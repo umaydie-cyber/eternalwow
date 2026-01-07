@@ -15,6 +15,14 @@ const RACE_TRAITS = {
         // 宾至如归：地图战斗结束后回复最大生命值的 10%
         mapCombatEndHealPct: 0.10,
     },
+    '矮人': {
+        // 选择矮人角色：额外获得两个种族技能
+        extraSkills: ['racial_dwarf_spirit', 'racial_dwarf_stoneform'],
+        // 矮人精魄：暴击伤害 +15%（以倍率加成：0.15 => +15%）
+        statBonus: { critDamage: 0.15 },
+        // 石像形态：战斗中首次受到诅咒/中毒效果时免疫（每种各 1 次）
+        firstDebuffImmunity: { curse: true, poison: true },
+    },
 };
 
 const CLASSES = {
@@ -610,6 +618,21 @@ const SKILLS = {
         icon: '🏠',
         type: 'passive',
         description: '炉石...啊不对，地图战斗结束后，回复最大生命值的10%。'
+    },
+
+    racial_dwarf_spirit: {
+        id: 'racial_dwarf_spirit',
+        name: '矮人精魄',
+        icon: '🪨',
+        type: 'passive',
+        description: '暴击伤害 +15%。'
+    },
+    racial_dwarf_stoneform: {
+        id: 'racial_dwarf_stoneform',
+        name: '石像形态',
+        icon: '🗿',
+        type: 'passive',
+        description: '战斗中首次受到【诅咒】与【中毒】效果时免疫（每种各 1 次）。'
     },
 
     mastery_precise_block: {
@@ -6864,6 +6887,12 @@ function learnNewSkills(character) {
     const classData = CLASSES[character.classId];
     const learned = new Set(character.skills || []);
 
+    // ✅ 种族额外技能：随时确保拥有（用于旧角色补齐 / 新增种族被动）
+    const raceExtraSkills = RACE_TRAITS?.[character.race]?.extraSkills || [];
+    raceExtraSkills.forEach(sid => {
+        if (sid) learned.add(sid);
+    });
+
     classData.skills.forEach(({ level, skillId }) => {
         if (character.level >= level && !learned.has(skillId)) {
             learned.add(skillId);
@@ -7406,6 +7435,41 @@ function stepBossCombat(state) {
         }
 
         return { finalDamage, absorbed };
+    };
+
+    // ==================== 种族：矮人【石像形态】 ====================
+    // 效果：战斗中首次受到【诅咒】与【中毒】效果时免疫（每种各 1 次）。
+    // 说明：这里只做“判定+消耗次数+写日志”，具体效果的应用点（debuff/dot）需要调用它。
+    const ensureRacialFlags = (ps) => {
+        if (!ps || typeof ps !== 'object') return {};
+        if (!ps.racialFlags || typeof ps.racialFlags !== 'object') ps.racialFlags = {};
+        if (ps.racialFlags.stoneformCurseUsed === undefined) ps.racialFlags.stoneformCurseUsed = false;
+        if (ps.racialFlags.stoneformPoisonUsed === undefined) ps.racialFlags.stoneformPoisonUsed = false;
+        return ps.racialFlags;
+    };
+
+    const tryFirstDebuffImmunity = (ps, kind, idx = null, sourceName = '') => {
+        if (!ps || ps.currentHp <= 0) return false;
+
+        const raceTrait = RACE_TRAITS?.[ps?.char?.race];
+        const enabled = !!raceTrait?.firstDebuffImmunity?.[kind];
+        if (!enabled) return false;
+
+        const flags = ensureRacialFlags(ps);
+        const flagKey = kind === 'curse'
+            ? 'stoneformCurseUsed'
+            : (kind === 'poison' ? 'stoneformPoisonUsed' : null);
+        if (!flagKey) return false;
+        if (flags[flagKey]) return false;
+
+        // 消耗次数
+        flags[flagKey] = true;
+
+        const kindText = kind === 'curse' ? '诅咒' : (kind === 'poison' ? '中毒' : kind);
+        const posText = (Number.isFinite(Number(idx)) && idx !== null) ? `位置${Number(idx) + 1} ` : '';
+        const srcText = sourceName ? `（${sourceName}）` : '';
+        addLog(`【石像形态】触发：${posText}${ps.char?.name || ''} 免疫了本场战斗的首次${kindText}效果${srcText}`);
+        return true;
     };
 
     // ==================== 玩家阶段 ====================
@@ -8842,13 +8906,18 @@ function stepBossCombat(state) {
                     const duration = boss.shadowCurseDuration || 4;
                     const delta = -Math.abs(Number(boss.shadowCurseMagicResistDown || 100));
 
-                    target.debuffs.shadowCurse = {
-                        type: 'curse',
-                        magicResistDelta: delta,
-                        duration
-                    };
+                    // ✅ 矮人：石像形态 - 本场首次诅咒免疫
+                    if (tryFirstDebuffImmunity(target, 'curse', tIdx, '暗影诅咒')) {
+                        addLog(`→ 【暗影诅咒】被免疫，未产生效果`, 'debuff');
+                    } else {
+                        target.debuffs.shadowCurse = {
+                            type: 'curse',
+                            magicResistDelta: delta,
+                            duration
+                        };
 
-                    addLog(`【${boss.name}】对 位置${tIdx + 1} ${target.char.name} 施放【暗影诅咒】：魔法抗性 ${delta}，持续 ${duration} 回合`, 'debuff');
+                        addLog(`【${boss.name}】对 位置${tIdx + 1} ${target.char.name} 施放【暗影诅咒】：魔法抗性 ${delta}，持续 ${duration} 回合`, 'debuff');
+                    }
                 }
             } else {
                 addLog(`【${boss.name}】施放【暗影诅咒】，但没有存活目标`);
@@ -9331,6 +9400,14 @@ function stepBossCombat(state) {
         if (!ps.dots || ps.dots.length === 0) return;
 
         ps.dots = ps.dots.filter(dot => {
+            // ✅ 矮人：石像形态 - 本场首次中毒免疫
+            // 约定：poison DOT 使用 school: 'poison'（或显式 type/isPoison 标记）
+            const isPoisonDot = dot?.school === 'poison' || dot?.type === 'poison' || dot?.isPoison === true;
+            if (isPoisonDot && tryFirstDebuffImmunity(ps, 'poison', pIdx, dot?.name || '中毒')) {
+                addLog(`→ 【${dot?.name || '中毒'}】被免疫，未产生伤害`, 'debuff');
+                return false;
+            }
+
             // DOT伤害类型：
             // - physical：沿用现有逻辑（主要用于“流血”）
             // - 其他（fire/shadow/...）：按魔抗减伤（满足“火焰伤害计算魔抗”设计）
@@ -12580,6 +12657,11 @@ function gameReducer(state, action) {
                 fortuneMisfortuneStacks: 0, // 祸福相依层数
                 fantasiaStacks: 0,          // 幻想曲层数（戒律牧师50级天赋，仅本场战斗）
                 fingersOfFrost: 0, // 寒冰指层数（冰霜法师）
+                // ✅ 种族战斗内触发状态（每场战斗重置）
+                racialFlags: {
+                    stoneformCurseUsed: false,
+                    stoneformPoisonUsed: false,
+                },
                 validSkills: Array.from({ length: 8 }, (_, i) => {
                     const sid = char.skillSlots?.[i] || '';
                     return sid && SKILLS[sid] ? sid : 'rest';

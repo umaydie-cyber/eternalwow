@@ -2860,14 +2860,14 @@ const CharacterPage = ({ state, dispatch }) => {
                                     background: 'rgba(0,0,0,0.35)',
                                     transition: 'transform 0.06s ease',
                                 }}
-                                onMouseDown={(e) => {
+                                onPointerDown={(e) => {
                                     // 小小按压反馈（可删）
                                     e.currentTarget.style.transform = 'scale(0.995)';
                                 }}
-                                onMouseUp={(e) => {
+                                onPointerMove={(e) => {
                                     e.currentTarget.style.transform = 'scale(1)';
                                 }}
-                                onMouseLeave={(e) => {
+                                onPointerUp={(e) => {
                                     e.currentTarget.style.transform = 'scale(1)';
                                 }}
                             >
@@ -3836,6 +3836,8 @@ export default function WoWIdleGame() {
     return (
         <div style={{
             minHeight: '100vh',
+            width: '100%',
+            boxSizing: 'border-box',
             background: 'linear-gradient(135deg, #1a1510 0%, #0d0a07 50%, #151210 100%)',
             fontFamily: '"Noto Serif SC", "Cinzel", Georgia, serif',
             color: '#e8dcc4',

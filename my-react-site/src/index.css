@@ -22,13 +22,19 @@ a:hover {
   color: #535bf2;
 }
 
-body {
+html, body, #root {
+  width: 100%;
+  height: 100%;
   margin: 0;
-  display: flex;
-  place-items: center;
-  min-width: 320px;
-  min-height: 100vh;
 }
+
+body {
+  display: block;     /* 不要 flex 居中 */
+  min-width: 0;       /* 不强制最小宽度 */
+  min-height: 100vh;
+  overflow: hidden;   /* 游戏页面避免滚动条，可选 */
+}
+
 
 h1 {
   font-size: 3.2em;

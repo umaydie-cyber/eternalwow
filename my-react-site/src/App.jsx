@@ -1336,32 +1336,42 @@ function gameReducer(state, action) {
         case 'UNEQUIP_ITEM': {
             const { characterId, slot } = action.payload;
 
+            // Ensure the character exists
             const char = state.characters.find(c => c.id === characterId);
             if (!char) return state;
 
+            // Get the item to unequip
             const equipped = char.equipment?.[slot];
             if (!equipped) return state;
 
-            // 背包满了就不让卸下（避免丢失）
+            // Ensure the inventory has space
             if (state.inventory.length >= state.inventorySize) return state;
 
+            // Map over characters and update their stats after unequipping the item
             const newChars = state.characters.map(c => {
                 if (c.id !== characterId) return c;
 
-                const nextEquip = { ...(c.equipment || {}) };
-                delete nextEquip[slot];
+                // Clone the character's equipment to avoid mutation
+                const newEquipment = { ...c.equipment };
+                delete newEquipment[slot];  // Remove the equipment from the slot
 
-                const nextChar = { ...c, equipment: nextEquip };
-                nextChar.stats = calculateTotalStats(nextChar);
-                return nextChar;
+                // Recalculate stats after unequipping the item
+                const updatedChar = { ...c, equipment: newEquipment };
+                updatedChar.stats = calculateTotalStats(updatedChar);
+
+                return updatedChar;
             });
+
+            // Add the unequipped item back to the inventory
+            const newInventory = [...state.inventory, equipped];
 
             return {
                 ...state,
                 characters: newChars,
-                inventory: [...state.inventory, equipped],
+                inventory: newInventory,
             };
         }
+
 
 
         case 'MERGE_EQUIPMENT': {

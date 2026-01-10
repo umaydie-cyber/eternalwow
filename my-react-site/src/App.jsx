@@ -779,11 +779,15 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1) {
         const dr = getArmorDamageReduction(character.stats.armor);
         const rawEnemyDamage = applyPhysicalMitigation(combatState.enemy?.attack ?? 0, character.stats.armor);
 
-        // 格挡判定：基础 blockRate + buffs
+        // 格挡判定：基础 blockRate + buffs（百分比数，如 10 = 10%）
         const blockChance = Math.max(
             0,
-            Math.min(0.95, (character.stats.blockRate || 0) + getBuffBlockRate())
+            Math.min(
+                0.95,
+                ((character.stats.blockRate || 0) + getBuffBlockRate()) / 100
+            )
         );
+
 
         let finalDamage = rawEnemyDamage;
         let blockedAmount = 0;

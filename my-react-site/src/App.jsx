@@ -242,6 +242,21 @@ const FIXED_EQUIPMENTS = {
     }
 };
 
+// ==================== RARITY COLORS ====================
+const RARITY_COLORS = {
+    white: '#d9d9d9',
+    green: '#1eff00',
+    blue: '#0070dd',
+    purple: '#a335ee',
+    orange: '#ff8000',
+    gold: '#ffd700'
+};
+
+const getRarityColor = (rarity) => {
+    if (!rarity) return '#4a3c2a';
+    return RARITY_COLORS[rarity] || '#4a3c2a';
+};
+
 const ITEMS = {
     IT_001: {
         id: 'IT_001',
@@ -363,6 +378,7 @@ function createEquipmentInstance(templateId) {
     return {
         ...tpl,
         instanceId: `eq_${Date.now()}_${Math.random()}`,
+        qualityColor: getRarityColor(tpl?.rarity),
         currentLevel: tpl.level,
         stats: scaleStats(tpl.baseStats, tpl.growth, tpl.level)
     };
@@ -3564,7 +3580,13 @@ const InventoryPage = ({ state, dispatch }) => {
                     gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))',
                     gap: 8
                 }}>
-                    {state.inventory.map(item => (
+                    {state.inventory.map(item => {
+                        const borderColor =
+                            item.type === 'equipment'
+                                ? (item.qualityColor || getRarityColor(item.rarity))
+                                : getRarityColor(item.rarity);
+
+                        return (
                         <div
                             key={item.instanceId || item.id}
                             draggable={item.type === 'equipment'}

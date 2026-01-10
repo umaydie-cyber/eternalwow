@@ -18,6 +18,13 @@ const CLASSES = {
 };
 
 // ==================== TALENTS ====================
+// 天赋触发类型（用于未来扩展）
+const TALENT_TYPES = {
+    AURA: 'aura',          // 战斗中常驻/光环类（如护甲+100、姿态）
+    ON_HIT: 'on_hit',      // 命中/使用普通攻击后触发
+    ON_BLOCK: 'on_block',  // 成功格挡后触发
+};
+
 // 规则：每10级一行，每行3选1。未到等级不能点。点亮后同排其它变黑。
 // 目前只实现战士（防护战士）10/20级，30-70级预留占位。
 const TALENTS = {
@@ -25,17 +32,17 @@ const TALENTS = {
         {
             tier: 10,
             options: [
-                { id: 'plain', name: '质朴', description: '普通攻击使你在本场战斗中的攻击强度提高5点。' },
-                { id: 'block_master', name: '格挡大师', description: '战斗中每次成功的格挡都会使你在本场战斗中的格挡值提高10点。' },
-                { id: 'armor_up', name: '叠甲过', description: '你在战斗中的护甲值提升100点。' },
+                { id: 'plain', type: TALENT_TYPES.ON_HIT, name: '质朴', description: '普通攻击使你在本场战斗中的攻击强度提高5点。' },
+                { id: 'block_master', type: TALENT_TYPES.ON_BLOCK, name: '格挡大师', description: '战斗中每次成功的格挡都会使你在本场战斗中的格挡值提高10点。' },
+                { id: 'armor_up', type: TALENT_TYPES.AURA, name: '叠甲过', description: '你在战斗中的护甲值提升100点。' },
             ]
         },
         {
             tier: 20,
             options: [
-                { id: 'defense_stance', name: '防御姿态', description: '你在战斗中受到的伤害降低20%。' },
-                { id: 'battle_stance', name: '战斗姿态', description: '你在战斗中的攻击强度提升10%。' },
-                { id: 'berserk_stance', name: '狂暴姿态', description: '你在战斗中获得额外的8%暴击和20%暴击伤害。' },
+                { id: 'defense_stance', type: TALENT_TYPES.AURA, name: '防御姿态', description: '你在战斗中受到的伤害降低20%。' },
+                { id: 'battle_stance', type: TALENT_TYPES.AURA, name: '战斗姿态', description: '你在战斗中的攻击强度提升10%。' },
+                { id: 'berserk_stance', type: TALENT_TYPES.AURA, name: '狂暴姿态', description: '你在战斗中获得额外的8%暴击和20%暴击伤害。' },
             ]
         },
         ...[30, 40, 50, 60, 70].map(tier => ({
@@ -866,16 +873,16 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1) {
             });
         }
 
-        // ===== 天赋：质朴（10级）普通攻击叠攻强（本场战斗） =====
+        // ===== 天赋：质朴（10级）普通攻击后触发（本场战斗叠层） =====
         if (currentSkillId === 'basic_attack' && character.talents?.[10] === 'plain') {
             talentBuffs.attackFlat = (talentBuffs.attackFlat || 0) + 5;
             logs.push({
                 round,
+                kind: 'proc',
                 actor: character.name,
-                action: '质朴',
-                target: character.name,
+                proc: '质朴',
                 value: 5,
-                type: 'talent'
+                text: '【质朴】触发：攻击强度 +5（本场战斗）'
             });
         }
 
@@ -914,16 +921,16 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1) {
             });*/
         }
 
-        // ===== 天赋：格挡大师（10级）成功格挡叠格挡值（本场战斗） =====
+        // ===== 天赋：格挡大师（10级）成功格挡后触发（本场战斗叠层） =====
         if (blockedAmount > 0 && character.talents?.[10] === 'block_master') {
             talentBuffs.blockValueFlat = (talentBuffs.blockValueFlat || 0) + 10;
             logs.push({
                 round,
+                kind: 'proc',
                 actor: character.name,
-                action: '格挡大师',
-                target: character.name,
+                proc: '格挡大师',
                 value: 10,
-                type: 'talent'
+                text: '【格挡大师】触发：格挡值 +10（本场战斗）'
             });
         }
 
@@ -2129,6 +2136,105 @@ const SkillViewerModal = ({ character, onClose }) => {
     );
 };
 
+// ==================== COMBAT LOGS (MODULE) ====================
+// 统一战斗日志规范：
+// - 主动技能：显示“使用”
+// - 被动触发（天赋/被动）：显示“【xxx】触发：...”，不算一次行动
+// - 系统事件：显示纯文本
+function normalizeCombatLogEntry(entry) {
+    if (!entry || typeof entry !== 'object') {
+        return { kind: 'system', text: String(entry ?? '') };
+    }
+    if (entry.kind) return entry;
+
+    // 兼容旧字段：type
+    if (entry.type === 'talent') {
+        return { ...entry, kind: 'proc', proc: entry.action || entry.proc || '被动' };
+    }
+    if (entry.type === 'damage' || entry.type === 'heal' || entry.type === 'buff' || entry.type === 'block') {
+        return { ...entry, kind: 'skill' };
+    }
+    return { ...entry, kind: 'system', text: entry.text || entry.action || '' };
+}
+
+function renderCombatLogLine(entry) {
+    const e = normalizeCombatLogEntry(entry);
+
+    // 系统日志
+    if (e.kind === 'system') {
+        return (
+            <>
+                <span style={{ color: '#aaa' }}>{e.text || ''}</span>
+            </>
+        );
+    }
+
+    // 被动触发：不显示“使用”
+    if (e.kind === 'proc') {
+        return (
+            <>
+                <span style={{ color: '#ffd700' }}>{e.actor}</span>
+                {' '}
+                <span style={{ color: '#ff9800' }}>{e.text || `【${e.proc || e.action || '被动'}】触发`}</span>
+            </>
+        );
+    }
+
+    // 主动技能：保留原来的“使用”语义
+    return (
+        <>
+            <span style={{ color: '#ffd700' }}>{e.actor}</span>
+            {' '}使用{' '}
+            <span style={{ color: '#4CAF50' }}>{e.action}</span>
+
+            {e.type === 'damage' && (
+                <>
+                    {' '}对{' '}
+                    <span style={{ color: '#ff6b6b' }}>{e.target}</span>
+                    {' '}造成{' '}
+                    <span style={{ color: '#f44336', fontWeight: 600 }}>
+                        {e.value}
+                    </span>
+                    {' '}点伤害
+                    {e.isCrit && (
+                        <span style={{ color: '#ff9800', marginLeft: 4 }}>
+                            [暴击!]
+                        </span>
+                    )}
+                </>
+            )}
+
+            {e.type === 'heal' && (
+                <>
+                    {' '}恢复{' '}
+                    <span style={{ color: '#4CAF50', fontWeight: 600 }}>
+                        {e.value}
+                    </span>
+                    {' '}点生命
+                </>
+            )}
+
+            {e.type === 'block' && (
+                <>
+                    {' '}格挡了{' '}
+                    <span style={{ color: '#4CAF50', fontWeight: 600 }}>
+                        {e.value}
+                    </span>
+                    {' '}点伤害
+                </>
+            )}
+
+            {e.type === 'buff' && (
+                <>
+                    {' '}获得效果（持续{' '}
+                    <span style={{ color: '#4CAF50', fontWeight: 700 }}>{e.value}</span>
+                    {' '}回合）
+                </>
+            )}
+        </>
+    );
+}
+
 // 战斗日志模态框
 const CombatLogsModal = ({ logs, onClose, onClear }) => {
     return (
@@ -2226,45 +2332,8 @@ const CombatLogsModal = ({ logs, onClose, onClear }) => {
                                             padding: '4px 0',
                                             borderBottom: i < log.logs.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none'
                                         }}>
-                                            <span style={{ color: '#888' }}>回合{entry.round}:</span>
-                                            {' '}
-                                            <span style={{ color: '#ffd700' }}>{entry.actor}</span>
-                                            {' '}使用{' '}
-                                            <span style={{ color: '#4CAF50' }}>{entry.action}</span>
-                                            {entry.type === 'damage' && (
-                                                <>
-                                                    {' '}对{' '}
-                                                    <span style={{ color: '#ff6b6b' }}>{entry.target}</span>
-                                                    {' '}造成{' '}
-                                                    <span style={{ color: '#f44336', fontWeight: 600 }}>
-                                                        {entry.value}
-                                                    </span>
-                                                    {' '}点伤害
-                                                    {entry.isCrit && (
-                                                        <span style={{ color: '#ff9800', marginLeft: 4 }}>
-                                                            [暴击!]
-                                                        </span>
-                                                    )}
-                                                </>
-                                            )}
-                                            {entry.type === 'heal' && (
-                                                <>
-                                                    {' '}恢复{' '}
-                                                    <span style={{ color: '#4CAF50', fontWeight: 600 }}>
-                                                        {entry.value}
-                                                    </span>
-                                                    {' '}点生命
-                                                </>
-                                            )}
-                                            {entry.type === 'block' && (
-                                                <>
-                                                    {' '}格挡了{' '}
-                                                    <span style={{ color: '#4CAF50', fontWeight: 600 }}>
-                                                        {entry.value}
-                                                    </span>
-                                                    {' '}点伤害
-                                                </>
-                                            )}
+                                            <span style={{ color: '#888' }}>回合{entry.round}:</span>{' '}
+                                            {renderCombatLogLine(entry)}
                                         </div>
                                     ))}
                                 </div>

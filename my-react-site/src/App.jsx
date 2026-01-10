@@ -1964,7 +1964,7 @@ const SkillViewerModal = ({ character, onClose }) => {
                             查看技能 - {character.name}
                         </h2>
                         <div style={{ fontSize: 12, color: '#888', marginTop: 4 }}>
-                            仅展示可用技能（不含“休息/普通攻击”）
+                            仅展示可用技能
                         </div>
                     </div>
                     <Button onClick={onClose} variant="secondary">✕ 关闭</Button>

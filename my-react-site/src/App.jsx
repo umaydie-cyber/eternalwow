@@ -2685,7 +2685,7 @@ const MapPage = ({ state, dispatch }) => {
 const CharacterPage = ({ state, dispatch }) => {
     const [showCreate, setShowCreate] = useState(false);
     const [newChar, setNewChar] = useState({ name: '', race: RACES[0], classId: 'protection_warrior' });
-    const [selectedChar, setSelectedChar] = useState(null);
+    const [selectedCharId, setSelectedCharId] = useState(null);
     const [showSkillEditor, setShowSkillEditor] = useState(null);
     const [showCombatLogs, setShowCombatLogs] = useState(false);
 
@@ -2724,21 +2724,19 @@ const CharacterPage = ({ state, dispatch }) => {
                 />
             )}
 
-            {selectedChar && (
+            {selectedCharId && (
                 <CharacterDetailsModal
                     characterId={selectedCharId}
                     state={state}
-                    onClose={() => setSelectedChar(null)}
+                    onClose={() => setSelectedCharId(null)}
                     onUnequip={(charId, slot) => {
                         dispatch({ type: 'UNEQUIP_ITEM', payload: { characterId: charId, slot } });
-                        const updated = state.characters.find(c => c.id === charId);
-                        if (updated) setSelectedChar(updated);
                     }}
                     onEditSkills={() => {
-                        setShowSkillEditor(selectedChar);
-                        setSelectedChar(null);
+                        const latest = state.characters.find(c => c.id === selectedCharId);
+                        if (latest) setShowSkillEditor(latest);
+                        setSelectedCharId(null);
                     }}
-
                 />
             )}
 
@@ -2866,7 +2864,7 @@ const CharacterPage = ({ state, dispatch }) => {
                         return (
                             <div
                                 key={char.id}
-                                onClick={() => setSelectedChar(char)}  // ✅ 整个卡片可点，直接打开详情
+                                onClick={() => setSelectedCharId(char.id)}
                                 style={{
                                     cursor: 'pointer',
                                     padding: 12,

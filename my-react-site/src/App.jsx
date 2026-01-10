@@ -2942,8 +2942,6 @@ const CharacterPage = ({ state, dispatch }) => {
                                     <div>法力: {Math.floor(char.stats.currentMp)} / {Math.floor(char.stats.maxMp)}</div>
                                     <div>攻击: {char.stats.attack}</div>
                                     <div>护甲: {Math.floor(char.stats.armor)}</div>
-                                    <div>格挡率: {(((char.stats.blockRate || 0) * 100).toFixed(1))}%</div>
-                                    <div>格挡值: {Math.floor(char.stats.blockValue || 0)}</div>
                                 </div>
 
                                 {/* ✅ 删除“查看详情”按钮，只保留“编辑技能” */}

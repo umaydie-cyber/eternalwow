@@ -694,7 +694,11 @@ function createCombatState(character, enemy, skillSlots) {
     let buffs = []; // { blockRate, duration }
 
     // 过滤出有效技能（战斗开始时固定下来）
-    const validSkills = (skillSlots || []).filter(sid => sid && SKILLS[sid]);
+    const validSkills = (skillSlots || [])
+        // 空槽 => 默认休息
+        .map(sid => (sid && SKILLS[sid]) ? sid : 'rest')
+        // 防御一下：如果 rest 也不存在才会被过滤
+        .filter(sid => SKILLS[sid]);
     if (validSkills.length === 0) validSkills.push('basic_attack');
 
     return {
@@ -726,9 +730,12 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1) {
     const validSkills = Array.isArray(combatState.validSkills) && combatState.validSkills.length > 0
         ? combatState.validSkills
         : (() => {
-            const v = (character.skillSlots || []).filter(sid => sid && SKILLS[sid]);
-            if (v.length === 0) v.push('basic_attack');
+            const v = (character.skillSlots || [])
+                .map(sid => (sid && SKILLS[sid]) ? sid : 'rest')
+                .filter(sid => SKILLS[sid]);
+
             return v;
+
         })();
 
     const getBuffBlockRate = () =>
@@ -1256,7 +1263,7 @@ function gameReducer(state, action) {
                 exp: 0,
                 expToNext: 100,
                 equipment: {},
-                skillSlots: ['basic_attack', 'rest', '', '', '', '', '', ''], // 8个技能槽位
+                skillSlots: ['basic_attack', 'basic_attack', 'basic_attack', 'basic_attack', 'basic_attack', 'basic_attack', 'basic_attack', 'basic_attack'], // 8个技能槽位
                 skills: classData.skills.filter(s => s.level <= 1).map(s => s.skillId),
                 buffs: [],
                 lastCombatTime: 0,

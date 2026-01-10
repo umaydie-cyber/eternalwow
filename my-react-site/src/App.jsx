@@ -2057,7 +2057,7 @@ const CharacterDetailsModal = ({ character, onClose, onUnequip, onEditSkills, st
                                 }}>
                                     <span style={{ color: '#aaa' }}>{name}</span>
                                     <span style={{ color: '#ffd700', fontWeight: 600 }}>
-                                        {stat === 'critRate' || stat === 'blockRate' ? `${(character.stats[stat] / 100 || 0).toFixed(1)}%` : stat === 'critDamage' ? `${Math.round((character.stats[stat] || 0) * 100)}%` : stat === 'expBonus' ? `${Math.round((character.stats[stat] || 0) * 100)}%` : Math.floor(character.stats[stat] || 0)}
+                                        {stat === 'critRate' || stat === 'blockRate' ? `${(character.stats[stat] || 0).toFixed(1)}%` : stat === 'critDamage' ? `${Math.round((character.stats[stat] || 0) * 100)}%` : stat === 'expBonus' ? `${Math.round((character.stats[stat] || 0) * 100)}%` : Math.floor(character.stats[stat] || 0)}
                                     </span>
 
                                 </div>
@@ -2864,14 +2864,14 @@ const CharacterPage = ({ state, dispatch }) => {
                                     background: 'rgba(0,0,0,0.35)',
                                     transition: 'transform 0.06s ease',
                                 }}
-                                onPointerDown={(e) => {
+                                onMouseDown={(e) => {
                                     // 小小按压反馈（可删）
                                     e.currentTarget.style.transform = 'scale(0.995)';
                                 }}
-                                onPointerMove={(e) => {
+                                onMouseMove={(e) => {
                                     e.currentTarget.style.transform = 'scale(1)';
                                 }}
-                                onPointerUp={(e) => {
+                                onMouseUp={(e) => {
                                     e.currentTarget.style.transform = 'scale(1)';
                                 }}
                             >

@@ -2057,7 +2057,7 @@ const CharacterDetailsModal = ({ character, onClose, onUnequip, onEditSkills, st
                                 }}>
                                     <span style={{ color: '#aaa' }}>{name}</span>
                                     <span style={{ color: '#ffd700', fontWeight: 600 }}>
-                                        {stat === 'critRate' || stat === 'blockRate' ? `${(character.stats[stat] || 0).toFixed(1)}%` : stat === 'critDamage' ? `${Math.round((character.stats[stat] || 0) * 100)}%` : stat === 'expBonus' ? `${Math.round((character.stats[stat] || 0) * 100)}%` : Math.floor(character.stats[stat] || 0)}
+                                        {stat === 'critRate' || stat === 'blockRate' ? `${(character.stats[stat] / 100 || 0).toFixed(1)}%` : stat === 'critDamage' ? `${Math.round((character.stats[stat] || 0) * 100)}%` : stat === 'expBonus' ? `${Math.round((character.stats[stat] || 0) * 100)}%` : Math.floor(character.stats[stat] || 0)}
                                     </span>
 
                                 </div>

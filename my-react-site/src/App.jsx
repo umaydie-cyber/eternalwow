@@ -882,7 +882,7 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1) {
                 actor: character.name,
                 proc: '质朴',
                 value: 5,
-                text: '【质朴】触发：攻击强度 +5（本场战斗）'
+                text: '【质朴】触发，攻击强度 +5（本场战斗）'
             });
         }
 
@@ -930,7 +930,7 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1) {
                 actor: character.name,
                 proc: '格挡大师',
                 value: 10,
-                text: '【格挡大师】触发：格挡值 +10（本场战斗）'
+                text: '【格挡大师】触发，格挡值 +10（本场战斗）'
             });
         }
 
@@ -2168,18 +2168,18 @@ function renderCombatLogLine(entry) {
         );
     }
 
-    // 被动触发：不显示“使用”
+    // 被动触发：不显示“使用”，也不重复显示施放者（统一由文本自身表达）
     if (e.kind === 'proc') {
         return (
             <>
-                <span style={{ color: '#ffd700' }}>{e.actor}</span>
-                {' '}
-                <span style={{ color: '#ff9800' }}>{e.text || `【${e.proc || e.action || '被动'}】触发`}</span>
+                <span style={{ color: '#ff9800' }}>
+                    {e.text || `【${e.proc || e.action || '被动'}】触发`}
+                </span>
             </>
         );
     }
 
-    // 主动技能：保留原来的“使用”语义
+// 主动技能：保留原来的“使用”语义
     return (
         <>
             <span style={{ color: '#ffd700' }}>{e.actor}</span>

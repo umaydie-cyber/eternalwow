@@ -693,13 +693,15 @@ function createCombatState(character, enemy, skillSlots) {
     // 战斗内 buffs（不改角色本体）
     let buffs = []; // { blockRate, duration }
 
-    // 过滤出有效技能（战斗开始时固定下来）
-    const validSkills = (skillSlots || [])
-        // 空槽 => 默认休息
-        .map(sid => (sid && SKILLS[sid]) ? sid : 'rest')
-        // 防御一下：如果 rest 也不存在才会被过滤
-        .filter(sid => SKILLS[sid]);
-    if (validSkills.length === 0) validSkills.push('basic_attack');
+    // 保留 8 个槽位顺序：空/无效 => rest
+    const slots8 = Array.from({ length: 8 }, (_, i) => (skillSlots?.[i] ?? ''));
+
+    const validSkills = slots8.map(sid => (sid && SKILLS[sid]) ? sid : 'rest');
+
+    // 保险：如果 rest 不存在，至少不会崩（可选）
+    for (let i = 0; i < validSkills.length; i++) {
+        if (!SKILLS[validSkills[i]]) validSkills[i] = 'basic_attack';
+    }
 
     return {
         enemy: { ...enemy },
@@ -730,12 +732,13 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1) {
     const validSkills = Array.isArray(combatState.validSkills) && combatState.validSkills.length > 0
         ? combatState.validSkills
         : (() => {
-            const v = (character.skillSlots || [])
-                .map(sid => (sid && SKILLS[sid]) ? sid : 'rest')
-                .filter(sid => SKILLS[sid]);
+            const slots8 = Array.from({ length: 8 }, (_, i) => (character.skillSlots?.[i] ?? ''));
+            const v = slots8.map(sid => (sid && SKILLS[sid]) ? sid : 'rest');
 
+            for (let i = 0; i < v.length; i++) {
+                if (!SKILLS[v[i]]) v[i] = 'basic_attack';
+            }
             return v;
-
         })();
 
     const getBuffBlockRate = () =>

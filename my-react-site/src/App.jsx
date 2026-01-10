@@ -110,10 +110,10 @@ const ZONES = {
         level: 5,
         type: 'explore',
         enemies: [
-            { name: '收割机傀儡', hp: 80, attack: 12, defense: 8, exp: 35, gold: 25 },
-            { name: '迪菲亚盗贼', hp: 100, attack: 15, defense: 10, exp: 50, gold: 40 },
+            { name: '收割机傀儡', hp: 200, attack: 12, defense: 8, exp: 35, gold: 25 },
+            { name: '迪菲亚盗贼', hp: 250, attack: 15, defense: 10, exp: 50, gold: 40 },
         ],
-        resources: ['铁矿', '毛皮'],
+        resources: ['木材', '毛皮'],
         unlocked: false,
         unlockLevel: 5
     },
@@ -123,10 +123,10 @@ const ZONES = {
         level: 10,
         type: 'explore',
         enemies: [
-            { name: '豺狼人', hp: 1500, attack: 20, defense: 150, exp: 80, gold: 60 },
-            { name: '黑石兽人', hp: 2000, attack: 25, defense: 200, exp: 120, gold: 100 },
+            { name: '豺狼人', hp: 1500, attack: 55, defense: 150, exp: 80, gold: 60 },
+            { name: '黑石兽人', hp: 2000, attack: 85, defense: 200, exp: 120, gold: 100 },
         ],
-        resources: ['魔法精华', '炼金油'],
+        resources: ['木材', '铁矿'],
         unlocked: false,
         unlockLevel: 10
     }
@@ -217,7 +217,7 @@ const ITEMS = {
 
 const BUILDINGS = {
     house: { id: 'house', name: '民居', cost: { gold: 100, wood: 50 }, production: { population: 2 }, consumption: {} },
-    lumber_mill: { id: 'lumber_mill', name: '伐木场', cost: { gold: 200, wood: 100 }, production: { wood: 5 }, consumption: { population: 1 } },
+    lumber_mill: { id: 'lumber_mill', name: '伐木场', cost: { gold: 200 }, production: { wood: 5 }, consumption: { population: 1 } },
     iron_mine: { id: 'iron_mine', name: '铁矿场', cost: { gold: 300, wood: 150 }, production: { ironOre: 3 }, consumption: { population: 2 } },
     foundry: { id: 'foundry', name: '铸造厂', cost: { gold: 500, wood: 200, ironOre: 100 }, production: { ironIngot: 2 }, consumption: { population: 2, ironOre: 3 } },
     gathering_hut: { id: 'gathering_hut', name: '采集所', cost: { gold: 150, wood: 75 }, production: { herb: 4 }, consumption: { population: 1 } },
@@ -225,6 +225,21 @@ const BUILDINGS = {
     mana_well: { id: 'mana_well', name: '魔力之源', cost: { gold: 800, ironIngot: 50 }, production: { magicEssence: 1 }, consumption: { population: 3 } },
     alchemy_lab: { id: 'alchemy_lab', name: '炼金实验室', cost: { gold: 600, wood: 100, herb: 50 }, production: { alchemyOil: 2 }, consumption: { population: 2, herb: 2 } },
 };
+
+function getBuildingCost(buildingId, state) {
+    const building = BUILDINGS[buildingId];
+    const builtCount = state.buildings[buildingId] || 0;
+
+    const multiplier = 1 + builtCount * 0.1;
+
+    const cost = {};
+    for (const [res, amount] of Object.entries(building.cost)) {
+        cost[res] = Math.ceil(amount * multiplier);
+    }
+
+    return cost;
+}
+
 
 const RESEARCH = {
     fertility: { id: 'fertility', name: '生育', description: '民居提供的居民人数提升', baseCost: 100, effect: 'population', bonus: 0.1 },
@@ -1442,16 +1457,29 @@ function gameReducer(state, action) {
         case 'BUILD': {
             const { buildingId } = action.payload;
             const building = BUILDINGS[buildingId];
-            let canBuild = true;
 
+            // 已建数量（建第1座时 builtCount=0 → 100% 成本）
+            const builtCount = state.buildings[buildingId] || 0;
+
+            // 每多一座 +10%
+            const multiplier = 1 + builtCount * 0.1;
+
+            // 计算动态成本（向上取整避免出现小数）
+            const dynamicCost = {};
             Object.entries(building.cost).forEach(([resource, amount]) => {
-                if ((state.resources[resource] || 0) < amount) canBuild = false;
+                dynamicCost[resource] = Math.ceil(amount * multiplier);
             });
 
+            // 校验资源够不够
+            let canBuild = true;
+            Object.entries(dynamicCost).forEach(([resource, amount]) => {
+                if ((state.resources[resource] || 0) < amount) canBuild = false;
+            });
             if (!canBuild) return state;
 
+            // 扣资源
             const newResources = { ...state.resources };
-            Object.entries(building.cost).forEach(([resource, amount]) => {
+            Object.entries(dynamicCost).forEach(([resource, amount]) => {
                 newResources[resource] -= amount;
             });
 
@@ -1460,10 +1488,11 @@ function gameReducer(state, action) {
                 resources: newResources,
                 buildings: {
                     ...state.buildings,
-                    [buildingId]: (state.buildings[buildingId] || 0) + 1
+                    [buildingId]: builtCount + 1
                 }
             };
         }
+
 
         case 'START_RESEARCH': {
             const { researchId } = action.payload;
@@ -3188,8 +3217,19 @@ const CityPage = ({ state, dispatch }) => {
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: 12 }}>
                     {Object.values(BUILDINGS).map(building => {
                         const count = state.buildings[building.id] || 0;
-                        let canBuild = true;
+
+                        // ✅ 每多一座 +10%
+                        const multiplier = 1 + count * 0.1;
+
+                        // ✅ 动态成本（向上取整）
+                        const dynamicCost = {};
                         Object.entries(building.cost).forEach(([resource, amount]) => {
+                            dynamicCost[resource] = Math.ceil(amount * multiplier);
+                        });
+
+                        // ✅ 按动态成本判断是否可建造
+                        let canBuild = true;
+                        Object.entries(dynamicCost).forEach(([resource, amount]) => {
                             if ((state.resources[resource] || 0) < amount) canBuild = false;
                         });
 
@@ -3219,19 +3259,20 @@ const CityPage = ({ state, dispatch }) => {
                                         fontSize: 12,
                                         color: '#c9a227'
                                     }}>
-                                        ×{count}
-                                    </span>
+                                    ×{count}</span>
                                 </div>
 
                                 <div style={{ fontSize: 11, color: '#aaa', marginBottom: 8 }}>
                                     <div style={{ marginBottom: 4 }}>
-                                        成本: {Object.entries(building.cost).map(([r, a]) => `${r}:${a}`).join(', ')}
+                                        成本: {Object.entries(dynamicCost).map(([r, a]) => `${r}:${a}`).join(', ')}
                                     </div>
+
                                     {Object.keys(building.production || {}).length > 0 && (
                                         <div style={{ color: '#4CAF50' }}>
                                             产出: {Object.entries(building.production).map(([r, a]) => `${r}:+${a}`).join(', ')}
                                         </div>
                                     )}
+
                                     {Object.keys(building.consumption || {}).length > 0 && (
                                         <div style={{ color: '#f44336' }}>
                                             消耗: {Object.entries(building.consumption).map(([r, a]) => `${r}:-${a}`).join(', ')}
@@ -3251,6 +3292,7 @@ const CityPage = ({ state, dispatch }) => {
                     })}
                 </div>
             </Panel>
+
         </div>
     );
 };

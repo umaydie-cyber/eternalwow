@@ -278,7 +278,7 @@ function formatItemStatValue(stat, valueRaw) {
     const percentStats = new Set(['critRate', 'blockRate']);
 
     if (percentStats.has(stat)) {
-        return `${Math.floor(v * 100)}%`;
+        return `${(v).toFixed(1)}%`;
     }
 
     if (stat === 'critDamage') {

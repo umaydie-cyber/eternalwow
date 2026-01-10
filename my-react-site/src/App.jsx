@@ -146,11 +146,11 @@ const ZONES = {
     westfall: {
         id: 'westfall',
         name: '西部荒野',
-        level: 5,
+        level: 10,
         type: 'explore',
         enemies: [
-            { name: '收割机傀儡', hp: 200, attack: 12, defense: 8, exp: 35, gold: 25 },
-            { name: '迪菲亚盗贼', hp: 250, attack: 15, defense: 10, exp: 50, gold: 40 },
+            { name: '收割机傀儡', hp: 250, attack: 20, defense: 8, exp: 35, gold: 25 },
+            { name: '迪菲亚盗贼', hp: 300, attack: 30, defense: 10, exp: 50, gold: 40 },
         ],
         resources: ['木材', '毛皮'],
         unlocked: false,
@@ -159,11 +159,11 @@ const ZONES = {
     redridge: {
         id: 'redridge',
         name: '赤脊山',
-        level: 10,
+        level: 20,
         type: 'explore',
         enemies: [
-            { name: '豺狼人', hp: 1500, attack: 55, defense: 150, exp: 80, gold: 60 },
-            { name: '黑石兽人', hp: 2000, attack: 85, defense: 200, exp: 120, gold: 100 },
+            { name: '豺狼人', hp: 1500, attack: 55, defense: 40, exp: 80, gold: 60 },
+            { name: '黑石兽人', hp: 2000, attack: 85, defense: 50, exp: 120, gold: 100 },
         ],
         resources: ['木材', '铁矿'],
         unlocked: false,

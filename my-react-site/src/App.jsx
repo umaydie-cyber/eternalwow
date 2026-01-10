@@ -1987,7 +1987,12 @@ const CombatLogsModal = ({ logs, onClose, onClear }) => {
 };
 
 // 角色详情模态框
-const CharacterDetailsModal = ({ character, onClose, onUnequip, onEditSkills, state }) => {
+const CharacterDetailsModal = ({ characterId, state, onClose, onUnequip, onEditSkills }) => {
+    const character = state.characters.find(c => c.id === characterId);
+
+    // 角色被删除/不存在时，直接不渲染（或你也可以 onClose()）
+    if (!character) return null;
+
     const statNames = {
         hp: '生命值',
         mp: '法力值',
@@ -2048,7 +2053,7 @@ const CharacterDetailsModal = ({ character, onClose, onUnequip, onEditSkills, st
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 20 }}>
-                    {/* 左侧：属性面板 */}
+                    {/* 左侧：属性 */}
                     <div>
                         <h3 style={{ fontSize: 16, color: '#c9a227', marginBottom: 12 }}>角色属性</h3>
                         <div style={{
@@ -2067,22 +2072,22 @@ const CharacterDetailsModal = ({ character, onClose, onUnequip, onEditSkills, st
                                 }}>
                                     <span style={{ color: '#aaa' }}>{name}</span>
                                     <span style={{ color: '#ffd700', fontWeight: 600 }}>
-                                        {stat === 'critRate' || stat === 'blockRate' ? `${(character.stats[stat] || 0).toFixed(1)}%` : stat === 'critDamage' ? `${Math.round((character.stats[stat] || 0) * 100)}%` : stat === 'expBonus' ? `${Math.round((character.stats[stat] || 0) * 100)}%` : Math.floor(character.stats[stat] || 0)}
+                                        {stat === 'critRate' || stat === 'blockRate'
+                                            ? `${(character.stats[stat] || 0).toFixed(1)}%`
+                                            : stat === 'critDamage'
+                                                ? `${Math.round((character.stats[stat] || 0) * 100)}%`
+                                                : Math.floor(character.stats[stat] || 0)
+                                        }
                                     </span>
-
                                 </div>
                             ))}
                         </div>
                     </div>
 
-                    {/* 右侧：装备栏 */}
+                    {/* 右侧：装备 */}
                     <div>
                         <h3 style={{ fontSize: 16, color: '#c9a227', marginBottom: 12 }}>装备</h3>
-                        <div style={{
-                            display: 'grid',
-                            gridTemplateColumns: 'repeat(2, 1fr)',
-                            gap: 8
-                        }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
                             {Object.entries(EQUIPMENT_SLOTS).map(([slot, slotInfo]) => {
                                 const equipped = character.equipment[slot];
                                 return (
@@ -2119,6 +2124,7 @@ const CharacterDetailsModal = ({ character, onClose, onUnequip, onEditSkills, st
                                                 }}>
                                                     {equipped.name}
                                                 </div>
+
                                                 <div style={{ fontSize: 10, color: '#aaa', marginBottom: 8 }}>
                                                     {Object.entries(equipped.stats).map(([stat, value]) => (
                                                         <div key={stat}>
@@ -2126,6 +2132,7 @@ const CharacterDetailsModal = ({ character, onClose, onUnequip, onEditSkills, st
                                                         </div>
                                                     ))}
                                                 </div>
+
                                                 <Button
                                                     onClick={() => onUnequip(character.id, slot)}
                                                     variant="danger"
@@ -2148,7 +2155,8 @@ const CharacterDetailsModal = ({ character, onClose, onUnequip, onEditSkills, st
                                 );
                             })}
                         </div>
-                        {/* ✅ 套装效果展示 */}
+
+                        {/* 套装效果 */}
                         {setBonuses.length > 0 && (
                             <div style={{
                                 marginTop: 14,
@@ -2157,26 +2165,18 @@ const CharacterDetailsModal = ({ character, onClose, onUnequip, onEditSkills, st
                                 background: 'rgba(0,0,0,0.25)',
                                 border: '1px solid rgba(201,162,39,0.25)'
                             }}>
-                                <div style={{
-                                    fontSize: 14,
-                                    fontWeight: 800,
-                                    color: '#ffd700',
-                                    marginBottom: 8
-                                }}>
+                                <div style={{ fontSize: 14, fontWeight: 800, color: '#ffd700', marginBottom: 8 }}>
                                     套装效果
                                 </div>
 
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                                     {setBonuses.map(set => (
-                                        <div
-                                            key={set.setId}
-                                            style={{
-                                                padding: 10,
-                                                borderRadius: 8,
-                                                background: 'rgba(0,0,0,0.25)',
-                                                border: '1px solid rgba(201,162,39,0.18)'
-                                            }}
-                                        >
+                                        <div key={set.setId} style={{
+                                            padding: 10,
+                                            borderRadius: 8,
+                                            background: 'rgba(0,0,0,0.25)',
+                                            border: '1px solid rgba(201,162,39,0.18)'
+                                        }}>
                                             <div style={{
                                                 display: 'flex',
                                                 justifyContent: 'space-between',
@@ -2203,13 +2203,13 @@ const CharacterDetailsModal = ({ character, onClose, onUnequip, onEditSkills, st
                                 </div>
                             </div>
                         )}
-
                     </div>
                 </div>
             </div>
         </div>
     );
 };
+
 
 
 

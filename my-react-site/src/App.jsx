@@ -154,7 +154,7 @@ const ZONES = {
         ],
         resources: ['木材', '毛皮'],
         unlocked: false,
-        unlockLevel: 5
+        unlockLevel: 10
     },
     redridge: {
         id: 'redridge',
@@ -167,7 +167,7 @@ const ZONES = {
         ],
         resources: ['木材', '铁矿'],
         unlocked: false,
-        unlockLevel: 10
+        unlockLevel: 20
     }
 };
 

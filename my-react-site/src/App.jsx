@@ -6,7 +6,7 @@ const CLASSES = {
     protection_warrior: {
         id: 'protection_warrior',
         name: '防护战士',
-        baseStats: { hp: 150, mp: 50, attack: 15, spellPower: 5, armor: 30, magicResist: 10, blockValue: 20,blockRate:0,critRate:5 },
+        baseStats: { hp: 150, mp: 50, attack: 15, spellPower: 5, armor: 30, magicResist: 10, blockValue: 20},
         skills: [
             { level: 1, skillId: 'basic_attack' },
             { level: 1, skillId: 'rest' },
@@ -451,7 +451,7 @@ function calculateTotalStats(character) {
         critDamage: 2.0,
         mastery: 0,
         versatility: 0,
-        blockRate: 0.1,
+        blockRate: 0,
         expBonus: 0
     };
 

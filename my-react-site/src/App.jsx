@@ -137,11 +137,11 @@ const DROP_TABLES = {
         equipment: [
             {
                 id: 'EQ_001',
-                chance: 0.5, // 0.5%
+                chance: 0.05, // 0.5%
             },
             {
                 id: 'EQ_002',
-                chance: 0.005, // 0.5%
+                chance: 0.05, // 0.5%
             }
         ],
         items: [

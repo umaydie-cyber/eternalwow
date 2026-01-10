@@ -1875,6 +1875,93 @@ const SkillEditorModal = ({ character, onClose, onSave, state }) => {
     );
 };
 
+// 查看可用技能（排除“休息/普通攻击”）
+const SkillViewerModal = ({ character, onClose }) => {
+    const availableSkillIds = (character.skills || []).filter(
+        (sid) => sid && sid !== 'rest' && sid !== 'basic_attack' && SKILLS[sid]
+    );
+
+    return (
+        <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0,0,0,0.85)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: 20
+        }} onClick={onClose}>
+            <div style={{
+                background: 'linear-gradient(135deg, rgba(30,25,20,0.98) 0%, rgba(20,15,12,0.98) 100%)',
+                border: '3px solid #c9a227',
+                borderRadius: 12,
+                padding: 24,
+                maxWidth: 700,
+                width: '100%',
+                maxHeight: '80vh',
+                overflowY: 'auto',
+                boxShadow: '0 8px 32px rgba(201,162,39,0.3)',
+            }} onClick={(e) => e.stopPropagation()}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                    <div>
+                        <h2 style={{ margin: 0, fontSize: 20, color: '#ffd700' }}>
+                            查看技能 - {character.name}
+                        </h2>
+                        <div style={{ fontSize: 12, color: '#888', marginTop: 4 }}>
+                            仅展示可用技能（不含“休息/普通攻击”）
+                        </div>
+                    </div>
+                    <Button onClick={onClose} variant="secondary">✕ 关闭</Button>
+                </div>
+
+                {availableSkillIds.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: 40, color: '#666' }}>
+                        暂无可用技能
+                    </div>
+                ) : (
+                    <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(2, 1fr)',
+                        gap: 12
+                    }}>
+                        {availableSkillIds.map((sid) => {
+                            const skill = SKILLS[sid];
+                            return (
+                                <div key={sid} style={{
+                                    background: 'rgba(0,0,0,0.3)',
+                                    border: '1px solid #4a3c2a',
+                                    borderRadius: 10,
+                                    padding: 14
+                                }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+                                        <div style={{ fontSize: 26 }}>{skill.icon}</div>
+                                        <div style={{ flex: 1 }}>
+                                            <div style={{ color: '#ffd700', fontWeight: 700, fontSize: 13 }}>
+                                                {skill.name}
+                                            </div>
+                                            <div style={{ color: '#888', fontSize: 11 }}>
+                                                类型：{skill.type}{typeof skill.limit === 'number' ? ` · 槽位上限：${skill.limit}` : ''}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div style={{ fontSize: 12, color: '#ccc', lineHeight: 1.5 }}>
+                                        {skill.description}
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+};
+
 // 战斗日志模态框
 const CombatLogsModal = ({ logs, onClose, onClear }) => {
     return (
@@ -2036,7 +2123,7 @@ const CombatLogsModal = ({ logs, onClose, onClear }) => {
 };
 
 // 角色详情模态框
-const CharacterDetailsModal = ({ characterId, state, onClose, onUnequip, onEditSkills }) => {
+const CharacterDetailsModal = ({ characterId, state, onClose, onUnequip, onEditSkills, onViewSkills }) => {
     const character = state.characters.find(c => c.id === characterId);
 
     // 角色被删除/不存在时，直接不渲染（或你也可以 onClose()）
@@ -2096,6 +2183,7 @@ const CharacterDetailsModal = ({ characterId, state, onClose, onUnequip, onEditS
                         </div>
                     </div>
                     <div style={{ display: 'flex', gap: 8 }}>
+                        <Button onClick={onViewSkills} variant="secondary">👁 查看技能</Button>
                         <Button onClick={onEditSkills} variant="secondary">✏️ 编辑技能</Button>
                         <Button onClick={onClose} variant="secondary">✕ 关闭</Button>
                     </div>
@@ -2736,6 +2824,7 @@ const CharacterPage = ({ state, dispatch }) => {
     const [newChar, setNewChar] = useState({ name: '', race: RACES[0], classId: 'protection_warrior' });
     const [selectedCharId, setSelectedCharId] = useState(null);
     const [showSkillEditor, setShowSkillEditor] = useState(null);
+    const [showSkillViewer, setShowSkillViewer] = useState(null);
     const [showCombatLogs, setShowCombatLogs] = useState(false);
 
     const createCharacter = () => {
@@ -2773,6 +2862,13 @@ const CharacterPage = ({ state, dispatch }) => {
                 />
             )}
 
+            {showSkillViewer && (
+                <SkillViewerModal
+                    character={showSkillViewer}
+                    onClose={() => setShowSkillViewer(null)}
+                />
+            )}
+
             {selectedCharId && (
                 <CharacterDetailsModal
                     characterId={selectedCharId}
@@ -2784,6 +2880,11 @@ const CharacterPage = ({ state, dispatch }) => {
                     onEditSkills={() => {
                         const latest = state.characters.find(c => c.id === selectedCharId);
                         if (latest) setShowSkillEditor(latest);
+                        setSelectedCharId(null);
+                    }}
+                    onViewSkills={() => {
+                        const latest = state.characters.find(c => c.id === selectedCharId);
+                        if (latest) setShowSkillViewer(latest);
                         setSelectedCharId(null);
                     }}
                 />
@@ -3002,8 +3103,18 @@ const CharacterPage = ({ state, dispatch }) => {
                                     <div>护甲: {Math.floor(char.stats.armor)}</div>
                                 </div>
 
-                                {/* ✅ 删除“查看详情”按钮，只保留“编辑技能” */}
+                                {/* ✅ 角色卡片：查看技能（排除“休息/普通攻击”） + 编辑技能 */}
                                 <div style={{ display: 'flex', gap: 8 }}>
+                                    <Button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setShowSkillViewer(char);
+                                        }}
+                                        variant="secondary"
+                                        style={{ flex: 1, fontSize: 11, padding: '6px 8px' }}
+                                    >
+                                        查看技能
+                                    </Button>
                                     <Button
                                         onClick={(e) => {
                                             e.stopPropagation();     // ✅ 防止触发卡片点击打开详情

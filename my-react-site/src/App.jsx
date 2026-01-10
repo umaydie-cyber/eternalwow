@@ -964,8 +964,7 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1) {
             buffs,
             validSkills,
             logs,
-            talentBuffs,
-            logs
+            talentBuffs
         }
     };
 }

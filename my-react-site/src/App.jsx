@@ -387,7 +387,8 @@ function formatBonusText(bonusObj) {
         hpPct: '生命',
         expBonus: '经验值增幅',
         goldBonus: '金币增幅',
-        dropBonus: '掉落增幅'
+        dropBonus: '掉落增幅',
+        resourceBonus: '资源产出增幅',
     };
 
     return entries.map(([k, v]) => {
@@ -3450,6 +3451,7 @@ const AchievementPage = ({ state }) => {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: 12 }}>
                 {Object.values(ACHIEVEMENTS).map(achievement => {
                     const unlocked = state.achievements[achievement.id];
+                    const bonusText = formatBonusText(achievement.reward);
 
                     return (
                         <div
@@ -3465,6 +3467,7 @@ const AchievementPage = ({ state }) => {
                             <div style={{ fontSize: 32, textAlign: 'center', marginBottom: 8 }}>
                                 {achievement.icon}
                             </div>
+
                             <h4 style={{
                                 margin: '0 0 8px 0',
                                 fontSize: 14,
@@ -3473,6 +3476,7 @@ const AchievementPage = ({ state }) => {
                             }}>
                                 {achievement.name}
                             </h4>
+
                             <div style={{
                                 fontSize: 11,
                                 color: '#aaa',
@@ -3481,6 +3485,23 @@ const AchievementPage = ({ state }) => {
                             }}>
                                 {achievement.description}
                             </div>
+
+                            {/* ✅ BONUS 展示（已解锁显示“已获得”，未解锁显示“奖励预览”也行） */}
+                            {!!bonusText && (
+                                <div style={{
+                                    fontSize: 11,
+                                    color: unlocked ? '#4CAF50' : '#9aa0a6',
+                                    textAlign: 'center',
+                                    padding: '6px 8px',
+                                    background: unlocked ? 'rgba(76,175,80,0.10)' : 'rgba(255,255,255,0.04)',
+                                    borderRadius: 6,
+                                    border: unlocked ? '1px solid rgba(76,175,80,0.25)' : '1px solid rgba(255,255,255,0.08)',
+                                    marginBottom: 8
+                                }}>
+                                    {unlocked ? `BONUS：${bonusText}` : `奖励：${bonusText}`}
+                                </div>
+                            )}
+
                             {unlocked && (
                                 <div style={{
                                     fontSize: 10,
@@ -3500,6 +3521,7 @@ const AchievementPage = ({ state }) => {
         </Panel>
     );
 };
+
 
 // ==================== PAGE: CODEX ====================
 const CodexPage = ({ state, dispatch }) => {

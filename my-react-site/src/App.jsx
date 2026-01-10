@@ -813,22 +813,22 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1) {
             blockedAmount = Math.min(finalDamage - 1, blockValue); // 至少掉1血
             finalDamage = Math.max(1, finalDamage - blockedAmount);
 
-            logs.push({
+            /*logs.push({
                 round,
                 actor: character.name,
                 action: '格挡',
                 target: character.name,
                 value: blockedAmount,
                 type: 'block'
-            });
+            });*/
         }
 
         charHp -= finalDamage;
-
+        const blockText = blockedAmount > 0 ? `，格挡 ${blockedAmount}` : '';
         logs.push({
             round,
             actor: combatState.enemy?.name,
-            action: `普通攻击(护甲减伤 ${(dr * 100).toFixed(3)}%)`,
+            action: `普通攻击(护甲减伤 ${(dr * 100).toFixed(3)}%${blockText})`,
             target: character.name,
             value: Math.floor(finalDamage),
             type: 'damage'
@@ -1990,6 +1990,15 @@ const CombatLogsModal = ({ logs, onClose, onClear }) => {
                                                         {entry.value}
                                                     </span>
                                                     {' '}点生命
+                                                </>
+                                            )}
+                                            {entry.type === 'block' && (
+                                                <>
+                                                    {' '}格挡了{' '}
+                                                    <span style={{ color: '#4CAF50', fontWeight: 600 }}>
+                                                        {entry.value}
+                                                    </span>
+                                                    {' '}点伤害
                                                 </>
                                             )}
                                         </div>
@@ -3498,7 +3507,7 @@ const AchievementPage = ({ state }) => {
                                     border: unlocked ? '1px solid rgba(76,175,80,0.25)' : '1px solid rgba(255,255,255,0.08)',
                                     marginBottom: 8
                                 }}>
-                                    {unlocked ? `BONUS：${bonusText}` : `奖励：${bonusText}`}
+                                    {unlocked ? `奖励：${bonusText}` : `奖励：${bonusText}`}
                                 </div>
                             )}
 

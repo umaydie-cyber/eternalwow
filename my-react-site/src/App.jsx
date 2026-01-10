@@ -1432,6 +1432,57 @@ function gameReducer(state, action) {
         }
 
 
+        // ✅ Shift+左键：将背包中其它同款装备依次合成到目标装备上，直到 Lv.100 或没有同款
+        case 'BULK_MERGE_EQUIPMENT': {
+            const { targetInstanceId } = action.payload;
+
+            const targetIdx = state.inventory.findIndex(i => i.instanceId === targetInstanceId);
+            if (targetIdx === -1) return state;
+
+            const target = state.inventory[targetIdx];
+            if (!target || target.type !== 'equipment') return state;
+
+            const currentLv = target.currentLevel ?? target.level ?? 0;
+            if (currentLv >= 100) return state;
+
+            // 收集所有同款（同模板 id）装备，排除目标本身
+            const sameList = state.inventory
+                .filter(i => i?.type === 'equipment' && i.id === target.id && i.instanceId !== targetInstanceId);
+
+            if (sameList.length === 0) return state;
+
+            let merged = { ...target };
+            const consumedIds = [];
+
+            for (const other of sameList) {
+                const lvNow = merged.currentLevel ?? merged.level ?? 0;
+                if (lvNow >= 100) break;
+                const next = mergeEquipments(merged, other);
+                if (!next) break;
+                merged = next;
+                consumedIds.push(other.instanceId);
+            }
+
+            // 如果没有发生任何合成，直接返回
+            if (consumedIds.length === 0) return state;
+
+            const newInventory = state.inventory
+                .filter(i => i.instanceId !== targetInstanceId && !consumedIds.includes(i.instanceId));
+            newInventory.push(merged);
+
+            let nextState = {
+                ...addEquipmentIdToCodex(state, merged.id),
+                inventory: newInventory,
+            };
+
+            if ((merged.currentLevel ?? merged.level ?? 0) >= 100) {
+                nextState = addEquipmentIdToLv100Codex(nextState, merged.id);
+            }
+
+            return nextState;
+        }
+
+
         case 'ASSIGN_ZONE': {
             const { characterId, zoneId } = action.payload;
             return {
@@ -1875,11 +1926,14 @@ const SkillEditorModal = ({ character, onClose, onSave, state }) => {
     );
 };
 
-// 查看可用技能（排除“休息/普通攻击”）
+
+
+// 技能查看模态框（只展示除“休息/普通攻击”外的可用技能）
 const SkillViewerModal = ({ character, onClose }) => {
-    const availableSkillIds = (character.skills || []).filter(
-        (sid) => sid && sid !== 'rest' && sid !== 'basic_attack' && SKILLS[sid]
-    );
+    if (!character) return null;
+
+    const available = (character.skills || [])
+        .filter(sid => sid && sid !== 'rest' && sid !== 'basic_attack' && SKILLS[sid]);
 
     return (
         <div style={{
@@ -1902,55 +1956,57 @@ const SkillViewerModal = ({ character, onClose }) => {
                 padding: 24,
                 maxWidth: 700,
                 width: '100%',
-                maxHeight: '80vh',
+                maxHeight: '90vh',
                 overflowY: 'auto',
                 boxShadow: '0 8px 32px rgba(201,162,39,0.3)',
             }} onClick={(e) => e.stopPropagation()}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: 16 }}>
                     <div>
-                        <h2 style={{ margin: 0, fontSize: 20, color: '#ffd700' }}>
-                            查看技能 - {character.name}
+                        <h2 style={{ margin: '0 0 6px 0', fontSize: 20, color: '#ffd700' }}>
+                            可用技能 - {character.name}
                         </h2>
-                        <div style={{ fontSize: 12, color: '#888', marginTop: 4 }}>
-                            仅展示可用技能（不含“休息/普通攻击”）
+                        <div style={{ fontSize: 12, color: '#888' }}>
+                            仅展示除“休息/普通攻击”之外的可用技能
                         </div>
                     </div>
                     <Button onClick={onClose} variant="secondary">✕ 关闭</Button>
                 </div>
 
-                {availableSkillIds.length === 0 ? (
-                    <div style={{ textAlign: 'center', padding: 40, color: '#666' }}>
-                        暂无可用技能
+                {available.length === 0 ? (
+                    <div style={{
+                        padding: 16,
+                        border: '1px solid rgba(255,255,255,0.12)',
+                        background: 'rgba(0,0,0,0.25)',
+                        borderRadius: 8,
+                        color: '#aaa',
+                        fontSize: 12
+                    }}>
+                        暂无可用技能（需要升级或学习技能）
                     </div>
                 ) : (
-                    <div style={{
-                        display: 'grid',
-                        gridTemplateColumns: 'repeat(2, 1fr)',
-                        gap: 12
-                    }}>
-                        {availableSkillIds.map((sid) => {
-                            const skill = SKILLS[sid];
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
+                        {available.map(sid => {
+                            const s = SKILLS[sid];
                             return (
                                 <div key={sid} style={{
-                                    background: 'rgba(0,0,0,0.3)',
-                                    border: '1px solid #4a3c2a',
+                                    border: '1px solid rgba(255,255,255,0.12)',
+                                    background: 'rgba(0,0,0,0.25)',
                                     borderRadius: 10,
                                     padding: 14
                                 }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-                                        <div style={{ fontSize: 26 }}>{skill.icon}</div>
-                                        <div style={{ flex: 1 }}>
-                                            <div style={{ color: '#ffd700', fontWeight: 700, fontSize: 13 }}>
-                                                {skill.name}
+                                        <div style={{ fontSize: 26 }}>{s.icon}</div>
+                                        <div>
+                                            <div style={{ fontSize: 14, color: '#ffd700', fontWeight: 700 }}>
+                                                {s.name}
                                             </div>
-                                            <div style={{ color: '#888', fontSize: 11 }}>
-                                                类型：{skill.type}{typeof skill.limit === 'number' ? ` · 槽位上限：${skill.limit}` : ''}
+                                            <div style={{ fontSize: 11, color: '#888' }}>
+                                                类型: {s.type || '未知'}{Number.isFinite(s.limit) ? ` | 技能栏上限: ${s.limit}` : ''}
                                             </div>
                                         </div>
                                     </div>
-
                                     <div style={{ fontSize: 12, color: '#ccc', lineHeight: 1.5 }}>
-                                        {skill.description}
+                                        {s.description}
                                     </div>
                                 </div>
                             );
@@ -2123,7 +2179,7 @@ const CombatLogsModal = ({ logs, onClose, onClear }) => {
 };
 
 // 角色详情模态框
-const CharacterDetailsModal = ({ characterId, state, onClose, onUnequip, onEditSkills, onViewSkills }) => {
+const CharacterDetailsModal = ({ characterId, state, onClose, onUnequip, onEditSkills }) => {
     const character = state.characters.find(c => c.id === characterId);
 
     // 角色被删除/不存在时，直接不渲染（或你也可以 onClose()）
@@ -2183,7 +2239,6 @@ const CharacterDetailsModal = ({ characterId, state, onClose, onUnequip, onEditS
                         </div>
                     </div>
                     <div style={{ display: 'flex', gap: 8 }}>
-                        <Button onClick={onViewSkills} variant="secondary">👁 查看技能</Button>
                         <Button onClick={onEditSkills} variant="secondary">✏️ 编辑技能</Button>
                         <Button onClick={onClose} variant="secondary">✕ 关闭</Button>
                     </div>
@@ -2862,13 +2917,6 @@ const CharacterPage = ({ state, dispatch }) => {
                 />
             )}
 
-            {showSkillViewer && (
-                <SkillViewerModal
-                    character={showSkillViewer}
-                    onClose={() => setShowSkillViewer(null)}
-                />
-            )}
-
             {selectedCharId && (
                 <CharacterDetailsModal
                     characterId={selectedCharId}
@@ -2880,11 +2928,6 @@ const CharacterPage = ({ state, dispatch }) => {
                     onEditSkills={() => {
                         const latest = state.characters.find(c => c.id === selectedCharId);
                         if (latest) setShowSkillEditor(latest);
-                        setSelectedCharId(null);
-                    }}
-                    onViewSkills={() => {
-                        const latest = state.characters.find(c => c.id === selectedCharId);
-                        if (latest) setShowSkillViewer(latest);
                         setSelectedCharId(null);
                     }}
                 />
@@ -3103,30 +3146,30 @@ const CharacterPage = ({ state, dispatch }) => {
                                     <div>护甲: {Math.floor(char.stats.armor)}</div>
                                 </div>
 
-                                {/* ✅ 角色卡片：查看技能（排除“休息/普通攻击”） + 编辑技能 */}
-                                <div style={{ display: 'flex', gap: 8 }}>
-                                    <Button
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            setShowSkillViewer(char);
-                                        }}
-                                        variant="secondary"
-                                        style={{ flex: 1, fontSize: 11, padding: '6px 8px' }}
-                                    >
-                                        查看技能
-                                    </Button>
-                                    <Button
-                                        onClick={(e) => {
-                                            e.stopPropagation();     // ✅ 防止触发卡片点击打开详情
-                                            setShowSkillEditor(char);
-                                        }}
-                                        variant="secondary"
-                                        style={{ flex: 1, fontSize: 11, padding: '6px 8px' }}
-                                    >
-                                        编辑技能
-                                    </Button>
-                                </div>
-                            </div>
+                                {/* 技能按钮：查看技能（除休息/普攻外） + 编辑技能 */}
+<div style={{ display: 'flex', gap: 8 }}>
+    <Button
+        onClick={(e) => {
+            e.stopPropagation();
+            setShowSkillViewer(char);
+        }}
+        variant="secondary"
+        style={{ flex: 1, fontSize: 11, padding: '6px 8px' }}
+    >
+        查看技能
+    </Button>
+    <Button
+        onClick={(e) => {
+            e.stopPropagation();     // ✅ 防止触发卡片点击打开详情
+            setShowSkillEditor(char);
+        }}
+        variant="secondary"
+        style={{ flex: 1, fontSize: 11, padding: '6px 8px' }}
+    >
+        编辑技能
+    </Button>
+</div>
+</div>
                         );
 
                     })}
@@ -3231,7 +3274,21 @@ const InventoryPage = ({ state, dispatch }) => {
                                 setDraggedItemId(null);
                             }}
                             onDragEnd={() => setDraggedItemId(null)}
-                            onClick={() => item.type === 'equipment' && setSelectedItem(item)}
+                            onClick={(e) => {
+                                if (item.type !== 'equipment') return;
+
+                                // ✅ Shift+左键：将背包中其它同款装备依次合成到这件上（直到 Lv.100 或没有同款）
+                                if (e.shiftKey) {
+                                    e.preventDefault();
+                                    dispatch({
+                                        type: 'BULK_MERGE_EQUIPMENT',
+                                        payload: { targetInstanceId: item.instanceId }
+                                    });
+                                    return;
+                                }
+
+                                setSelectedItem(item);
+                            }}
                             onContextMenu={(e) => {
                                 e.preventDefault();
 

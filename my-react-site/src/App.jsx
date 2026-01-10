@@ -2726,7 +2726,8 @@ const CharacterPage = ({ state, dispatch }) => {
 
             {selectedChar && (
                 <CharacterDetailsModal
-                    character={selectedChar}
+                    characterId={selectedCharId}
+                    state={state}
                     onClose={() => setSelectedChar(null)}
                     onUnequip={(charId, slot) => {
                         dispatch({ type: 'UNEQUIP_ITEM', payload: { characterId: charId, slot } });
@@ -2737,7 +2738,7 @@ const CharacterPage = ({ state, dispatch }) => {
                         setShowSkillEditor(selectedChar);
                         setSelectedChar(null);
                     }}
-                    state={state}
+
                 />
             )}
 

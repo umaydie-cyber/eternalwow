@@ -3659,9 +3659,9 @@ const InventoryPage = ({ state, dispatch }) => {
                             style={{
                                 padding: 12,
                                 background: item.type === 'equipment'
-                                    ? `linear-gradient(135deg, ${item.qualityColor}22, rgba(0,0,0,0.3))`
+                                    ? `linear-gradient(135deg, ${borderColor}22, rgba(0,0,0,0.3))`
                                     : 'rgba(0,0,0,0.3)',
-                                border: `2px solid ${item.type === 'equipment' ? item.qualityColor : '#4a3c2a'}`,
+                                border: `2px solid ${item.type === 'equipment' ? borderColor : '#4a3c2a'}`,
                                 outline:
                                     (draggedItemId && item.type === 'equipment' && draggedItemId === item.instanceId)
                                         ? '2px solid #ffd700'

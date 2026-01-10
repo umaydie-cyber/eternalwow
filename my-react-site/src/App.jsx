@@ -3900,7 +3900,7 @@ export default function WoWIdleGame() {
                         textShadow: '2px 2px 4px rgba(0,0,0,0.8)',
                         fontWeight: 700,
                     }}>
-                        ⚔️ 艾泽拉斯经理人
+                        ⚔️ 艾泽拉斯万世轮回
                     </h1>
                     <span style={{
                         padding: '4px 12px',

@@ -3580,13 +3580,7 @@ const InventoryPage = ({ state, dispatch }) => {
                     gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))',
                     gap: 8
                 }}>
-                    {state.inventory.map(item => {
-                        const borderColor =
-                            item.type === 'equipment'
-                                ? (item.qualityColor || getRarityColor(item.rarity))
-                                : getRarityColor(item.rarity);
-
-                        return (
+                    {state.inventory.map(item => (
                         <div
                             key={item.instanceId || item.id}
                             draggable={item.type === 'equipment'}
@@ -3659,9 +3653,9 @@ const InventoryPage = ({ state, dispatch }) => {
                             style={{
                                 padding: 12,
                                 background: item.type === 'equipment'
-                                    ? `linear-gradient(135deg, ${borderColor}22, rgba(0,0,0,0.3))`
+                                    ? `linear-gradient(135deg, ${(item.qualityColor || getRarityColor(item.rarity))}22, rgba(0,0,0,0.3))`
                                     : 'rgba(0,0,0,0.3)',
-                                border: `2px solid ${item.type === 'equipment' ? borderColor : '#4a3c2a'}`,
+                                border: `2px solid ${item.type === 'equipment' ? (item.qualityColor || getRarityColor(item.rarity)) : '#4a3c2a'}`,
                                 outline:
                                     (draggedItemId && item.type === 'equipment' && draggedItemId === item.instanceId)
                                         ? '2px solid #ffd700'

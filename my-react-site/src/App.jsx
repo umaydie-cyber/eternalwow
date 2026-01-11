@@ -184,7 +184,11 @@ const DROP_TABLES = {
             },
             {
                 id: 'EQ_003',
-                chance: 0.1, // 0.05%
+                chance: 0.001, // 0.1%
+            },
+            {
+                id: 'EQ_004',
+                chance: 1, // 0.1%
             }
         ],
         items: [
@@ -257,6 +261,27 @@ const FIXED_EQUIPMENTS = {
         maxLevel: 100,
         baseStats: {
             hp: 500,
+            versatility: 10
+        },
+        growth: {
+            hp: 2,
+            versatility: 2
+        }
+    },
+    EQ_004: {
+        id: 'EQ_004',
+        name: '神秘森林戒指',
+        type: 'equipment',
+        slot: 'ring1',
+        rarity: 'blue',
+
+        setId: 'secret_set',
+        setName: '神秘套装',
+
+        level: 1,
+        maxLevel: 100,
+        baseStats: {
+            mp: 100,
             versatility: 10
         },
         growth: {

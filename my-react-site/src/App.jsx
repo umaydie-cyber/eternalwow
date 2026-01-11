@@ -1015,7 +1015,7 @@ function createCombatState(character, enemy, skillSlots) {
         buffs,
         enemyDebuffs: [], // 怪物身上的 debuff
         validSkills,
-        talentBuffs: { attackFlat: 0, blockValueFlat: 0 },
+        talentBuffs: { attackFlat: 0, blockValueFlat: 0, spellPowerFlat: 0 },
         logs: [],
         startedAt: Date.now(),
     };
@@ -1038,7 +1038,9 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1) {
     let enemyDebuffs = Array.isArray(combatState.enemyDebuffs) ? [...combatState.enemyDebuffs] : [];
 
     // 天赋叠层（仅本场战斗有效）
-    let talentBuffs = combatState.talentBuffs ? { ...combatState.talentBuffs } : { attackFlat: 0, blockValueFlat: 0 };
+    let talentBuffs = combatState.talentBuffs
+        ? { ...combatState.talentBuffs }
+        : { attackFlat: 0, blockValueFlat: 0, spellPowerFlat: 0 };
 
     const validSkills = Array.isArray(combatState.validSkills) && combatState.validSkills.length > 0
         ? combatState.validSkills
@@ -1082,8 +1084,10 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1) {
                 ...character.stats,
                 attack: (character.stats.attack || 0) + (talentBuffs.attackFlat || 0),
                 blockValue: (character.stats.blockValue || 0) + (talentBuffs.blockValueFlat || 0),
+                spellPower: (character.stats.spellPower || 0) + (talentBuffs.spellPowerFlat || 0), // ✅ 新增
             }
         };
+
         const result = skill.calculate(charForCalc);
 
         if (result.damage) {
@@ -1190,6 +1194,19 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1) {
                 proc: '质朴',
                 value: 5,
                 text: '【质朴】触发，攻击强度 +5（本场战斗）'
+            });
+        }
+
+        // ===== 10级天赋：神圣灌注（惩击：本场战斗法术强度 +2）=====
+        if (currentSkillId === 'smite' && character.talents?.[10] === 'holy_infusion') {
+            talentBuffs.spellPowerFlat = (talentBuffs.spellPowerFlat || 0) + 2;
+            logs.push({
+                round,
+                kind: 'proc',
+                actor: character.name,
+                proc: '神圣灌注',
+                value: 2,
+                text: '【神圣灌注】触发，法术强度 +2（本场战斗）'
             });
         }
 

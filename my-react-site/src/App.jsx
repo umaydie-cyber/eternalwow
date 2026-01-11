@@ -990,6 +990,7 @@ function createCombatState(character, enemy, skillSlots) {
         round: 0,
         skillIndex: 0,
         buffs,
+        enemyDebuffs: [], // 怪物身上的 debuff
         validSkills,
         talentBuffs: { attackFlat: 0, blockValueFlat: 0 },
         logs: [],
@@ -1010,6 +1011,8 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1) {
 
     // buffs
     let buffs = Array.isArray(combatState.buffs) ? [...combatState.buffs] : [];
+    //enemy debuffs
+    let enemyDebuffs = Array.isArray(combatState.enemyDebuffs) ? [...combatState.enemyDebuffs] : [];
 
     // 天赋叠层（仅本场战斗有效）
     let talentBuffs = combatState.talentBuffs ? { ...combatState.talentBuffs } : { attackFlat: 0, blockValueFlat: 0 };
@@ -1034,6 +1037,11 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1) {
             .map(b => ({ ...b, duration: (b.duration ?? 0) - 1 }))
             .filter(b => (b.duration ?? 0) > 0);
     };
+    const tickEnemyDebuffs = () => {
+        enemyDebuffs = enemyDebuffs
+            .map(d => ({ ...d, duration: (d.duration ?? 0) - 1 }))
+            .filter(d => (d.duration ?? 0) > 0);
+    };
 
     const maxRounds = 20;
 
@@ -1056,8 +1064,45 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1) {
         const result = skill.calculate(charForCalc);
 
         if (result.damage) {
-            const actualDamage = Math.max(1, result.damage - (combatState.enemy?.defense ?? 0));
+            let damage = result.damage;
+
+            // ===== 10级天赋：暗影增幅（暗影伤害 +20%）=====
+            if (character.talents?.[10] === 'shadow_amp' && result.school === 'shadow') {
+                damage *= 1.2;
+            }
+
+            // ===== 20级天赋：阴暗面之力（心灵震爆伤害 +80%）=====
+            // 这里用“当前技能id”判定最稳
+            if (character.talents?.[20] === 'dark_side' && currentSkillId === 'mind_blast') {
+                damage *= 1.8;
+            }
+
+            // ===== 10级天赋：神圣增幅（惩击：目标受法术伤害 +10% 持续2回合）=====
+            // 触发：你使用惩击命中后，给怪物挂 debuff
+            if (character.talents?.[10] === 'holy_vuln' && currentSkillId === 'smite') {
+                enemyDebuffs.push({ type: 'spell_vuln', mult: 1.10, duration: 2 });
+                logs.push({
+                    round,
+                    kind: 'proc',
+                    actor: character.name,
+                    proc: '神圣增幅',
+                    text: '【神圣增幅】触发：目标受到的法术伤害 +10%（2回合）'
+                });
+            }
+
+            // 受法术伤害加成：只对 holy/shadow 这类“法术系”生效（按你当前设计）
+            const isSpellSchool = (result.school === 'holy' || result.school === 'shadow');
+            let takenMult = 1;
+            if (isSpellSchool) {
+                const vuln = enemyDebuffs.find(d => d.type === 'spell_vuln');
+                if (vuln) takenMult *= (vuln.mult ?? 1);
+            }
+
+            // 最后统一结算：乘易伤 -> 扣防御 -> 扣血
+            damage = Math.floor(damage * takenMult);
+            const actualDamage = Math.max(1, damage - (combatState.enemy?.defense ?? 0));
             enemyHp -= actualDamage;
+
             logs.push({
                 round,
                 actor: character.name,
@@ -1166,6 +1211,7 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1) {
 
         // 回合结束，buff duration -1
         tickBuffs();
+        tickEnemyDebuffs();
     }
 
     const finished = (charHp <= 0) || (enemyHp <= 0) || (round >= 20);

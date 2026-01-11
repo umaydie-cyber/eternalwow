@@ -176,11 +176,15 @@ const DROP_TABLES = {
         equipment: [
             {
                 id: 'EQ_001',
-                chance: 0.05, // 0.5%
+                chance: 0.05, // 5%
             },
             {
                 id: 'EQ_002',
-                chance: 0.05, // 0.5%
+                chance: 0.05, // 5%
+            },
+            {
+                id: 'EQ_003',
+                chance: 0.1, // 0.05%
             }
         ],
         items: [
@@ -216,7 +220,6 @@ const FIXED_EQUIPMENTS = {
             blockRate: 2
         }
     },
-
     EQ_002: {
         id: 'EQ_002',
         name: '初心者的小刀',
@@ -238,6 +241,27 @@ const FIXED_EQUIPMENTS = {
             attack: 2,
             critRate: 2,
             critDamage: 2
+        }
+    },
+    EQ_003: {
+        id: 'EQ_003',
+        name: '神秘森林吊坠',
+        type: 'equipment',
+        slot: 'neck',
+        rarity: 'blue',
+
+        setId: 'secret_set',
+        setName: '神秘套装',
+
+        level: 1,
+        maxLevel: 100,
+        baseStats: {
+            hp: 500,
+            versatility: 10
+        },
+        growth: {
+            hp: 2,
+            versatility: 2
         }
     }
 };
@@ -309,7 +333,7 @@ const ACHIEVEMENTS = {
 };
 
 const WORLD_BOSSES = {
-    hogger: { id: 'hogger', name: '霍格', hp: 1000, attack: 30, defense: 20, rewards: { gold: 500, exp: 300, items: ['霍格之爪'] } },
+    hogger: { id: 'hogger', name: '霍格', hp: 18000, attack: 50, defense: 70, rewards: { gold: 5000, exp: 3500, items: ['霍格之爪'] } },
     vancleef: { id: 'vancleef', name: '艾德温·范克里夫', hp: 3000, attack: 50, defense: 35, rewards: { gold: 1500, exp: 800, items: ['范克里夫之刃'] }, unlockLevel: 15 },
 };
 

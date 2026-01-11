@@ -14,6 +14,26 @@ const CLASSES = {
             { level: 5, skillId: 'shield_block' },
             { level: 10, skillId: 'revenge' },
         ]
+    },
+    discipline_priest: {
+        id: 'discipline_priest',
+        name: '戒律牧师',
+        baseStats: {
+            hp: 100,
+            mp: 120,
+            attack: 5,
+            spellPower: 15,
+            armor: 10,
+            magicResist: 20,
+        },
+        skills: [
+            { level: 1, skillId: 'basic_attack' },
+            { level: 1, skillId: 'rest' },
+            { level: 3, skillId: 'smite' },
+            { level: 5, skillId: 'shadow_word_pain' },
+            { level: 10, skillId: 'mind_blast' },
+            { level: 20, skillId: 'power_word_radiance' },
+        ]
     }
 };
 
@@ -53,7 +73,79 @@ const TALENTS = {
                 { id: `t${tier}_c`, name: '（预留）天赋C', description: '待实现' },
             ]
         }))
+    ],
+    discipline_priest: [
+        {
+            tier: 10,
+            options: [
+                {
+                    id: 'shadow_amp',
+                    name: '暗影增幅',
+                    description: '战斗中暗影伤害提高20%',
+                    type: 'aura'
+                },
+                {
+                    id: 'holy_vuln',
+                    name: '神圣增幅',
+                    description: '惩击使目标受到的法术伤害提高10%，持续2回合',
+                    type: 'on_hit'
+                },
+                {
+                    id: 'holy_infusion',
+                    name: '神圣灌注',
+                    description: '惩击使你本场战斗法术强度+2',
+                    type: 'on_cast'
+                }
+            ]
+        },
+        {
+            tier: 20,
+            options: [
+                {
+                    id: 'radiance_plus',
+                    name: '圣光的许诺',
+                    description: '真言术：耀可多配置1次',
+                    type: 'aura'
+                },
+                {
+                    id: 'long_atonement',
+                    name: '持久之光',
+                    description: '救赎持续时间+2回合',
+                    type: 'aura'
+                },
+                {
+                    id: 'dark_side',
+                    name: '阴暗面之力',
+                    description: '心灵震爆伤害提高80%',
+                    type: 'aura'
+                }
+            ]
+        },
+        {
+            tier: 30,
+            options: [
+                {
+                    id: 'pwt',
+                    name: '真言术：耐',
+                    description: '全队生命值提高10%',
+                    type: 'aura'
+                },
+                {
+                    id: 'holy_enlight',
+                    name: '神圣启迪',
+                    description: '全队法术强度提高5%',
+                    type: 'aura'
+                },
+                {
+                    id: 'shadowfiend',
+                    name: '暗影魔',
+                    description: '每回合造成0.3倍法术强度的暗影伤害',
+                    type: 'dot'
+                }
+            ]
+        }
     ]
+
 };
 
 const SKILLS = {
@@ -127,7 +219,68 @@ const SKILLS = {
             damage *= (1 + char.stats.versatility / 100);
             return { damage: Math.floor(damage), isCrit: false };
         }
+    },
+    smite: {
+        id: 'smite',
+        name: '惩击',
+        icon: '✨',
+        type: 'damage',
+        limit: 3,
+        description: '造成基于法术强度的神圣伤害',
+        calculate: (char) => {
+            let damage = char.stats.spellPower * 1.2;
+            return {
+                damage: Math.floor(damage),
+                school: 'holy'
+            };
+        }
+    },
+    shadow_word_pain: {
+        id: 'shadow_word_pain',
+        name: '真言术：痛',
+        icon: '🩸',
+        type: 'dot',
+        limit: 2,
+        description: '持续3回合造成暗影伤害',
+        calculate: (char) => ({
+            dot: {
+                school: 'shadow',
+                damagePerTurn: Math.floor(char.stats.spellPower * 0.6),
+                duration: 3
+            }
+        })
+    },
+    mind_blast: {
+        id: 'mind_blast',
+        name: '心灵震爆',
+        icon: '🧠',
+        type: 'damage',
+        limit: 2,
+        description: '造成高额暗影伤害',
+        calculate: (char) => {
+            let damage = char.stats.spellPower * 2.0;
+            return {
+                damage: Math.floor(damage),
+                school: 'shadow'
+            };
+        }
+    },
+    power_word_radiance: {
+        id: 'power_word_radiance',
+        name: '真言术：耀',
+        icon: '🌟',
+        type: 'heal',
+        limit: 2,
+        description: '为全队治疗并施加【救赎】',
+        calculate: (char) => ({
+            healAll: Math.floor(char.stats.spellPower * 1.5),
+            applyAtonement: {
+                duration: 2
+            }
+        })
     }
+
+
 };
 
 const ZONES = {
@@ -285,7 +438,7 @@ const FIXED_EQUIPMENTS = {
             versatility: 10
         },
         growth: {
-            hp: 2,
+            mp: 2,
             versatility: 2
         }
     }

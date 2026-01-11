@@ -342,6 +342,10 @@ const DROP_TABLES = {
             {
                 id: 'EQ_004',
                 chance: 0.001, // 0.1%
+            },
+            {
+                id: 'EQ_005',
+                chance: 0.05, // 5%
             }
         ],
         items: [
@@ -440,6 +444,25 @@ const FIXED_EQUIPMENTS = {
         growth: {
             mp: 2,
             versatility: 2
+        }
+    },
+    EQ_005: {
+        id: 'EQ_005',
+        name: '初心者的拐杖',
+        type: 'equipment',
+        slot: 'mainHand',
+        rarity: 'green',
+
+        setId: 'beginner_set',
+        setName: '初心者套装',
+
+        level: 8,
+        maxLevel: 100,
+        baseStats: {
+            spellPower: 30
+        },
+        growth: {
+            spellPower: 2
         }
     }
 };
@@ -1226,6 +1249,7 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1) {
             round,
             skillIndex,
             buffs,
+            enemyDebuffs,
             validSkills,
             logs,
             talentBuffs

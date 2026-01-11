@@ -188,7 +188,7 @@ const DROP_TABLES = {
             },
             {
                 id: 'EQ_004',
-                chance: 1, // 0.1%
+                chance: 0.001, // 0.1%
             }
         ],
         items: [

@@ -3330,7 +3330,7 @@ const TalentPage = ({ state, dispatch }) => {
                 }
             >
                 <div style={{ color: '#888', fontSize: 12, marginBottom: 10 }}>
-                    每10级解锁一行，每行3选1。选中后同排其它选项会变黑。当前只实现防护战士的 10/20 级天赋，30-70 级为预留占位。
+                    每10级解锁一行，每行3选1。
                 </div>
 
                 {tiers.map(tierDef => {

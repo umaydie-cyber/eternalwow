@@ -728,8 +728,36 @@ function learnNewSkills(character) {
     return Array.from(learned);
 }
 
+// 计算“全队光环”倍率：只要队里有人点了，就全队吃到
+function getPartyAuraMultipliers(characters) {
+    let hpMul = 1;
+    let spellPowerMul = 1;
+
+    (characters || []).forEach(c => {
+        const t = c.talents || {};
+        // 30级：真言术耐（全队HP+10%）
+        if (t[30] === 'pwt') hpMul *= 1.10;
+
+        // 30级：神圣启迪（全队法强+5%）
+        if (t[30] === 'holy_enlight') spellPowerMul *= 1.05;
+    });
+
+    return { hpMul, spellPowerMul };
+}
+
+// 用同一套光环倍率，重算全队 stats（关键：光环要全队一起重算）
+function recalcPartyStats(characters) {
+    const auras = getPartyAuraMultipliers(characters);
+    return (characters || []).map(c => {
+        const next = { ...c };
+        next.stats = calculateTotalStats(next, auras);
+        return next;
+    });
+}
+
+
 // 计算角色总属性（基础+装备）
-function calculateTotalStats(character) {
+function calculateTotalStats(character, partyAuras = { hpMul: 1, spellPowerMul: 1 }) {
     const classData = CLASSES[character.classId];
 
     // 先算 max
@@ -791,7 +819,7 @@ if (character.classId === 'protection_warrior') {
         }
     });
 
-    totalStats.maxHp = totalStats.hp;
+    totalStats.maxHp = Math.floor((totalStats.hp || 0) * (partyAuras.hpMul || 1));
     totalStats.maxMp = totalStats.mp;
 
     // ✅ 关键：保留旧的 currentHp/currentMp，不要直接重置为满
@@ -800,6 +828,7 @@ if (character.classId === 'protection_warrior') {
 
     totalStats.currentHp = Math.min(totalStats.maxHp, Math.max(0, prevHp));
     totalStats.currentMp = Math.min(totalStats.maxMp, Math.max(0, prevMp));
+    totalStats.spellPower = Math.floor((totalStats.spellPower || 0) * (partyAuras.spellPowerMul || 1));
 
     return totalStats;
 }
@@ -1820,9 +1849,11 @@ function gameReducer(state, action) {
                 return rest;
             });
 
+            const finalChars = recalcPartyStats(cleanedChars);
+
             return {
                 ...state,
-                characters: cleanedChars,
+                characters: finalChars,
                 inventory: newInventory,
             };
         }
@@ -1859,9 +1890,10 @@ function gameReducer(state, action) {
             // Add the unequipped item back to the inventory
             const newInventory = [...state.inventory, equipped];
 
+            const finalChars = recalcPartyStats(newChars);
             return {
                 ...state,
-                characters: newChars,
+                characters: finalChars,
                 inventory: newInventory,
             };
         }
@@ -2101,23 +2133,25 @@ case 'ASSIGN_ZONE': {
             };
         }
 
-case 'SET_TALENT': {
-    const { characterId, tier, talentId } = action.payload || {};
-    if (!characterId || !tier) return state;
+        case 'SET_TALENT': {
+            const { characterId, tier, talentId } = action.payload || {};
+            if (!characterId || !tier) return state;
 
-    const newChars = state.characters.map(c => {
-        if (c.id !== characterId) return c;
+            const updatedChars = state.characters.map(c => {
+                if (c.id !== characterId) return c;
 
-        const talents = { ...(c.talents || {}) };
-        talents[tier] = talentId;
+                const talents = { ...(c.talents || {}) };
+                talents[tier] = talentId;
 
-        const nextChar = { ...c, talents };
-        nextChar.stats = calculateTotalStats(nextChar);
-        return nextChar;
-    });
+                return { ...c, talents };
+            });
 
-    return { ...state, characters: newChars };
-}
+            // 关键：光环会影响全队，所以要全队一起重算
+            const newChars = recalcPartyStats(updatedChars);
+
+            return { ...state, characters: newChars };
+        }
+
 
         case 'SET_MENU': {
             return {

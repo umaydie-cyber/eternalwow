@@ -755,7 +755,7 @@ function calculateTotalStats(character) {
     };
 
     const hasBeginnerSet =
-        character.equipment.mainHand?.id === 'EQ_002' &&
+        (character.equipment.mainHand?.id === 'EQ_002'||character.equipment.mainHand?.id === 'EQ_005') &&
         character.equipment.offHand?.id === 'EQ_001';
 
     if (hasBeginnerSet) {

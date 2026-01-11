@@ -1157,6 +1157,27 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1) {
                 value: result.buff.duration ?? 0,
                 type: 'buff'
             });
+        } else if (result.dot) {
+            // ===== DOT：施加到怪物身上（存到 enemyDebuffs）=====
+            enemyDebuffs.push({
+                type: 'dot',
+                sourceSkillId: currentSkillId,
+                sourceSkillName: skill.name,
+                school: result.dot.school, // 'shadow' / 'holy'...
+                damagePerTurn: result.dot.damagePerTurn,
+                duration: result.dot.duration
+            });
+
+            // 施加日志
+            logs.push({
+                round,
+                actor: character.name,
+                action: `${skill.name}(施加)`,
+                target: combatState.enemy?.name,
+                value: result.dot.damagePerTurn,
+                type: 'debuff',
+                text: `施加持续伤害：每回合 ${result.dot.damagePerTurn}，持续 ${result.dot.duration} 回合`
+            });
         }
 
         // ===== 天赋：质朴（10级）普通攻击后触发（本场战斗叠层） =====
@@ -1173,7 +1194,45 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1) {
         }
 
         skillIndex++;
+
         if (enemyHp <= 0) break;
+
+        // ===== DOT 结算（放在敌人回合前：让“从本回合开始”立即生效）=====
+        const dots = enemyDebuffs.filter(d => d.type === 'dot');
+        if (dots.length > 0) {
+            for (const d of dots) {
+                let dotDamage = d.damagePerTurn ?? 0;
+
+                // 10级天赋：暗影增幅（暗影DOT同样吃加成）
+                if (character.talents?.[10] === 'shadow_amp' && d.school === 'shadow') {
+                    dotDamage *= 1.2;
+                }
+
+                // 如果你启用了“神圣增幅 spell_vuln”，DOT 也算法术伤害：吃易伤
+                const isSpellSchool = (d.school === 'holy' || d.school === 'shadow');
+                if (isSpellSchool) {
+                    const vuln = enemyDebuffs.find(x => x.type === 'spell_vuln');
+                    if (vuln?.mult) dotDamage *= vuln.mult;
+                }
+
+                dotDamage = Math.floor(dotDamage);
+
+                // 扣防御（沿用你 damage 的简化逻辑：damage - enemy.defense）
+                const actualDot = Math.max(1, dotDamage - (combatState.enemy?.defense ?? 0));
+                enemyHp -= actualDot;
+
+                logs.push({
+                    round,
+                    actor: character.name,
+                    action: `${d.sourceSkillName || '持续伤害'}(持续)`,
+                    target: combatState.enemy?.name,
+                    value: actualDot,
+                    type: 'damage'
+                });
+
+                if (enemyHp <= 0) break;
+            }
+        }
 
         // ===== 敌人回合 =====
         const dr = getArmorDamageReduction(character.stats.armor);

@@ -5175,8 +5175,20 @@ const BossCombatModal = ({ combat, state }) => {
 
     return (
         <div style={{
-            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-            background: 'rgba(0,0,0,0.9)', display: 'flex', flexDirection: 'column', zIndex: 1000
+            position: 'fixed',
+            top: '50%', left: '50%',
+            transform: 'translate(-50%, -50%)',
+            width: '90%',
+            maxWidth: 1200,
+            height: '90%',
+            background: 'rgba(20,10,10,0.98)',
+            display: 'flex',
+            flexDirection: 'column',
+            zIndex: 1000,
+            border: '4px solid #c9a227',
+            borderRadius: 16,
+            overflow: 'hidden',
+            boxShadow: '0 0 40px rgba(201,162,39,0.6)'
         }}>
             <div style={{ padding: 16, textAlign: 'center', color: '#ffd700', fontSize: 24 }}>
                 正在挑战 {boss.name} - 第 {combat.round} 回合
@@ -5186,9 +5198,16 @@ const BossCombatModal = ({ combat, state }) => {
                 <div>
                     <h3 style={{ color: '#4CAF50' }}>队伍</h3>
                     {combat.playerStates.map((p, i) => (
-                        <div key={i} style={{ marginBottom: 12 }}>
-                            <div>位置{i + 1} {p.char.name} Lv.{p.char.level}</div>
-                            <StatBar current={p.currentHp} max={p.char.stats.maxHp} color="#f44336" />
+                        <div key={i} style={{ marginBottom: 16 }}>
+                            <div style={{ fontSize: 14, marginBottom: 4 }}>
+                                位置{i + 1} {p.char.name} Lv.{p.char.level}
+                            </div>
+                            <StatBar
+                                label="生命值"
+                                current={p.currentHp}
+                                max={p.char.stats.maxHp}
+                                color="#f44336"
+                            />
                         </div>
                     ))}
                 </div>
@@ -5196,14 +5215,25 @@ const BossCombatModal = ({ combat, state }) => {
                 <div>
                     <h3 style={{ color: '#f44336' }}>敌人</h3>
                     <div style={{ marginBottom: 16 }}>
-                        <div>{boss.name}</div>
-                        <StatBar current={combat.bossHp} max={boss.maxHp} color="#ff4444" />
+                        <div style={{ fontSize: 14, marginBottom: 4 }}>{boss.name}</div>
+                        <StatBar
+                            label="生命值"
+                            current={combat.bossHp}
+                            max={boss.maxHp}
+                            color="#ff4444"
+                        />
                     </div>
                     {combat.minions.length > 0 && (
                         <div>
-                            <div>豺狼人小弟 ({combat.minions.length})</div>
+                            <div style={{ fontSize: 14, marginBottom: 8 }}>豺狼人小弟 ({combat.minions.length}个)</div>
                             {combat.minions.map((m, i) => (
-                                <StatBar key={i} current={m.hp} max={boss.minion.maxHp} color="#ff6666" />
+                                <StatBar
+                                    key={i}
+                                    label={`小弟${i + 1} 生命值`}
+                                    current={m.hp}
+                                    max={boss.minion.maxHp}
+                                    color="#ff6666"
+                                />
                             ))}
                         </div>
                     )}

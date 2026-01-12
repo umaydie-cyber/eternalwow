@@ -901,11 +901,14 @@ function stepBossCombat(state) {
     if (!state.bossCombat) return state;
 
     let combat = { ...state.bossCombat };
+    combat.logs = combat.logs || [];  // ← 安全防护
+    let logs = [...combat.logs]; // immutable
+
     const boss = BOSS_DATA[combat.bossId];
     if (!boss) return state;
 
     combat.round += 1;
-    let logs = [...combat.logs]; // immutable
+
 
     // ==================== 玩家阶段 ====================
     for (let i = 0; i < combat.playerStates.length; i++) {
@@ -1037,9 +1040,9 @@ function stepBossCombat(state) {
         }
 
         // 更新日志（可选显示在其他地方）
-        newState.combatLogs = [...(newState.combatLogs || []), ...logs].slice(-100);
+        // 胜负日志推到全局 combatLogs（或直接留到 combat.logs）
+        newState.combatLogs = [...(newState.combatLogs || []), ...logs, (bossDead ? '★★★ 胜利！获得奖励 ★★★' : '××× 失败，全队阵亡 ×××')].slice(-100);
 
-        // ✅ 关键：一定要 return！
         return newState;
     }
 

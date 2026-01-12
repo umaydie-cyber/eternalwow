@@ -1040,8 +1040,21 @@ function stepBossCombat(state) {
         }
 
         // 更新日志（可选显示在其他地方）
-        // 胜负日志推到全局 combatLogs（或直接留到 combat.logs）
-        newState.combatLogs = [...(newState.combatLogs || []), ...logs, (bossDead ? '★★★ 胜利！获得奖励 ★★★' : '××× 失败，全队阵亡 ×××')].slice(-100);
+        // ✅ 新代码：写成和普通战斗一致的结构
+        const bossLogEntry = {
+            id: `bosslog_${Date.now()}_${Math.random()}`,
+            timestamp: Date.now(),
+            characterName: '队伍',
+            zoneName: '世界首领',
+            enemyName: boss.name,
+            result: bossDead ? 'victory' : 'defeat',
+            logs: logs, // 这里 logs 本来就是字符串数组，没问题
+            rewards: bossDead
+                ? { gold: boss.rewards.gold, exp: boss.rewards.exp }
+                : { gold: 0, exp: 0 },
+        };
+
+        newState.combatLogs = [bossLogEntry, ...(newState.combatLogs || [])].slice(0, 50);
 
         return newState;
     }
@@ -2907,6 +2920,27 @@ function renderCombatLogLine(entry) {
 
 // 战斗日志模态框
 const CombatLogsModal = ({ logs, onClose, onClear }) => {
+
+    const safe = Array.isArray(logs) ? logs : [];
+
+    const normalized = safe
+        .filter(Boolean)
+        .map((x) => {
+            if (typeof x === "string") {
+                return {
+                    id: `legacy_${Date.now()}_${Math.random()}`,
+                    timestamp: Date.now(),
+                    characterName: "系统",
+                    zoneName: "",
+                    enemyName: "",
+                    result: "victory",
+                    logs: [x],
+                    rewards: { gold: 0, exp: 0 },
+                };
+            }
+            return { ...x, logs: Array.isArray(x.logs) ? x.logs : [] };
+        });
+
     return (
         <div style={{
             position: 'fixed',
@@ -2955,7 +2989,7 @@ const CombatLogsModal = ({ logs, onClose, onClear }) => {
                             暂无战斗记录
                         </div>
                     ) : (
-                        logs.map(log => (
+                        normalized.map(log => (
                             <div key={log.id} style={{
                                 background: log.result === 'victory' ? 'rgba(76,175,80,0.1)' : 'rgba(244,67,54,0.1)',
                                 border: `1px solid ${log.result === 'victory' ? '#4CAF50' : '#f44336'}`,
@@ -2997,7 +3031,7 @@ const CombatLogsModal = ({ logs, onClose, onClear }) => {
                                     fontSize: 11,
                                     color: '#ccc'
                                 }}>
-                                    {log.logs.map((entry, i) => (
+                                    {(log.logs || []).map((entry, i) => (
                                         <div key={i} style={{
                                             padding: '4px 0',
                                             borderBottom: i < log.logs.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none'

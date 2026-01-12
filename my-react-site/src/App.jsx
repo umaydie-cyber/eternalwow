@@ -5315,7 +5315,7 @@ export default function WoWIdleGame() {
             case 'inventory': return <InventoryPage state={state} dispatch={dispatch} />;
             case 'city': return <CityPage state={state} dispatch={dispatch} />;
             case 'research': return <ResearchPage state={state} dispatch={dispatch} />;
-            case 'worldboss': return <WorldBossPage state={state} />;
+            case 'worldboss': return <WorldBossPage state={state} dispatch={dispatch}/>;
             case 'achievement': return <AchievementPage state={state} />;
             case 'codex': return <CodexPage state={state} dispatch={dispatch} />;
             default: return <MapPage state={state} dispatch={dispatch} />;

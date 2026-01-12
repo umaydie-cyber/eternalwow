@@ -534,8 +534,8 @@ const ACHIEVEMENTS = {
 };
 
 const WORLD_BOSSES = {
-    hogger: { id: 'hogger', name: '霍格', hp: 18000, attack: 50, defense: 70, rewards: { gold: 5000, exp: 3500, items: ['霍格之爪'] } },
-    vancleef: { id: 'vancleef', name: '艾德温·范克里夫', hp: 3000, attack: 50, defense: 35, rewards: { gold: 1500, exp: 800, items: ['范克里夫之刃'] }, unlockLevel: 15 },
+    hogger: { id: 'hogger', name: '霍格', hp: 18000, attack: 150, defense: 70, rewards: { gold: 5000, exp: 5500, items: ['霍格之爪'] } },
+    vancleef: { id: 'vancleef', name: '艾德温·范克里夫', hp: 30000, attack: 200, defense: 85, rewards: { gold: 15000, exp: 6800, items: ['范克里夫之刃'] }, unlockLevel: 30 },
 };
 
 // 装备槽位定义
@@ -563,6 +563,40 @@ const SET_BONUSES = {
             { count: 2, bonus: { expBonus: 0.20 } },
         ]
     }
+};
+
+// ==================== BOSS DATA ====================
+const BOSS_DATA = {
+    hogger: {
+        id: 'hogger',
+        name: '霍格',
+        maxHp: 18000,
+        attack: 150,
+        defense: 70,
+        cycle: ['summon', 'strike', 'strike', 'strike'], // 循环：召唤 → 重击 ×3
+        summonCount: 2,
+        heavyMultiplier: 2.5,
+        minion: {
+            name: '豺狼人小弟',
+            maxHp: 300,
+            attack: 75, // 0.5 × boss attack
+            defense: 20
+        },
+        rewards: {
+            gold: 5000,
+            exp: 5500,
+            items: [
+                {
+                    name: '霍格之爪',
+                    icon: '🗡️',
+                    type: 'junk',
+                    rarity: 'purple',
+                    sellPrice: 10000
+                }
+            ]
+        }
+    }
+    // 其他boss后续可扩展
 };
 
 // ==================== UTILS ====================
@@ -862,6 +896,254 @@ function scaleStats(baseStats = {}, growth = {}, level = 0) {
     return scaled;
 }
 
+// ==================== BOSS战斗一步推进函数 ====================
+function stepBossCombat(state) {
+    let combat = { ...state.bossCombat };
+    if (!combat) return state;
+
+    const boss = BOSS_DATA[combat.bossId];
+    combat.round += 1;
+    const logs = combat.logs;
+
+    // ==================== 玩家阶段 ====================
+    for (let i = 0; i < combat.playerStates.length; i++) {
+        const p = combat.playerStates[i];
+        if (p.currentHp <= 0) continue;
+
+        const skillId = p.validSkills[p.skillIndex % p.validSkills.length];
+        p.skillIndex += 1;
+        const skill = SKILLS[skillId];
+        if (!skill) continue;
+
+        const charForCalc = {
+            ...p.char,
+            stats: {
+                ...p.char.stats,
+                attack: (p.char.stats.attack || 0) + (p.talentBuffs.attackFlat || 0),
+                blockValue: (p.char.stats.blockValue || 0) + (p.talentBuffs.blockValueFlat || 0),
+                spellPower: (p.char.stats.spellPower || 0) + (p.talentBuffs.spellPowerFlat || 0)
+            }
+        };
+
+        const result = skill.calculate(charForCalc);
+
+        // 目标选择
+        let targetType = 'boss';
+        let targetIndex = -1; // minion index
+        if (!combat.strategy.priorityBoss) {
+            const aliveMinions = combat.minions.map((m, idx) => ({ idx, hp: m.hp })).filter(m => m.hp > 0);
+            if (aliveMinions.length > 0) {
+                aliveMinions.sort((a, b) => a.hp - b.hp);
+                targetIndex = aliveMinions[0].idx;
+                targetType = 'minion';
+            }
+        }
+
+        // 伤害/治疗/DOT处理
+        if (result.damage) {
+            let damage = result.damage;
+
+            // 天赋示例：暗影增幅、心灵震爆加成等（可继续补充）
+            if (p.char.talents?.[10] === 'shadow_amp' && result.school === 'shadow') damage *= 1.2;
+            if (p.char.talents?.[20] === 'dark_side' && skillId === 'mind_blast') damage *= 1.8;
+
+            const targetDefense = targetType === 'boss' ? boss.defense : boss.minion.defense;
+            const actualDamage = Math.max(1, Math.floor(damage) - targetDefense);
+
+            if (targetType === 'boss') {
+                combat.bossHp -= actualDamage;
+            } else {
+                combat.minions[targetIndex].hp -= actualDamage;
+            }
+
+            logs.push(`位置${i + 1} ${p.char.name} 使用 ${skill.name} 对 ${targetType === 'boss' ? boss.name : boss.minion.name} 造成 ${actualDamage} 伤害${result.isCrit ? '（暴击）' : ''}`);
+        }
+
+        if (result.healAll) {
+            const heal = Math.floor(result.healAll);
+            combat.playerStates.forEach(ps => {
+                if (ps.currentHp > 0) {
+                    ps.currentHp = Math.min(ps.char.stats.maxHp, ps.currentHp + heal);
+                }
+            });
+            logs.push(`位置${i + 1} ${p.char.name} 使用 ${skill.name} 全队治疗 ${heal}`);
+        }
+
+        if (result.dot) {
+            const dot = {
+                damagePerTurn: result.dot.damagePerTurn,
+                duration: result.dot.duration,
+                school: result.dot.school
+            };
+            if (targetType === 'boss') {
+                combat.bossDebuffs.push(dot);
+            } else {
+                if (!combat.minionDebuffs[targetIndex]) combat.minionDebuffs[targetIndex] = [];
+                combat.minionDebuffs[targetIndex].push(dot);
+            }
+            logs.push(`位置${i + 1} ${p.char.name} 对目标施加持续伤害`);
+        }
+
+        // 天赋触发示例：质朴
+        if (skillId === 'basic_attack' && p.char.talents?.[10] === 'plain') {
+            p.talentBuffs.attackFlat += 5;
+            logs.push(`【质朴】触发：${p.char.name} 攻击+5`);
+        }
+    }
+
+    // ==================== DOT结算 ====================
+    // Boss DOT
+    combat.bossDebuffs = combat.bossDebuffs.filter(dot => {
+        const actual = Math.max(1, Math.floor(dot.damagePerTurn) - boss.defense);
+        combat.bossHp -= actual;
+        logs.push(`Boss受到持续伤害 ${actual}`);
+        dot.duration -= 1;
+        return dot.duration > 0;
+    });
+
+    // 小弟 DOT
+    combat.minionDebuffs = combat.minionDebuffs.map(list => list.filter(dot => {
+        const actual = Math.max(1, Math.floor(dot.damagePerTurn) - boss.minion.defense);
+        // 找到对应minion
+        const minionIdx = combat.minionDebuffs.indexOf(list);
+        if (combat.minions[minionIdx]) combat.minions[minionIdx].hp -= actual;
+        logs.push(`小弟受到持续伤害 ${actual}`);
+        dot.duration -= 1;
+        return dot.duration > 0;
+    }));
+
+    // 清理死亡小弟
+    let aliveMinions = [];
+    let aliveMinionDebuffs = [];
+    combat.minions.forEach((m, idx) => {
+        if (m.hp > 0) {
+            aliveMinions.push(m);
+            aliveMinionDebuffs.push(combat.minionDebuffs[idx] || []);
+        }
+    });
+    combat.minions = aliveMinions;
+    combat.minionDebuffs = aliveMinionDebuffs;
+
+    // ==================== Boss阶段 ====================
+    const cycleIdx = (combat.round - 1) % boss.cycle.length;
+    const action = boss.cycle[cycleIdx];
+
+    if (action === 'summon') {
+        for (let i = 0; i < boss.summonCount; i++) {
+            combat.minions.push({ hp: boss.minion.maxHp });
+            combat.minionDebuffs.push([]);
+        }
+        logs.push(`霍格召唤了 ${boss.summonCount} 个豺狼人小弟`);
+    } else if (action === 'strike') {
+        // 优先攻击位置1→2→3存活角色
+        let targetI = -1;
+        for (let j = 0; j < combat.playerStates.length; j++) {
+            if (combat.playerStates[j].currentHp > 0) {
+                targetI = j;
+                break;
+            }
+        }
+        if (targetI !== -1) {
+            const p = combat.playerStates[targetI];
+            let damage = boss.attack * boss.heavyMultiplier;
+            damage = applyPhysicalMitigation(damage, p.char.stats.armor);
+
+            // 格挡判定
+            const blockChance = (p.char.stats.blockRate || 0) / 100;
+            let blocked = 0;
+            if (Math.random() < blockChance) {
+                blocked = Math.min(damage - 1, p.char.stats.blockValue + p.talentBuffs.blockValueFlat);
+                damage -= blocked;
+                logs.push(`位置${targetI + 1} ${p.char.name} 格挡 ${blocked}`);
+                if (p.char.talents?.[10] === 'block_master') {
+                    p.talentBuffs.blockValueFlat += 10;
+                    logs.push(`【格挡大师】触发：格挡值+10`);
+                }
+            }
+
+            damage = Math.max(1, Math.floor(damage * (p.char.stats.damageTakenMult || 1)));
+            p.currentHp -= damage;
+            logs.push(`霍格重击位置${targetI + 1} ${p.char.name}，造成 ${damage} 伤害`);
+        }
+    }
+
+    // ==================== 小弟阶段 ====================
+    combat.minions.forEach((minion, idx) => {
+        if (minion.hp <= 0) return;
+        let targetI = -1;
+        for (let j = 0; j < combat.playerStates.length; j++) {
+            if (combat.playerStates[j].currentHp > 0) {
+                targetI = j;
+                break;
+            }
+        }
+        if (targetI !== -1) {
+            const p = combat.playerStates[targetI];
+            let damage = boss.minion.attack;
+            damage = applyPhysicalMitigation(damage, p.char.stats.armor);
+
+            const blockChance = (p.char.stats.blockRate || 0) / 100;
+            let blocked = 0;
+            if (Math.random() < blockChance) {
+                blocked = Math.min(damage - 1, p.char.stats.blockValue + p.talentBuffs.blockValueFlat);
+                damage -= blocked;
+                logs.push(`位置${targetI + 1} ${p.char.name} 格挡小弟攻击 ${blocked}`);
+                if (p.char.talents?.[10] === 'block_master') p.talentBuffs.blockValueFlat += 10;
+            }
+
+            damage = Math.max(1, Math.floor(damage));
+            p.currentHp -= damage;
+            logs.push(`小弟${idx + 1} 攻击位置${targetI + 1} ${p.char.name}，造成 ${damage} 伤害`);
+        }
+    });
+
+    // ==================== 胜负判定 ====================
+    const allPlayersDead = combat.playerStates.every(p => p.currentHp <= 0);
+    const bossDead = combat.bossHp <= 0;
+
+    if (bossDead || allPlayersDead) {
+        let newState = { ...state, bossCombat: null };
+
+        if (bossDead) {
+            // 胜利奖励
+            newState.resources.gold += boss.rewards.gold;
+
+            combat.playerStates.forEach(p => {
+                const char = newState.characters.find(c => c.id === p.char.id);
+                if (char) {
+                    let gainedExp = boss.rewards.exp * (1 + (char.stats.expBonus || 0));
+                    char.exp += gainedExp;
+
+                    while (char.exp >= char.expToNext && char.level < 200) {
+                        char.level++;
+                        char.exp -= char.expToNext;
+                        char.expToNext = Math.floor(100 * Math.pow(1.2, char.level - 1));
+                        char.skills = learnNewSkills(char);
+                    }
+                    char.stats = calculateTotalStats(char);
+                }
+            });
+
+            boss.rewards.items.forEach(item => {
+                newState.inventory.push({
+                    instanceId: `boss_${Date.now()}_${Math.random()}`,
+                    ...item
+                });
+            });
+
+            logs.push('★★★ 胜利！获得奖励 ★★★');
+        } else {
+            logs.push('××× 失败，全队阵亡 ×××');
+        }
+    } else {
+        // 继续战斗
+        combat.logs = [...logs].slice(-50);
+        return { ...state, bossCombat: combat };
+    }
+
+    return newState;
+}
+
 
 // ==================== INITIAL STATE ====================
 const initialState = {
@@ -900,6 +1182,10 @@ const initialState = {
     offlineRewards: null,
     dropFilters: {}, // { [itemId]: true/false }  true=允许掉落  false=禁止掉落
     codexEquipLv100: [], // 记录曾经到过Lv100的装备模板id（永久亮框）
+    prepareBoss: null, // 当前准备挑战的bossId
+    bossTeam: [null, null, null], // 3个位置的charId
+    bossStrategy: { priorityBoss: true, stance: 'dispersed' }, // 策略
+    bossCombat: null, // 正在进行的boss战状态
 };
 
 // ==================== BASE64 ENCODING (支持中文) ====================
@@ -1554,6 +1840,11 @@ function gameReducer(state, action) {
                 }
             }
 
+            // Boss战斗推进
+            if (newState.bossCombat) {
+                newState = stepBossCombat(newState);
+            }
+
             const toRecall = [];
 
             // 后台战斗（拆分成多 tick 推进，实时更新血量）
@@ -2196,6 +2487,81 @@ case 'ASSIGN_ZONE': {
             return {
                 ...state,
                 combatLogs: []
+            };
+        }
+
+        case 'OPEN_BOSS_PREPARE': {
+            const bossId = action.payload;
+            return {
+                ...state,
+                prepareBoss: bossId,
+                bossTeam: [null, null, null],
+                bossStrategy: { priorityBoss: true, stance: 'dispersed' }
+            };
+        }
+
+        case 'CLOSE_BOSS_PREPARE': {
+            return { ...state, prepareBoss: null, bossTeam: [null, null, null] };
+        }
+
+        case 'SET_BOSS_TEAM_SLOT': {
+            const { slot, charId } = action.payload;
+            const newTeam = [...state.bossTeam];
+            // 如果同一个角色已存在，移除旧位置
+            const oldSlot = newTeam.indexOf(charId);
+            if (oldSlot !== -1 && oldSlot !== slot) newTeam[oldSlot] = null;
+            newTeam[slot] = charId ?? null;
+            return { ...state, bossTeam: newTeam };
+        }
+
+        case 'SET_BOSS_STRATEGY': {
+            const { key, value } = action.payload;
+            return {
+                ...state,
+                bossStrategy: { ...state.bossStrategy, [key]: value }
+            };
+        }
+
+        case 'START_BOSS_COMBAT': {
+            const bossId = state.prepareBoss;
+            if (!bossId) return state;
+            const boss = BOSS_DATA[bossId];
+            if (!boss) return state;
+
+            const teamIds = state.bossTeam.filter(Boolean);
+            if (teamIds.length === 0) return state;
+
+            const teamChars = teamIds.map(id => state.characters.find(c => c.id === id)).filter(Boolean);
+            // 重新计算队伍光环
+            const recalcedTeam = recalcPartyStats(teamChars.map(c => ({ ...c })));
+
+            const playerStates = recalcedTeam.map(char => ({
+                char,
+                currentHp: char.stats.maxHp,
+                currentMp: char.stats.maxMp,
+                skillIndex: 0,
+                buffs: [],
+                talentBuffs: { attackFlat: 0, blockValueFlat: 0, spellPowerFlat: 0 },
+                validSkills: Array.from({ length: 8 }, (_, i) => {
+                    const sid = char.skillSlots?.[i] || '';
+                    return sid && SKILLS[sid] ? sid : 'rest';
+                }).map(sid => SKILLS[sid] ? sid : 'basic_attack')
+            }));
+
+            return {
+                ...state,
+                bossCombat: {
+                    bossId,
+                    strategy: { ...state.bossStrategy },
+                    playerStates,
+                    bossHp: boss.maxHp,
+                    minions: [],
+                    minionDebuffs: [],
+                    bossDebuffs: [],
+                    round: 0,
+                    logs: []
+                },
+                prepareBoss: null
             };
         }
 
@@ -4295,61 +4661,40 @@ const ResearchPage = ({ state, dispatch }) => {
     );
 };
 
-// ==================== PAGE: WORLD BOSS ====================
-const WorldBossPage = ({ state }) => {
+// ==================== WorldBossPage 修改 ====================
+const WorldBossPage = ({ state, dispatch }) => {
     return (
         <Panel title="世界首领">
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 16 }}>
                 {Object.values(WORLD_BOSSES).map(boss => {
-                    const unlocked = !boss.unlockLevel || state.characters.some(c => c.level >= boss.unlockLevel);
+                    const bossData = BOSS_DATA[boss.id] || boss;
+                    const unlocked = !boss.unlockLevel || state.characters.some(c => c.level >= (boss.unlockLevel || 0));
 
                     return (
-                        <div
-                            key={boss.id}
-                            style={{
-                                padding: 20,
-                                background: unlocked ? 'rgba(180,50,50,0.2)' : 'rgba(0,0,0,0.3)',
-                                border: `2px solid ${unlocked ? '#a03030' : '#333'}`,
-                                borderRadius: 8,
-                                opacity: unlocked ? 1 : 0.5
-                            }}
-                        >
+                        <div key={boss.id} style={{
+                            padding: 20,
+                            background: unlocked ? 'rgba(180,50,50,0.2)' : 'rgba(0,0,0,0.3)',
+                            border: `2px solid ${unlocked ? '#a03030' : '#333'}`,
+                            borderRadius: 8,
+                            opacity: unlocked ? 1 : 0.5
+                        }}>
                             <div style={{ fontSize: 48, textAlign: 'center', marginBottom: 12 }}>
                                 {unlocked ? '🐲' : '🔒'}
                             </div>
-                            <h3 style={{
-                                margin: '0 0 12px 0',
-                                fontSize: 18,
-                                color: unlocked ? '#ff6b6b' : '#666',
-                                textAlign: 'center'
-                            }}>
+                            <h3 style={{ textAlign: 'center', color: unlocked ? '#ff6b6b' : '#666' }}>
                                 {boss.name}
                             </h3>
                             {unlocked ? (
-                                <>
-                                    <div style={{
-                                        fontSize: 12,
-                                        color: '#aaa',
-                                        marginBottom: 12,
-                                        textAlign: 'center'
-                                    }}>
-                                        HP: {boss.hp} | 攻击: {boss.attack} | 防御: {boss.defense}
-                                    </div>
-                                    <div style={{
-                                        fontSize: 11,
-                                        color: '#ffd700',
-                                        textAlign: 'center',
-                                        marginBottom: 12
-                                    }}>
-                                        奖励: 🪙{boss.rewards.gold} | ⭐{boss.rewards.exp}
-                                    </div>
-                                    <Button variant="danger" style={{ width: '100%' }} disabled>
-                                        挑战 (开发中)
-                                    </Button>
-                                </>
+                                <Button
+                                    variant="danger"
+                                    style={{ width: '100%' }}
+                                    onClick={() => dispatch({ type: 'OPEN_BOSS_PREPARE', payload: boss.id })}
+                                >
+                                    挑战
+                                </Button>
                             ) : (
-                                <div style={{ fontSize: 12, color: '#666', textAlign: 'center' }}>
-                                    需要等级 {boss.unlockLevel}
+                                <div style={{ textAlign: 'center', color: '#666' }}>
+                                    需要等级 {boss.unlockLevel || 0}
                                 </div>
                             )}
                         </div>
@@ -4721,7 +5066,158 @@ const CodexPage = ({ state, dispatch }) => {
     );
 };
 
+// ==================== Boss准备模态 ====================
+const BossPrepareModal = ({ state, dispatch }) => {
+    const bossId = state.prepareBoss;
+    if (!bossId) return null;
+    const boss = BOSS_DATA[bossId];
+    const available = state.characters.filter(c => !state.assignments[c.id]);
+    const [dragged, setDragged] = useState(null);
 
+    return (
+        <div style={{
+            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+            background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
+        }}>
+            <div style={{ width: 900, maxHeight: '90vh', overflowY: 'auto', background: '#1a1510', padding: 24, borderRadius: 12, border: '2px solid #c9a227' }}>
+                <h2 style={{ textAlign: 'center', color: '#ffd700' }}>准备挑战 {boss.name}</h2>
+
+                <div style={{ marginBottom: 20, padding: 16, background: 'rgba(100,0,0,0.2)', borderRadius: 8 }}>
+                    <p><strong>技能1：</strong>重击 - 对目标造成 {boss.heavyMultiplier} 倍攻击的物理伤害</p>
+                    <p><strong>技能2：</strong>召唤小弟 - 召唤 {boss.summonCount} 个血量 {boss.minion.maxHp}、攻击 {boss.minion.attack} 的豺狼人小弟</p>
+                    <p><strong>技能循环：</strong>召唤小弟 → 重击 → 重击 → 重击 → 循环</p>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+                    <div>
+                        <h3>队伍位置（敌人优先攻击顺序）</h3>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+                            {[0, 1, 2].map(slot => {
+                                const charId = state.bossTeam[slot];
+                                const char = charId ? state.characters.find(c => c.id === charId) : null;
+                                return (
+                                    <div
+                                        key={slot}
+                                        onDrop={(e) => {
+                                            e.preventDefault();
+                                            if (dragged) dispatch({ type: 'SET_BOSS_TEAM_SLOT', payload: { slot, charId: dragged } });
+                                            setDragged(null);
+                                        }}
+                                        onDragOver={e => e.preventDefault()}
+                                        style={{ padding: 16, border: '2px dashed #4a3c2a', borderRadius: 8, minHeight: 100, background: 'rgba(0,0,0,0.3)' }}
+                                    >
+                                        {char ? `${char.name} Lv.${char.level} ${CLASSES[char.classId].name}` : `位置 ${slot + 1} 空`}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    <div>
+                        <h3>可用角色（拖拽到队伍位置）</h3>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 8 }}>
+                            {available.map(char => (
+                                <div
+                                    key={char.id}
+                                    draggable
+                                    onDragStart={() => setDragged(char.id)}
+                                    style={{ padding: 12, background: 'rgba(0,0,0,0.4)', borderRadius: 6, cursor: 'grab' }}
+                                >
+                                    {char.name} Lv.{char.level} {CLASSES[char.classId].name}
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+
+                <div style={{ marginTop: 20 }}>
+                    <h3>战斗策略</h3>
+                    <label style={{ display: 'block', marginBottom: 8 }}>
+                        <input
+                            type="checkbox"
+                            checked={state.bossStrategy.priorityBoss}
+                            onChange={e => dispatch({ type: 'SET_BOSS_STRATEGY', payload: { key: 'priorityBoss', value: e.target.checked } })}
+                        />
+                        优先攻击Boss（否则优先清理小弟）
+                    </label>
+                    <div>
+                        站位：
+                        <label style={{ marginRight: 16 }}>
+                            <input type="radio" name="stance" checked={state.bossStrategy.stance === 'concentrated'}
+                                   onChange={() => dispatch({ type: 'SET_BOSS_STRATEGY', payload: { key: 'stance', value: 'concentrated' } })} />
+                            集中站位
+                        </label>
+                        <label>
+                            <input type="radio" name="stance" checked={state.bossStrategy.stance === 'dispersed'}
+                                   onChange={() => dispatch({ type: 'SET_BOSS_STRATEGY', payload: { key: 'stance', value: 'dispersed' } })} />
+                            分散站位
+                        </label>
+                    </div>
+                </div>
+
+                <div style={{ marginTop: 24, textAlign: 'center' }}>
+                    <Button onClick={() => dispatch({ type: 'START_BOSS_COMBAT' })} style={{ marginRight: 12 }}>
+                        开始战斗
+                    </Button>
+                    <Button variant="secondary" onClick={() => dispatch({ type: 'CLOSE_BOSS_PREPARE' })}>
+                        取消
+                    </Button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+// ==================== Boss战斗显示模态 ====================
+const BossCombatModal = ({ combat, state }) => {
+    if (!combat) return null;
+    const boss = BOSS_DATA[combat.bossId];
+
+    return (
+        <div style={{
+            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+            background: 'rgba(0,0,0,0.9)', display: 'flex', flexDirection: 'column', zIndex: 1000
+        }}>
+            <div style={{ padding: 16, textAlign: 'center', color: '#ffd700', fontSize: 24 }}>
+                正在挑战 {boss.name} - 第 {combat.round} 回合
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, padding: 20, flex: 1, overflow: 'hidden' }}>
+                <div>
+                    <h3 style={{ color: '#4CAF50' }}>队伍</h3>
+                    {combat.playerStates.map((p, i) => (
+                        <div key={i} style={{ marginBottom: 12 }}>
+                            <div>位置{i + 1} {p.char.name} Lv.{p.char.level}</div>
+                            <StatBar current={p.currentHp} max={p.char.stats.maxHp} color="#f44336" />
+                        </div>
+                    ))}
+                </div>
+
+                <div>
+                    <h3 style={{ color: '#f44336' }}>敌人</h3>
+                    <div style={{ marginBottom: 16 }}>
+                        <div>{boss.name}</div>
+                        <StatBar current={combat.bossHp} max={boss.maxHp} color="#ff4444" />
+                    </div>
+                    {combat.minions.length > 0 && (
+                        <div>
+                            <div>豺狼人小弟 ({combat.minions.length})</div>
+                            {combat.minions.map((m, i) => (
+                                <StatBar key={i} current={m.hp} max={boss.minion.maxHp} color="#ff6666" />
+                            ))}
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            <div style={{ height: 200, overflowY: 'auto', padding: 16, background: 'rgba(0,0,0,0.5)', fontSize: 12 }}>
+                {combat.logs.map((log, i) => (
+                    <div key={i}>{log}</div>
+                ))}
+            </div>
+        </div>
+    );
+};
 
 
 // ==================== MAIN APP ====================
@@ -4861,6 +5357,10 @@ export default function WoWIdleGame() {
                     onDismiss={() => dispatch({ type: 'DISMISS_OFFLINE_REWARDS' })}
                 />
             )}
+
+            {/* ===== 添加两个Boss模态 ===== */}
+            {state.prepareBoss && <BossPrepareModal state={state} dispatch={dispatch} />}
+            {state.bossCombat && <BossCombatModal combat={state.bossCombat} state={state} />}
 
             {/* Header */}
             <div style={{

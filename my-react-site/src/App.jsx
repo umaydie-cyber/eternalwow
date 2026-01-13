@@ -157,7 +157,7 @@ const SKILLS = {
         icon: '⚔️',
         type: 'damage',
         calculate: (char) => {
-            let damage = char.stats.attack * 1.2;
+            let damage = char.stats.attack * 1.2 * (char.stats.basicAttackMultiplier || 1);
             if (Math.random() < char.stats.critRate/100) {
                 damage *= char.stats.critDamage;
                 return { damage: Math.floor(damage), isCrit: true };
@@ -464,6 +464,17 @@ const FIXED_EQUIPMENTS = {
         growth: {
             spellPower: 2
         }
+    },
+    REBIRTH_INVITATION: {
+        id: 'REBIRTH_INVITATION',
+        name: '破碎时空的邀请函',
+        type: 'equipment',
+        slot: null, // 不可装备
+        rarity: 'purple',
+        level: 1,
+        maxLevel: 100,
+        baseStats: {},
+        growth: {}
     }
 };
 
@@ -586,17 +597,17 @@ const BOSS_DATA = {
             gold: 5000,
             exp: 5500,
             items: [
-                {
-                    name: '霍格之爪',
-                    icon: '🗡️',
-                    type: 'junk',
-                    rarity: 'purple',
-                    sellPrice: 10000
-                }
+                { id: 'REBIRTH_INVITATION' } // 改为使用 FIXED_EQUIPMENTS
             ]
         }
     }
     // 其他boss后续可扩展
+};
+
+// ==================== 羁绊名称映射 ====================
+const BOND_NAMES = {
+    baoernai: '包二奶',
+    jianyue: '简约而不简单'
 };
 
 // ==================== UTILS ====================
@@ -824,6 +835,17 @@ function calculateTotalStats(character, partyAuras = { hpMul: 1, spellPowerMul: 
         totalStats.expBonus = (totalStats.expBonus || 0) + 0.2;
     }
 
+    // 重生全局加成
+    totalStats.expBonus = (totalStats.expBonus || 0) + (state?.rebirthBonuses?.exp || 0);
+
+    // 简约而不简单羁绊：单一职业队伍普通攻击伤害提高150%
+    if (state?.rebirthBonds?.includes('jianyue')) {
+        const allSameClass = state?.characters?.length > 0 && state.characters.every(c => c.classId === state.characters[0].classId);
+        if (allSameClass) {
+            totalStats.basicAttackMultiplier = (totalStats.basicAttackMultiplier || 1) * 2.5;
+        }
+    }
+
     Object.values(character.equipment || {}).forEach(item => {
         if (item && item.stats) {
             Object.entries(item.stats).forEach(([stat, value]) => {
@@ -986,6 +1008,24 @@ function stepBossCombat(state) {
         // 其他天赋类似...
     }
 
+    // ===== 玩家阶段结束后添加羁绊效果 =====
+    if (state.rebirthBonds?.includes('baoernai')) {
+        const priests = combat.playerStates.filter(p => p.char.classId === 'discipline_priest' && p.currentHp > 0).length;
+        const warriors = combat.playerStates.filter(p => p.char.classId === 'protection_warrior' && p.currentHp > 0).length;
+        if (warriors === 1 && priests === 2) {
+            const warrior = combat.playerStates.find(p => p.char.classId === 'protection_warrior' && p.currentHp > 0);
+            if (warrior) {
+                const blockValue = (warrior.char.stats.blockValue || 0) + (warrior.talentBuffs?.blockValueFlat || 0);
+                const aoeDamage = Math.floor(blockValue * 0.8);
+                if (aoeDamage > 0) {
+                    combat.bossHp -= aoeDamage;
+                    combat.minions.forEach(m => { if (m.hp > 0) m.hp -= aoeDamage; });
+                    logs.push(`【包二奶羁绊】防护战士对所有敌人造成 ${aoeDamage} 额外伤害（基于格挡值）`);
+                }
+            }
+        }
+    }
+
     // DOT 结算 + 清理死亡小弟（保持原逻辑）
 
     // ==================== Boss阶段 + 小弟阶段（保持原逻辑） ====================
@@ -1112,6 +1152,18 @@ function stepBossCombat(state) {
         if (bossDead) {
             logs.push('★★★ 胜利！获得奖励 ★★★');
 
+            // ==================== 胜利霍格后弹出剧情 ====================
+            if (bossDead && combat.bossId === 'hogger') {
+                // 添加邀请函
+                boss.rewards.items.forEach(itemTpl => {
+                    if (itemTpl.id) {
+                        const instance = createEquipmentInstance(itemTpl.id);
+                        newState.inventory.push(instance);
+                    }
+                });
+                newState.showHoggerPlot = true;
+            }
+
             // 金币奖励
             newState.resources = {
                 ...newState.resources,
@@ -1232,6 +1284,18 @@ const initialState = {
     bossTeam: [null, null, null], // 3个位置的charId
     bossStrategy: { priorityBoss: true, stance: 'dispersed' }, // 策略
     bossCombat: null, // 正在进行的boss战状态
+
+    showHoggerPlot: false,
+    showRebirthConfirm: false,
+    showRebirthPlot: null,
+    rebirthCount: 0,
+    rebirthBonuses: {
+        exp: 0,
+        gold: 0,
+        drop: 0,
+        researchSpeed: 0
+    },
+    rebirthBonds: []
 };
 
 // ==================== BASE64 ENCODING (支持中文) ====================
@@ -2609,6 +2673,79 @@ case 'ASSIGN_ZONE': {
                 },
                 prepareBoss: null
             };
+        }
+        case 'CLOSE_HOGGER_PLOT': return { ...state, showHoggerPlot: false };
+        case 'OPEN_REBIRTH_CONFIRM': return { ...state, showRebirthConfirm: true };
+        case 'CLOSE_REBIRTH_CONFIRM': return { ...state, showRebirthConfirm: false };
+        case 'PERFORM_REBIRTH': {
+            const equippedCount = state.characters.reduce((sum, char) =>
+                sum + Object.values(char.equipment || {}).filter(Boolean).length, 0);
+            if (state.inventory.length + equippedCount > state.inventorySize) {
+                alert('道具栏空间不足，请清理或扩容背包以存放所有装备！');
+                return state;
+            }
+
+            let newState = { ...state, showRebirthConfirm: false };
+
+            // 卸下所有装备
+            const extraItems = [];
+            newState.characters = newState.characters.map(char => {
+                Object.values(char.equipment || {}).forEach(eq => { if (eq) extraItems.push(eq); });
+                return { ...char, equipment: {} };
+            });
+            newState.inventory = [...newState.inventory, ...extraItems];
+
+            // 计算本世增幅
+            const frameBonus = state.frame / 20000;
+            const levelBonus = state.characters.reduce((m, c) => Math.max(m, c.level), 0) / 100;
+            const newExp = 0.3 + frameBonus + levelBonus;
+            const newGold = newExp;
+            const newDrop = newExp * 0.6;
+            const newResearch = 0.3;
+
+            newState.rebirthBonuses.exp += newExp;
+            newState.rebirthBonuses.gold += newGold;
+            newState.rebirthBonuses.drop += newDrop;
+            newState.rebirthBonuses.researchSpeed += newResearch;
+
+            // 随机羁绊
+            const possibleBonds = ['baoernai', 'jianyue'];
+            const newBond = possibleBonds[Math.floor(Math.random() * possibleBonds.length)];
+            newState.rebirthBonds = [...newState.rebirthBonds, newBond];
+
+            // 消耗邀请函
+            const tokenIdx = newState.inventory.findIndex(i => i.id === 'REBIRTH_INVITATION' && (i.currentLevel || 0) >= 100);
+            if (tokenIdx >= 0) newState.inventory.splice(tokenIdx, 1);
+
+            newState.rebirthCount += 1;
+
+            // 重生剧情数据
+            newState.showRebirthPlot = {
+                frame: state.frame,
+                newExp: newExp.toFixed(2),
+                newGold: newGold.toFixed(2),
+                newDrop: newDrop.toFixed(2),
+                newResearch: newResearch.toFixed(2),
+                newBond: BOND_NAMES[newBond],
+                rebirthCount: newState.rebirthCount
+            };
+
+            // 重置游戏进度
+            newState.characters = [];
+            newState.resources = { ...initialState.resources, gold: 500 };
+            newState.buildings = {};
+            newState.research = {};
+            newState.currentResearch = null;
+            newState.researchProgress = 0;
+            newState.assignments = {};
+            newState.zones = JSON.parse(JSON.stringify(ZONES));
+            newState.achievements = {};
+            newState.prepareBoss = null;
+            newState.bossTeam = [null, null, null];
+            newState.bossCombat = null;
+            newState.currentMenu = 'map';
+
+            return newState;
         }
 
         default:
@@ -5316,6 +5453,78 @@ const BossCombatModal = ({ combat, state }) => {
     );
 };
 
+// ==================== 霍格剧情模态框 ====================
+const HoggerPlotModal = ({ state, dispatch }) => {
+    if (!state.showHoggerPlot) return null;
+    return (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.9)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000 }}>
+            <div style={{ width: 600, padding: 40, background: '#1a1510', border: '3px solid #c9a227', borderRadius: 12, textAlign: 'center' }}>
+                <h2 style={{ color: '#ffd700', marginBottom: 30 }}>轮回之始</h2>
+                <p style={{ fontSize: 16, lineHeight: 1.8, color: '#e8dcc4' }}>
+                    你感到一阵头晕目眩，过往的种种白驹过隙，熟悉的感觉涌上心头，仿佛这已经是你无数次击败过的对手，<br/>
+                    这一世你击败了强劲的对手霍格，三十年河东三十年河西，莫欺少年穷。
+                </p>
+                <Button onClick={() => dispatch({ type: 'CLOSE_HOGGER_PLOT' })} style={{ marginTop: 30 }}>
+                    确定
+                </Button>
+            </div>
+        </div>
+    );
+};
+
+// ==================== 重生确认模态框 ====================
+const RebirthConfirmModal = ({ state, dispatch }) => {
+    if (!state.showRebirthConfirm) return null;
+    const equippedCount = state.characters.reduce((s, c) => s + Object.values(c.equipment || {}).filter(Boolean).length, 0);
+    const spaceNeeded = state.inventory.length + equippedCount > state.inventorySize;
+
+    return (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.9)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000 }}>
+            <div style={{ width: 500, padding: 30, background: '#1a1510', border: '3px solid #ff6b6b', borderRadius: 12 }}>
+                <h2 style={{ color: '#ff6b6b', textAlign: 'center' }}>重生轮回确认</h2>
+                <p style={{ lineHeight: 1.6, margin: '20px 0' }}>
+                    重生轮回将重置王国的建筑、资源、研究等级以及角色，<br/>
+                    但道具栏和装备会保留。<br/><br/>
+                    {spaceNeeded ?
+                        <span style={{ color: '#ff6b6b' }}>⚠️ 背包空间不足，无法容纳所有装备！</span> :
+                        `需要 ${equippedCount} 个背包空格存放当前装备。`
+                    }
+                </p>
+                <div style={{ display: 'flex', gap: 20, justifyContent: 'center' }}>
+                    <Button onClick={() => dispatch({ type: 'PERFORM_REBIRTH' })} variant="danger" disabled={spaceNeeded}>
+                        确认重生
+                    </Button>
+                    <Button onClick={() => dispatch({ type: 'CLOSE_REBIRTH_CONFIRM' })} variant="secondary">
+                        取消
+                    </Button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+// ==================== 重生剧情模态框 ====================
+const RebirthPlotModal = ({ state, dispatch }) => {
+    if (!state.showRebirthPlot) return null;
+    const p = state.showRebirthPlot;
+    return (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.95)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000 }}>
+            <div style={{ width: 700, padding: 40, background: '#1a1510', border: '4px solid #ffd700', borderRadius: 16, textAlign: 'center' }}>
+                <h2 style={{ color: '#ffd700', marginBottom: 30 }}>第 {p.rebirthCount} 世</h2>
+                <p style={{ fontSize: 18, lineHeight: 2, color: '#e8dcc4' }}>
+                    你眼前一黑，上一世，经历了 {p.frame} 帧的努力，你击败了最强boss霍格，<br/>
+                    这一世，你获得了 {p.newExp}% 经验值、{p.newGold}% 金币、{p.newDrop}% 道具装备掉落概率增幅，<br/>
+                    {p.newResearch}% 研究速度，并获得了羁绊“{p.newBond}”。<br/><br/>
+                    你缓缓睁开双眼，<br/>
+                    这是你经历的第 {p.rebirthCount} 世，这一世你感到全身充满了抛瓦，fighting!
+                </p>
+                <Button onClick={() => dispatch({ type: 'CLOSE_REBIRTH_PLOT' })} style={{ marginTop: 40, padding: '12px 40px', fontSize: 18 }}>
+                    开始新的一世
+                </Button>
+            </div>
+        </div>
+    );
+};
 
 // ==================== MAIN APP ====================
 export default function WoWIdleGame() {
@@ -5459,6 +5668,10 @@ export default function WoWIdleGame() {
             {state.prepareBoss && <BossPrepareModal state={state} dispatch={dispatch} />}
             {state.bossCombat && <BossCombatModal combat={state.bossCombat} state={state} />}
 
+            <HoggerPlotModal state={state} dispatch={dispatch} />
+            <RebirthConfirmModal state={state} dispatch={dispatch} />
+            {state.showRebirthPlot && <RebirthPlotModal state={state} dispatch={dispatch} />}
+
             {/* Header */}
             <div style={{
                 display: 'flex',
@@ -5496,6 +5709,12 @@ export default function WoWIdleGame() {
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                         <span style={{ fontSize: 12, color: '#888' }}>🪙 {Math.floor(state.resources.gold)}</span>
                     </div>
+
+                    {state.inventory.some(i => i.id === 'REBIRTH_INVITATION' && (i.currentLevel || 0) >= 100) && (
+                        <Button onClick={() => dispatch({ type: 'OPEN_REBIRTH_CONFIRM' })} variant="danger">
+                            重生轮回
+                        </Button>
+                    )}
 
                     <Button onClick={() => setIsPaused(!isPaused)} variant="secondary">
                         {isPaused ? '▶️ 继续' : '⏸️ 暂停'}

@@ -1014,18 +1014,18 @@ function getPartyAuraMultipliers(characters) {
 }
 
 // 用同一套光环倍率，重算全队 stats（关键：光环要全队一起重算）
-function recalcPartyStats(characters) {
+function recalcPartyStats(gameState,characters) {
     const auras = getPartyAuraMultipliers(characters);
     return (characters || []).map(c => {
         const next = { ...c };
-        next.stats = calculateTotalStats(next, auras);
+        next.stats = calculateTotalStats(next, auras, gameState);
         return next;
     });
 }
 
 
 // 计算角色总属性（基础+装备）
-function calculateTotalStats(character, partyAuras = { hpMul: 1, spellPowerMul: 1 }) {
+function calculateTotalStats(character, partyAuras = { hpMul: 1, spellPowerMul: 1 }, gameState) {
     const classData = CLASSES[character.classId];
 
     // 先算 max
@@ -1059,11 +1059,14 @@ function calculateTotalStats(character, partyAuras = { hpMul: 1, spellPowerMul: 
     }
 
     // 重生全局加成
-    totalStats.expBonus = (totalStats.expBonus || 0) + (state?.rebirthBonuses?.exp || 0);
+    totalStats.expBonus = (totalStats.expBonus || 0) + (gameState?.rebirthBonuses?.exp || 0);
 
     // 简约而不简单羁绊：单一职业队伍普通攻击伤害提高150%
-    if (state?.rebirthBonds?.includes('jianyue')) {
-        const allSameClass = state?.characters?.length > 0 && state.characters.every(c => c.classId === state.characters[0].classId);
+    if (gameState?.rebirthBonds?.includes('jianyue')) {
+        const allSameClass =
+            (gameState?.characters?.length || 0) > 0 &&
+            gameState.characters.every(c => c.classId === gameState.characters[0].classId);
+
         if (allSameClass) {
             totalStats.basicAttackMultiplier = (totalStats.basicAttackMultiplier || 1) * 2.5;
         }
@@ -1408,7 +1411,7 @@ function stepBossCombat(state) {
                     newChar.skills = learnNewSkills(newChar);
                 }
 
-                newChar.stats = calculateTotalStats(newChar);
+                newChar.stats = calculateTotalStats(newChar, undefined, state);
                 return newChar;
             });
 
@@ -2023,7 +2026,7 @@ function gameReducer(state, action) {
                     }
 
                     const updatedChar = { ...char, exp, level, expToNext };
-                    updatedChar.stats = calculateTotalStats(updatedChar);
+                    updatedChar.stats = calculateTotalStats(updatedChar, undefined, state);
                     return updatedChar;
                 }
                 return char;
@@ -2256,7 +2259,7 @@ function gameReducer(state, action) {
                                 char.level++;
                                 char.expToNext = Math.floor(100 * Math.pow(1.2, char.level - 1));
                                 char.skills = learnNewSkills(char);
-                                char.stats = calculateTotalStats(char);
+                                char.stats = calculateTotalStats(char, undefined, state);
                             }
 
                             newState.stats.battlesWon++;
@@ -2394,7 +2397,7 @@ function gameReducer(state, action) {
                 combatState: null,
             };
 
-            newChar.stats = calculateTotalStats(newChar);
+            newChar.stats = calculateTotalStats(newChar, undefined, state);
 
             return {
                 ...state,
@@ -2447,7 +2450,7 @@ function gameReducer(state, action) {
                 };
 
                 // 3) 重算属性（你已经有 calculateTotalStats）
-                nextChar.stats = calculateTotalStats(nextChar);
+                nextChar.stats = calculateTotalStats(nextChar, undefined, state);
 
                 // 把之前穿着的同槽装备（如果有）临时挂到 nextChar 上，方便后面塞回背包
                 nextChar.__prevEquipped = prevEquipped;
@@ -2473,7 +2476,7 @@ function gameReducer(state, action) {
                 return rest;
             });
 
-            const finalChars = recalcPartyStats(cleanedChars);
+            const finalChars = recalcPartyStats(state,cleanedChars);
 
             return {
                 ...state,
@@ -2506,7 +2509,7 @@ function gameReducer(state, action) {
 
                 // Recalculate stats after unequipping the item
                 const updatedChar = { ...c, equipment: newEquipment };
-                updatedChar.stats = calculateTotalStats(updatedChar);
+                updatedChar.stats = calculateTotalStats(updatedChar, undefined, state);
 
                 return updatedChar;
             });
@@ -2514,7 +2517,7 @@ function gameReducer(state, action) {
             // Add the unequipped item back to the inventory
             const newInventory = [...state.inventory, equipped];
 
-            const finalChars = recalcPartyStats(newChars);
+            const finalChars = recalcPartyStats(state,newChars);
             return {
                 ...state,
                 characters: finalChars,
@@ -2771,7 +2774,7 @@ case 'ASSIGN_ZONE': {
             });
 
             // 关键：光环会影响全队，所以要全队一起重算
-            const newChars = recalcPartyStats(updatedChars);
+            const newChars = recalcPartyStats(state,updatedChars);
 
             return { ...state, characters: newChars };
         }
@@ -2866,7 +2869,7 @@ case 'ASSIGN_ZONE': {
 
             const teamChars = teamIds.map(id => state.characters.find(c => c.id === id)).filter(Boolean);
             // 重新计算队伍光环
-            const recalcedTeam = recalcPartyStats(teamChars.map(c => ({ ...c })));
+            const recalcedTeam = recalcPartyStats(state,teamChars.map(c => ({ ...c })));
 
             const playerStates = recalcedTeam.map(char => ({
                 char,

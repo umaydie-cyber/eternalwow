@@ -986,7 +986,75 @@ function stepBossCombat(state) {
     // DOT 结算 + 清理死亡小弟（保持原逻辑）
 
     // ==================== Boss阶段 + 小弟阶段（保持原逻辑） ====================
-    // ...（你的原代码）
+    // 选一个存活玩家位作为目标：固定优先 1号位 → 2号位 → 3号位
+    const pickAlivePlayerIndex = () => {
+        for (let idx = 0; idx < combat.playerStates.length; idx++) {
+            const p = combat.playerStates[idx];
+            if ((p.currentHp ?? 0) > 0) return idx;
+        }
+        return -1;
+    };
+
+    // 计算本回合 boss 动作：按 cycle 循环
+    const bossAction = boss.cycle[(combat.round - 1) % boss.cycle.length];
+
+    // ① Boss 行动
+    if (bossAction === 'summon') {
+        // 统计存活小弟
+        const aliveMinions = (combat.minions || []).filter(m => (m.hp ?? 0) > 0);
+        const need = Math.max(0, (boss.summonCount || 0) - aliveMinions.length);
+
+        for (let i = 0; i < need; i++) {
+            combat.minions.push({
+                hp: boss.minion.maxHp,
+                maxHp: boss.minion.maxHp,
+                attack: boss.minion.attack,
+                defense: boss.minion.defense,
+            });
+        }
+
+        if (need > 0) {
+            logs.push(`【${boss.name}】使用【召唤】呼叫了 ${need} 个${boss.minion.name}`);
+        } else {
+            logs.push(`【${boss.name}】尝试召唤，但场上小弟已满`);
+        }
+    }
+
+    if (bossAction === 'strike') {
+        const tIdx = pickAlivePlayerIndex();
+        if (tIdx >= 0) {
+            const target = combat.playerStates[tIdx];
+
+            // 重击伤害 = boss.attack * heavyMultiplier - 玩家防御（至少1）
+            const raw = Math.floor((boss.attack || 0) * (boss.heavyMultiplier || 1));
+            const actual = Math.max(1, raw - (target.defense || 0));
+
+            target.currentHp -= actual;
+
+            logs.push(`【${boss.name}】使用【重击】对 位置${tIdx + 1} 造成 ${actual} 伤害`);
+        }
+    }
+
+    // ② 小弟行动：每个存活小弟各攻击一次
+    for (let i = 0; i < (combat.minions || []).length; i++) {
+        const m = combat.minions[i];
+        if ((m.hp ?? 0) <= 0) continue;
+
+        const tIdx = pickAlivePlayerIndex();
+        if (tIdx < 0) break;
+
+        const target = combat.playerStates[tIdx];
+
+        const raw = Math.floor(m.attack || 0);
+        const actual = Math.max(1, raw - (target.defense || 0));
+
+        target.currentHp -= actual;
+
+        logs.push(`【${boss.minion.name}】攻击 位置${tIdx + 1} 造成 ${actual} 伤害`);
+    }
+
+    // ③ 清理死亡小弟（可选：保持数组干净）
+    combat.minions = (combat.minions || []).filter(m => (m.hp ?? 0) > 0);
 
     // ==================== 胜负判定 ====================
     const allPlayersDead = combat.playerStates.every(p => p.currentHp <= 0);

@@ -829,29 +829,30 @@ function calculateTotalStats(character, partyAuras = { hpMul: 1, spellPowerMul: 
             Object.entries(item.stats).forEach(([stat, value]) => {
                 totalStats[stat] = (totalStats[stat] || 0) + value;
             });
-// ==================== TALENTS (PASSIVE) ====================
-// 仅处理“永久/战斗中始终生效”的被动：如护甲+100、姿态等。
-// 战斗内“叠层”类天赋（质朴/格挡大师）在战斗系统里处理。
-const t = character.talents || {};
-if (character.classId === 'protection_warrior') {
-    // 10级：叠甲过 - 护甲 +100（战斗中生效；此游戏只有战斗用护甲，所以直接加到总护甲）
-    if (t[10] === 'armor_up') {
-        totalStats.armor = (totalStats.armor || 0) + 100;
-    }
-
-    // 20级：姿态三选一
-    if (t[20] === 'defense_stance') {
-        totalStats.damageTakenMult = (totalStats.damageTakenMult || 1) * 0.8; // 受到伤害 -20%
-    } else if (t[20] === 'battle_stance') {
-        totalStats.attack = (totalStats.attack || 0) * 1.10; // 攻击强度 +10%
-    } else if (t[20] === 'berserk_stance') {
-        totalStats.critRate = (totalStats.critRate || 0) + 8;      // 暴击 +8%
-        totalStats.critDamage = (totalStats.critDamage || 2.0) + 0.20; // 暴击伤害 +20%（以倍率加成）
-    }
-}
 
         }
     });
+
+    // ==================== TALENTS (PASSIVE) ====================
+    // 仅处理“永久/战斗中始终生效”的被动：如护甲+100、姿态等。
+    // 战斗内“叠层”类天赋（质朴/格挡大师）在战斗系统里处理。
+    const t = character.talents || {};
+    if (character.classId === 'protection_warrior') {
+        // 10级：叠甲过 - 护甲 +100（战斗中生效；此游戏只有战斗用护甲，所以直接加到总护甲）
+        if (t[10] === 'armor_up') {
+            totalStats.armor = (totalStats.armor || 0) + 100;
+        }
+
+        // 20级：姿态三选一
+        if (t[20] === 'defense_stance') {
+            totalStats.damageTakenMult = (totalStats.damageTakenMult || 1) * 0.8; // 受到伤害 -20%
+        } else if (t[20] === 'battle_stance') {
+            totalStats.attack = (totalStats.attack || 0) * 1.10; // 攻击强度 +10%
+        } else if (t[20] === 'berserk_stance') {
+            totalStats.critRate = (totalStats.critRate || 0) + 8;      // 暴击 +8%
+            totalStats.critDamage = (totalStats.critDamage || 2.0) + 0.20; // 暴击伤害 +20%（以倍率加成）
+        }
+    }
 
     totalStats.maxHp = Math.floor((totalStats.hp || 0) * (partyAuras.hpMul || 1));
     totalStats.maxMp = totalStats.mp;
@@ -997,6 +998,40 @@ function stepBossCombat(state) {
         return -1;
     };
 
+    // ✅ Boss战：复用“护甲减伤 + 格挡”逻辑（与普通战斗一致）
+    const getBuffBlockRate = (playerState) => {
+        const buffs = Array.isArray(playerState?.buffs) ? playerState.buffs : [];
+        return buffs.reduce((sum, b) => sum + (b?.blockRate || 0), 0);
+    };
+
+    const calcMitigatedAndBlockedDamage = (playerState, rawDamage, isHeavy = false) => {
+        const armor = playerState?.char?.stats?.armor || 0;
+        const dr = getArmorDamageReduction(armor);
+
+        // 先护甲减伤（至少 1）
+        let dmg = applyPhysicalMitigation(rawDamage, armor);
+
+        // 再格挡
+        const baseBlockRate = playerState?.char?.stats?.blockRate || 0;
+        const buffBlockRate = getBuffBlockRate(playerState);
+        const blockChance = Math.max(0, Math.min(0.95, (baseBlockRate + buffBlockRate) / 100));
+
+        let blockedAmount = 0;
+        if (Math.random() < blockChance) {
+            const blockValue = Math.floor(
+                (playerState?.char?.stats?.blockValue || 0) + (playerState?.talentBuffs?.blockValueFlat || 0)
+            );
+            blockedAmount = Math.min(Math.max(0, dmg - 1), Math.max(0, blockValue));
+            dmg = Math.max(1, dmg - blockedAmount);
+        }
+
+        // 最后吃“受到伤害乘区”（如防御姿态）
+        const takenMult = playerState?.char?.stats?.damageTakenMult ?? 1;
+        dmg = Math.max(1, Math.floor(dmg * takenMult));
+
+        return { damage: dmg, dr, blockedAmount, isHeavy };
+    };
+
     // 计算本回合 boss 动作：按 cycle 循环
     const bossAction = boss.cycle[(combat.round - 1) % boss.cycle.length];
 
@@ -1029,11 +1064,13 @@ function stepBossCombat(state) {
 
             // 重击伤害 = boss.attack * heavyMultiplier - 玩家防御（至少1）
             const raw = Math.floor((boss.attack || 0) * (boss.heavyMultiplier || 1));
-            const actual = Math.max(1, raw - (target.defense || 0));
+            const { damage, dr, blockedAmount } = calcMitigatedAndBlockedDamage(target, raw, true);
 
-            target.currentHp -= actual;
+            target.currentHp -= damage;
 
-            logs.push(`【${boss.name}】使用【重击】对 位置${tIdx + 1} 造成 ${actual} 伤害`);
+            const drPct = Math.round(dr * 100);
+            const blockText = blockedAmount > 0 ? `，格挡 ${blockedAmount}` : '';
+            logs.push(`【${boss.name}】使用【重击】对 位置${tIdx + 1} 造成 ${damage} 伤害（护甲减伤${drPct}%${blockText}）`);
         }
     }
 
@@ -1048,11 +1085,14 @@ function stepBossCombat(state) {
         const target = combat.playerStates[tIdx];
 
         const raw = Math.floor(m.attack || 0);
-        const actual = Math.max(1, raw - (target.defense || 0));
+        const { damage, dr, blockedAmount } = calcMitigatedAndBlockedDamage(target, raw, false);
 
-        target.currentHp -= actual;
+        target.currentHp -= damage;
 
-        logs.push(`【${boss.minion.name}】攻击 位置${tIdx + 1} 造成 ${actual} 伤害`);
+        const drPct = Math.round(dr * 100);
+        const blockText = blockedAmount > 0 ? `，格挡 ${blockedAmount}` : '';
+        logs.push(`【${boss.minion.name}】攻击 位置${tIdx + 1} 造成 ${damage} 伤害（护甲减伤${drPct}%${blockText}）`);
+
     }
 
     // ③ 清理死亡小弟（可选：保持数组干净）

@@ -963,7 +963,9 @@ function stepBossCombat(state) {
             const heal = Math.floor(result.healAll);
             combat.playerStates.forEach(ps => {
                 if (ps.currentHp > 0) {
-                    ps.currentHp = Math.min(ps.char.stats.maxHp, ps.currentHp + heal);
+                    const newHp = Math.min(ps.char.stats.maxHp, ps.currentHp + heal);
+                    ps.currentHp = newHp;
+                    ps.char.stats.currentHp = newHp; // ✅ 同步角色本体
                 }
             });
             logs.push(`位置${i + 1} ${p.char.name} 全队治疗 ${heal}`);
@@ -1129,7 +1131,23 @@ function stepBossCombat(state) {
 
     // 继续战斗
     combat.logs = logs.slice(-50);
-    return { ...state, bossCombat: combat };
+
+    // 每tick把 bossCombat 的血量回写到角色本体
+    const syncedCharacters = (state.characters || []).map(c => {
+        const ps = combat.playerStates?.find(p => p.char?.id === c.id);
+        if (!ps) return c;
+
+        const maxHp = c.stats?.maxHp ?? ps.char?.stats?.maxHp ?? 0;
+        const nextHp = Math.min(maxHp, Math.max(0, Math.floor(ps.currentHp ?? 0)));
+
+        return {
+            ...c,
+            stats: { ...c.stats, currentHp: nextHp }
+        };
+    });
+
+    return { ...state, characters: syncedCharacters, bossCombat: combat };
+
 }
 
 

@@ -321,6 +321,33 @@ const ZONES = {
         resources: ['木材', '铁矿'],
         unlocked: false,
         unlockLevel: 20
+    },
+    barrens: {
+        id: 'barrens',
+        name: '贫瘠之地',
+        level: 25,
+        type: 'explore',
+        enemies: [
+            {
+                name: '风险投资公司雇员',
+                hp: 5000,
+                attack: 100,
+                defense: 90,
+                exp: 1200,
+                gold: 800
+            },
+            {
+                name: '贫瘠之地小野猪',
+                hp: 8000,
+                attack: 75,
+                defense: 100,
+                exp: 1100,
+                gold: 900
+            }
+        ],
+        resources: ['毛皮','铁矿'],
+        unlocked: false,
+        unlockLevel: 25
     }
 };
 
@@ -353,6 +380,18 @@ const DROP_TABLES = {
                 id: 'IT_001',
                 chance: 0.05
             }
+        ]
+    },
+    westfall: {
+        equipment: [
+            { id: 'EQ_006', chance: 0.03 },
+            { id: 'EQ_007', chance: 0.03 },
+            { id: 'EQ_008', chance: 0.03 },
+            { id: 'EQ_009', chance: 0.03 },
+            { id: 'EQ_010', chance: 0.03 },
+            { id: 'EQ_011', chance: 0.03 },
+            { id: 'EQ_012', chance: 0.03 },
+            { id: 'EQ_013', chance: 0.001 } // 0.1%
         ]
     }
 };
@@ -475,7 +514,180 @@ const FIXED_EQUIPMENTS = {
         maxLevel: 100,
         baseStats: {},
         growth: {}
+    },
+    EQ_006: {
+        id: 'EQ_006',
+        name: '旅行者的头盔',
+        type: 'equipment',
+        slot: 'head',
+        rarity: 'green',
+
+        setId: 'traveler_set',
+        setName: '旅行者套装',
+
+        level: 2,
+        maxLevel: 100,
+        baseStats: {
+            hp: 150,
+            armor: 30
+        },
+        growth: {
+            hp: 2,
+            armor: 2
+        }
+    },
+    EQ_007: {
+        id: 'EQ_007',
+        name: '旅行者的护肩',
+        type: 'equipment',
+        slot: 'shoulder',
+        rarity: 'green',
+
+        setId: 'traveler_set',
+        setName: '旅行者套装',
+
+        level: 2,
+        maxLevel: 100,
+        baseStats: {
+            hp: 120,
+            armor: 25,
+            spellPower: 15
+        },
+        growth: {
+            hp: 2,
+            armor: 2,
+            spellPower: 2
+        }
+    },
+    EQ_008: {
+        id: 'EQ_008',
+        name: '旅行者的胸甲',
+        type: 'equipment',
+        slot: 'chest',
+        rarity: 'green',
+
+        setId: 'traveler_set',
+        setName: '旅行者套装',
+
+        level: 2,
+        maxLevel: 100,
+        baseStats: {
+            hp: 200,
+            armor: 20
+        },
+        growth: {
+            hp: 2,
+            armor: 2
+        }
+    },
+    EQ_009: {
+        id: 'EQ_009',
+        name: '旅行者的护腕',
+        type: 'equipment',
+        slot: 'wrist',
+        rarity: 'green',
+
+        setId: 'traveler_set',
+        setName: '旅行者套装',
+
+        level: 2,
+        maxLevel: 100,
+        baseStats: {
+            hp: 100,
+            armor: 20,
+            attack: 10
+        },
+        growth: {
+            hp: 2,
+            armor: 2,
+            attack: 2
+        }
+    },
+    EQ_010: {
+        id: 'EQ_010',
+        name: '旅行者的手套',
+        type: 'equipment',
+        slot: 'hands',
+        rarity: 'green',
+
+        setId: 'traveler_set',
+        setName: '旅行者套装',
+
+        level: 2,
+        maxLevel: 100,
+        baseStats: {
+            hp: 120,
+            armor: 10,
+            attack: 10
+        },
+        growth: {
+            hp: 2,
+            armor: 2,
+            attack: 2
+        }
+    },
+    EQ_011: {
+        id: 'EQ_011',
+        name: '旅行者的护腿',
+        type: 'equipment',
+        slot: 'legs',
+        rarity: 'green',
+
+        setId: 'traveler_set',
+        setName: '旅行者套装',
+
+        level: 2,
+        maxLevel: 100,
+        baseStats: {
+            hp: 200,
+            armor: 20,
+            spellPower: 15
+        },
+        growth: {
+            hp: 2,
+            armor: 2,
+            spellPower: 2
+        }
+    },
+    EQ_012: {
+        id: 'EQ_012',
+        name: '旅行者的布靴',
+        type: 'equipment',
+        slot: 'feet',
+        rarity: 'green',
+
+        setId: 'traveler_set',
+        setName: '旅行者套装',
+
+        level: 2,
+        maxLevel: 100,
+        baseStats: {
+            hp: 150,
+            armor: 30
+        },
+        growth: {
+            hp: 2,
+            armor: 2
+        }
+    },
+    EQ_013: {
+        id: 'EQ_013',
+        name: '神秘山脉戒指',
+        type: 'equipment',
+        slot: 'ring2',
+        rarity: 'blue',
+
+        level: 1,
+        maxLevel: 100,
+        baseStats: {
+            mastery: 10
+        },
+        growth: {
+            mastery: 2
+        }
     }
+
+
 };
 
 // ==================== RARITY COLORS ====================
@@ -499,7 +711,7 @@ const ITEMS = {
         name: '破烂的毛皮',
         type: 'junk',
         rarity: 'white',
-        sellPrice: 10,
+        sellPrice: 200,
         icon: '🦊'
     }
 };
@@ -572,6 +784,17 @@ const SET_BONUSES = {
         name: '初心者套装',
         tiers: [
             { count: 2, bonus: { expBonus: 0.20 } },
+        ]
+    },
+    traveler_set: {
+        name: '旅行者套装',
+        tiers: [
+            {
+                count: 6,
+                bonus: {
+                    expBonus: 0.40
+                }
+            }
         ]
     }
 };

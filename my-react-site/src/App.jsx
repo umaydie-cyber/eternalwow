@@ -4674,7 +4674,7 @@ const CharacterPage = ({ state, dispatch }) => {
                                 }}>
                                     <div>生命: {Math.floor(char.stats.currentHp)} / {Math.floor(char.stats.maxHp)}</div>
                                     <div>法力: {Math.floor(char.stats.currentMp)} / {Math.floor(char.stats.maxMp)}</div>
-                                    <div>攻击: {char.stats.attack}</div>
+                                    <div>攻击: {formatStatForDisplay('attack', char.stats.attack)}</div>
                                     <div>护甲: {Math.floor(char.stats.armor)}</div>
                                 </div>
 

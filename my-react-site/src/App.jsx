@@ -2101,6 +2101,25 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1) {
                 type: 'damage',
                 isCrit: result.isCrit
             });
+
+            if (character.stats.atonement) {
+                // 救赎生效，恢复血量
+                const healFromAtonement = Math.floor(actualDamage * character.stats.atonement.healingRate); // 救赎恢复healingRate倍伤害的生命
+                const maxHp = character.stats.maxHp ?? character.stats.hp ?? 0;
+                const actualHeal = Math.min(healFromAtonement, maxHp - charHp);
+                charHp += actualHeal;
+                logs.push(`${ps.char.name} 因为救赎恢复 ${healFromAtonement} 点生命`);
+                // 施加日志
+                logs.push({
+                    round,
+                    actor: character.name,
+                    action: `救赎`,
+                    target: character.name,
+                    value: actualHeal,
+                    type: 'heal',
+                    text: `因为救赎恢复 ${healFromAtonement} 点生命`
+                });
+            }
         } else if (result.heal) {
             const maxHp = character.stats.maxHp ?? character.stats.hp ?? 0;
             const actualHeal = Math.min(result.heal, maxHp - charHp);
@@ -2144,7 +2163,38 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1) {
                 type: 'debuff',
                 text: `施加持续伤害：每回合 ${result.dot.damagePerTurn}，持续 ${result.dot.duration} 回合`
             });
+        }else if (result.healAll) {
+            const maxHp = character.stats.maxHp ?? character.stats.hp ?? 0;
+            const actualHeal = Math.min(result.healAll, maxHp - charHp);
+            charHp += actualHeal;
+            logs.push({
+                round,
+                actor: character.name,
+                action: skill.name,
+                target: character.name,
+                value: actualHeal,
+                type: 'heal'
+            });
         }
+
+        // 如果有救赎效果，则应用救赎
+        if (result.applyAtonement) {
+            const actualHeal = 0.2;
+            const atonementDuration = result.applyAtonement.duration || 2;  // 默认持续 2 回合
+            character.stats.atonement = {
+                healingRate: actualHeal,
+                duration: atonementDuration
+            };
+            logs.push({
+                round,
+                actor: character.name,
+                action: skill.name,
+                target: character.name,
+                value: `救赎生效，持续 ${atonementDuration} 回合，治疗量：${actualHeal}倍伤害`,
+                type: 'buff'
+            });
+        }
+
 
         // ===== 天赋：质朴（10级）普通攻击后触发（本场战斗叠层） =====
         if (currentSkillId === 'basic_attack' && character.talents?.[10] === 'plain') {

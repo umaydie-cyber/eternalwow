@@ -1009,6 +1009,14 @@ const BUILDINGS = {
     hunter_lodge: { id: 'hunter_lodge', name: '猎人小屋', cost: { gold: 250, wood: 120 }, production: { leather: 3 }, consumption: { population: 1 } },
     mana_well: { id: 'mana_well', name: '魔力之源', cost: { gold: 800, ironIngot: 50 }, production: { magicEssence: 1 }, consumption: { population: 3 } },
     alchemy_lab: { id: 'alchemy_lab', name: '炼金实验室', cost: { gold: 600, wood: 100, herb: 50 }, production: { alchemyOil: 2 }, consumption: { population: 2, herb: 2 } },
+    plaza_fountain: {
+        id: 'plaza_fountain',
+        name: '广场喷泉',
+        cost: { gold: 10000, wood: 10000, ironOre: 8000 },
+        production: {},
+        consumption: {}
+        // 效果在 gameReducer 的 TICK 中实现（见下文）
+    },
 };
 
 function getBuildingCost(buildingId, state) {
@@ -2479,6 +2487,9 @@ function gameReducer(state, action) {
                 }
             }
 
+            // ===== 广场喷泉：所有脱战英雄每秒回血 +1点（每座喷泉 +1，可叠加） =====
+            const fountainCount = state.buildings.plaza_fountain || 0;
+
             // Boss战斗推进
             if (newState.bossCombat) {
                 newState = stepBossCombat(newState);
@@ -2670,7 +2681,7 @@ function gameReducer(state, action) {
                     ...char,
                     stats: {
                         ...char.stats,
-                        currentHp: Math.min(maxHp, curHp + REGEN_PER_SECOND)
+                        currentHp: Math.min(maxHp, curHp + REGEN_PER_SECOND+fountainCount*1)
                     }
                 };
             });

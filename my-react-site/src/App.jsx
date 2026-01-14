@@ -2262,6 +2262,23 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1) {
             }
         }
 
+        // 后续回合中处理救赎恢复
+        if (character.stats.atonement && character.stats.atonement.duration > 0) {
+            character.stats.atonement.duration -= 1;  // 递减持续回合
+        }
+        // 清理过期的救赎效果
+        if (character.stats.atonement && character.stats.atonement.duration <= 0) {
+            delete character.stats.atonement;
+            logs.push({
+                round,
+                actor: character.name,
+                action: "救赎结束",
+                target: character.name,
+                value: "救赎效果结束",
+                type: 'buff'
+            });
+        }
+
         // ===== 敌人回合 =====
         const dr = getArmorDamageReduction(character.stats.armor);
         const rawEnemyDamage = applyPhysicalMitigation(combatState.enemy?.attack ?? 0, character.stats.armor);

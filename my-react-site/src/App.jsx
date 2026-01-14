@@ -302,8 +302,8 @@ const ZONES = {
         level: 10,
         type: 'explore',
         enemies: [
-            { name: '收割机傀儡', hp: 250, attack: 20, defense: 8, exp: 35, gold: 25 },
-            { name: '迪菲亚盗贼', hp: 300, attack: 30, defense: 10, exp: 50, gold: 40 },
+            { name: '收割机傀儡', hp: 250, attack: 25, defense: 20, exp: 45, gold: 35 },
+            { name: '迪菲亚盗贼', hp: 300, attack: 30, defense: 18, exp: 50, gold: 40 },
         ],
         resources: ['木材', '毛皮'],
         unlocked: false,
@@ -315,7 +315,7 @@ const ZONES = {
         level: 20,
         type: 'explore',
         enemies: [
-            { name: '豺狼人', hp: 1500, attack: 55, defense: 40, exp: 80, gold: 60 },
+            { name: '豺狼人', hp: 1500, attack: 55, defense: 40, exp: 80, gold: 70 },
             { name: '黑石兽人', hp: 2000, attack: 85, defense: 50, exp: 120, gold: 100 },
         ],
         resources: ['木材', '铁矿'],
@@ -1050,12 +1050,14 @@ function calculateTotalStats(character, partyAuras = { hpMul: 1, spellPowerMul: 
         damageTakenMult: 1
     };
 
-    const hasBeginnerSet =
-        (character.equipment.mainHand?.id === 'EQ_002'||character.equipment.mainHand?.id === 'EQ_005') &&
-        character.equipment.offHand?.id === 'EQ_001';
-
-    if (hasBeginnerSet) {
-        totalStats.expBonus = (totalStats.expBonus || 0) + 0.2;
+    // 套装加成（expBonus / goldBonus / dropBonus 等）
+    const setBonuses = getSetBonusesForCharacter(character);
+    for (const set of setBonuses) {
+        for (const tier of set.activated) {
+            for (const [k, v] of Object.entries(tier.bonus || {})) {
+                totalStats[k] = (totalStats[k] || 0) + v;
+            }
+        }
     }
 
     // 重生全局加成

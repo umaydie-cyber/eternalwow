@@ -393,6 +393,27 @@ const DROP_TABLES = {
             { id: 'EQ_012', chance: 0.03 },
             { id: 'EQ_013', chance: 0.001 } // 0.1%
         ]
+    },
+    redridge: {
+        equipment: [
+            { id: 'EQ_014', chance: 0.01 },   // 1%
+            { id: 'EQ_015', chance: 0.01 },   // 1%
+            { id: 'EQ_016', chance: 0.01 },   // 1%
+            { id: 'EQ_017', chance: 0.01 },   // 1%
+            { id: 'EQ_018', chance: 0.001 }  // 0.1%
+        ]
+    },
+    barrens: {
+        equipment: [
+            { id: 'EQ_019', chance: 0.01 },   // 1%
+            { id: 'EQ_020', chance: 0.003 },  // 0.3%
+            { id: 'EQ_021', chance: 0.003 },  // 0.3%
+            { id: 'EQ_022', chance: 0.01 },   // 1%
+            { id: 'EQ_023', chance: 0.01 },   // 1%
+            { id: 'EQ_024', chance: 0.001 },  // 0.1%
+            { id: 'EQ_025', chance: 0.003 },  // 0.3%
+            { id: 'EQ_026', chance: 0.003 }   // 0.3%
+        ]
     }
 };
 
@@ -685,10 +706,272 @@ const FIXED_EQUIPMENTS = {
         growth: {
             mastery: 2
         }
-    }
+    },EQ_014: {
+        id: 'EQ_014',
+        name: '山脉卫士之刺',
+        type: 'equipment',
+        slot: 'mainHand',
+        rarity: 'green',
+        level: 1,
+        maxLevel: 100,
+        baseStats: {
+            attack: 120,
+            versatility: 10,
+            mastery: 10
+        },
+        growth: {
+            attack: 2,
+            versatility: 2,
+            mastery: 2
+        }
+    },
+    EQ_015: {
+        id: 'EQ_015',
+        name: '山脉卫士之噬',
+        type: 'equipment',
+        slot: 'mainHand',
+        rarity: 'green',
+        level: 1,
+        maxLevel: 100,
+        baseStats: {
+            spellPower: 180,
+            versatility: 10,
+            mastery: 10
+        },
+        growth: {
+            spellPower: 2,
+            versatility: 2,
+            mastery: 2
+        }
+    },
+    EQ_016: {
+        id: 'EQ_016',
+        name: '山脉卫士之盾',
+        type: 'equipment',
+        slot: 'offHand',
+        rarity: 'green',
+        level: 1,
+        maxLevel: 100,
+        baseStats: {
+            blockRate: 15,
+            blockValue: 80,
+            mastery: 10
+        },
+        growth: {
+            blockRate: 2,
+            blockValue: 2,
+            mastery: 2
+        }
+    },
+    EQ_017: {
+        id: 'EQ_017',
+        name: '山脉卫士魔典',
+        type: 'equipment',
+        slot: 'offHand',
+        rarity: 'green',
+        level: 1,
+        maxLevel: 100,
+        baseStats: {
+            spellPower: 100,
+            versatility: 10,
+            mastery: 20
+        },
+        growth: {
+            spellPower: 2,
+            versatility: 2,
+            mastery: 2
+        }
+    },
+    EQ_018: {
+        id: 'EQ_018',
+        name: '山脉卫士之心',
+        type: 'equipment',
+        slot: 'trinket1',
+        rarity: 'blue',
+        level: 1,
+        maxLevel: 100,
+        baseStats: {
+            spellPower: 120,
+            attack: 80,
+            mastery: 10,
+            versatility: 10
+        },
+        growth: {
+            spellPower: 2,
+            attack: 2,
+            mastery: 2,
+            versatility: 2
+        }
+    },EQ_019: {
+        id: 'EQ_019',
+        name: '尖牙手套',
+        type: 'equipment',
+        slot: 'hands',
+        rarity: 'green',
+        setId: 'venom_embrace',
+        setName: '毒蛇的拥抱',
+        level: 1,
+        maxLevel: 100,
+        baseStats: {
+            hp: 150,
+            armor: 30
+        },
+        growth: {
+            hp: 2,
+            armor: 2
+        }
+    },
+    EQ_020: {
+        id: 'EQ_020',
+        name: '尖牙护腿',
+        type: 'equipment',
+        slot: 'legs',
+        rarity: 'blue',
+        setId: 'venom_embrace',
+        setName: '毒蛇的拥抱',
+        level: 1,
+        maxLevel: 100,
+        baseStats: {
+            hp: 120,
+            armor: 25,
+            spellPower: 15
+        },
+        growth: {
+            hp: 2,
+            armor: 2,
+            spellPower: 2
+        }
+    },
+    EQ_021: {
+        id: 'EQ_021',
+        name: '尖牙铠甲',
+        type: 'equipment',
+        slot: 'chest',
+        rarity: 'blue',
+        setId: 'venom_embrace',
+        setName: '毒蛇的拥抱',
+        level: 1,
+        maxLevel: 100,
+        baseStats: {
+            hp: 200,
+            armor: 20
+        },
+        growth: {
+            hp: 2,
+            armor: 2
+        }
+    },
+    EQ_022: {
+        id: 'EQ_022',
+        name: '尖牙腰带',
+        type: 'equipment',
+        slot: 'wrist',  // 用 wrist 槽位代替腰带（游戏中常见做法）
+        rarity: 'green',
+        setId: 'venom_embrace',
+        setName: '毒蛇的拥抱',
+        level: 1,
+        maxLevel: 100,
+        baseStats: {
+            hp: 100,
+            armor: 20,
+            attack: 10
+        },
+        growth: {
+            hp: 2,
+            armor: 2,
+            attack: 2
+        }
+    },
+    EQ_023: {
+        id: 'EQ_023',
+        name: '尖牙足垫',
+        type: 'equipment',
+        slot: 'feet',
+        rarity: 'green',
+        setId: 'venom_embrace',
+        setName: '毒蛇的拥抱',
+        level: 1,
+        maxLevel: 100,
+        baseStats: {
+            hp: 120,
+            armor: 10,
+            attack: 10
+        },
+        growth: {
+            hp: 2,
+            armor: 2,
+            attack: 2
+        }
+    },
+    EQ_024: {
+        id: 'EQ_024',
+        name: '毒蛇',
+        type: 'equipment',
+        slot: 'mainHand',
+        rarity: 'purple',
+        setId: 'venom_embrace',
+        setName: '毒蛇的拥抱',
+        level: 1,
+        maxLevel: 100,
+        baseStats: {
+            attack: 250,
+            critRate: 20,
+            critDamage: 0.5,  // 50% 额外暴击伤害
+            versatility: 5
+        },
+        growth: {
+            attack: 2,
+            critRate: 2,
+            critDamage: 2,
+            versatility: 2
+        }
+    },
+    EQ_025: {
+        id: 'EQ_025',
+        name: '生命之根',
+        type: 'equipment',
+        slot: 'trinket1',
+        rarity: 'blue',
+        level: 1,
+        maxLevel: 100,
+        baseStats: {
+            spellPower: 200,
+            hp: 300,
+            versatility: 10
+        },
+        growth: {
+            spellPower: 2,
+            hp: 2,
+            versatility: 2
+        }
+    },
+    EQ_026: {
+        id: 'EQ_026',
+        name: '克雷什之背',
+        type: 'equipment',
+        slot: 'offHand',
+        rarity: 'blue',
+        level: 1,
+        maxLevel: 100,
+        baseStats: {
+            blockRate: 20,
+            blockValue: 100,
+            hp: 400
+        },
+        growth: {
+            blockRate: 2,
+            blockValue: 2,
+            hp: 2
+        }
+    },
 
 
 };
+
+//赤脊山5件图鉴100级点亮效果
+const REDRIDGE_LV100_SET = ['EQ_014', 'EQ_015', 'EQ_016', 'EQ_017', 'EQ_018'];
+// 贫瘠之地毒蛇的拥抱6件装备全部达到过Lv.100 → 全队爆击率+5
+const BARRENS_LV100_SET = ['EQ_019', 'EQ_020', 'EQ_021', 'EQ_022', 'EQ_023', 'EQ_024'];
 
 // ==================== RARITY COLORS ====================
 const RARITY_COLORS = {
@@ -795,6 +1078,12 @@ const SET_BONUSES = {
                     expBonus: 0.40
                 }
             }
+        ]
+    },venom_embrace: {
+        name: '毒蛇的拥抱',
+        tiers: [
+            { count: 3, bonus: { versatility: 10 } },
+            { count: 6, bonus: { critRate: 10, critDamage: 0.30 } }  // 10%爆击率 + 30%暴击伤害
         ]
     }
 };
@@ -1062,6 +1351,18 @@ function calculateTotalStats(character, partyAuras = { hpMul: 1, spellPowerMul: 
 
     // 重生全局加成
     totalStats.expBonus = (totalStats.expBonus || 0) + (gameState?.rebirthBonuses?.exp || 0);
+
+    // ===== 赤脊山五件装备全部达到过Lv.100 → 全队全能+5 =====
+    if (gameState && Array.isArray(gameState.codexEquipLv100) &&
+        REDRIDGE_LV100_SET.every(id => gameState.codexEquipLv100.includes(id))) {
+        totalStats.versatility = (totalStats.versatility || 0) + 5;
+    }
+
+    // 贫瘠之地毒蛇的拥抱6件全部达到过Lv.100 → 全队爆击率+5
+    if (gameState && Array.isArray(gameState.codexEquipLv100) &&
+        BARRENS_LV100_SET.every(id => gameState.codexEquipLv100.includes(id))) {
+        totalStats.critRate = (totalStats.critRate || 0) + 5;
+    }
 
     // 简约而不简单羁绊：单一职业队伍普通攻击伤害提高150%
     if (gameState?.rebirthBonds?.includes('jianyue')) {

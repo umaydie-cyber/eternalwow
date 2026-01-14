@@ -1013,7 +1013,7 @@ const BUILDINGS = {
         id: 'plaza_fountain',
         name: '广场喷泉',
         cost: { gold: 10000, wood: 10000, ironOre: 8000 },
-        production: {},
+        production: {'自动回血':1},
         consumption: {}
         // 效果在 gameReducer 的 TICK 中实现（见下文）
     },
@@ -2660,7 +2660,7 @@ function gameReducer(state, action) {
                 }
             });
 
-            // ✅ 离开战斗 5 秒后开始回血：每秒 +10
+            // ✅ 离开战斗 5 秒后开始回血：每秒 +10+喷泉数量
             const REGEN_DELAY_MS = 5000;
             const REGEN_PER_SECOND = 10;
             const now = Date.now();

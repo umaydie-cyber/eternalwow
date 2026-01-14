@@ -2108,7 +2108,6 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1) {
                 const maxHp = character.stats.maxHp ?? character.stats.hp ?? 0;
                 const actualHeal = Math.min(healFromAtonement, maxHp - charHp);
                 charHp += actualHeal;
-                logs.push(`${ps.char.name} 因为救赎恢复 ${healFromAtonement} 点生命`);
                 // 施加日志
                 logs.push({
                     round,

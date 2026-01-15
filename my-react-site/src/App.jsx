@@ -2361,6 +2361,258 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1) {
     };
 }
 
+//
+function tickOnce(newState){
+    newState.lastOnlineTime = Date.now();
+
+    let newResources = { ...newState.resources };
+    const researchBonus = {};
+    Object.entries(newState.research).forEach(([id, level]) => {
+        const research = RESEARCH[id];
+        if (research) {
+            researchBonus[research.effect] = (researchBonus[research.effect] || 0) + research.bonus * level;
+        }
+    });
+
+    Object.entries(newState.buildings).forEach(([buildingId, count]) => {
+        if (count > 0) {
+            const building = BUILDINGS[buildingId];
+            Object.entries(building.production || {}).forEach(([resource, amount]) => {
+                const bonus = researchBonus[resource] || 0;
+                const production = amount * count * (1 + bonus);
+                newResources[resource] = (newResources[resource] || 0) + production;
+            });
+            Object.entries(building.consumption || {}).forEach(([resource, amount]) => {
+                newResources[resource] = (newResources[resource] || 0) - amount * count;
+            });
+        }
+    });
+
+    const maxPopBonus = researchBonus.population || 0;
+    const houseCount = newState.buildings.house || 0;
+    newResources.maxPopulation = Math.floor(houseCount * 2 * (1 + maxPopBonus));
+
+    newState.resources = newResources;
+
+    if (newState.currentResearch) {
+        const research = RESEARCH[newState.currentResearch];
+        const level = newState.research[newState.currentResearch] || 0;
+        const cost = Math.floor(research.baseCost * Math.pow(1.5, level));
+
+        if (newState.resources.gold >= cost) {
+            newState.researchProgress += 1;
+            if (newState.researchProgress >= 100) {
+                newState.research = {
+                    ...newState.research,
+                    [newState.currentResearch]: level + 1
+                };
+                newState.researchProgress = 0;
+                newState.resources.gold -= cost;
+            }
+        }
+    }
+
+    // ===== 广场喷泉：所有脱战英雄每秒回血 +1点（每座喷泉 +1，可叠加） =====
+    const fountainCount = state.buildings.plaza_fountain || 0;
+
+    // Boss战斗推进
+    if (newState.bossCombat) {
+        newState = stepBossCombat(newState);
+    }
+
+    const toRecall = [];
+
+    // 后台战斗（拆分成多 tick 推进，实时更新血量）
+    const COMBAT_START_INTERVAL_FRAMES = 10; // 与旧逻辑保持节奏：每10帧“开一场”
+    const COMBAT_ROUNDS_PER_TICK = 2; // 每秒推进2回合：最多20回合 => 最长约10秒
+
+    Object.entries(newState.assignments).forEach(([charId, zoneId]) => {
+        const zone = newState.zones[zoneId];
+        const charIndex = newState.characters.findIndex(c => c.id === charId);
+        if (charIndex === -1) return;
+
+        let char = { ...newState.characters[charIndex] };
+
+        if (!zone || !zone.enemies) return;
+
+        const now = Date.now();
+
+        // 只有“到点”才会拉怪开始一场新战斗（避免每秒都重开）
+        if (!char.combatState && newState.frame % COMBAT_START_INTERVAL_FRAMES === 0) {
+            const enemy = zone.enemies[Math.floor(Math.random() * zone.enemies.length)];
+            char.combatState = createCombatState(char, enemy, char.skillSlots || []);
+            char.lastCombatTime = now; // 进入战斗
+        }
+
+        // 推进当前战斗：每tick更新一次 currentHp => UI 实时变化
+        if (char.combatState) {
+            char.lastCombatTime = now; // 战斗中持续刷新，确保不会被脱战回血逻辑影响
+
+            const step = stepCombatRounds(char, char.combatState, COMBAT_ROUNDS_PER_TICK);
+
+            const endHp = Number.isFinite(step.charHp)
+                ? Math.max(0, Math.floor(step.charHp))
+                : (char.stats.currentHp ?? char.stats.maxHp);
+
+            char.stats = { ...char.stats, currentHp: endHp };
+            char.combatState = step.combatState;
+
+            // 战斗结束：写日志、结算奖励、清 combatState
+            if (step.finished) {
+                char.lastCombatTime = now; // 结束也刷新一次：脱战回血从这里开始计时
+
+                const enemy = step.combatState.enemy;
+                const finalLogs = step.combatState.logs || [];
+
+                newState.combatLogs = [
+                    {
+                        id: `log_${Date.now()}_${Math.random()}`,
+                        timestamp: Date.now(),
+                        characterName: char.name,
+                        zoneName: zone.name,
+                        enemyName: enemy.name,
+                        result: step.won ? 'victory' : 'defeat',
+                        logs: finalLogs,
+                        rewards: step.won ? { gold: enemy.gold, exp: enemy.exp } : { gold: 0, exp: 0 }
+                    },
+                    ...newState.combatLogs
+                ].slice(0, 50);
+
+                // 清理战斗状态
+                char.combatState = null;
+
+                // 失败：如果死亡则召回
+                if (!step.won) {
+                    if (endHp <= 0) {
+                        toRecall.push(charId);
+                    }
+                } else {
+                    // 胜利结算
+                    newState.resources.gold += enemy.gold;
+
+                    let expGained = (1 + (char.stats.expBonus || 0));
+                    char.exp += enemy.exp * expGained;
+
+                    while (char.exp >= char.expToNext && char.level < 200) {
+                        char.exp -= char.expToNext;
+                        char.level++;
+                        char.expToNext = Math.floor(100 * Math.pow(1.2, char.level - 1));
+                        char.skills = learnNewSkills(char);
+                        char.stats = calculateTotalStats(char, undefined, state);
+                    }
+
+                    newState.stats.battlesWon++;
+
+                    const mapResourceNameToKey = (name) => {
+                        const m = {
+                            '木材': 'wood',
+                            '草药': 'herb',
+                            '铁矿': 'ironOre',
+                            '毛皮': 'leather',
+                            '魔法精华': 'magicEssence',
+                            '炼金油': 'alchemyOil',
+                        };
+                        return m[name] || null;
+                    };
+
+                    if (Math.random() < 0.1 && zone.resources) {
+                        const resourceName = zone.resources[Math.floor(Math.random() * zone.resources.length)];
+                        const key = mapResourceNameToKey(resourceName);
+                        if (key) {
+                            newState.resources = { ...newState.resources, [key]: (newState.resources[key] || 0) + 1 };
+                        }
+                    }
+
+                    // ✅ 装备掉落：使用掉落表（例如第一张图 elwynn_forest 掉初心者套装）
+                    const dropTable = DROP_TABLES[zone.id];
+                    if (dropTable?.equipment && newState.inventory.length < newState.inventorySize) {
+                        const allowDrop = (id) => state.dropFilters?.[id] !== false; // 默认允许
+                        dropTable.equipment.filter(drop => allowDrop(drop.id)).forEach(drop => {
+                            if (newState.inventory.length >= newState.inventorySize) return;
+                            if (Math.random() < (drop.chance ?? 0)) {
+                                // 固定装备：用模板创建实例
+                                newState.inventory.push(createEquipmentInstance(drop.id));
+                                newState = addEquipmentIdToCodex(newState, drop.id);
+                            }
+                        });
+                    }
+
+                    // ✅ 物品掉落（如果你也想用掉落表的 items）
+                    if (dropTable?.items && newState.inventory.length < newState.inventorySize) {
+
+                        const allowDrop = (id) => state.dropFilters?.[id] !== false; // 默认允许
+
+                        dropTable.items.filter(drop => allowDrop(drop.id)).forEach(drop => {
+                            if (newState.inventory.length >= newState.inventorySize) return;
+                            if (Math.random() < (drop.chance ?? 0)) {
+                                const tpl = ITEMS[drop.id];
+                                if (tpl) {
+                                    newState.inventory.push({
+                                        ...tpl,
+                                        instanceId: `inv_${Date.now()}_${Math.random()}`,
+                                        id: tpl.id,            // 保持模板 id: IT_001
+                                    });
+                                    newState = addJunkIdToCodex(newState, drop.id);
+                                }
+                            }
+                        });
+                    }
+
+                }
+            }
+
+            // 写回角色
+            newState.characters = [...newState.characters];
+            newState.characters[charIndex] = char;
+        }
+    });
+    if (toRecall.length > 0) {
+        const newAssignments = { ...newState.assignments };
+        toRecall.forEach(id => delete newAssignments[id]);
+        newState.assignments = newAssignments;
+    }
+
+    Object.entries(ACHIEVEMENTS).forEach(([id, achievement]) => {
+        if (!newState.achievements[id] && achievement.condition(newState)) {
+            newState.achievements = { ...newState.achievements, [id]: true };
+        }
+    });
+
+    const maxCharLevel = Math.max(...newState.characters.map(c => c.level), 0);
+    Object.values(newState.zones).forEach(zone => {
+        if (!zone.unlocked && zone.unlockLevel && maxCharLevel >= zone.unlockLevel) {
+            zone.unlocked = true;
+        }
+    });
+
+    // ✅ 离开战斗 5 秒后开始回血：每秒 +10+喷泉数量
+    const REGEN_DELAY_MS = 5000;
+    const REGEN_PER_SECOND = 10;
+    const now = Date.now();
+
+    newState.characters = newState.characters.map(char => {
+        const maxHp = char.stats?.maxHp ?? char.stats?.hp ?? 0;
+        const curHp = char.stats?.currentHp ?? maxHp;
+
+        // 战斗中不回血
+        if (char.combatState) return char;
+
+        if (curHp >= maxHp) return char;
+
+        const lastCombatTime = char.lastCombatTime || 0;
+        if (now - lastCombatTime < REGEN_DELAY_MS) return char;
+
+        return {
+            ...char,
+            stats: {
+                ...char.stats,
+                currentHp: Math.min(maxHp, curHp + REGEN_PER_SECOND+fountainCount*1)
+            }
+        };
+    });
+
+    return newState;
+}
 // ==================== GAME REDUCER ====================
 function gameReducer(state, action) {
     switch (action.type) {
@@ -2502,257 +2754,15 @@ function gameReducer(state, action) {
         }
 
         case 'TICK': {
-            let newState = { ...state, frame: state.frame + 1 };
+            const deltaSeconds = action.payload?.deltaSeconds ?? 1;
 
-            newState.lastOnlineTime = Date.now();
+            // 防止一次补太多卡死（比如离开几小时）
+            const steps = Math.min(deltaSeconds, 60 * 60); // 例：最多补 1 小时
+            let s = state;
+            for (let i = 0; i < steps; i++) s = tickOnce(s);
+            return s;
 
-            let newResources = { ...newState.resources };
-            const researchBonus = {};
-            Object.entries(newState.research).forEach(([id, level]) => {
-                const research = RESEARCH[id];
-                if (research) {
-                    researchBonus[research.effect] = (researchBonus[research.effect] || 0) + research.bonus * level;
-                }
-            });
 
-            Object.entries(newState.buildings).forEach(([buildingId, count]) => {
-                if (count > 0) {
-                    const building = BUILDINGS[buildingId];
-                    Object.entries(building.production || {}).forEach(([resource, amount]) => {
-                        const bonus = researchBonus[resource] || 0;
-                        const production = amount * count * (1 + bonus);
-                        newResources[resource] = (newResources[resource] || 0) + production;
-                    });
-                    Object.entries(building.consumption || {}).forEach(([resource, amount]) => {
-                        newResources[resource] = (newResources[resource] || 0) - amount * count;
-                    });
-                }
-            });
-
-            const maxPopBonus = researchBonus.population || 0;
-            const houseCount = newState.buildings.house || 0;
-            newResources.maxPopulation = Math.floor(houseCount * 2 * (1 + maxPopBonus));
-
-            newState.resources = newResources;
-
-            if (newState.currentResearch) {
-                const research = RESEARCH[newState.currentResearch];
-                const level = newState.research[newState.currentResearch] || 0;
-                const cost = Math.floor(research.baseCost * Math.pow(1.5, level));
-
-                if (newState.resources.gold >= cost) {
-                    newState.researchProgress += 1;
-                    if (newState.researchProgress >= 100) {
-                        newState.research = {
-                            ...newState.research,
-                            [newState.currentResearch]: level + 1
-                        };
-                        newState.researchProgress = 0;
-                        newState.resources.gold -= cost;
-                    }
-                }
-            }
-
-            // ===== 广场喷泉：所有脱战英雄每秒回血 +1点（每座喷泉 +1，可叠加） =====
-            const fountainCount = state.buildings.plaza_fountain || 0;
-
-            // Boss战斗推进
-            if (newState.bossCombat) {
-                newState = stepBossCombat(newState);
-            }
-
-            const toRecall = [];
-
-            // 后台战斗（拆分成多 tick 推进，实时更新血量）
-            const COMBAT_START_INTERVAL_FRAMES = 10; // 与旧逻辑保持节奏：每10帧“开一场”
-            const COMBAT_ROUNDS_PER_TICK = 2; // 每秒推进2回合：最多20回合 => 最长约10秒
-
-            Object.entries(newState.assignments).forEach(([charId, zoneId]) => {
-                const zone = newState.zones[zoneId];
-                const charIndex = newState.characters.findIndex(c => c.id === charId);
-                if (charIndex === -1) return;
-
-                let char = { ...newState.characters[charIndex] };
-
-                if (!zone || !zone.enemies) return;
-
-                const now = Date.now();
-
-                // 只有“到点”才会拉怪开始一场新战斗（避免每秒都重开）
-                if (!char.combatState && newState.frame % COMBAT_START_INTERVAL_FRAMES === 0) {
-                    const enemy = zone.enemies[Math.floor(Math.random() * zone.enemies.length)];
-                    char.combatState = createCombatState(char, enemy, char.skillSlots || []);
-                    char.lastCombatTime = now; // 进入战斗
-                }
-
-                // 推进当前战斗：每tick更新一次 currentHp => UI 实时变化
-                if (char.combatState) {
-                    char.lastCombatTime = now; // 战斗中持续刷新，确保不会被脱战回血逻辑影响
-
-                    const step = stepCombatRounds(char, char.combatState, COMBAT_ROUNDS_PER_TICK);
-
-                    const endHp = Number.isFinite(step.charHp)
-                        ? Math.max(0, Math.floor(step.charHp))
-                        : (char.stats.currentHp ?? char.stats.maxHp);
-
-                    char.stats = { ...char.stats, currentHp: endHp };
-                    char.combatState = step.combatState;
-
-                    // 战斗结束：写日志、结算奖励、清 combatState
-                    if (step.finished) {
-                        char.lastCombatTime = now; // 结束也刷新一次：脱战回血从这里开始计时
-
-                        const enemy = step.combatState.enemy;
-                        const finalLogs = step.combatState.logs || [];
-
-                        newState.combatLogs = [
-                            {
-                                id: `log_${Date.now()}_${Math.random()}`,
-                                timestamp: Date.now(),
-                                characterName: char.name,
-                                zoneName: zone.name,
-                                enemyName: enemy.name,
-                                result: step.won ? 'victory' : 'defeat',
-                                logs: finalLogs,
-                                rewards: step.won ? { gold: enemy.gold, exp: enemy.exp } : { gold: 0, exp: 0 }
-                            },
-                            ...newState.combatLogs
-                        ].slice(0, 50);
-
-                        // 清理战斗状态
-                        char.combatState = null;
-
-                        // 失败：如果死亡则召回
-                        if (!step.won) {
-                            if (endHp <= 0) {
-                                toRecall.push(charId);
-                            }
-                        } else {
-                            // 胜利结算
-                            newState.resources.gold += enemy.gold;
-
-                            let expGained = (1 + (char.stats.expBonus || 0));
-                            char.exp += enemy.exp * expGained;
-
-                            while (char.exp >= char.expToNext && char.level < 200) {
-                                char.exp -= char.expToNext;
-                                char.level++;
-                                char.expToNext = Math.floor(100 * Math.pow(1.2, char.level - 1));
-                                char.skills = learnNewSkills(char);
-                                char.stats = calculateTotalStats(char, undefined, state);
-                            }
-
-                            newState.stats.battlesWon++;
-
-                            const mapResourceNameToKey = (name) => {
-                                const m = {
-                                    '木材': 'wood',
-                                    '草药': 'herb',
-                                    '铁矿': 'ironOre',
-                                    '毛皮': 'leather',
-                                    '魔法精华': 'magicEssence',
-                                    '炼金油': 'alchemyOil',
-                                };
-                                return m[name] || null;
-                            };
-
-                            if (Math.random() < 0.1 && zone.resources) {
-                                const resourceName = zone.resources[Math.floor(Math.random() * zone.resources.length)];
-                                const key = mapResourceNameToKey(resourceName);
-                                if (key) {
-                                    newState.resources = { ...newState.resources, [key]: (newState.resources[key] || 0) + 1 };
-                                }
-                            }
-
-                            // ✅ 装备掉落：使用掉落表（例如第一张图 elwynn_forest 掉初心者套装）
-                            const dropTable = DROP_TABLES[zone.id];
-                            if (dropTable?.equipment && newState.inventory.length < newState.inventorySize) {
-                                const allowDrop = (id) => state.dropFilters?.[id] !== false; // 默认允许
-                                dropTable.equipment.filter(drop => allowDrop(drop.id)).forEach(drop => {
-                                    if (newState.inventory.length >= newState.inventorySize) return;
-                                    if (Math.random() < (drop.chance ?? 0)) {
-                                        // 固定装备：用模板创建实例
-                                        newState.inventory.push(createEquipmentInstance(drop.id));
-                                        newState = addEquipmentIdToCodex(newState, drop.id);
-                                    }
-                                });
-                            }
-
-                            // ✅ 物品掉落（如果你也想用掉落表的 items）
-                            if (dropTable?.items && newState.inventory.length < newState.inventorySize) {
-
-                                const allowDrop = (id) => state.dropFilters?.[id] !== false; // 默认允许
-
-                                dropTable.items.filter(drop => allowDrop(drop.id)).forEach(drop => {
-                                    if (newState.inventory.length >= newState.inventorySize) return;
-                                    if (Math.random() < (drop.chance ?? 0)) {
-                                        const tpl = ITEMS[drop.id];
-                                        if (tpl) {
-                                            newState.inventory.push({
-                                                ...tpl,
-                                                instanceId: `inv_${Date.now()}_${Math.random()}`,
-                                                id: tpl.id,            // 保持模板 id: IT_001
-                                            });
-                                            newState = addJunkIdToCodex(newState, drop.id);
-                                        }
-                                    }
-                                });
-                            }
-
-                        }
-                    }
-
-                    // 写回角色
-                    newState.characters = [...newState.characters];
-                    newState.characters[charIndex] = char;
-                }
-            });
-            if (toRecall.length > 0) {
-                const newAssignments = { ...newState.assignments };
-                toRecall.forEach(id => delete newAssignments[id]);
-                newState.assignments = newAssignments;
-            }
-
-            Object.entries(ACHIEVEMENTS).forEach(([id, achievement]) => {
-                if (!newState.achievements[id] && achievement.condition(newState)) {
-                    newState.achievements = { ...newState.achievements, [id]: true };
-                }
-            });
-
-            const maxCharLevel = Math.max(...newState.characters.map(c => c.level), 0);
-            Object.values(newState.zones).forEach(zone => {
-                if (!zone.unlocked && zone.unlockLevel && maxCharLevel >= zone.unlockLevel) {
-                    zone.unlocked = true;
-                }
-            });
-
-            // ✅ 离开战斗 5 秒后开始回血：每秒 +10+喷泉数量
-            const REGEN_DELAY_MS = 5000;
-            const REGEN_PER_SECOND = 10;
-            const now = Date.now();
-
-            newState.characters = newState.characters.map(char => {
-                const maxHp = char.stats?.maxHp ?? char.stats?.hp ?? 0;
-                const curHp = char.stats?.currentHp ?? maxHp;
-
-                // 战斗中不回血
-                if (char.combatState) return char;
-
-                if (curHp >= maxHp) return char;
-
-                const lastCombatTime = char.lastCombatTime || 0;
-                if (now - lastCombatTime < REGEN_DELAY_MS) return char;
-
-                return {
-                    ...char,
-                    stats: {
-                        ...char.stats,
-                        currentHp: Math.min(maxHp, curHp + REGEN_PER_SECOND+fountainCount*1)
-                    }
-                };
-            });
-
-            return newState;
         }
 
         case 'CREATE_CHARACTER': {

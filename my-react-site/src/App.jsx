@@ -1013,7 +1013,7 @@ const BUILDINGS = {
         id: 'plaza_fountain',
         name: '广场喷泉',
         cost: { gold: 10000, wood: 10000, ironOre: 8000 },
-        production: {'自动回血':1},
+        production: {},
         consumption: {}
         // 效果在 gameReducer 的 TICK 中实现（见下文）
     },

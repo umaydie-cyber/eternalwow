@@ -4580,7 +4580,7 @@ const TalentPage = ({ state, dispatch }) => {
                                             if (tier >= 30) return;
                                             chooseTalent(tier, opt.id);
                                         }}
-                                        title={locked ? '未解锁' : (tier >= 30 ? '预留天赋，待实现' : '点击选择')}
+                                        title={locked ? '未解锁' : (tier >= 40 ? '预留天赋，待实现' : '点击选择')}
                                     >
                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                                             <div style={{ fontWeight: 700, color: '#fff' }}>{opt.name}</div>

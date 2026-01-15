@@ -6142,6 +6142,36 @@ export default function WoWIdleGame() {
     const saveIntervalRef = useRef(null);
 
     const lastTickRef = useRef(Date.now());
+    const hiddenAtRef = useRef(null);
+
+    useEffect(() => {
+        const onVisChange = () => {
+            if (document.hidden) {
+                // 切走：记录隐藏开始时间
+                hiddenAtRef.current = Date.now();
+                return;
+            }
+
+            // 切回：计算离开秒数
+            const hiddenAt = hiddenAtRef.current;
+            hiddenAtRef.current = null;
+            if (!hiddenAt) return;
+
+            const deltaSeconds = Math.floor((Date.now() - hiddenAt) / 1000);
+            if (deltaSeconds <= 0) return;
+
+            // ✅ 补一发 tick
+            dispatch({ type: "TICK", payload: { deltaSeconds } });
+
+            // ✅ 关键：同步 lastTickRef，防止 interval 下一次又用旧的 lastTickRef 再补一遍
+            if (lastTickRef?.current != null) {
+                lastTickRef.current = Date.now();
+            }
+        };
+
+        document.addEventListener("visibilitychange", onVisChange);
+        return () => document.removeEventListener("visibilitychange", onVisChange);
+    }, [dispatch]); // lastTickRef 是 ref，不用放依赖
 
     // 加载存档
     useEffect(() => {

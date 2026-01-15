@@ -2413,7 +2413,7 @@ function tickOnce(newState){
     }
 
     // ===== 广场喷泉：所有脱战英雄每秒回血 +1点（每座喷泉 +1，可叠加） =====
-    const fountainCount = state.buildings.plaza_fountain || 0;
+    const fountainCount = newState.buildings.plaza_fountain || 0;
 
     // Boss战斗推进
     if (newState.bossCombat) {
@@ -2498,7 +2498,7 @@ function tickOnce(newState){
                         char.level++;
                         char.expToNext = Math.floor(100 * Math.pow(1.2, char.level - 1));
                         char.skills = learnNewSkills(char);
-                        char.stats = calculateTotalStats(char, undefined, state);
+                        char.stats = calculateTotalStats(char, undefined, newState);
                     }
 
                     newState.stats.battlesWon++;
@@ -2526,7 +2526,7 @@ function tickOnce(newState){
                     // ✅ 装备掉落：使用掉落表（例如第一张图 elwynn_forest 掉初心者套装）
                     const dropTable = DROP_TABLES[zone.id];
                     if (dropTable?.equipment && newState.inventory.length < newState.inventorySize) {
-                        const allowDrop = (id) => state.dropFilters?.[id] !== false; // 默认允许
+                        const allowDrop = (id) => newState.dropFilters?.[id] !== false; // 默认允许
                         dropTable.equipment.filter(drop => allowDrop(drop.id)).forEach(drop => {
                             if (newState.inventory.length >= newState.inventorySize) return;
                             if (Math.random() < (drop.chance ?? 0)) {
@@ -2540,7 +2540,7 @@ function tickOnce(newState){
                     // ✅ 物品掉落（如果你也想用掉落表的 items）
                     if (dropTable?.items && newState.inventory.length < newState.inventorySize) {
 
-                        const allowDrop = (id) => state.dropFilters?.[id] !== false; // 默认允许
+                        const allowDrop = (id) => newState.dropFilters?.[id] !== false; // 默认允许
 
                         dropTable.items.filter(drop => allowDrop(drop.id)).forEach(drop => {
                             if (newState.inventory.length >= newState.inventorySize) return;

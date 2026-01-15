@@ -2766,7 +2766,7 @@ function gameReducer(state, action) {
             const total = (state.tickBacklog || 0) + incoming;
 
             // 每次最多补 5 秒，避免卡死（你可以调成 10）
-            const steps = Math.min(total, 5);
+            const steps = Math.min(total, 10);
 
             let s = { ...state, tickBacklog: total - steps };
 

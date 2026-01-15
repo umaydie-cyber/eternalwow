@@ -1832,7 +1832,8 @@ const initialState = {
         drop: 0,
         researchSpeed: 0
     },
-    rebirthBonds: []
+    rebirthBonds: [],
+    tickBacklog: 0,
 };
 
 // ==================== BASE64 ENCODING (支持中文) ====================
@@ -2753,13 +2754,26 @@ function gameReducer(state, action) {
             };
         }
 
-        case 'TICK': {
-            const deltaSeconds = action.payload?.deltaSeconds ?? 1;
+        case "ADD_TICK_BACKLOG": {
+            const seconds = action.payload?.seconds ?? 0;
+            return { ...state, tickBacklog: (state.tickBacklog || 0) + seconds };
+        }
 
-            // 防止一次补太多卡死（比如离开几小时）
-            const steps = Math.min(deltaSeconds, 60 * 60); // 例：最多补 1 小时
-            let s = state;
-            for (let i = 0; i < steps; i++) s = tickOnce(s);
+        case 'TICK': {
+            const incoming = action.payload?.deltaSeconds ?? 1;
+
+            // backlog + 本次 tick 的秒数
+            const total = (state.tickBacklog || 0) + incoming;
+
+            // 每次最多补 5 秒，避免卡死（你可以调成 10）
+            const steps = Math.min(total, 5);
+
+            let s = { ...state, tickBacklog: total - steps };
+
+            for (let i = 0; i < steps; i++) {
+                s = tickOnce(s);   // tickOnce 必须是“推进 1 秒”的纯推进
+            }
+
             return s;
 
 
@@ -6171,7 +6185,7 @@ export default function WoWIdleGame() {
             if (deltaSeconds <= 0) return;
 
             // ✅ 补一发 tick
-            dispatch({ type: "TICK", payload: { deltaSeconds } });
+            dispatch({ type: "ADD_TICK_BACKLOG", payload: { seconds: deltaSeconds  } });
 
             // ✅ 关键：同步 lastTickRef，防止 interval 下一次又用旧的 lastTickRef 再补一遍
             if (lastTickRef?.current != null) {

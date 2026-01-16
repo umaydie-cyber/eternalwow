@@ -3402,6 +3402,17 @@ case 'ASSIGN_ZONE': {
                 codexEquipLv100: newCodexLv100
             };
         }
+        case 'CHEAT_ADD_LV100_CODEX': {
+            const id = action.payload;
+            let newCodexLv100 = state.codexEquipLv100.slice();
+            if (!newCodexLv100.includes(id)) {
+                newCodexLv100.push(id);
+            }
+            return {
+                ...state,
+                codexEquipLv100: newCodexLv100
+            };
+        }
         default:
             return state;
     }
@@ -6291,28 +6302,39 @@ export default function WoWIdleGame() {
         const trimmed = cmd.trim();
         if (!trimmed) return;
 
-        // 记录输入命令
+        // 记录输入命令（保留原始大小写）
         setConsoleLogs(prev => [...prev, `> ${trimmed}`]);
 
-        const parts = trimmed.toLowerCase().split(' ');
-        if (parts[0] === 'add') {
-            if (parts[1] === 'gold' && parts[2]) {
+        const parts = trimmed.split(' ');
+        const mainCmd = parts[0].toLowerCase();
+
+        if (mainCmd === 'add') {
+            const subCmd = parts[1]?.toLowerCase();
+
+            if (subCmd === 'gold' && parts[2]) {
                 const amount = parseFloat(parts[2]);
                 if (!isNaN(amount) && amount > 0) {
                     dispatch({ type: 'CHEAT_ADD_GOLD', payload: amount });
-                    setConsoleLogs(prev => [...prev, `成功添加 ${amount} 金币`]);
+                    setConsoleLogs(prev => [...prev, `✓ 成功添加 ${amount} 金币`]);
                 } else {
-                    setConsoleLogs(prev => [...prev, '错误：无效的金币数量']);
+                    setConsoleLogs(prev => [...prev, '✗ 错误：金币数量必须是正数']);
                 }
             }
-            else if (parts[1] === 'equip' && parts[2]) {
-                const [id, levelStr] = parts[2].split(',');
-                const level = parseInt(levelStr) || 1;
+            else if (subCmd === 'equip' && parts[2]) {
+                const equipArg = parts[2];
+                const [idRaw, levelStr] = equipArg.split(',');
+                if (!idRaw) {
+                    setConsoleLogs(prev => [...prev, '✗ 错误：装备ID不能为空']);
+                    return;
+                }
+
+                const id = idRaw.trim().toUpperCase(); // 统一转大写，确保匹配
+                const level = parseInt(levelStr?.trim()) || 1;
                 const clampedLevel = Math.max(1, Math.min(100, level));
 
                 const tpl = FIXED_EQUIPMENTS[id];
                 if (!tpl) {
-                    setConsoleLogs(prev => [...prev, `错误：找不到装备 ID ${id}`]);
+                    setConsoleLogs(prev => [...prev, `✗ 错误：找不到装备 ID "${id}"（请检查ID是否正确）`]);
                     return;
                 }
 
@@ -6325,13 +6347,20 @@ export default function WoWIdleGame() {
                 };
 
                 dispatch({ type: 'CHEAT_ADD_EQUIPMENT', payload: instance });
-                setConsoleLogs(prev => [...prev, `成功添加 ${id} Lv.${clampedLevel}`]);
+                setConsoleLogs(prev => [...prev, `✓ 成功添加 ${tpl.name} (ID: ${id}) Lv.${clampedLevel}`]);
+
+                // 如果达到100级，自动点亮Lv100图鉴
+                if (clampedLevel >= 100) {
+                    dispatch({ type: 'CHEAT_ADD_LV100_CODEX', payload: id });
+                }
             }
             else {
-                setConsoleLogs(prev => [...prev, '用法：add gold <数量> 或 add equip <ID>,<等级>']);
+                setConsoleLogs(prev => [...prev, '✗ 用法：add gold <数量>   或   add equip <装备ID>,<等级>（等级可选，默认为1）']);
+                setConsoleLogs(prev => [...prev, '   示例：add equip EQ_024,100']);
             }
-        } else {
-            setConsoleLogs(prev => [...prev, '未知命令，支持：add gold / add equip']);
+        }
+        else {
+            setConsoleLogs(prev => [...prev, '✗ 未知命令，目前仅支持：add gold / add equip']);
         }
 
         setCommand('');

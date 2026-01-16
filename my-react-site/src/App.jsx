@@ -875,7 +875,7 @@ const FIXED_EQUIPMENTS = {
         id: 'EQ_022',
         name: '尖牙腰带',
         type: 'equipment',
-        slot: 'wrist',  // 用 wrist 槽位代替腰带（游戏中常见做法）
+        slot: 'belt',
         rarity: 'green',
         setId: 'venom_embrace',
         setName: '毒蛇的拥抱',
@@ -1074,6 +1074,7 @@ const EQUIPMENT_SLOTS = {
     chest: { name: '胸甲', icon: '🛡️' },
     wrist: { name: '手腕', icon: '⌚' },
     hands: { name: '手套', icon: '🧤' },
+    belt: { name: '腰带', icon: '🧷' },
     legs: { name: '腿部', icon: '👖' },
     feet: { name: '鞋子', icon: '👢' },
     ring1: { name: '戒指1', icon: '💍' },

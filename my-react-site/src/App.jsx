@@ -997,7 +997,7 @@ const FIXED_EQUIPMENTS = {
         id: 'EQ_025',
         name: '生命之根',
         type: 'equipment',
-        slot: 'trinket1',
+        slot: 'mainHand',
         rarity: 'blue',
         level: 1,
         maxLevel: 100,

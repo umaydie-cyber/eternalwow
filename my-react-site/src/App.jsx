@@ -3592,6 +3592,37 @@ case 'ASSIGN_ZONE': {
                 inventorySize: state.inventorySize + amount
             };
         }
+        case 'CHEAT_ADD_EXP': {
+            const { amount, charIndex } = action.payload;
+            if (charIndex < 0 || charIndex >= state.characters.length) {
+                return state; // 安全检查
+            }
+
+            const newCharacters = [...state.characters];
+            let char = { ...newCharacters[charIndex] };
+
+            // 加经验
+            char.exp = (char.exp || 0) + amount;
+
+            // 升级循环
+            while (char.exp >= char.expToNext && char.level < 200) {
+                char.level += 1;
+                char.exp -= char.expToNext;
+                char.expToNext = Math.floor(100 * Math.pow(1.2, char.level - 1));
+                char.skills = learnNewSkills(char); // 学会新技能
+            }
+
+            // 重算总属性（使用全队光环）
+            const updatedParty = recalcPartyStats(state, newCharacters.map(c => c.id === char.id ? char : c));
+            const updatedChar = updatedParty.find(c => c.id === char.id);
+
+            newCharacters[charIndex] = updatedChar || char;
+
+            return {
+                ...state,
+                characters: newCharacters
+            };
+        }
         default:
             return state;
     }

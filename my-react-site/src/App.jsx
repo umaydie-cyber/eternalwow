@@ -6481,7 +6481,6 @@ export default function WoWIdleGame() {
         const trimmed = cmd.trim();
         if (!trimmed) return;
 
-        // 记录输入命令（保留原始大小写）
         setConsoleLogs(prev => [...prev, `> ${trimmed}`]);
 
         const parts = trimmed.split(' ');
@@ -6507,13 +6506,13 @@ export default function WoWIdleGame() {
                     return;
                 }
 
-                const id = idRaw.trim().toUpperCase(); // 统一转大写
+                const id = idRaw.trim().toUpperCase();
                 const level = parseInt(levelStr?.trim()) || 1;
                 const clampedLevel = Math.max(1, Math.min(100, level));
 
                 const tpl = FIXED_EQUIPMENTS[id];
                 if (!tpl) {
-                    setConsoleLogs(prev => [...prev, `✗ 错误：找不到装备 ID "${id}"（请检查ID是否正确）`]);
+                    setConsoleLogs(prev => [...prev, `✗ 错误：找不到装备 ID "${id}"`]);
                     return;
                 }
 
@@ -6541,16 +6540,38 @@ export default function WoWIdleGame() {
                     setConsoleLogs(prev => [...prev, '✗ 错误：栏位数量必须是正整数']);
                 }
             }
+            // ===== 新增：add exp =====
+            else if (subCmd === 'exp' && parts[2]) {
+                const expArg = parts[2];
+                const [amountStr, indexStr] = expArg.split(',');
+                const amount = parseInt(amountStr?.trim());
+                const index1Based = parseInt(indexStr?.trim());
+
+                if (isNaN(amount) || amount <= 0) {
+                    setConsoleLogs(prev => [...prev, '✗ 错误：经验值必须是正整数']);
+                    return;
+                }
+                if (isNaN(index1Based) || index1Based < 1 || index1Based > state.characters.length) {
+                    setConsoleLogs(prev => [...prev, `✗ 错误：角色索引无效（当前有 ${state.characters.length} 个角色，索引范围 1~${state.characters.length}）`]);
+                    return;
+                }
+
+                const charIndex = index1Based - 1; // 转为0-based索引
+                dispatch({ type: 'CHEAT_ADD_EXP', payload: { amount, charIndex } });
+                const char = state.characters[charIndex];
+                setConsoleLogs(prev => [...prev, `✓ 成功给 ${char.name} (第${index1Based}个角色) 添加 ${amount} 经验`]);
+            }
             else {
                 setConsoleLogs(prev => [...prev, '✗ 用法：']);
                 setConsoleLogs(prev => [...prev, '   add gold <数量>']);
                 setConsoleLogs(prev => [...prev, '   add equip <装备ID>,<等级>（等级可选）']);
                 setConsoleLogs(prev => [...prev, '   add bagslot <数量>']);
-                setConsoleLogs(prev => [...prev, '   示例：add bagslot 20']);
+                setConsoleLogs(prev => [...prev, '   add exp <经验值>,<角色索引>（索引从1开始）']);
+                setConsoleLogs(prev => [...prev, '   示例：add exp 99999,1']);
             }
         }
         else {
-            setConsoleLogs(prev => [...prev, '✗ 未知命令，目前仅支持 add gold / add equip / add bagslot']);
+            setConsoleLogs(prev => [...prev, '✗ 未知命令，目前仅支持 add gold / add equip / add bagslot / add exp']);
         }
 
         setCommand('');

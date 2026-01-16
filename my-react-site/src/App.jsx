@@ -13,6 +13,8 @@ const CLASSES = {
             { level: 3, skillId: 'shield_bash' },
             { level: 5, skillId: 'shield_block' },
             { level: 10, skillId: 'revenge' },
+            { level: 20, skillId: 'thunder_strike' },
+            { level: 30, skillId: 'shield_wall' },
         ]
     },
     discipline_priest: {
@@ -219,6 +221,57 @@ const SKILLS = {
             damage *= (1 + char.stats.versatility / 100);
             return { damage: Math.floor(damage), isCrit: false };
         }
+    },
+    thunder_strike: {
+        id: 'thunder_strike',
+        name: '雷霆一击',
+        icon: '⚡',
+        type: 'aoe_damage',
+        limit: 2,
+        description: '对所有敌人造成0.8倍攻击强度的伤害，暴击时对每个目标施加重伤（DOT 0.5倍攻击强度，持续4回合）',
+        calculate: (char) => {
+            let baseDamage = char.stats.attack * 0.8;
+
+            // 暴击判定
+            const isCrit = Math.random() < (char.stats.critRate / 100);
+            if (isCrit) {
+                baseDamage *= char.stats.critDamage;
+            }
+
+            // 全能加成
+            baseDamage *= (1 + char.stats.versatility / 100);
+
+            const damage = Math.floor(baseDamage);
+
+            // 暴击时生成的DOT（每目标独立）
+            const dot = isCrit ? {
+                damagePerTurn: Math.floor(char.stats.attack * 0.5),
+                duration: 4,
+                name: '重伤'
+            } : null;
+
+            return {
+                aoeDamage: damage,
+                isCrit,
+                dotOnCrit: dot  // 战斗系统会检查这个并对每个目标施加
+            };
+        }
+    },
+
+    shield_wall: {
+        id: 'shield_wall',
+        name: '盾墙',
+        icon: '🛡️',
+        type: 'buff',
+        limit: 1,
+        description: '受到的所有伤害降低50%，持续3回合',
+        duration: 3,
+        calculate: () => ({
+            buff: {
+                damageTakenMult: 0.5,  // 乘区减伤50%
+                duration: 3
+            }
+        })
     },
     smite: {
         id: 'smite',
@@ -1517,6 +1570,37 @@ function stepBossCombat(state) {
             targetType = 'minion';
         }
 
+        // 新增：支持 AOE 和条件 DOT
+        if (result.aoeDamage) {
+            const damage = result.aoeDamage;
+
+            // 对 Boss 造成伤害
+            if (combat.bossHp > 0) {
+                combat.bossHp -= damage;
+                logs.push(`位置${i + 1} ${p.char.name} 的雷霆一击对 ${boss.name} 造成 ${damage} 伤害${result.isCrit ? '（暴击！）' : ''}`);
+
+                // 暴击时对 Boss 施加 DOT
+                if (result.isCrit && result.dotOnCrit) {
+                    combat.bossDots = combat.bossDots || [];
+                    combat.bossDots.push({ ...result.dotOnCrit });
+                    logs.push(`→ ${boss.name} 获得【重伤】，将持续受到 DOT 伤害`);
+                }
+            }
+
+            // 对所有小弟造成伤害
+            combat.minions.forEach((m, idx) => {
+                if (m.hp <= 0) return;
+                m.hp -= damage;
+                logs.push(`位置${i + 1} ${p.char.name} 的雷霆一击对 小弟${idx + 1} 造成 ${damage} 伤害${result.isCrit ? '（暴击！）' : ''}`);
+
+                if (result.isCrit && result.dotOnCrit) {
+                    m.dots = m.dots || [];
+                    m.dots.push({ ...result.dotOnCrit });
+                    logs.push(`→ 小弟${idx + 1} 获得【重伤】，将持续受到 DOT 伤害`);
+                }
+            });
+        }
+
         // 伤害/治疗/DOT 处理（简化版，保持原有逻辑）
         if (result.damage) {
             let damage = result.damage;
@@ -1547,8 +1631,17 @@ function stepBossCombat(state) {
         }
 
         if (result.dot) {
-            // DOT 施加逻辑（不变）
-            // ...
+
+        }
+
+        // 新增：支持 buff 类型的 damageTakenMult
+        if (result.buff) {
+            p.buffs = p.buffs || [];
+            p.buffs.push({ ...result.buff });
+
+            if (result.buff.damageTakenMult) {
+                logs.push(`位置${i + 1} ${p.char.name} 开启盾墙，受到伤害降低50%（持续${result.buff.duration}回合）`);
+            }
         }
 
         // 天赋触发（如质朴）
@@ -1558,6 +1651,18 @@ function stepBossCombat(state) {
         }
 
         // 其他天赋类似...
+
+        // ===== 新增：每回合减少 buff 持续时间 =====
+        if (p.buffs && p.buffs.length > 0) {
+            p.buffs = p.buffs
+                .map(b => {
+                    if (b.duration !== undefined) {
+                        b.duration -= 1;
+                    }
+                    return b;
+                })
+                .filter(b => (b.duration ?? 999) > 0);
+        }
     }
 
     // ===== 玩家阶段结束后添加羁绊效果 =====
@@ -1579,6 +1684,30 @@ function stepBossCombat(state) {
     }
 
     // DOT 结算 + 清理死亡小弟（保持原逻辑）
+    // ===== DOT 结算（Boss + 小弟）=====
+    if (combat.bossDots) {
+        combat.bossDots = combat.bossDots.filter(dot => {
+            const dmg = Math.max(1, Math.floor(dot.damagePerTurn));
+            combat.bossHp -= dmg;
+            logs.push(`【重伤】对 ${boss.name} 造成 ${dmg} DOT 伤害（剩余${dot.duration - 1}回合）`);
+            dot.duration -= 1;
+            return dot.duration > 0;
+        });
+    }
+
+    combat.minions = combat.minions.map((m, idx) => {
+        if (m.hp <= 0) return m;
+        if (m.dots && m.dots.length > 0) {
+            m.dots = m.dots.filter(dot => {
+                const dmg = Math.max(1, Math.floor(dot.damagePerTurn));
+                m.hp -= dmg;
+                logs.push(`【重伤】对 小弟${idx + 1} 造成 ${dmg} DOT 伤害（剩余${dot.duration - 1}回合）`);
+                dot.duration -= 1;
+                return dot.duration > 0;
+            });
+        }
+        return m;
+    });
 
     // ==================== Boss阶段 + 小弟阶段（保持原逻辑） ====================
     // 选一个存活玩家位作为目标：固定优先 1号位 → 2号位 → 3号位
@@ -1619,10 +1748,25 @@ function stepBossCombat(state) {
 
         // 最后吃“受到伤害乘区”（如防御姿态）
         const takenMult = playerState?.char?.stats?.damageTakenMult ?? 1;
-        dmg = Math.max(1, Math.floor(dmg * takenMult));
+        // 新增：buff 中的 damageTakenMult 乘区叠加
+        let buffTakenMult = 1;
+        if (playerState.buffs) {
+            playerState.buffs.forEach(b => {
+                if (b.damageTakenMult) {
+                    buffTakenMult *= b.damageTakenMult;
+                }
+            });
+            // 清理过期buff
+            playerState.buffs = playerState.buffs.filter(b => (b.duration ?? 999) > 0);
+        }
+
+        const finalTakenMult = takenMult * buffTakenMult;
+        dmg = Math.max(1, Math.floor(dmg * finalTakenMult));
 
         return { damage: dmg, dr, blockedAmount, isHeavy };
     };
+
+
 
     // 计算本回合 boss 动作：按 cycle 循环
     const bossAction = boss.cycle[(combat.round - 1) % boss.cycle.length];
@@ -1686,6 +1830,7 @@ function stepBossCombat(state) {
         logs.push(`【${boss.minion.name}】攻击 位置${tIdx + 1} 造成 ${damage} 伤害（护甲减伤${drPct}%${blockText}）`);
 
     }
+
 
     // ③ 清理死亡小弟（可选：保持数组干净）
     combat.minions = (combat.minions || []).filter(m => (m.hp ?? 0) > 0);
@@ -2011,7 +2156,7 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1) {
 
     // buffs
     let buffs = Array.isArray(combatState.buffs) ? [...combatState.buffs] : [];
-    //enemy debuffs
+    // enemy debuffs
     let enemyDebuffs = Array.isArray(combatState.enemyDebuffs) ? [...combatState.enemyDebuffs] : [];
 
     // 天赋叠层（仅本场战斗有效）
@@ -2061,13 +2206,53 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1) {
                 ...character.stats,
                 attack: (character.stats.attack || 0) + (talentBuffs.attackFlat || 0),
                 blockValue: (character.stats.blockValue || 0) + (talentBuffs.blockValueFlat || 0),
-                spellPower: (character.stats.spellPower || 0) + (talentBuffs.spellPowerFlat || 0), // ✅ 新增
+                spellPower: (character.stats.spellPower || 0) + (talentBuffs.spellPowerFlat || 0),
             }
         };
 
         const result = skill.calculate(charForCalc);
 
-        if (result.damage) {
+        // ===== 新增：雷霆一击（单体高伤 + 暴击时施加重伤DOT）=====
+        if (result.aoeDamage) {
+            let damage = result.aoeDamage;
+
+            // 全能等通用乘区已在上层calculate中处理，这里直接扣防御
+            const actualDamage = Math.max(1, Math.floor(damage - (combatState.enemy?.defense ?? 0)));
+            enemyHp -= actualDamage;
+
+            logs.push({
+                round,
+                actor: character.name,
+                action: skill.name,
+                target: combatState.enemy?.name,
+                value: actualDamage,
+                type: 'damage',
+                isCrit: result.isCrit
+            });
+
+            // 暴击时施加重伤DOT（与现有DOT结构兼容）
+            if (result.isCrit && result.dotOnCrit) {
+                enemyDebuffs.push({
+                    type: 'dot',
+                    sourceSkillId: currentSkillId,
+                    sourceSkillName: skill.name,
+                    damagePerTurn: result.dotOnCrit.damagePerTurn,
+                    duration: result.dotOnCrit.duration
+                });
+
+                logs.push({
+                    round,
+                    actor: character.name,
+                    action: `${skill.name}(重伤)`,
+                    target: combatState.enemy?.name,
+                    value: result.dotOnCrit.damagePerTurn,
+                    type: 'debuff',
+                    text: `【重伤】施加：每回合 ${result.dotOnCrit.damagePerTurn} 伤害，持续 ${result.dotOnCrit.duration} 回合`
+                });
+            }
+        }
+        // ===== 原有普通伤害逻辑（保持不变）=====
+        else if (result.damage) {
             let damage = result.damage;
 
             // ===== 10级天赋：暗影增幅（暗影伤害 +20%）=====
@@ -2076,13 +2261,11 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1) {
             }
 
             // ===== 20级天赋：阴暗面之力（心灵震爆伤害 +80%）=====
-            // 这里用“当前技能id”判定最稳
             if (character.talents?.[20] === 'dark_side' && currentSkillId === 'mind_blast') {
                 damage *= 1.8;
             }
 
             // ===== 10级天赋：神圣增幅（惩击：目标受法术伤害 +10% 持续2回合）=====
-            // 触发：你使用惩击命中后，给怪物挂 debuff
             if (character.talents?.[10] === 'holy_vuln' && currentSkillId === 'smite') {
                 enemyDebuffs.push({ type: 'spell_vuln', mult: 1.10, duration: 2 });
                 logs.push({
@@ -2094,7 +2277,6 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1) {
                 });
             }
 
-            // 受法术伤害加成：只对 holy/shadow 这类“法术系”生效（按你当前设计）
             const isSpellSchool = (result.school === 'holy' || result.school === 'shadow');
             let takenMult = 1;
             if (isSpellSchool) {
@@ -2102,7 +2284,6 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1) {
                 if (vuln) takenMult *= (vuln.mult ?? 1);
             }
 
-            // 最后统一结算：乘易伤 -> 扣防御 -> 扣血
             damage = Math.floor(damage * takenMult);
             const actualDamage = Math.max(1, damage - (combatState.enemy?.defense ?? 0));
             enemyHp -= actualDamage;
@@ -2118,12 +2299,10 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1) {
             });
 
             if (character.stats.atonement) {
-                // 救赎生效，恢复血量
-                const healFromAtonement = Math.floor(actualDamage * character.stats.atonement.healingRate); // 救赎恢复healingRate倍伤害的生命
+                const healFromAtonement = Math.floor(actualDamage * character.stats.atonement.healingRate);
                 const maxHp = character.stats.maxHp ?? character.stats.hp ?? 0;
                 const actualHeal = Math.min(healFromAtonement, maxHp - charHp);
                 charHp += actualHeal;
-                // 施加日志
                 logs.push({
                     round,
                     actor: character.name,
@@ -2134,7 +2313,9 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1) {
                     text: `因为救赎恢复 ${healFromAtonement} 点生命`
                 });
             }
-        } else if (result.heal) {
+        }
+        // ===== 原有其他技能逻辑（保持不变）=====
+        else if (result.heal) {
             const maxHp = character.stats.maxHp ?? character.stats.hp ?? 0;
             const actualHeal = Math.min(result.heal, maxHp - charHp);
             charHp += actualHeal;
@@ -2146,7 +2327,8 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1) {
                 value: actualHeal,
                 type: 'heal'
             });
-        } else if (result.buff) {
+        }
+        else if (result.buff) {
             buffs.push({ ...result.buff });
             logs.push({
                 round,
@@ -2154,20 +2336,20 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1) {
                 action: skill.name,
                 target: character.name,
                 value: result.buff.duration ?? 0,
-                type: 'buff'
+                type: 'buff',
+                text: result.buff.damageTakenMult ? '开启盾墙：受到伤害降低50%' : ''
             });
-        } else if (result.dot) {
-            // ===== DOT：施加到怪物身上（存到 enemyDebuffs）=====
+        }
+        else if (result.dot) {
             enemyDebuffs.push({
                 type: 'dot',
                 sourceSkillId: currentSkillId,
                 sourceSkillName: skill.name,
-                school: result.dot.school, // 'shadow' / 'holy'...
+                school: result.dot.school,
                 damagePerTurn: result.dot.damagePerTurn,
                 duration: result.dot.duration
             });
 
-            // 施加日志
             logs.push({
                 round,
                 actor: character.name,
@@ -2177,7 +2359,8 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1) {
                 type: 'debuff',
                 text: `施加持续伤害：每回合 ${result.dot.damagePerTurn}，持续 ${result.dot.duration} 回合`
             });
-        }else if (result.healAll) {
+        }
+        else if (result.healAll) {
             const maxHp = character.stats.maxHp ?? character.stats.hp ?? 0;
             const actualHeal = Math.min(result.healAll, maxHp - charHp);
             charHp += actualHeal;
@@ -2191,10 +2374,9 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1) {
             });
         }
 
-        // 如果有救赎效果，则应用救赎
         if (result.applyAtonement) {
             const actualHeal = 0.2;
-            const atonementDuration = result.applyAtonement.duration || 2;  // 默认持续 2 回合
+            const atonementDuration = result.applyAtonement.duration || 2;
             character.stats.atonement = {
                 healingRate: actualHeal,
                 duration: atonementDuration
@@ -2209,8 +2391,7 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1) {
             });
         }
 
-
-        // ===== 天赋：质朴（10级）普通攻击后触发（本场战斗叠层） =====
+        // ===== 天赋触发（保持不变）=====
         if (currentSkillId === 'basic_attack' && character.talents?.[10] === 'plain') {
             talentBuffs.attackFlat = (talentBuffs.attackFlat || 0) + 5;
             logs.push({
@@ -2223,7 +2404,6 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1) {
             });
         }
 
-        // ===== 10级天赋：神圣灌注（惩击：本场战斗法术强度 +2）=====
         if (currentSkillId === 'smite' && character.talents?.[10] === 'holy_infusion') {
             talentBuffs.spellPowerFlat = (talentBuffs.spellPowerFlat || 0) + 2;
             logs.push({
@@ -2240,18 +2420,16 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1) {
 
         if (enemyHp <= 0) break;
 
-        // ===== DOT 结算（放在敌人回合前：让“从本回合开始”立即生效）=====
+        // ===== DOT 结算（保持原有逻辑，重伤DOT会自动参与）=====
         const dots = enemyDebuffs.filter(d => d.type === 'dot');
         if (dots.length > 0) {
             for (const d of dots) {
                 let dotDamage = d.damagePerTurn ?? 0;
 
-                // 10级天赋：暗影增幅（暗影DOT同样吃加成）
                 if (character.talents?.[10] === 'shadow_amp' && d.school === 'shadow') {
                     dotDamage *= 1.2;
                 }
 
-                // 如果你启用了“神圣增幅 spell_vuln”，DOT 也算法术伤害：吃易伤
                 const isSpellSchool = (d.school === 'holy' || d.school === 'shadow');
                 if (isSpellSchool) {
                     const vuln = enemyDebuffs.find(x => x.type === 'spell_vuln');
@@ -2259,8 +2437,6 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1) {
                 }
 
                 dotDamage = Math.floor(dotDamage);
-
-                // 扣防御（沿用你 damage 的简化逻辑：damage - enemy.defense）
                 const actualDot = Math.max(1, dotDamage - (combatState.enemy?.defense ?? 0));
                 enemyHp -= actualDot;
 
@@ -2277,11 +2453,10 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1) {
             }
         }
 
-        // 后续回合中处理救赎恢复
+        // 救赎持续时间处理（保持不变）
         if (character.stats.atonement && character.stats.atonement.duration > 0) {
-            character.stats.atonement.duration -= 1;  // 递减持续回合
+            character.stats.atonement.duration -= 1;
         }
-        // 清理过期的救赎效果
         if (character.stats.atonement && character.stats.atonement.duration <= 0) {
             delete character.stats.atonement;
             logs.push({
@@ -2298,7 +2473,6 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1) {
         const dr = getArmorDamageReduction(character.stats.armor);
         const rawEnemyDamage = applyPhysicalMitigation(combatState.enemy?.attack ?? 0, character.stats.armor);
 
-        // 格挡判定：基础 blockRate + buffs（百分比数，如 10 = 10%）
         const blockChance = Math.max(
             0,
             Math.min(
@@ -2307,26 +2481,15 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1) {
             )
         );
 
-
         let finalDamage = rawEnemyDamage;
         let blockedAmount = 0;
 
         if (Math.random() < blockChance) {
             const blockValue = Math.floor((character.stats.blockValue || 0) + (talentBuffs.blockValueFlat || 0));
-            blockedAmount = Math.min(finalDamage - 1, blockValue); // 至少掉1血
+            blockedAmount = Math.min(finalDamage - 1, blockValue);
             finalDamage = Math.max(1, finalDamage - blockedAmount);
-
-            /*logs.push({
-                round,
-                actor: character.name,
-                action: '格挡',
-                target: character.name,
-                value: blockedAmount,
-                type: 'block'
-            });*/
         }
 
-        // ===== 天赋：格挡大师（10级）成功格挡后触发（本场战斗叠层） =====
         if (blockedAmount > 0 && character.talents?.[10] === 'block_master') {
             talentBuffs.blockValueFlat = (talentBuffs.blockValueFlat || 0) + 10;
             logs.push({
@@ -2339,7 +2502,16 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1) {
             });
         }
 
-        finalDamage = Math.max(1, Math.floor(finalDamage * (character.stats.damageTakenMult || 1)));
+        // ===== 新增：buff减伤乘区（盾墙等）=====
+        let buffDamageTakenMult = 1;
+        buffs.forEach(b => {
+            if (b.damageTakenMult) {
+                buffDamageTakenMult *= b.damageTakenMult;
+            }
+        });
+
+        finalDamage = Math.max(1, Math.floor(finalDamage * (character.stats.damageTakenMult || 1) * buffDamageTakenMult));
+
         charHp -= finalDamage;
         const blockText = blockedAmount > 0 ? `，格挡 ${blockedAmount}` : '';
         logs.push({
@@ -2351,7 +2523,7 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1) {
             type: 'damage'
         });
 
-        // 回合结束，buff duration -1
+        // 回合结束，buff/debuff duration -1（保持原有）
         tickBuffs();
         tickEnemyDebuffs();
     }

@@ -813,12 +813,16 @@ const FIXED_EQUIPMENTS = {
         level: 1,
         maxLevel: 100,
         baseStats: {
-            hp: 150,
-            armor: 30
+            hp: 200,
+            armor: 30,
+            critRate: 2,
+            critDamage: 0.10
         },
         growth: {
             hp: 2,
-            armor: 2
+            armor: 2,
+            critRate: 2,
+            critDamage: 2
         }
     },
     EQ_020: {
@@ -832,14 +836,16 @@ const FIXED_EQUIPMENTS = {
         level: 1,
         maxLevel: 100,
         baseStats: {
-            hp: 120,
-            armor: 25,
-            spellPower: 15
+            hp: 300,
+            armor: 40,
+            critRate: 3,
+            critDamage: 0.10
         },
         growth: {
             hp: 2,
             armor: 2,
-            spellPower: 2
+            critRate: 2,
+            critDamage: 2
         }
     },
     EQ_021: {
@@ -853,12 +859,16 @@ const FIXED_EQUIPMENTS = {
         level: 1,
         maxLevel: 100,
         baseStats: {
-            hp: 200,
-            armor: 20
+            hp: 300,
+            armor: 40,
+            critRate: 3,
+            critDamage: 0.10
         },
         growth: {
             hp: 2,
-            armor: 2
+            armor: 2,
+            critRate: 2,
+            critDamage: 2
         }
     },
     EQ_022: {
@@ -872,14 +882,16 @@ const FIXED_EQUIPMENTS = {
         level: 1,
         maxLevel: 100,
         baseStats: {
-            hp: 100,
-            armor: 20,
-            attack: 10
+            hp: 200,
+            armor: 30,
+            critRate: 2,
+            critDamage: 0.10
         },
         growth: {
             hp: 2,
             armor: 2,
-            attack: 2
+            critRate: 2,
+            critDamage: 2
         }
     },
     EQ_023: {
@@ -893,14 +905,16 @@ const FIXED_EQUIPMENTS = {
         level: 1,
         maxLevel: 100,
         baseStats: {
-            hp: 120,
-            armor: 10,
-            attack: 10
+            hp: 250,
+            armor: 30,
+            critRate: 2,
+            critDamage: 0.10
         },
         growth: {
             hp: 2,
             armor: 2,
-            attack: 2
+            critRate: 2,
+            critDamage: 2
         }
     },
     EQ_024: {

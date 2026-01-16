@@ -3413,6 +3413,13 @@ case 'ASSIGN_ZONE': {
                 codexEquipLv100: newCodexLv100
             };
         }
+        case 'CHEAT_ADD_BAGSLOT': {
+            const amount = Math.max(0, parseInt(action.payload) || 0);
+            return {
+                ...state,
+                inventorySize: state.inventorySize + amount
+            };
+        }
         default:
             return state;
     }
@@ -6328,7 +6335,7 @@ export default function WoWIdleGame() {
                     return;
                 }
 
-                const id = idRaw.trim().toUpperCase(); // 统一转大写，确保匹配
+                const id = idRaw.trim().toUpperCase(); // 统一转大写
                 const level = parseInt(levelStr?.trim()) || 1;
                 const clampedLevel = Math.max(1, Math.min(100, level));
 
@@ -6349,18 +6356,29 @@ export default function WoWIdleGame() {
                 dispatch({ type: 'CHEAT_ADD_EQUIPMENT', payload: instance });
                 setConsoleLogs(prev => [...prev, `✓ 成功添加 ${tpl.name} (ID: ${id}) Lv.${clampedLevel}`]);
 
-                // 如果达到100级，自动点亮Lv100图鉴
                 if (clampedLevel >= 100) {
                     dispatch({ type: 'CHEAT_ADD_LV100_CODEX', payload: id });
                 }
             }
+            else if (subCmd === 'bagslot' && parts[2]) {
+                const amount = parseInt(parts[2]);
+                if (!isNaN(amount) && amount > 0) {
+                    dispatch({ type: 'CHEAT_ADD_BAGSLOT', payload: amount });
+                    setConsoleLogs(prev => [...prev, `✓ 成功增加 ${amount} 个背包栏位（当前总栏位：${state.inventorySize + amount}）`]);
+                } else {
+                    setConsoleLogs(prev => [...prev, '✗ 错误：栏位数量必须是正整数']);
+                }
+            }
             else {
-                setConsoleLogs(prev => [...prev, '✗ 用法：add gold <数量>   或   add equip <装备ID>,<等级>（等级可选，默认为1）']);
-                setConsoleLogs(prev => [...prev, '   示例：add equip EQ_024,100']);
+                setConsoleLogs(prev => [...prev, '✗ 用法：']);
+                setConsoleLogs(prev => [...prev, '   add gold <数量>']);
+                setConsoleLogs(prev => [...prev, '   add equip <装备ID>,<等级>（等级可选）']);
+                setConsoleLogs(prev => [...prev, '   add bagslot <数量>']);
+                setConsoleLogs(prev => [...prev, '   示例：add bagslot 20']);
             }
         }
         else {
-            setConsoleLogs(prev => [...prev, '✗ 未知命令，目前仅支持：add gold / add equip']);
+            setConsoleLogs(prev => [...prev, '✗ 未知命令，目前仅支持 add gold / add equip / add bagslot']);
         }
 
         setCommand('');

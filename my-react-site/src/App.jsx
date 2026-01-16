@@ -3370,7 +3370,38 @@ case 'ASSIGN_ZONE': {
 
             return newState;
         }
+        case 'CHEAT_ADD_GOLD': {
+            return {
+                ...state,
+                resources: {
+                    ...state.resources,
+                    gold: state.resources.gold + action.payload
+                }
+            };
+        }
 
+        case 'CHEAT_ADD_EQUIPMENT': {
+            const newInventory = [...state.inventory, action.payload];
+
+            // 自动点亮图鉴
+            let newCodex = state.codex.slice();
+            if (!newCodex.includes(action.payload.id)) {
+                newCodex.push(action.payload.id);
+            }
+
+            // 如果达到 Lv.100，点亮 Lv100 图鉴
+            let newCodexLv100 = state.codexEquipLv100.slice();
+            if (action.payload.currentLevel >= 100 && !newCodexLv100.includes(action.payload.id)) {
+                newCodexLv100.push(action.payload.id);
+            }
+
+            return {
+                ...state,
+                inventory: newInventory,
+                codex: newCodex,
+                codexEquipLv100: newCodexLv100
+            };
+        }
         default:
             return state;
     }
@@ -6152,6 +6183,9 @@ const RebirthPlotModal = ({ state, dispatch }) => {
 // ==================== MAIN APP ====================
 export default function WoWIdleGame() {
     const [state, dispatch] = useReducer(gameReducer, initialState);
+    const [consoleOpen, setConsoleOpen] = useState(false);
+    const [command, setCommand] = useState('');
+    const [consoleLogs, setConsoleLogs] = useState([]);
     const [isPaused, setIsPaused] = useState(false);
     const [showExport, setShowExport] = useState(false);
     const [importData, setImportData] = useState('');
@@ -6160,6 +6194,19 @@ export default function WoWIdleGame() {
 
     const lastTickRef = useRef(Date.now());
     const hiddenAtRef = useRef(null);
+
+    // 按 ` 键开关控制台
+    useEffect(() => {
+        const handleKeyDown = (e) => {
+            if (e.key === '`') {
+                e.preventDefault();
+                setConsoleOpen(prev => !prev);
+                setCommand(''); // 打开时清空输入
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, []);
 
     useEffect(() => {
         const onVisChange = () => {
@@ -6239,6 +6286,56 @@ export default function WoWIdleGame() {
         }
         return () => clearInterval(intervalRef.current);
     }, [isPaused]);
+
+    const executeCommand = (cmd) => {
+        const trimmed = cmd.trim();
+        if (!trimmed) return;
+
+        // 记录输入命令
+        setConsoleLogs(prev => [...prev, `> ${trimmed}`]);
+
+        const parts = trimmed.toLowerCase().split(' ');
+        if (parts[0] === 'add') {
+            if (parts[1] === 'gold' && parts[2]) {
+                const amount = parseFloat(parts[2]);
+                if (!isNaN(amount) && amount > 0) {
+                    dispatch({ type: 'CHEAT_ADD_GOLD', payload: amount });
+                    setConsoleLogs(prev => [...prev, `成功添加 ${amount} 金币`]);
+                } else {
+                    setConsoleLogs(prev => [...prev, '错误：无效的金币数量']);
+                }
+            }
+            else if (parts[1] === 'equip' && parts[2]) {
+                const [id, levelStr] = parts[2].split(',');
+                const level = parseInt(levelStr) || 1;
+                const clampedLevel = Math.max(1, Math.min(100, level));
+
+                const tpl = FIXED_EQUIPMENTS[id];
+                if (!tpl) {
+                    setConsoleLogs(prev => [...prev, `错误：找不到装备 ID ${id}`]);
+                    return;
+                }
+
+                const instance = {
+                    ...tpl,
+                    instanceId: `cheat_${Date.now()}_${Math.random().toString(36)}`,
+                    qualityColor: getRarityColor(tpl.rarity),
+                    currentLevel: clampedLevel,
+                    stats: scaleStats(tpl.baseStats, tpl.growth, clampedLevel)
+                };
+
+                dispatch({ type: 'CHEAT_ADD_EQUIPMENT', payload: instance });
+                setConsoleLogs(prev => [...prev, `成功添加 ${id} Lv.${clampedLevel}`]);
+            }
+            else {
+                setConsoleLogs(prev => [...prev, '用法：add gold <数量> 或 add equip <ID>,<等级>']);
+            }
+        } else {
+            setConsoleLogs(prev => [...prev, '未知命令，支持：add gold / add equip']);
+        }
+
+        setCommand('');
+    };
 
     const exportSave = () => {
         const saveData = encodeBase64(JSON.stringify(state));
@@ -6439,6 +6536,56 @@ export default function WoWIdleGame() {
             <div style={{ minHeight: 'calc(100vh - 160px)' }}>
                 {renderPage()}
             </div>
+
+            {/* 开发者控制台 */}
+            {consoleOpen && (
+                <div style={{
+                    position: 'fixed',
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    background: 'rgba(0,0,0,0.95)',
+                    borderTop: '2px solid #0f0',
+                    padding: '10px',
+                    zIndex: 9999,
+                    fontFamily: 'monospace',
+                    color: '#0f0',
+                    maxHeight: '40vh',
+                    display: 'flex',
+                    flexDirection: 'column'
+                }}>
+                    <div style={{
+                        flex: 1,
+                        overflowY: 'auto',
+                        marginBottom: '8px',
+                        paddingRight: '8px'
+                    }}>
+                        {consoleLogs.map((log, i) => (
+                            <div key={i}>{log}</div>
+                        ))}
+                    </div>
+                    <input
+                        autoFocus
+                        value={command}
+                        onChange={(e) => setCommand(e.target.value)}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                                executeCommand(command);
+                            }
+                        }}
+                        placeholder="输入命令，按 Enter 执行，按 ` 关闭"
+                        style={{
+                            width: '100%',
+                            background: 'transparent',
+                            border: '1px solid #0f0',
+                            color: '#0f0',
+                            padding: '8px',
+                            fontFamily: 'monospace',
+                            outline: 'none'
+                        }}
+                    />
+                </div>
+            )}
         </div>
     );
 }

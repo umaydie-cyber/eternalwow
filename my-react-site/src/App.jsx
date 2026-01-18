@@ -581,14 +581,13 @@ const FIXED_EQUIPMENTS = {
     REBIRTH_INVITATION: {
         id: 'REBIRTH_INVITATION',
         name: '破碎时空的邀请函',
-        type: 'equipment',
-        slot: null, // 不可装备
+        type: 'consumable',
         rarity: 'purple',
-        level: 1,
-        maxLevel: 100,
-        baseStats: {},
-        growth: {}
-    },
+        icon: '🌀',
+        canUse: true,
+        description: '使用后解锁重生轮回'
+    }
+    ,
     EQ_006: {
         id: 'EQ_006',
         name: '旅行者的头盔',
@@ -1116,7 +1115,7 @@ const ACHIEVEMENTS = {
 
 const WORLD_BOSSES = {
     hogger: { id: 'hogger', name: '霍格', hp: 18000, attack: 150, defense: 70, rewards: { gold: 5000, exp: 5500, items: ['霍格之爪'] } },
-    vancleef: { id: 'vancleef', name: '艾德温·范克里夫', hp: 30000, attack: 200, defense: 85, rewards: { gold: 15000, exp: 6800, items: ['范克里夫之刃'] }, unlockLevel: 30 },
+    vancleef: { id: 'vancleef', name: '艾德温·范克里夫', hp: 90000, attack: 400, defense: 250, rewards: { gold: 15000, exp: 6800, items: ['范克里夫之刃'] }, unlockLevel: 30 },
 };
 
 // 装备槽位定义
@@ -1986,6 +1985,7 @@ const initialState = {
     showRebirthConfirm: false,
     showRebirthPlot: null,
     rebirthCount: 0,
+    rebirthUnlocked: false,
     rebirthBonuses: {
         exp: 0,
         gold: 0,
@@ -3279,6 +3279,20 @@ case 'ASSIGN_ZONE': {
             );
             if (idx === -1) return state;
 
+            const item = state.inventory[idx];
+            // ✅ 邀请函逻辑
+            if (item.id === 'REBIRTH_INVITATION') {
+                const newInventory = [...state.inventory];
+                newInventory.splice(idx, 1);
+
+                return {
+                    ...state,
+                    inventory: newInventory,
+                    rebirthUnlocked: true,       // 🔓 解锁重生
+                    showRebirthConfirm: true     // 可选：直接弹确认
+                };
+            }
+
             const newInventory = [...state.inventory];
             newInventory.splice(idx, 1);
 
@@ -3509,7 +3523,7 @@ case 'ASSIGN_ZONE': {
             newState.rebirthBonds = [...newState.rebirthBonds, newBond];
 
             // 消耗邀请函
-            const tokenIdx = newState.inventory.findIndex(i => i.id === 'REBIRTH_INVITATION' && (i.currentLevel || 0) >= 100);
+            const tokenIdx = newState.inventory.findIndex(i => i.id === 'REBIRTH_INVITATION');
             if (tokenIdx >= 0) newState.inventory.splice(tokenIdx, 1);
 
             newState.rebirthCount += 1;
@@ -3623,6 +3637,22 @@ case 'ASSIGN_ZONE': {
                 characters: newCharacters
             };
         }
+        case 'USE_REBIRTH_INVITATION': {
+            const { instanceId } = action.payload;
+            const idx = state.inventory.findIndex(i => i.instanceId === instanceId && i.id === 'REBIRTH_INVITATION');
+            if (idx < 0) return state;
+
+            const inv = [...state.inventory];
+            inv.splice(idx, 1);
+
+            return {
+                ...state,
+                inventory: inv,
+                rebirthUnlocked: true,
+                showRebirthConfirm: true, // 可选：用完直接弹确认
+            };
+        }
+
         default:
             return state;
     }
@@ -6731,7 +6761,7 @@ export default function WoWIdleGame() {
                         <span style={{ fontSize: 12, color: '#888' }}>🪙 {Math.floor(state.resources.gold)}</span>
                     </div>
 
-                    {state.inventory.some(i => i.id === 'REBIRTH_INVITATION' && (i.currentLevel || 0) >= 100) && (
+                    {state.rebirthUnlocked && (
                         <Button onClick={() => dispatch({ type: 'OPEN_REBIRTH_CONFIRM' })} variant="danger">
                             重生轮回
                         </Button>

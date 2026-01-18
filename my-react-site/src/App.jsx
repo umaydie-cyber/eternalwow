@@ -1850,13 +1850,7 @@ function stepBossCombat(state) {
 
             // ==================== 胜利霍格后弹出剧情 ====================
             if (bossDead && combat.bossId === 'hogger') {
-                // 添加邀请函
-                boss.rewards.items.forEach(itemTpl => {
-                    if (itemTpl.id) {
-                        const instance = createEquipmentInstance(itemTpl.id);
-                        newState.inventory.push(instance);
-                    }
-                });
+                // ✅ 只弹剧情，奖励统一由下面的 Boss 奖励循环发放
                 newState.showHoggerPlot = true;
             }
 
@@ -1885,11 +1879,40 @@ function stepBossCombat(state) {
                 return newChar;
             });
 
-            // 物品奖励（junk）
-            boss.rewards.items.forEach(item => {
+            // ✅ Boss 物品奖励：统一走“正规生成逻辑”
+            boss.rewards.items.forEach(itemTpl => {
+                // 允许两种写法：{id:'xxx'} 或 'xxx'
+                const dropId = (typeof itemTpl === 'string') ? itemTpl : itemTpl?.id;
+                if (!dropId) return;
+
+                // 1) 固定装备（FIXED_EQUIPMENTS）=> 用 createEquipmentInstance
+                // createEquipmentInstance 本来就是从 FIXED_EQUIPMENTS 拿模板生成实例的：:contentReference[oaicite:3]{index=3}
+                if (FIXED_EQUIPMENTS?.[dropId]) {
+                    const inst = createEquipmentInstance(dropId);
+                    newState.inventory.push(inst);
+                    newState = addEquipmentIdToCodex(newState, dropId);
+                    return;
+                }
+
+                // 2) 普通物品/材料（ITEMS）=> 用 ITEMS 模板生成实例
+                // 你在掉落表 items 已经这样生成过（就是这套“正规写法”）：:contentReference[oaicite:4]{index=4}
+                const tpl = ITEMS?.[dropId];
+                if (tpl) {
+                    newState.inventory.push({
+                        ...tpl,
+                        instanceId: `inv_${Date.now()}_${Math.random()}`,
+                        id: tpl.id,
+                    });
+                    newState = addJunkIdToCodex(newState, dropId);
+                    return;
+                }
+
+                // 3) 兜底：防止未来写了个未知 id 又变 UNDEFINED
                 newState.inventory.push({
                     instanceId: `boss_${Date.now()}_${Math.random()}`,
-                    ...item
+                    id: dropId,
+                    name: dropId,
+                    type: 'junk',
                 });
             });
 

@@ -1965,7 +1965,8 @@ function stepBossCombat(state) {
 // ==================== INITIAL STATE ====================
 const initialState = {
     currentMenu: 'map',
-    frame: 0,
+    frame: 0,      // 总帧
+    lifeFrame: 0,  // 本世帧
     characters: [],
     characterSlots: 1,
     maxCharacterSlots: 10,
@@ -2714,7 +2715,10 @@ function gameReducer(state, action) {
         case 'TICK': {
             const deltaSeconds = action.payload?.deltaSeconds ?? 1;
 
-            let newState = { ...state, frame: state.frame + deltaSeconds };
+            let newState = {
+                ...state,
+                frame: state.frame + deltaSeconds ,
+                lifeFrame: (state.lifeFrame || 0) + deltaSeconds,};
 
             newState.lastOnlineTime = Date.now();
 
@@ -3576,7 +3580,7 @@ case 'ASSIGN_ZONE': {
             newState.bossTeam = [null, null, null];
             newState.bossCombat = null;
             newState.currentMenu = 'map';
-
+            newState.lifeFrame = 0; // 新一世从0开始计
             return newState;
         }
         case 'CHEAT_ADD_GOLD': {
@@ -6779,7 +6783,7 @@ export default function WoWIdleGame() {
                         fontSize: 12,
                         color: '#c9a227',
                     }}>
-            帧: {state.frame}
+            本世帧: {Math.floor(state.lifeFrame || 0)} ｜ 总帧: {Math.floor(state.frame)}
           </span>
                 </div>
 

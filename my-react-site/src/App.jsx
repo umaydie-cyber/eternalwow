@@ -3660,6 +3660,8 @@ case 'ASSIGN_ZONE': {
                 characters: newCharacters
             };
         }
+        case 'CLOSE_REBIRTH_PLOT':
+            return { ...state, showRebirthPlot: null };
 
         default:
             return state;

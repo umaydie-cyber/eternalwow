@@ -3637,21 +3637,6 @@ case 'ASSIGN_ZONE': {
                 characters: newCharacters
             };
         }
-        case 'USE_REBIRTH_INVITATION': {
-            const { instanceId } = action.payload;
-            const idx = state.inventory.findIndex(i => i.instanceId === instanceId && i.id === 'REBIRTH_INVITATION');
-            if (idx < 0) return state;
-
-            const inv = [...state.inventory];
-            inv.splice(idx, 1);
-
-            return {
-                ...state,
-                inventory: inv,
-                rebirthUnlocked: true,
-                showRebirthConfirm: true, // 可选：用完直接弹确认
-            };
-        }
 
         default:
             return state;
@@ -4574,6 +4559,18 @@ const ItemDetailsModal = ({ item, onClose, onEquip, characters, state , dispatch
                 </div>
 
                 <div style={{ display: 'flex', gap: 12 }}>
+                    {item.id === 'REBIRTH_INVITATION' && (
+                        <Button
+                            variant="danger"
+                            onClick={() => {
+                                dispatch({ type: 'USE_ITEM', payload: { itemInstanceId: item.instanceId || item.id } });
+                                onClose();
+                            }}
+                            style={{ flex: 1 }}
+                        >
+                            🌀 使用邀请函
+                        </Button>
+                    )}
                     <Button
                         onClick={() => {
                             if (selectedCharId) {
@@ -5484,6 +5481,11 @@ const InventoryPage = ({ state, dispatch }) => {
                             }}
                             onDragEnd={() => setDraggedItemId(null)}
                             onClick={(e) => {
+                                // ✅ 新增：邀请函直接使用（不管是不是 equipment）
+                                if (item.id === 'REBIRTH_INVITATION') {
+                                    dispatch({ type: 'USE_ITEM', payload: { itemInstanceId: item.instanceId || item.id } });
+                                    return;
+                                }
                                 if (item.type !== 'equipment') return;
                                 // Shift + 左键：把背包里同款装备依次合成到该装备上，直到 Lv100 或没有同款
                                 if (e.shiftKey && item.instanceId) {

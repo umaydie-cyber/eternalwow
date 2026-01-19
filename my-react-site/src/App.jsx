@@ -6524,11 +6524,8 @@ const RebirthBonusModal = ({ state, onClose }) => {
         vancleef: { name: '范克里夫', bonus: 0.10 },
     };
 
-    // 统计羁绊出现次数
-    const bondCounts = {};
-    bonds.forEach(b => {
-        bondCounts[b] = (bondCounts[b] || 0) + 1;
-    });
+    // 去重后的已获得羁绊
+    const uniqueBonds = [...new Set(bonds)];
 
     // ==================== 计算预测加成（新公式） ====================
     // 帧数加成：对数函数，3600帧→10%, 36000帧→20%, 86400帧→30%
@@ -6709,19 +6706,23 @@ const RebirthBonusModal = ({ state, onClose }) => {
 
                     {/* 羁绊池 */}
                     <div style={{ marginTop: 12, padding: '8px 12px', background: 'rgba(255,215,0,0.1)', borderRadius: 6, border: '1px dashed rgba(255,215,0,0.3)' }}>
-                        <div style={{ fontSize: 11, color: '#888', marginBottom: 4 }}>羁绊：随机获得以下之一</div>
+                        <div style={{ fontSize: 11, color: '#888', marginBottom: 4 }}>羁绊：随机获得以下之一（同一羁绊只生效一次）</div>
                         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                            {ALL_BONDS.map(bondId => (
-                                <span key={bondId} style={{
-                                    padding: '3px 8px',
-                                    background: 'rgba(201,162,39,0.2)',
-                                    borderRadius: 4,
-                                    fontSize: 11,
-                                    color: '#ffd700'
-                                }}>
-                                    {BOND_DETAILS[bondId]?.name || bondId}
-                                </span>
-                            ))}
+                            {ALL_BONDS.map(bondId => {
+                                const owned = uniqueBonds.includes(bondId);
+                                return (
+                                    <span key={bondId} style={{
+                                        padding: '3px 8px',
+                                        background: owned ? 'rgba(102,102,102,0.3)' : 'rgba(201,162,39,0.2)',
+                                        borderRadius: 4,
+                                        fontSize: 11,
+                                        color: owned ? '#666' : '#ffd700',
+                                        textDecoration: owned ? 'line-through' : 'none'
+                                    }}>
+                                        {BOND_DETAILS[bondId]?.name || bondId}{owned ? '（已有）' : ''}
+                                    </span>
+                                );
+                            })}
                         </div>
                     </div>
 
@@ -6740,15 +6741,15 @@ const RebirthBonusModal = ({ state, onClose }) => {
                     border: '1px solid #4a3c2a'
                 }}>
                     <h3 style={{ color: '#c9a227', fontSize: 14, marginBottom: 12, borderBottom: '1px solid rgba(201,162,39,0.2)', paddingBottom: 8 }}>
-                        🔗 已获得羁绊 ({bonds.length})
+                        🔗 已获得羁绊 ({uniqueBonds.length}/{ALL_BONDS.length})
                     </h3>
-                    {bonds.length === 0 ? (
+                    {uniqueBonds.length === 0 ? (
                         <div style={{ color: '#666', textAlign: 'center', padding: 20 }}>
                             暂无羁绊
                         </div>
                     ) : (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                            {Object.entries(bondCounts).map(([bondId, count]) => {
+                            {uniqueBonds.map(bondId => {
                                 const detail = BOND_DETAILS[bondId] || { name: bondId, description: '未知羁绊' };
                                 return (
                                     <div key={bondId} style={{
@@ -6759,19 +6760,9 @@ const RebirthBonusModal = ({ state, onClose }) => {
                                     }}>
                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
                                             <span style={{ color: '#ffd700', fontWeight: 600 }}>
-                                                {detail.name}
+                                                ✓ {detail.name}
                                             </span>
-                                            {count > 1 && (
-                                                <span style={{
-                                                    padding: '2px 8px',
-                                                    background: 'rgba(201,162,39,0.3)',
-                                                    borderRadius: 10,
-                                                    fontSize: 11,
-                                                    color: '#c9a227'
-                                                }}>
-                                                    ×{count}
-                                                </span>
-                                            )}
+                                            <span style={{ fontSize: 11, color: '#4CAF50' }}>生效中</span>
                                         </div>
                                         <div style={{ color: '#aaa', fontSize: 12, lineHeight: 1.5 }}>
                                             {detail.description}
@@ -6796,20 +6787,20 @@ const RebirthBonusModal = ({ state, onClose }) => {
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                         {ALL_BONDS.map(bondId => {
                             const detail = BOND_DETAILS[bondId] || { name: bondId, description: '未知羁绊' };
-                            const ownedCount = bondCounts[bondId] || 0;
+                            const owned = uniqueBonds.includes(bondId);
                             return (
                                 <div key={bondId} style={{
                                     padding: 10,
-                                    background: ownedCount > 0 ? 'rgba(76,175,80,0.1)' : 'rgba(0,0,0,0.2)',
+                                    background: owned ? 'rgba(76,175,80,0.1)' : 'rgba(0,0,0,0.2)',
                                     borderRadius: 6,
-                                    border: ownedCount > 0 ? '1px solid rgba(76,175,80,0.3)' : '1px solid rgba(74,60,42,0.5)'
+                                    border: owned ? '1px solid rgba(76,175,80,0.3)' : '1px solid rgba(74,60,42,0.5)'
                                 }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                                        <span style={{ color: ownedCount > 0 ? '#4CAF50' : '#888', fontWeight: 600, fontSize: 13 }}>
-                                            {ownedCount > 0 ? '✓ ' : ''}{detail.name}
+                                        <span style={{ color: owned ? '#4CAF50' : '#888', fontWeight: 600, fontSize: 13 }}>
+                                            {owned ? '✓ ' : ''}{detail.name}
                                         </span>
-                                        {ownedCount > 0 && (
-                                            <span style={{ fontSize: 11, color: '#4CAF50' }}>已获得 ×{ownedCount}</span>
+                                        {owned && (
+                                            <span style={{ fontSize: 11, color: '#4CAF50' }}>已获得</span>
                                         )}
                                     </div>
                                     <div style={{ color: '#777', fontSize: 11, lineHeight: 1.4 }}>

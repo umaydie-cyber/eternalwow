@@ -2953,13 +2953,17 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1) {
             }
         };
 
-        // 传入combatContext给技能计算（用于祸福相依等）
+
         // 冰冷血脉是否开启（buff 内含 icyVeinsBuff）
-        const icyVeinsBuff = buffs.some(b => b.icyVeinsBuff);
+        const icyVeinsBuff = buffs.some(b => b.type === 'icy_veins');
+        // 冰风暴DOT期间 -> 冰枪必爆
+        const blizzardActive = enemyDebuffs.some(d =>
+            d.type === 'dot' &&
+            d.name === '冰风暴' &&
+            d.enableIceLanceCrit === true
+        );
 
-        // 冰风暴是否在场（dot 内含 enableIceLanceCrit）
-        const blizzardActive = enemyDebuffs.some(d => d.type === 'dot' && d.enableIceLanceCrit);
-
+        // 传入combatContext给技能计算（用于祸福相依等）
         const combatContext = {
             fortuneMisfortuneStacks,
             fingersOfFrost,
@@ -3211,9 +3215,7 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1) {
                 type: 'dot',
                 sourceSkillId: currentSkillId,
                 sourceSkillName: skill.name,
-                school: result.dot.school,
-                damagePerTurn: result.dot.damagePerTurn,
-                duration: result.dot.duration
+                ...result.dot
             });
 
             logs.push({

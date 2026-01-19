@@ -2849,7 +2849,6 @@ function applyPhysicalMitigation(rawDamage, armor) {
     return Math.max(1, Math.floor(reduced)); // 至少1点伤害
 }
 
-
 // ==================== COMBAT SYSTEM ====================
 // 将战斗拆成“多 tick 多回合”推进：这样 UI 能实时看到血量变化
 function createCombatState(character, enemy, skillSlots) {
@@ -4666,6 +4665,53 @@ function gameReducer(state, action) {
         }
         case 'CLOSE_REBIRTH_PLOT':
             return { ...state, showRebirthPlot: null };
+        case "DELETE_CHARACTER": {
+            const { characterId } = action.payload || {};
+            if (!characterId) return state;
+
+            // 找到要删的角色（为了把装备退回背包）
+            const target = (state.characters || []).find(c => c.id === characterId);
+            if (!target) return state;
+
+            // 1) 装备退回背包：把 target.equipment 里所有已穿戴装备捞出来
+            const equippedItems = Object.values(target.equipment || {}).filter(Boolean);
+
+            // 注意：你的系统对掉落/奖励入包会检查 inventorySize（避免超上限）
+            // 这里删除角色属于“退回已有物品”，建议也遵守上限：能放多少放多少，剩余丢弃（避免背包无限膨胀）
+            const freeSlots = Math.max(0, (state.inventorySize ?? 0) - (state.inventory?.length ?? 0));
+            const canReturn = equippedItems.slice(0, freeSlots);
+            const newInventory = [...(state.inventory || []), ...canReturn];
+
+            // 2) 从角色列表移除（角色本体上就包含 exp/talents/skillSlots/combatState 等）
+            // 角色对象包含 exp、equipment、talents、skillSlots、combatState 等字段，删掉对象即可清理 :contentReference[oaicite:2]{index=2}
+            const newCharacters = (state.characters || []).filter(c => c.id !== characterId);
+
+            // 3) 清理 assignments（防止离线奖励/派遣逻辑仍然引用已删除角色）
+            const newAssignments = { ...(state.assignments || {}) };
+            delete newAssignments[characterId];
+
+            // 4) 清理 bossTeam：把阵容里引用的 charId 置空
+            // bossTeam 在 state 里是 [null, null, null] 存 charId :contentReference[oaicite:3]{index=3}
+            const newBossTeam = (state.bossTeam || []).map(id => (id === characterId ? null : id));
+
+            // 5) 清理 bossCombat（如果该角色正在世界首领战里）
+            let newBossCombat = state.bossCombat;
+            if (newBossCombat?.playerStates?.some(ps => ps?.char?.id === characterId)) {
+                newBossCombat = null; // 最稳妥：直接中止这场 boss 战，避免残留 playerStates 引用已删角色
+            }
+
+            // 6) 你项目里多处会重算全队/光环等，这里保持一致
+            const finalChars = recalcPartyStats(state, newCharacters);
+
+            return {
+                ...state,
+                characters: finalChars,
+                inventory: newInventory,
+                assignments: newAssignments,
+                bossTeam: newBossTeam,
+                bossCombat: newBossCombat,
+            };
+        }
 
         default:
             return state;
@@ -6438,6 +6484,16 @@ const CharacterPage = ({ state, dispatch }) => {
                                         style={{ flex: 1, fontSize: 11, padding: '6px 8px' }}
                                     >
                                         编辑技能
+                                    </Button>
+                                    <Button
+                                        variant="danger"
+                                        onClick={() => {
+                                            if (window.confirm("确定要删除该角色吗？")) {
+                                                dispatch({ type: "DELETE_CHARACTER", payload: { characterId: char.id } });
+                                            }
+                                        }}
+                                    >
+                                        🗑 删除
                                     </Button>
                                 </div>
                             </div>

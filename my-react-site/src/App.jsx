@@ -2559,12 +2559,13 @@ function stepBossCombat(state) {
                 newState.defeatedBosses = [...newState.defeatedBosses, combat.bossId];
             }
 
-            // ==================== 胜利霍格后弹出剧情 ====================
-            if (bossDead && combat.bossId === 'hogger') {
-                // ✅ 只弹剧情，奖励统一由下面的 Boss 奖励循环发放
+            // ==================== 胜利霍格后弹出剧情（只弹一次） ====================
+            const alreadyDefeated = (state.defeatedBosses || []).includes('hogger');
+
+            if (bossDead && combat.bossId === 'hogger' && !alreadyDefeated) {
+                // 只在第一次击败霍格时弹剧情
                 newState.showHoggerPlot = true;
             }
-
             // 金币奖励
             newState.resources = {
                 ...newState.resources,
@@ -4285,11 +4286,13 @@ function gameReducer(state, action) {
                 const newInventory = [...state.inventory];
                 newInventory.splice(idx, 1);
 
+                const alreadyRebirthed = (state.rebirthCount || 0) > 0;
+
                 return {
                     ...state,
                     inventory: newInventory,
-                    rebirthUnlocked: true,       // 🔓 解锁重生
-                    showRebirthConfirm: true     // 可选：直接弹确认
+                    rebirthUnlocked: true,
+                    showRebirthConfirm: !alreadyRebirthed // 只有没重生过才弹确认
                 };
             }
 

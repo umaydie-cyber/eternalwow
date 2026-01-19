@@ -2875,6 +2875,7 @@ function createCombatState(character, enemy, skillSlots) {
         validSkills,
         talentBuffs: { attackFlat: 0, blockValueFlat: 0, spellPowerFlat: 0 },
         fortuneMisfortuneStacks: 0, // 祸福相依层数
+        fingersOfFrost: 0,          // 寒冰指层数
         logs: [],
         startedAt: Date.now(),
     };
@@ -2903,6 +2904,8 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1) {
 
     // 祸福相依层数
     let fortuneMisfortuneStacks = combatState.fortuneMisfortuneStacks || 0;
+    // 寒冰指层数
+    let fingersOfFrost = combatState.fingersOfFrost || 0;
 
     const validSkills = Array.isArray(combatState.validSkills) && combatState.validSkills.length > 0
         ? combatState.validSkills
@@ -2951,7 +2954,19 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1) {
         };
 
         // 传入combatContext给技能计算（用于祸福相依等）
-        const combatContext = { fortuneMisfortuneStacks };
+        // 冰冷血脉是否开启（buff 内含 icyVeinsBuff）
+        const icyVeinsBuff = buffs.some(b => b.icyVeinsBuff);
+
+        // 冰风暴是否在场（dot 内含 enableIceLanceCrit）
+        const blizzardActive = enemyDebuffs.some(d => d.type === 'dot' && d.enableIceLanceCrit);
+
+        const combatContext = {
+            fortuneMisfortuneStacks,
+            fingersOfFrost,
+            icyVeinsBuff,
+            blizzardActive
+        };
+
         const result = skill.calculate(charForCalc, combatContext);
 
         // ===== 新增：雷霆一击（单体高伤 + 暴击时施加重伤DOT）=====
@@ -3065,7 +3080,25 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1) {
                     });
                 }
             }
+        }else if (result.aoeDot) {
+            // 把 aoeDot 当作单体 dot 挂到 enemyDebuffs
+            enemyDebuffs.push({
+                type: 'dot',
+                sourceSkillId: currentSkillId,
+                sourceSkillName: result.aoeDot.name || skill.name,
+                ...result.aoeDot, // school, damagePerTurn, duration, canGenerateFinger, name 等
+            });
+
+            logs.push({
+                round,
+                actor: character.name,
+                action: skill.name,
+                target: combatState.enemy?.name,
+                type: 'debuff',
+                text: `施放【${result.aoeDot.name || skill.name}】：每回合 ${result.aoeDot.damagePerTurn}，持续 ${result.aoeDot.duration} 回合`
+            });
         }
+
         // ===== 原有普通伤害逻辑（保持不变）=====
         else if (result.damage) {
             let damage = result.damage;
@@ -3320,6 +3353,19 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1) {
             });
         }
 
+        // ✅ 冰枪消耗寒冰指
+        if (result.consumeFingersOfFrost) {
+            fingersOfFrost = Math.max(0, fingersOfFrost - 1);
+            logs.push({
+                round,
+                kind: 'proc',
+                actor: character.name,
+                proc: '寒冰指',
+                value: fingersOfFrost,
+                text: `消耗 1 层寒冰指（剩余 ${fingersOfFrost} 层）`
+            });
+        }
+
         skillIndex++;
 
         if (enemyHp <= 0) break;
@@ -3371,6 +3417,22 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1) {
                         });
                     }
                 }
+
+                // ✅ 30级天赋：宝珠精通 - 寒冰宝珠的DOT有概率生成寒冰指
+                if (character.talents?.[30] === 'orb_mastery' && d.canGenerateFinger) {
+                    if (Math.random() < 0.25) { // 概率你可以按Boss战逻辑对齐；
+                        fingersOfFrost += 1;
+                        logs.push({
+                            round,
+                            kind: 'proc',
+                            actor: character.name,
+                            proc: '宝珠精通',
+                            value: fingersOfFrost,
+                            text: `【宝珠精通】触发：获得 1 层寒冰指（当前 ${fingersOfFrost} 层）`
+                        });
+                    }
+                }
+
 
                 if (enemyHp <= 0) break;
             }
@@ -3475,7 +3537,8 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1) {
             validSkills,
             logs,
             talentBuffs,
-            fortuneMisfortuneStacks
+            fortuneMisfortuneStacks,
+            fingersOfFrost, // 把最新层数存回去
         }
     };
 }
@@ -3489,7 +3552,7 @@ function gameReducer(state, action) {
 
             // current === false => 切回 true
             // undefined / true => 切成 false
-            const nextValue = current === false ? true : false;
+            const nextValue = current === false;
 
             return {
                 ...state,

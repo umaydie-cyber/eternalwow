@@ -3155,7 +3155,7 @@ function gameReducer(state, action) {
         }
 
 
-        
+
         case 'MERGE_EQUIPMENT_CHAIN': {
             const { targetInstanceId } = action.payload || {};
             if (!targetInstanceId) return state;
@@ -3207,7 +3207,7 @@ function gameReducer(state, action) {
             return nextState;
         }
 
-case 'ASSIGN_ZONE': {
+        case 'ASSIGN_ZONE': {
             const { characterId, zoneId } = action.payload;
             return {
                 ...state,
@@ -6462,6 +6462,181 @@ const RebirthPlotModal = ({ state, dispatch }) => {
     );
 };
 
+// ==================== 本世重生加成模态框 ====================
+const RebirthBonusModal = ({ state, onClose }) => {
+    const bonuses = state.rebirthBonuses || { exp: 0, gold: 0, drop: 0, researchSpeed: 0 };
+    const bonds = state.rebirthBonds || [];
+    const rebirthCount = state.rebirthCount || 0;
+
+    // 羁绊详细信息
+    const BOND_DETAILS = {
+        baoernai: {
+            name: '包二奶',
+            description: '队伍中有1个防护战士和2个戒律牧师时，每回合战士对所有敌人造成格挡值80%的额外伤害'
+        },
+        jianyue: {
+            name: '简约而不简单',
+            description: '队伍全为同一职业时，普通攻击伤害提高150%'
+        }
+    };
+
+    // 统计羁绊出现次数
+    const bondCounts = {};
+    bonds.forEach(b => {
+        bondCounts[b] = (bondCounts[b] || 0) + 1;
+    });
+
+    return (
+        <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0,0,0,0.9)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 2000
+        }} onClick={onClose}>
+            <div style={{
+                width: 600,
+                maxHeight: '80vh',
+                overflowY: 'auto',
+                padding: 30,
+                background: 'linear-gradient(135deg, #1a1510 0%, #0d0a07 100%)',
+                border: '3px solid #c9a227',
+                borderRadius: 12,
+                boxShadow: '0 8px 32px rgba(201,162,39,0.3)'
+            }} onClick={(e) => e.stopPropagation()}>
+                <h2 style={{
+                    color: '#ffd700',
+                    textAlign: 'center',
+                    marginBottom: 24,
+                    textShadow: '2px 2px 4px rgba(0,0,0,0.8)'
+                }}>
+                    ⚡ 本世重生加成
+                </h2>
+
+                {rebirthCount === 0 ? (
+                    <div style={{
+                        textAlign: 'center',
+                        color: '#888',
+                        padding: '40px 20px',
+                        fontSize: 14
+                    }}>
+                        你尚未经历重生轮回，击败霍格后使用「破碎时空的邀请函」开启你的轮回之旅吧！
+                    </div>
+                ) : (
+                    <>
+                        {/* 重生次数 */}
+                        <div style={{
+                            textAlign: 'center',
+                            marginBottom: 24,
+                            padding: '12px 20px',
+                            background: 'rgba(201,162,39,0.15)',
+                            borderRadius: 8,
+                            border: '1px solid rgba(201,162,39,0.3)'
+                        }}>
+                            <span style={{ color: '#c9a227', fontSize: 14 }}>已轮回 </span>
+                            <span style={{ color: '#ffd700', fontSize: 24, fontWeight: 700 }}>{rebirthCount}</span>
+                            <span style={{ color: '#c9a227', fontSize: 14 }}> 世</span>
+                        </div>
+
+                        {/* 数值加成 */}
+                        <div style={{
+                            background: 'rgba(0,0,0,0.3)',
+                            borderRadius: 8,
+                            padding: 16,
+                            marginBottom: 20,
+                            border: '1px solid #4a3c2a'
+                        }}>
+                            <h3 style={{ color: '#c9a227', fontSize: 14, marginBottom: 12, borderBottom: '1px solid rgba(201,162,39,0.2)', paddingBottom: 8 }}>
+                                📊 累计加成
+                            </h3>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', background: 'rgba(76,175,80,0.1)', borderRadius: 6, border: '1px solid rgba(76,175,80,0.3)' }}>
+                                    <span style={{ color: '#888' }}>⭐ 经验值</span>
+                                    <span style={{ color: '#4CAF50', fontWeight: 600 }}>+{(bonuses.exp * 100).toFixed(1)}%</span>
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', background: 'rgba(255,215,0,0.1)', borderRadius: 6, border: '1px solid rgba(255,215,0,0.3)' }}>
+                                    <span style={{ color: '#888' }}>🪙 金币</span>
+                                    <span style={{ color: '#ffd700', fontWeight: 600 }}>+{(bonuses.gold * 100).toFixed(1)}%</span>
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', background: 'rgba(163,51,238,0.1)', borderRadius: 6, border: '1px solid rgba(163,51,238,0.3)' }}>
+                                    <span style={{ color: '#888' }}>📦 掉落</span>
+                                    <span style={{ color: '#a335ee', fontWeight: 600 }}>+{(bonuses.drop * 100).toFixed(1)}%</span>
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', background: 'rgba(0,112,221,0.1)', borderRadius: 6, border: '1px solid rgba(0,112,221,0.3)' }}>
+                                    <span style={{ color: '#888' }}>🔬 研究速度</span>
+                                    <span style={{ color: '#0070dd', fontWeight: 600 }}>+{(bonuses.researchSpeed * 100).toFixed(1)}%</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* 羁绊列表 */}
+                        <div style={{
+                            background: 'rgba(0,0,0,0.3)',
+                            borderRadius: 8,
+                            padding: 16,
+                            border: '1px solid #4a3c2a'
+                        }}>
+                            <h3 style={{ color: '#c9a227', fontSize: 14, marginBottom: 12, borderBottom: '1px solid rgba(201,162,39,0.2)', paddingBottom: 8 }}>
+                                🔗 已获得羁绊 ({bonds.length})
+                            </h3>
+                            {bonds.length === 0 ? (
+                                <div style={{ color: '#666', textAlign: 'center', padding: 20 }}>
+                                    暂无羁绊
+                                </div>
+                            ) : (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                                    {Object.entries(bondCounts).map(([bondId, count]) => {
+                                        const detail = BOND_DETAILS[bondId] || { name: bondId, description: '未知羁绊' };
+                                        return (
+                                            <div key={bondId} style={{
+                                                padding: 12,
+                                                background: 'linear-gradient(135deg, rgba(201,162,39,0.1), rgba(139,115,25,0.05))',
+                                                borderRadius: 6,
+                                                border: '1px solid rgba(201,162,39,0.3)'
+                                            }}>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                                                    <span style={{ color: '#ffd700', fontWeight: 600 }}>
+                                                        {detail.name}
+                                                    </span>
+                                                    {count > 1 && (
+                                                        <span style={{
+                                                            padding: '2px 8px',
+                                                            background: 'rgba(201,162,39,0.3)',
+                                                            borderRadius: 10,
+                                                            fontSize: 11,
+                                                            color: '#c9a227'
+                                                        }}>
+                                                            ×{count}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <div style={{ color: '#aaa', fontSize: 12, lineHeight: 1.5 }}>
+                                                    {detail.description}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+                    </>
+                )}
+
+                <div style={{ textAlign: 'center', marginTop: 24 }}>
+                    <Button onClick={onClose} variant="secondary">
+                        关闭
+                    </Button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 // ==================== MAIN APP ====================
 export default function WoWIdleGame() {
     const [state, dispatch] = useReducer(gameReducer, initialState);
@@ -6471,6 +6646,7 @@ export default function WoWIdleGame() {
     const [isPaused, setIsPaused] = useState(false);
     const [showExport, setShowExport] = useState(false);
     const [importData, setImportData] = useState('');
+    const [showRebirthBonus, setShowRebirthBonus] = useState(false);
     const intervalRef = useRef(null);
     const saveIntervalRef = useRef(null);
 
@@ -6753,6 +6929,7 @@ export default function WoWIdleGame() {
             <HoggerPlotModal state={state} dispatch={dispatch} />
             <RebirthConfirmModal state={state} dispatch={dispatch} />
             {state.showRebirthPlot && <RebirthPlotModal state={state} dispatch={dispatch} />}
+            {showRebirthBonus && <RebirthBonusModal state={state} onClose={() => setShowRebirthBonus(false)} />}
 
             {/* Header */}
             <div style={{
@@ -6791,6 +6968,10 @@ export default function WoWIdleGame() {
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                         <span style={{ fontSize: 12, color: '#888' }}>🪙 {Math.floor(state.resources.gold)}</span>
                     </div>
+
+                    <Button onClick={() => setShowRebirthBonus(true)} variant="secondary" style={{ padding: '6px 10px', fontSize: 11 }}>
+                        ⚡ 轮回加成
+                    </Button>
 
                     {state.rebirthUnlocked && (
                         <Button onClick={() => dispatch({ type: 'OPEN_REBIRTH_CONFIRM' })} variant="danger">

@@ -67,7 +67,23 @@ const TALENTS = {
                 { id: 'berserk_stance', type: TALENT_TYPES.AURA, name: '狂暴姿态', description: '你在战斗中获得额外的8%暴击和20%暴击伤害。' },
             ]
         },
-        ...[30, 40, 50, 60, 70].map(tier => ({
+        {
+            tier: 30,
+            options: [
+                { id: 'brutal_momentum', type: TALENT_TYPES.ON_HIT, name: '残暴动力', description: '你的重伤造成的伤害的150%会治疗你。' },
+                { id: 'demoralizing_shout', type: TALENT_TYPES.ON_HIT, name: '挫志怒吼', description: '你的雷霆一击会为目标施加debuff【挫志怒吼】，使其造成的所有伤害降低20%。' },
+                { id: 'mountain_king', type: TALENT_TYPES.ON_HIT, name: '山丘之王', description: '雷霆一击有50%几率再次释放一次。' },
+            ]
+        },
+        {
+            tier: 40,
+            options: [
+                { id: 'guardian_shield', type: TALENT_TYPES.AURA, name: '护卫神盾', description: '你的盾墙可以配置2次。' },
+                { id: 'indomitable_might', type: TALENT_TYPES.AURA, name: '无坚不摧之力', description: '你的盾墙同时使你造成的伤害提高50%。' },
+                { id: 'fortified_wall', type: TALENT_TYPES.AURA, name: '坚毅长城', description: '盾墙的减伤提高到75%。' },
+            ]
+        },
+        ...[50, 60, 70].map(tier => ({
             tier,
             options: [
                 { id: `t${tier}_a`, name: '（预留）天赋A', description: '待实现' },
@@ -263,15 +279,23 @@ const SKILLS = {
         name: '盾墙',
         icon: '🛡️',
         type: 'buff',
-        limit: 1,
+        limit: 1, // 基础1次，护卫神盾天赋可提升到2次
         description: '受到的所有伤害降低50%，持续3回合',
         duration: 3,
-        calculate: () => ({
-            buff: {
-                damageTakenMult: 0.5,  // 乘区减伤50%
-                duration: 3
-            }
-        })
+        calculate: (char) => {
+            // 40级天赋：坚毅长城 - 减伤提高到75%
+            const damageTakenMult = char.talents?.[40] === 'fortified_wall' ? 0.25 : 0.5;
+            // 40级天赋：无坚不摧之力 - 造成伤害提高50%
+            const damageDealtMult = char.talents?.[40] === 'indomitable_might' ? 1.5 : 1;
+
+            return {
+                buff: {
+                    damageTakenMult,
+                    damageDealtMult,
+                    duration: 3
+                }
+            };
+        }
     },
     smite: {
         id: 'smite',
@@ -1569,20 +1593,39 @@ function stepBossCombat(state) {
             targetType = 'minion';
         }
 
+        // 40级天赋：无坚不摧之力 - 盾墙期间伤害提高50%
+        let buffDamageDealtMult = 1;
+        if (p.buffs) {
+            p.buffs.forEach(b => {
+                if (b.damageDealtMult) {
+                    buffDamageDealtMult *= b.damageDealtMult;
+                }
+            });
+        }
+
         // 新增：支持 AOE 和条件 DOT
         if (result.aoeDamage) {
-            const damage = result.aoeDamage;
+            let damage = result.aoeDamage * buffDamageDealtMult;
 
             // 对 Boss 造成伤害
             if (combat.bossHp > 0) {
                 combat.bossHp -= damage;
-                logs.push(`位置${i + 1} ${p.char.name} 的雷霆一击对 ${boss.name} 造成 ${damage} 伤害${result.isCrit ? '（暴击！）' : ''}`);
+                logs.push(`位置${i + 1} ${p.char.name} 的雷霆一击对 ${boss.name} 造成 ${Math.floor(damage)} 伤害${result.isCrit ? '（暴击！）' : ''}`);
 
                 // 暴击时对 Boss 施加 DOT
                 if (result.isCrit && result.dotOnCrit) {
                     combat.bossDots = combat.bossDots || [];
-                    combat.bossDots.push({ ...result.dotOnCrit });
+                    combat.bossDots.push({ ...result.dotOnCrit, sourcePlayerId: p.char.id });
                     logs.push(`→ ${boss.name} 获得【重伤】，将持续受到 DOT 伤害`);
+                }
+
+                // 30级天赋：挫志怒吼 - 雷霆一击施加debuff，Boss/小弟造成的伤害降低20%
+                if (p.char.talents?.[30] === 'demoralizing_shout') {
+                    if (!combat.bossDebuffs?.demoralizingShout) {
+                        combat.bossDebuffs = combat.bossDebuffs || {};
+                        combat.bossDebuffs.demoralizingShout = { damageMult: 0.8 };
+                        logs.push(`【挫志怒吼】触发：所有敌人造成的伤害降低20%`);
+                    }
                 }
             }
 
@@ -1590,14 +1633,44 @@ function stepBossCombat(state) {
             combat.minions.forEach((m, idx) => {
                 if (m.hp <= 0) return;
                 m.hp -= damage;
-                logs.push(`位置${i + 1} ${p.char.name} 的雷霆一击对 小弟${idx + 1} 造成 ${damage} 伤害${result.isCrit ? '（暴击！）' : ''}`);
+                logs.push(`位置${i + 1} ${p.char.name} 的雷霆一击对 小弟${idx + 1} 造成 ${Math.floor(damage)} 伤害${result.isCrit ? '（暴击！）' : ''}`);
 
                 if (result.isCrit && result.dotOnCrit) {
                     m.dots = m.dots || [];
-                    m.dots.push({ ...result.dotOnCrit });
+                    m.dots.push({ ...result.dotOnCrit, sourcePlayerId: p.char.id });
                     logs.push(`→ 小弟${idx + 1} 获得【重伤】，将持续受到 DOT 伤害`);
                 }
             });
+
+            // 30级天赋：山丘之王 - 雷霆一击有50%几率再次释放一次
+            if (p.char.talents?.[30] === 'mountain_king' && Math.random() < 0.5) {
+                const extraResult = skill.calculate(charForCalc);
+                const extraDamage = extraResult.aoeDamage * buffDamageDealtMult;
+
+                logs.push(`【山丘之王】触发：雷霆一击再次释放！`);
+
+                if (combat.bossHp > 0) {
+                    combat.bossHp -= extraDamage;
+                    logs.push(`位置${i + 1} ${p.char.name} 的雷霆一击(山丘之王)对 ${boss.name} 造成 ${Math.floor(extraDamage)} 伤害${extraResult.isCrit ? '（暴击！）' : ''}`);
+
+                    if (extraResult.isCrit && extraResult.dotOnCrit) {
+                        combat.bossDots = combat.bossDots || [];
+                        combat.bossDots.push({ ...extraResult.dotOnCrit, sourcePlayerId: p.char.id });
+                        logs.push(`→ ${boss.name} 获得【重伤】`);
+                    }
+                }
+
+                combat.minions.forEach((m, idx) => {
+                    if (m.hp <= 0) return;
+                    m.hp -= extraDamage;
+                    logs.push(`位置${i + 1} ${p.char.name} 的雷霆一击(山丘之王)对 小弟${idx + 1} 造成 ${Math.floor(extraDamage)} 伤害${extraResult.isCrit ? '（暴击！）' : ''}`);
+
+                    if (extraResult.isCrit && extraResult.dotOnCrit) {
+                        m.dots = m.dots || [];
+                        m.dots.push({ ...extraResult.dotOnCrit, sourcePlayerId: p.char.id });
+                    }
+                });
+            }
         }
 
         // 伤害/治疗/DOT 处理（简化版，保持原有逻辑）
@@ -1639,7 +1712,13 @@ function stepBossCombat(state) {
             p.buffs.push({ ...result.buff });
 
             if (result.buff.damageTakenMult) {
-                logs.push(`位置${i + 1} ${p.char.name} 开启盾墙，受到伤害降低50%（持续${result.buff.duration}回合）`);
+                const damageReduction = Math.round((1 - result.buff.damageTakenMult) * 100);
+                let buffText = `位置${i + 1} ${p.char.name} 开启盾墙，受到伤害降低${damageReduction}%（持续${result.buff.duration}回合）`;
+                if (result.buff.damageDealtMult && result.buff.damageDealtMult > 1) {
+                    const damageIncrease = Math.round((result.buff.damageDealtMult - 1) * 100);
+                    buffText += `，造成伤害提高${damageIncrease}%`;
+                }
+                logs.push(buffText);
             }
         }
 
@@ -1689,6 +1768,21 @@ function stepBossCombat(state) {
             const dmg = Math.max(1, Math.floor(dot.damagePerTurn));
             combat.bossHp -= dmg;
             logs.push(`【重伤】对 ${boss.name} 造成 ${dmg} DOT 伤害（剩余${dot.duration - 1}回合）`);
+
+            // 30级天赋：残暴动力 - 重伤伤害的150%治疗自己
+            if (dot.sourcePlayerId) {
+                const sourcePlayer = combat.playerStates.find(p => p.char.id === dot.sourcePlayerId);
+                if (sourcePlayer && sourcePlayer.char.talents?.[30] === 'brutal_momentum' && sourcePlayer.currentHp > 0) {
+                    const healAmount = Math.floor(dmg * 1.5);
+                    const maxHp = sourcePlayer.char.stats.maxHp || 0;
+                    const actualHeal = Math.min(healAmount, maxHp - sourcePlayer.currentHp);
+                    if (actualHeal > 0) {
+                        sourcePlayer.currentHp += actualHeal;
+                        logs.push(`【残暴动力】触发：${sourcePlayer.char.name} 治疗 ${actualHeal} 点生命`);
+                    }
+                }
+            }
+
             dot.duration -= 1;
             return dot.duration > 0;
         });
@@ -1701,6 +1795,21 @@ function stepBossCombat(state) {
                 const dmg = Math.max(1, Math.floor(dot.damagePerTurn));
                 m.hp -= dmg;
                 logs.push(`【重伤】对 小弟${idx + 1} 造成 ${dmg} DOT 伤害（剩余${dot.duration - 1}回合）`);
+
+                // 30级天赋：残暴动力 - 重伤伤害的150%治疗自己
+                if (dot.sourcePlayerId) {
+                    const sourcePlayer = combat.playerStates.find(p => p.char.id === dot.sourcePlayerId);
+                    if (sourcePlayer && sourcePlayer.char.talents?.[30] === 'brutal_momentum' && sourcePlayer.currentHp > 0) {
+                        const healAmount = Math.floor(dmg * 1.5);
+                        const maxHp = sourcePlayer.char.stats.maxHp || 0;
+                        const actualHeal = Math.min(healAmount, maxHp - sourcePlayer.currentHp);
+                        if (actualHeal > 0) {
+                            sourcePlayer.currentHp += actualHeal;
+                            logs.push(`【残暴动力】触发：${sourcePlayer.char.name} 治疗 ${actualHeal} 点生命`);
+                        }
+                    }
+                }
+
                 dot.duration -= 1;
                 return dot.duration > 0;
             });
@@ -1760,7 +1869,9 @@ function stepBossCombat(state) {
         }
 
         const finalTakenMult = takenMult * buffTakenMult;
-        dmg = Math.max(1, Math.floor(dmg * finalTakenMult));
+        // 30级天赋：挫志怒吼 - 敌人造成的伤害降低20%
+        const demoralizingShoutMult = combat.bossDebuffs?.demoralizingShout?.damageMult ?? 1;
+        dmg = Math.max(1, Math.floor(dmg * finalTakenMult * demoralizingShoutMult));
 
         return { damage: dmg, dr, blockedAmount, isHeavy };
     };
@@ -2247,6 +2358,15 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1) {
         if (result.aoeDamage) {
             let damage = result.aoeDamage;
 
+            // 40级天赋：无坚不摧之力 - 盾墙期间伤害提高50%
+            let buffDamageDealtMult = 1;
+            buffs.forEach(b => {
+                if (b.damageDealtMult) {
+                    buffDamageDealtMult *= b.damageDealtMult;
+                }
+            });
+            damage *= buffDamageDealtMult;
+
             // 全能等通用乘区已在上层calculate中处理，这里直接扣防御
             const actualDamage = Math.max(1, Math.floor(damage - (combatState.enemy?.defense ?? 0)));
             enemyHp -= actualDamage;
@@ -2281,6 +2401,70 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1) {
                     text: `【重伤】施加：每回合 ${result.dotOnCrit.damagePerTurn} 伤害，持续 ${result.dotOnCrit.duration} 回合`
                 });
             }
+
+            // 30级天赋：挫志怒吼 - 雷霆一击施加debuff，敌人造成的伤害降低20%
+            if (character.talents?.[30] === 'demoralizing_shout') {
+                const existingShout = enemyDebuffs.find(d => d.type === 'demoralizing_shout');
+                if (!existingShout) {
+                    enemyDebuffs.push({
+                        type: 'demoralizing_shout',
+                        damageMult: 0.8,  // 造成伤害降低20%
+                        duration: 999     // 持续整场战斗
+                    });
+                    logs.push({
+                        round,
+                        kind: 'proc',
+                        actor: character.name,
+                        proc: '挫志怒吼',
+                        text: '【挫志怒吼】触发：敌人造成的伤害降低20%'
+                    });
+                }
+            }
+
+            // 30级天赋：山丘之王 - 雷霆一击有50%几率再次释放一次
+            if (character.talents?.[30] === 'mountain_king' && Math.random() < 0.5) {
+                const extraResult = skill.calculate(charForCalc);
+                const extraDamage = Math.max(1, Math.floor(extraResult.aoeDamage - (combatState.enemy?.defense ?? 0)));
+                enemyHp -= extraDamage;
+
+                logs.push({
+                    round,
+                    kind: 'proc',
+                    actor: character.name,
+                    proc: '山丘之王',
+                    text: `【山丘之王】触发：雷霆一击再次释放！`
+                });
+                logs.push({
+                    round,
+                    actor: character.name,
+                    action: `${skill.name}(山丘之王)`,
+                    target: combatState.enemy?.name,
+                    value: extraDamage,
+                    type: 'damage',
+                    isCrit: extraResult.isCrit
+                });
+
+                // 额外的雷霆一击也能触发暴击重伤
+                if (extraResult.isCrit && extraResult.dotOnCrit) {
+                    enemyDebuffs.push({
+                        type: 'dot',
+                        sourceSkillId: currentSkillId,
+                        sourceSkillName: skill.name,
+                        damagePerTurn: extraResult.dotOnCrit.damagePerTurn,
+                        duration: extraResult.dotOnCrit.duration
+                    });
+
+                    logs.push({
+                        round,
+                        actor: character.name,
+                        action: `${skill.name}(山丘之王-重伤)`,
+                        target: combatState.enemy?.name,
+                        value: extraResult.dotOnCrit.damagePerTurn,
+                        type: 'debuff',
+                        text: `【重伤】施加：每回合 ${extraResult.dotOnCrit.damagePerTurn} 伤害，持续 ${extraResult.dotOnCrit.duration} 回合`
+                    });
+                }
+            }
         }
         // ===== 原有普通伤害逻辑（保持不变）=====
         else if (result.damage) {
@@ -2295,6 +2479,15 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1) {
             if (character.talents?.[20] === 'dark_side' && currentSkillId === 'mind_blast') {
                 damage *= 1.8;
             }
+
+            // 40级天赋：无坚不摧之力 - 盾墙期间伤害提高50%
+            let buffDamageDealtMultForDamage = 1;
+            buffs.forEach(b => {
+                if (b.damageDealtMult) {
+                    buffDamageDealtMultForDamage *= b.damageDealtMult;
+                }
+            });
+            damage *= buffDamageDealtMultForDamage;
 
             // ===== 10级天赋：神圣增幅（惩击：目标受法术伤害 +10% 持续2回合）=====
             if (character.talents?.[10] === 'holy_vuln' && currentSkillId === 'smite') {
@@ -2361,6 +2554,15 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1) {
         }
         else if (result.buff) {
             buffs.push({ ...result.buff });
+            let buffText = '';
+            if (result.buff.damageTakenMult) {
+                const damageReduction = Math.round((1 - result.buff.damageTakenMult) * 100);
+                buffText = `开启盾墙：受到伤害降低${damageReduction}%`;
+                if (result.buff.damageDealtMult && result.buff.damageDealtMult > 1) {
+                    const damageIncrease = Math.round((result.buff.damageDealtMult - 1) * 100);
+                    buffText += `，造成伤害提高${damageIncrease}%`;
+                }
+            }
             logs.push({
                 round,
                 actor: character.name,
@@ -2368,7 +2570,7 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1) {
                 target: character.name,
                 value: result.buff.duration ?? 0,
                 type: 'buff',
-                text: result.buff.damageTakenMult ? '开启盾墙：受到伤害降低50%' : ''
+                text: buffText
             });
         }
         else if (result.dot) {
@@ -2480,6 +2682,25 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1) {
                     type: 'damage'
                 });
 
+                // 30级天赋：残暴动力 - 重伤伤害的150%治疗自己
+                if (character.talents?.[30] === 'brutal_momentum' && d.sourceSkillName === '雷霆一击') {
+                    const healAmount = Math.floor(actualDot * 1.5);
+                    const maxHp = character.stats.maxHp ?? character.stats.hp ?? 0;
+                    const actualHeal = Math.min(healAmount, maxHp - charHp);
+                    if (actualHeal > 0) {
+                        charHp += actualHeal;
+                        logs.push({
+                            round,
+                            kind: 'proc',
+                            actor: character.name,
+                            proc: '残暴动力',
+                            value: actualHeal,
+                            type: 'heal',
+                            text: `【残暴动力】触发：治疗 ${actualHeal} 点生命`
+                        });
+                    }
+                }
+
                 if (enemyHp <= 0) break;
             }
         }
@@ -2535,13 +2756,21 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1) {
 
         // ===== 新增：buff减伤乘区（盾墙等）=====
         let buffDamageTakenMult = 1;
+        let buffDamageDealtMult = 1;  // 40级天赋：无坚不摧之力
         buffs.forEach(b => {
             if (b.damageTakenMult) {
                 buffDamageTakenMult *= b.damageTakenMult;
             }
+            if (b.damageDealtMult) {
+                buffDamageDealtMult *= b.damageDealtMult;
+            }
         });
 
-        finalDamage = Math.max(1, Math.floor(finalDamage * (character.stats.damageTakenMult || 1) * buffDamageTakenMult));
+        // 30级天赋：挫志怒吼 - 敌人造成的伤害降低20%
+        const demoralizingShout = enemyDebuffs.find(d => d.type === 'demoralizing_shout');
+        const enemyDamageMult = demoralizingShout ? demoralizingShout.damageMult : 1;
+
+        finalDamage = Math.max(1, Math.floor(finalDamage * (character.stats.damageTakenMult || 1) * buffDamageTakenMult * enemyDamageMult));
 
         charHp -= finalDamage;
         const blockText = blockedAmount > 0 ? `，格挡 ${blockedAmount}` : '';
@@ -3817,6 +4046,19 @@ const StatBar = ({ label, current, max, color = '#4CAF50' }) => (
 const SkillEditorModal = ({ character, onClose, onSave, state }) => {
     const [skillSlots, setSkillSlots] = useState(character.skillSlots || Array(8).fill(''));
 
+    // 获取技能的实际限制（考虑天赋效果）
+    const getSkillLimit = (skillId) => {
+        const skill = SKILLS[skillId];
+        let limit = skill?.limit ?? Infinity;
+
+        // 40级天赋：护卫神盾 - 盾墙可配置2次
+        if (skillId === 'shield_wall' && character.talents?.[40] === 'guardian_shield') {
+            limit = 2;
+        }
+
+        return limit;
+    };
+
     const handleSlotChange = (index, skillId) => {
         const newSlots = [...skillSlots];
         newSlots[index] = skillId;
@@ -3828,10 +4070,10 @@ const SkillEditorModal = ({ character, onClose, onSave, state }) => {
             countMap[sid] = (countMap[sid] || 0) + 1;
         });
 
-        // 校验每个技能的 limit
+        // 校验每个技能的 limit（考虑天赋）
         for (const [sid, count] of Object.entries(countMap)) {
             const skill = SKILLS[sid];
-            const limit = skill?.limit ?? Infinity;
+            const limit = getSkillLimit(sid);
 
             if (count > limit) {
                 alert(`${skill.name} 在技能栏中最多只能放 ${limit} 次`);
@@ -3998,6 +4240,11 @@ const SkillViewerModal = ({ character, onClose }) => {
                     }}>
                         {availableSkillIds.map((sid) => {
                             const skill = SKILLS[sid];
+                            // 获取技能的实际限制（考虑天赋效果）
+                            let limit = skill.limit;
+                            if (sid === 'shield_wall' && character.talents?.[40] === 'guardian_shield') {
+                                limit = 2;
+                            }
                             return (
                                 <div key={sid} style={{
                                     background: 'rgba(0,0,0,0.3)',
@@ -4012,7 +4259,7 @@ const SkillViewerModal = ({ character, onClose }) => {
                                                 {skill.name}
                                             </div>
                                             <div style={{ color: '#888', fontSize: 11 }}>
-                                                类型：{skill.type}{typeof skill.limit === 'number' ? ` · 槽位上限：${skill.limit}` : ''}
+                                                类型：{skill.type}{typeof limit === 'number' ? ` · 槽位上限：${limit}` : ''}
                                             </div>
                                         </div>
                                     </div>

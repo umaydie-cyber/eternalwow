@@ -37,6 +37,28 @@ const CLASSES = {
             { level: 20, skillId: 'power_word_radiance' },
             { level: 40, skillId: 'penance' },
         ]
+    },
+    frost_mage: {
+        id: 'frost_mage',
+        name: '冰霜法师',
+        baseStats: {
+            hp: 90,
+            mp: 150,
+            attack: 5,
+            spellPower: 18,
+            armor: 8,
+            magicResist: 25,
+        },
+        skills: [
+            { level: 1, skillId: 'basic_attack' },
+            { level: 1, skillId: 'rest' },
+            { level: 3, skillId: 'frostbolt' },
+            { level: 5, skillId: 'ice_lance' },
+            { level: 10, skillId: 'blizzard' },
+            { level: 20, skillId: 'frozen_orb' },
+            { level: 30, skillId: 'icy_veins' },
+            { level: 40, skillId: 'comet_storm' },
+        ]
     }
 };
 
@@ -183,6 +205,100 @@ const TALENTS = {
                     name: '争分夺秒',
                     description: '释放苦修使你的急速提高30%，持续4回合',
                     type: 'on_cast'
+                }
+            ]
+        }
+    ],
+    frost_mage: [
+        {
+            tier: 10,
+            options: [
+                {
+                    id: 'lingering_cold',
+                    name: '延绵寒冷',
+                    description: '寒冰箭使你的法术强度提高5，持续到战斗结束',
+                    type: 'on_cast'
+                },
+                {
+                    id: 'piercing_cold',
+                    name: '寒冷刺骨',
+                    description: '爆击率提高10',
+                    type: 'aura'
+                },
+                {
+                    id: 'frost_amp',
+                    name: '寒冰增幅',
+                    description: '法术伤害提高10%',
+                    type: 'aura'
+                }
+            ]
+        },
+        {
+            tier: 20,
+            options: [
+                {
+                    id: 'fingers_of_frost',
+                    name: '寒冰指',
+                    description: '寒冰箭有50%概率使你获得1层寒冰指效果，寒冰指使下一个冰枪术的伤害提高100%',
+                    type: 'on_cast'
+                },
+                {
+                    id: 'cold_wisdom',
+                    name: '冰冷智慧',
+                    description: '寒冰箭有25%概率额外对目标施放冰风暴',
+                    type: 'on_cast'
+                },
+                {
+                    id: 'endless_winter',
+                    name: '无尽寒冬',
+                    description: '寒冰宝珠持续时间提高2回合，伤害提高到0.8倍法术强度',
+                    type: 'aura'
+                }
+            ]
+        },
+        {
+            tier: 30,
+            options: [
+                {
+                    id: 'frozen_touch',
+                    name: '冰冻之触',
+                    description: '你的冰枪术造成的伤害提升25%',
+                    type: 'aura'
+                },
+                {
+                    id: 'cold_intuition',
+                    name: '冰冷直觉',
+                    description: '你的冰冷智慧触发概率提高至40%',
+                    type: 'aura'
+                },
+                {
+                    id: 'orb_mastery',
+                    name: '宝珠精通',
+                    description: '你的寒冰宝珠造成DOT伤害时有25%概率生成一层寒冰指',
+                    type: 'on_hit'
+                }
+            ]
+        },
+        {
+            tier: 40,
+            options: [
+                {
+                    id: 'glacial_spike',
+                    name: '冰川突进',
+                    description: '你的彗星风暴每造成一次伤害，获取一层寒冰指',
+                    type: 'on_hit'
+                },
+                {
+                    id: 'double_comet',
+                    name: '双彗星',
+                    description: '你的彗星风暴可以配置2次',
+                    type: 'aura'
+                },
+                {
+                    id: 'arcane_intellect',
+                    name: '奥术智慧',
+                    description: '你的小队所有成员的法术强度提高10%',
+                    type: 'aura'
                 }
             ]
         }
@@ -416,8 +532,236 @@ const SKILLS = {
 
             return result;
         }
-    }
+    },
 
+    // ==================== 冰霜法师技能 ====================
+    frostbolt: {
+        id: 'frostbolt',
+        name: '寒冰箭',
+        icon: '❄️',
+        type: 'damage',
+        limit: 8,
+        description: '造成1.8倍法术强度的冰霜伤害',
+        calculate: (char, combatContext) => {
+            let damage = char.stats.spellPower * 1.8;
+
+            // 冰冷血脉buff：冰霜伤害提高50%
+            if (combatContext?.icyVeinsBuff) {
+                damage *= 1.5;
+            }
+
+            // 10级天赋：寒冰增幅 - 法术伤害提高10%
+            if (char.talents?.[10] === 'frost_amp') {
+                damage *= 1.1;
+            }
+
+            // 暴击判定
+            let critRate = char.stats.critRate;
+            // 10级天赋：寒冷刺骨 - 暴击率提高10
+            if (char.talents?.[10] === 'piercing_cold') {
+                critRate += 10;
+            }
+
+            const isCrit = Math.random() < critRate / 100;
+            if (isCrit) {
+                damage *= char.stats.critDamage;
+            }
+
+            return {
+                damage: Math.floor(damage),
+                isCrit,
+                school: 'frost',
+                triggerFrostboltTalents: true // 标记用于触发天赋
+            };
+        }
+    },
+    ice_lance: {
+        id: 'ice_lance',
+        name: '冰枪术',
+        icon: '🔱',
+        type: 'damage',
+        limit: 8,
+        description: '造成1.2倍法术强度的冰霜伤害，爆击伤害额外增加200%',
+        calculate: (char, combatContext) => {
+            let damage = char.stats.spellPower * 1.2;
+
+            // 冰冷血脉buff：冰霜伤害提高50%
+            if (combatContext?.icyVeinsBuff) {
+                damage *= 1.5;
+            }
+
+            // 10级天赋：寒冰增幅 - 法术伤害提高10%
+            if (char.talents?.[10] === 'frost_amp') {
+                damage *= 1.1;
+            }
+
+            // 30级天赋：冰冻之触 - 冰枪术伤害提升25%
+            if (char.talents?.[30] === 'frozen_touch') {
+                damage *= 1.25;
+            }
+
+            // 20级天赋：寒冰指 - 消耗一层寒冰指，伤害提高100%
+            const fingersOfFrost = combatContext?.fingersOfFrost || 0;
+            let consumeFinger = false;
+            if (char.talents?.[20] === 'fingers_of_frost' && fingersOfFrost > 0) {
+                damage *= 2;
+                consumeFinger = true;
+            }
+
+            // 暴击判定
+            let critRate = char.stats.critRate;
+            // 10级天赋：寒冷刺骨 - 暴击率提高10
+            if (char.talents?.[10] === 'piercing_cold') {
+                critRate += 10;
+            }
+
+            // 冰风暴DOT期间必定爆击
+            let forceCrit = false;
+            if (combatContext?.blizzardActive) {
+                forceCrit = true;
+            }
+
+            const isCrit = forceCrit || Math.random() < critRate / 100;
+            if (isCrit) {
+                // 基础暴击伤害 + 额外200%
+                damage *= (char.stats.critDamage + 2);
+            }
+
+            return {
+                damage: Math.floor(damage),
+                isCrit,
+                school: 'frost',
+                consumeFingersOfFrost: consumeFinger
+            };
+        }
+    },
+    blizzard: {
+        id: 'blizzard',
+        name: '冰风暴',
+        icon: '🌨️',
+        type: 'dot',
+        limit: 2,
+        description: 'DOT持续3回合，每回合造成1倍法术强度的冰霜伤害，持续期间冰枪术必定爆击',
+        calculate: (char, combatContext) => {
+            let damagePerTurn = char.stats.spellPower * 1;
+
+            // 冰冷血脉buff：冰霜伤害提高50%
+            if (combatContext?.icyVeinsBuff) {
+                damagePerTurn *= 1.5;
+            }
+
+            // 10级天赋：寒冰增幅 - 法术伤害提高10%
+            if (char.talents?.[10] === 'frost_amp') {
+                damagePerTurn *= 1.1;
+            }
+
+            return {
+                dot: {
+                    school: 'frost',
+                    name: '冰风暴',
+                    damagePerTurn: Math.floor(damagePerTurn),
+                    duration: 3,
+                    enableIceLanceCrit: true // 标记冰枪术必定爆击
+                }
+            };
+        }
+    },
+    frozen_orb: {
+        id: 'frozen_orb',
+        name: '寒冰宝珠',
+        icon: '🔮',
+        type: 'aoe_dot',
+        limit: 2,
+        description: '对所有敌方单位施加DOT，持续3回合，每回合造成0.5倍法术强度的伤害',
+        calculate: (char, combatContext) => {
+            let damagePerTurn = char.stats.spellPower * 0.5;
+            let duration = 3;
+
+            // 20级天赋：无尽寒冬 - 持续时间+2，伤害提高到0.8倍
+            if (char.talents?.[20] === 'endless_winter') {
+                duration = 5;
+                damagePerTurn = char.stats.spellPower * 0.8;
+            }
+
+            // 冰冷血脉buff：冰霜伤害提高50%
+            if (combatContext?.icyVeinsBuff) {
+                damagePerTurn *= 1.5;
+            }
+
+            // 10级天赋：寒冰增幅 - 法术伤害提高10%
+            if (char.talents?.[10] === 'frost_amp') {
+                damagePerTurn *= 1.1;
+            }
+
+            return {
+                aoeDot: {
+                    school: 'frost',
+                    name: '寒冰宝珠',
+                    damagePerTurn: Math.floor(damagePerTurn),
+                    duration: duration,
+                    canGenerateFinger: char.talents?.[30] === 'orb_mastery' // 30级天赋：宝珠精通
+                }
+            };
+        }
+    },
+    icy_veins: {
+        id: 'icy_veins',
+        name: '冰冷血脉',
+        icon: '💠',
+        type: 'buff',
+        limit: 1,
+        description: '你造成的冰霜伤害提高50%，急速提高50%，持续4回合',
+        calculate: (char) => {
+            return {
+                buff: {
+                    type: 'icy_veins',
+                    frostDamageMult: 1.5,
+                    hasteBonus: 50,
+                    duration: 4
+                }
+            };
+        }
+    },
+    comet_storm: {
+        id: 'comet_storm',
+        name: '彗星风暴',
+        icon: '☄️',
+        type: 'aoe_damage',
+        limit: 1,
+        description: '对所有敌人造成3倍法术强度的伤害',
+        calculate: (char, combatContext) => {
+            let damage = char.stats.spellPower * 3;
+
+            // 冰冷血脉buff：冰霜伤害提高50%
+            if (combatContext?.icyVeinsBuff) {
+                damage *= 1.5;
+            }
+
+            // 10级天赋：寒冰增幅 - 法术伤害提高10%
+            if (char.talents?.[10] === 'frost_amp') {
+                damage *= 1.1;
+            }
+
+            // 暴击判定
+            let critRate = char.stats.critRate;
+            // 10级天赋：寒冷刺骨 - 暴击率提高10
+            if (char.talents?.[10] === 'piercing_cold') {
+                critRate += 10;
+            }
+
+            const isCrit = Math.random() < critRate / 100;
+            if (isCrit) {
+                damage *= char.stats.critDamage;
+            }
+
+            return {
+                aoeDamage: Math.floor(damage),
+                isCrit,
+                school: 'frost',
+                generateFingerOnHit: char.talents?.[40] === 'glacial_spike' // 40级天赋：冰川突进
+            };
+        }
+    }
 
 };
 
@@ -1457,6 +1801,9 @@ function getPartyAuraMultipliers(characters) {
 
         // 30级：神圣启迪（全队法强+5%）
         if (t[30] === 'holy_enlight') spellPowerMul *= 1.05;
+
+        // 冰霜法师40级：奥术智慧（全队法强+10%）
+        if (t[40] === 'arcane_intellect') spellPowerMul *= 1.10;
     });
 
     return { hpMul, spellPowerMul };
@@ -1642,8 +1989,20 @@ function stepBossCombat(state) {
             }
         };
 
-        // 传入combatContext给技能计算（用于祸福相依等）
-        const combatContext = { fortuneMisfortuneStacks: p.fortuneMisfortuneStacks || 0 };
+        // 传入combatContext给技能计算（用于祸福相依、冰霜法师效果等）
+        // 检查是否有冰冷血脉buff
+        const icyVeinsBuff = p.buffs?.some(b => b.type === 'icy_veins');
+        // 检查是否有冰风暴DOT激活（用于冰枪术必定爆击）
+        const blizzardActive = combat.bossDots?.some(d => d.name === '冰风暴' && d.sourcePlayerId === p.char.id) ||
+            combat.minions?.some(m => m.dots?.some(d => d.name === '冰风暴' && d.sourcePlayerId === p.char.id));
+
+        const combatContext = {
+            fortuneMisfortuneStacks: p.fortuneMisfortuneStacks || 0,
+            // 冰霜法师状态
+            icyVeinsBuff,
+            blizzardActive,
+            fingersOfFrost: p.fingersOfFrost || 0
+        };
         const result = skill.calculate(charForCalc, combatContext);
 
         // 目标选择逻辑（不变）
@@ -1670,16 +2029,25 @@ function stepBossCombat(state) {
         if (result.aoeDamage) {
             let damage = result.aoeDamage * buffDamageDealtMult;
 
+            // 获取技能名称用于日志
+            const skillName = skill.name || '技能';
+
             // 对 Boss 造成伤害
             if (combat.bossHp > 0) {
                 combat.bossHp -= damage;
-                logs.push(`位置${i + 1} ${p.char.name} 的雷霆一击对 ${boss.name} 造成 ${Math.floor(damage)} 伤害${result.isCrit ? '（暴击！）' : ''}`);
+                logs.push(`位置${i + 1} ${p.char.name} 的${skillName}对 ${boss.name} 造成 ${Math.floor(damage)} 伤害${result.isCrit ? '（暴击！）' : ''}`);
 
                 // 暴击时对 Boss 施加 DOT
                 if (result.isCrit && result.dotOnCrit) {
                     combat.bossDots = combat.bossDots || [];
                     combat.bossDots.push({ ...result.dotOnCrit, sourcePlayerId: p.char.id });
                     logs.push(`→ ${boss.name} 获得【重伤】，将持续受到 DOT 伤害`);
+                }
+
+                // 冰霜法师40级天赋：冰川突进 - 彗星风暴每造成一次伤害获取一层寒冰指
+                if (result.generateFingerOnHit && p.char.classId === 'frost_mage') {
+                    p.fingersOfFrost = (p.fingersOfFrost || 0) + 1;
+                    logs.push(`【冰川突进】触发：${p.char.name} 获得1层寒冰指，当前${p.fingersOfFrost}层`);
                 }
 
                 // 30级天赋：挫志怒吼 - 雷霆一击施加debuff，Boss/小弟造成的伤害降低20%
@@ -1696,12 +2064,18 @@ function stepBossCombat(state) {
             combat.minions.forEach((m, idx) => {
                 if (m.hp <= 0) return;
                 m.hp -= damage;
-                logs.push(`位置${i + 1} ${p.char.name} 的雷霆一击对 小弟${idx + 1} 造成 ${Math.floor(damage)} 伤害${result.isCrit ? '（暴击！）' : ''}`);
+                logs.push(`位置${i + 1} ${p.char.name} 的${skillName}对 小弟${idx + 1} 造成 ${Math.floor(damage)} 伤害${result.isCrit ? '（暴击！）' : ''}`);
 
                 if (result.isCrit && result.dotOnCrit) {
                     m.dots = m.dots || [];
                     m.dots.push({ ...result.dotOnCrit, sourcePlayerId: p.char.id });
                     logs.push(`→ 小弟${idx + 1} 获得【重伤】，将持续受到 DOT 伤害`);
+                }
+
+                // 冰霜法师40级天赋：冰川突进 - 彗星风暴每造成一次伤害获取一层寒冰指
+                if (result.generateFingerOnHit && p.char.classId === 'frost_mage') {
+                    p.fingersOfFrost = (p.fingersOfFrost || 0) + 1;
+                    logs.push(`【冰川突进】触发：${p.char.name} 获得1层寒冰指，当前${p.fingersOfFrost}层`);
                 }
             });
 
@@ -1819,7 +2193,35 @@ function stepBossCombat(state) {
         }
 
         if (result.dot) {
+            // 冰风暴DOT处理 - 对当前目标施加
+            if (result.dot.name === '冰风暴') {
+                if (targetType === 'boss') {
+                    combat.bossDots = combat.bossDots || [];
+                    combat.bossDots.push({ ...result.dot, sourcePlayerId: p.char.id });
+                    logs.push(`位置${i + 1} ${p.char.name} 对 ${boss.name} 施放【冰风暴】，持续${result.dot.duration}回合`);
+                } else if (targetIndex >= 0) {
+                    combat.minions[targetIndex].dots = combat.minions[targetIndex].dots || [];
+                    combat.minions[targetIndex].dots.push({ ...result.dot, sourcePlayerId: p.char.id });
+                    logs.push(`位置${i + 1} ${p.char.name} 对 小弟${targetIndex + 1} 施放【冰风暴】，持续${result.dot.duration}回合`);
+                }
+            }
+        }
 
+        // 处理AOE DOT（寒冰宝珠）
+        if (result.aoeDot) {
+            // 对Boss施加
+            if (combat.bossHp > 0) {
+                combat.bossDots = combat.bossDots || [];
+                combat.bossDots.push({ ...result.aoeDot, sourcePlayerId: p.char.id });
+                logs.push(`位置${i + 1} ${p.char.name} 对 ${boss.name} 施放【${result.aoeDot.name}】，持续${result.aoeDot.duration}回合`);
+            }
+            // 对所有小弟施加
+            combat.minions.forEach((m, idx) => {
+                if (m.hp <= 0) return;
+                m.dots = m.dots || [];
+                m.dots.push({ ...result.aoeDot, sourcePlayerId: p.char.id });
+                logs.push(`位置${i + 1} ${p.char.name} 对 小弟${idx + 1} 施放【${result.aoeDot.name}】，持续${result.aoeDot.duration}回合`);
+            });
         }
 
         // 新增：支持 buff 类型的 damageTakenMult
@@ -1836,6 +2238,11 @@ function stepBossCombat(state) {
                 }
                 logs.push(buffText);
             }
+
+            // 冰冷血脉buff处理
+            if (result.buff.type === 'icy_veins') {
+                logs.push(`位置${i + 1} ${p.char.name} 开启【冰冷血脉】：冰霜伤害+50%，急速+50%，持续${result.buff.duration}回合`);
+            }
         }
 
         // 天赋触发（如质朴）
@@ -1848,6 +2255,49 @@ function stepBossCombat(state) {
         if ((skillId === 'smite' || skillId === 'mind_blast') && p.char.talents?.[40] === 'fortune_misfortune') {
             p.fortuneMisfortuneStacks = (p.fortuneMisfortuneStacks || 0) + 1;
             logs.push(`【祸福相依】${p.char.name} 层数+1，当前${p.fortuneMisfortuneStacks}层`);
+        }
+
+        // ==================== 冰霜法师天赋处理 ====================
+        // 寒冰箭天赋触发
+        if (skillId === 'frostbolt' && result.triggerFrostboltTalents) {
+            // 10级天赋：延绵寒冷 - 法术强度+5
+            if (p.char.talents?.[10] === 'lingering_cold') {
+                p.talentBuffs = p.talentBuffs || {};
+                p.talentBuffs.spellPowerFlat = (p.talentBuffs.spellPowerFlat || 0) + 5;
+                logs.push(`【延绵寒冷】触发：${p.char.name} 法术强度+5`);
+            }
+
+            // 20级天赋：寒冰指 - 50%概率获得1层寒冰指
+            if (p.char.talents?.[20] === 'fingers_of_frost' && Math.random() < 0.5) {
+                p.fingersOfFrost = (p.fingersOfFrost || 0) + 1;
+                logs.push(`【寒冰指】触发：${p.char.name} 获得1层寒冰指，当前${p.fingersOfFrost}层`);
+            }
+
+            // 20级天赋：冰冷智慧 - 概率额外施放冰风暴
+            if (p.char.talents?.[20] === 'cold_wisdom' || p.char.talents?.[30] === 'cold_intuition') {
+                // 30级天赋：冰冷直觉 - 触发概率提高到40%
+                const triggerChance = p.char.talents?.[30] === 'cold_intuition' ? 0.4 : 0.25;
+                if (Math.random() < triggerChance) {
+                    const blizzardSkill = SKILLS['blizzard'];
+                    const blizzardResult = blizzardSkill.calculate(charForCalc, combatContext);
+
+                    if (targetType === 'boss') {
+                        combat.bossDots = combat.bossDots || [];
+                        combat.bossDots.push({ ...blizzardResult.dot, sourcePlayerId: p.char.id });
+                        logs.push(`【冰冷智慧】触发：${p.char.name} 额外对 ${boss.name} 施放冰风暴！`);
+                    } else if (targetIndex >= 0) {
+                        combat.minions[targetIndex].dots = combat.minions[targetIndex].dots || [];
+                        combat.minions[targetIndex].dots.push({ ...blizzardResult.dot, sourcePlayerId: p.char.id });
+                        logs.push(`【冰冷智慧】触发：${p.char.name} 额外对 小弟${targetIndex + 1} 施放冰风暴！`);
+                    }
+                }
+            }
+        }
+
+        // 冰枪术消耗寒冰指
+        if (skillId === 'ice_lance' && result.consumeFingersOfFrost) {
+            p.fingersOfFrost = Math.max(0, (p.fingersOfFrost || 0) - 1);
+            logs.push(`【寒冰指】消耗1层，${p.char.name} 剩余${p.fingersOfFrost}层`);
         }
 
         // 其他天赋类似...
@@ -1889,7 +2339,10 @@ function stepBossCombat(state) {
         combat.bossDots = combat.bossDots.filter(dot => {
             const dmg = Math.max(1, Math.floor(dot.damagePerTurn));
             combat.bossHp -= dmg;
-            logs.push(`【重伤】对 ${boss.name} 造成 ${dmg} DOT 伤害（剩余${dot.duration - 1}回合）`);
+
+            // 根据DOT类型显示不同的日志
+            const dotName = dot.name || '重伤';
+            logs.push(`【${dotName}】对 ${boss.name} 造成 ${dmg} DOT 伤害（剩余${dot.duration - 1}回合）`);
 
             // 30级天赋：残暴动力 - 重伤伤害的150%治疗自己
             if (dot.sourcePlayerId) {
@@ -1901,6 +2354,14 @@ function stepBossCombat(state) {
                     if (actualHeal > 0) {
                         sourcePlayer.currentHp += actualHeal;
                         logs.push(`【残暴动力】触发：${sourcePlayer.char.name} 治疗 ${actualHeal} 点生命`);
+                    }
+                }
+
+                // 冰霜法师30级天赋：宝珠精通 - 寒冰宝珠DOT有25%概率生成寒冰指
+                if (dot.canGenerateFinger && sourcePlayer && sourcePlayer.char.talents?.[30] === 'orb_mastery') {
+                    if (Math.random() < 0.25) {
+                        sourcePlayer.fingersOfFrost = (sourcePlayer.fingersOfFrost || 0) + 1;
+                        logs.push(`【宝珠精通】触发：${sourcePlayer.char.name} 获得1层寒冰指，当前${sourcePlayer.fingersOfFrost}层`);
                     }
                 }
             }
@@ -1916,7 +2377,10 @@ function stepBossCombat(state) {
             m.dots = m.dots.filter(dot => {
                 const dmg = Math.max(1, Math.floor(dot.damagePerTurn));
                 m.hp -= dmg;
-                logs.push(`【重伤】对 小弟${idx + 1} 造成 ${dmg} DOT 伤害（剩余${dot.duration - 1}回合）`);
+
+                // 根据DOT类型显示不同的日志
+                const dotName = dot.name || '重伤';
+                logs.push(`【${dotName}】对 小弟${idx + 1} 造成 ${dmg} DOT 伤害（剩余${dot.duration - 1}回合）`);
 
                 // 30级天赋：残暴动力 - 重伤伤害的150%治疗自己
                 if (dot.sourcePlayerId) {
@@ -1928,6 +2392,14 @@ function stepBossCombat(state) {
                         if (actualHeal > 0) {
                             sourcePlayer.currentHp += actualHeal;
                             logs.push(`【残暴动力】触发：${sourcePlayer.char.name} 治疗 ${actualHeal} 点生命`);
+                        }
+                    }
+
+                    // 冰霜法师30级天赋：宝珠精通 - 寒冰宝珠DOT有25%概率生成寒冰指
+                    if (dot.canGenerateFinger && sourcePlayer && sourcePlayer.char.talents?.[30] === 'orb_mastery') {
+                        if (Math.random() < 0.25) {
+                            sourcePlayer.fingersOfFrost = (sourcePlayer.fingersOfFrost || 0) + 1;
+                            logs.push(`【宝珠精通】触发：${sourcePlayer.char.name} 获得1层寒冰指，当前${sourcePlayer.fingersOfFrost}层`);
                         }
                     }
                 }
@@ -3925,6 +4397,7 @@ function gameReducer(state, action) {
                 buffs: [],
                 talentBuffs: { attackFlat: 0, blockValueFlat: 0, spellPowerFlat: 0 },
                 fortuneMisfortuneStacks: 0, // 祸福相依层数
+                fingersOfFrost: 0, // 寒冰指层数（冰霜法师）
                 validSkills: Array.from({ length: 8 }, (_, i) => {
                     const sid = char.skillSlots?.[i] || '';
                     return sid && SKILLS[sid] ? sid : 'rest';
@@ -4257,6 +4730,16 @@ const SkillEditorModal = ({ character, onClose, onSave, state }) => {
             limit = 2;
         }
 
+        // 冰霜法师40级天赋：双彗星 - 彗星风暴可配置2次
+        if (skillId === 'comet_storm' && character.talents?.[40] === 'double_comet') {
+            limit = 2;
+        }
+
+        // 戒律牧师20级天赋：圣光的许诺 - 真言术：耀可多配置1次
+        if (skillId === 'power_word_radiance' && character.talents?.[20] === 'radiance_plus') {
+            limit = (skill?.limit || 2) + 1;
+        }
+
         return limit;
     };
 
@@ -4445,6 +4928,14 @@ const SkillViewerModal = ({ character, onClose }) => {
                             let limit = skill.limit;
                             if (sid === 'shield_wall' && character.talents?.[40] === 'guardian_shield') {
                                 limit = 2;
+                            }
+                            // 冰霜法师40级天赋：双彗星
+                            if (sid === 'comet_storm' && character.talents?.[40] === 'double_comet') {
+                                limit = 2;
+                            }
+                            // 戒律牧师20级天赋：圣光的许诺
+                            if (sid === 'power_word_radiance' && character.talents?.[20] === 'radiance_plus') {
+                                limit = (skill?.limit || 2) + 1;
                             }
                             return (
                                 <div key={sid} style={{

@@ -1848,6 +1848,12 @@ function stepBossCombat(state) {
         if (bossDead) {
             logs.push('★★★ 胜利！获得奖励 ★★★');
 
+            // ==================== 记录击杀的Boss ====================
+            if (!newState.defeatedBosses) newState.defeatedBosses = [];
+            if (!newState.defeatedBosses.includes(combat.bossId)) {
+                newState.defeatedBosses = [...newState.defeatedBosses, combat.bossId];
+            }
+
             // ==================== 胜利霍格后弹出剧情 ====================
             if (bossDead && combat.bossId === 'hogger') {
                 // ✅ 只弹剧情，奖励统一由下面的 Boss 奖励循环发放
@@ -2016,7 +2022,8 @@ const initialState = {
         drop: 0,
         researchSpeed: 0
     },
-    rebirthBonds: []
+    rebirthBonds: [],
+    defeatedBosses: [] // 本世击杀的Boss列表
 };
 
 // ==================== BASE64 ENCODING (支持中文) ====================
@@ -3531,20 +3538,39 @@ function gameReducer(state, action) {
             });
             newState.inventory = [...newState.inventory, ...extraItems];
 
-            // 计算本世增幅
-            const frameBonus = state.frame / 20000;
-            const levelBonus = state.characters.reduce((m, c) => Math.max(m, c.level), 0) / 100;
-            const newExp = 0.3 + frameBonus + levelBonus;
+            // ==================== 新的重生加成计算公式 ====================
+            // 帧数加成：对数函数，3600帧→10%, 36000帧→20%, 86400帧→30%
+            // 公式：frameBonus = 0.1 * log10(frame / 360)，最小0
+            const frame = state.lifeFrame || 0;
+            const frameBonus = frame >= 360 ? 0.1 * Math.log10(frame / 360) : 0;
+
+            // 等级加成：每级0.2%，最高等级
+            const maxLevel = state.characters.reduce((m, c) => Math.max(m, c.level || 0), 0);
+            const levelBonus = maxLevel * 0.002;
+
+            // Boss加成：根据击杀的Boss给予加成
+            const bossBonus = {
+                hogger: 0.05,      // 霍格 +5%
+                vancleef: 0.10,   // 范克里夫 +10%（预留）
+            };
+            const defeatedBosses = state.defeatedBosses || [];
+            const totalBossBonus = defeatedBosses.reduce((sum, bossId) => sum + (bossBonus[bossId] || 0), 0);
+
+            // 总加成（经验/金币相同，掉落和研究有系数）
+            const newExp = frameBonus + levelBonus + totalBossBonus;
             const newGold = newExp;
             const newDrop = newExp * 0.6;
-            const newResearch = 0.3;
+            const newResearch = newExp * 0.5;
 
-            newState.rebirthBonuses.exp += newExp;
-            newState.rebirthBonuses.gold += newGold;
-            newState.rebirthBonuses.drop += newDrop;
-            newState.rebirthBonuses.researchSpeed += newResearch;
+            // ⚠️ 重要：清空上一世加成，使用新的加成值（不叠加）
+            newState.rebirthBonuses = {
+                exp: newExp,
+                gold: newGold,
+                drop: newDrop,
+                researchSpeed: newResearch
+            };
 
-            // 随机羁绊
+            // 随机羁绊（羁绊仍然叠加保留）
             const possibleBonds = ['baoernai', 'jianyue'];
             const newBond = possibleBonds[Math.floor(Math.random() * possibleBonds.length)];
             newState.rebirthBonds = [...newState.rebirthBonds, newBond];
@@ -3557,11 +3583,13 @@ function gameReducer(state, action) {
 
             // 重生剧情数据
             newState.showRebirthPlot = {
-                frame: state.frame,
-                newExp: newExp.toFixed(2),
-                newGold: newGold.toFixed(2),
-                newDrop: newDrop.toFixed(2),
-                newResearch: newResearch.toFixed(2),
+                frame: frame,
+                maxLevel: maxLevel,
+                defeatedBosses: defeatedBosses,
+                newExp: (newExp * 100).toFixed(1),
+                newGold: (newGold * 100).toFixed(1),
+                newDrop: (newDrop * 100).toFixed(1),
+                newResearch: (newResearch * 100).toFixed(1),
                 newBond: BOND_NAMES[newBond],
                 rebirthCount: newState.rebirthCount
             };
@@ -3581,6 +3609,7 @@ function gameReducer(state, action) {
             newState.bossCombat = null;
             newState.currentMenu = 'map';
             newState.lifeFrame = 0; // 新一世从0开始计
+            newState.defeatedBosses = []; // 清空本世击杀的Boss
             return newState;
         }
         case 'CHEAT_ADD_GOLD': {
@@ -6443,16 +6472,22 @@ const RebirthConfirmModal = ({ state, dispatch }) => {
 const RebirthPlotModal = ({ state, dispatch }) => {
     if (!state.showRebirthPlot) return null;
     const p = state.showRebirthPlot;
+    const bossNames = (p.defeatedBosses || []).map(id => {
+        const names = { hogger: '霍格', vancleef: '范克里夫' };
+        return names[id] || id;
+    });
     return (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.95)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000 }}>
             <div style={{ width: 700, padding: 40, background: '#1a1510', border: '4px solid #ffd700', borderRadius: 16, textAlign: 'center' }}>
                 <h2 style={{ color: '#ffd700', marginBottom: 30 }}>第 {p.rebirthCount} 世</h2>
                 <p style={{ fontSize: 18, lineHeight: 2, color: '#e8dcc4' }}>
-                    你眼前一黑，上一世，经历了 {p.frame} 帧的努力，你击败了最强boss霍格，<br/>
-                    这一世，你获得了 {p.newExp}% 经验值、{p.newGold}% 金币、{p.newDrop}% 道具装备掉落概率增幅，<br/>
-                    {p.newResearch}% 研究速度，并获得了羁绊“{p.newBond}”。<br/><br/>
+                    你眼前一黑，上一世经历了 {p.frame} 帧的努力，
+                    {bossNames.length > 0 ? `击败了${bossNames.join('、')}，` : ''}
+                    最高等级达到 Lv.{p.maxLevel || 0}。<br/>
+                    这一世，你获得了 {p.newExp}% 经验值、{p.newGold}% 金币、{p.newDrop}% 掉落、<br/>
+                    {p.newResearch}% 研究速度增幅，并获得了羁绊「{p.newBond}」。<br/><br/>
                     你缓缓睁开双眼，<br/>
-                    这是你经历的第 {p.rebirthCount} 世，这一世你感到全身充满了抛瓦，fighting!
+                    这是你经历的第 {p.rebirthCount} 世，这一世你感到全身充满了力量，fighting!
                 </p>
                 <Button onClick={() => dispatch({ type: 'CLOSE_REBIRTH_PLOT' })} style={{ marginTop: 40, padding: '12px 40px', fontSize: 18 }}>
                     开始新的一世
@@ -6483,20 +6518,36 @@ const RebirthBonusModal = ({ state, onClose }) => {
     // 所有可能的羁绊池
     const ALL_BONDS = ['baoernai', 'jianyue'];
 
+    // Boss加成配置
+    const BOSS_BONUS_CONFIG = {
+        hogger: { name: '霍格', bonus: 0.05 },
+        vancleef: { name: '范克里夫', bonus: 0.10 },
+    };
+
     // 统计羁绊出现次数
     const bondCounts = {};
     bonds.forEach(b => {
         bondCounts[b] = (bondCounts[b] || 0) + 1;
     });
 
-    // 计算如果现在重生能获得的加成（基于PERFORM_REBIRTH的公式）
-    const frameBonus = (state.frame || 0) / 20000;
+    // ==================== 计算预测加成（新公式） ====================
+    // 帧数加成：对数函数，3600帧→10%, 36000帧→20%, 86400帧→30%
+    const frame = state.lifeFrame || 0;
+    const frameBonus = frame >= 360 ? 0.1 * Math.log10(frame / 360) : 0;
+
+    // 等级加成：每级0.2%
     const maxLevel = state.characters.reduce((m, c) => Math.max(m, c.level || 0), 0);
-    const levelBonus = maxLevel / 100;
-    const predictedExp = 0.3 + frameBonus + levelBonus;
+    const levelBonus = maxLevel * 0.002;
+
+    // Boss加成
+    const defeatedBosses = state.defeatedBosses || [];
+    const totalBossBonus = defeatedBosses.reduce((sum, bossId) => sum + (BOSS_BONUS_CONFIG[bossId]?.bonus || 0), 0);
+
+    // 总预测加成
+    const predictedExp = frameBonus + levelBonus + totalBossBonus;
     const predictedGold = predictedExp;
     const predictedDrop = predictedExp * 0.6;
-    const predictedResearch = 0.3;
+    const predictedResearch = predictedExp * 0.5;
 
     return (
         <div style={{
@@ -6512,7 +6563,7 @@ const RebirthBonusModal = ({ state, onClose }) => {
             zIndex: 2000
         }} onClick={onClose}>
             <div style={{
-                width: 650,
+                width: 680,
                 maxHeight: '85vh',
                 overflowY: 'auto',
                 padding: 30,
@@ -6544,7 +6595,7 @@ const RebirthBonusModal = ({ state, onClose }) => {
                     <span style={{ color: '#c9a227', fontSize: 14 }}> 世</span>
                 </div>
 
-                {/* 当前累计加成 */}
+                {/* 当前生效加成（来自上一世） */}
                 <div style={{
                     background: 'rgba(0,0,0,0.3)',
                     borderRadius: 8,
@@ -6553,11 +6604,11 @@ const RebirthBonusModal = ({ state, onClose }) => {
                     border: '1px solid #4a3c2a'
                 }}>
                     <h3 style={{ color: '#c9a227', fontSize: 14, marginBottom: 12, borderBottom: '1px solid rgba(201,162,39,0.2)', paddingBottom: 8 }}>
-                        📊 当前累计加成
+                        📊 当前生效加成（来自上一世）
                     </h3>
                     {rebirthCount === 0 ? (
                         <div style={{ color: '#666', textAlign: 'center', padding: 12, fontSize: 13 }}>
-                            尚未轮回，暂无累计加成
+                            尚未轮回，暂无生效加成
                         </div>
                     ) : (
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
@@ -6590,11 +6641,53 @@ const RebirthBonusModal = ({ state, onClose }) => {
                     border: '1px solid rgba(255,107,107,0.3)'
                 }}>
                     <h3 style={{ color: '#ff6b6b', fontSize: 14, marginBottom: 12, borderBottom: '1px solid rgba(255,107,107,0.2)', paddingBottom: 8 }}>
-                        🔮 若此刻重生可获得
+                        🔮 若此刻重生，下一世将获得
                     </h3>
-                    <div style={{ fontSize: 11, color: '#888', marginBottom: 12 }}>
-                        基于当前进度：总帧数 {Math.floor(state.frame || 0)} | 最高等级 Lv.{maxLevel}
+
+                    {/* 当前进度明细 */}
+                    <div style={{
+                        background: 'rgba(0,0,0,0.2)',
+                        borderRadius: 6,
+                        padding: 12,
+                        marginBottom: 12,
+                        fontSize: 12
+                    }}>
+                        <div style={{ color: '#888', marginBottom: 8 }}>本世进度：</div>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+                            <div>
+                                <span style={{ color: '#666' }}>帧数：</span>
+                                <span style={{ color: '#ffd700' }}>{Math.floor(frame)}</span>
+                                <span style={{ color: '#4CAF50', marginLeft: 4 }}>→ +{(frameBonus * 100).toFixed(1)}%</span>
+                            </div>
+                            <div>
+                                <span style={{ color: '#666' }}>最高等级：</span>
+                                <span style={{ color: '#ffd700' }}>Lv.{maxLevel}</span>
+                                <span style={{ color: '#4CAF50', marginLeft: 4 }}>→ +{(levelBonus * 100).toFixed(1)}%</span>
+                            </div>
+                            <div>
+                                <span style={{ color: '#666' }}>Boss击杀：</span>
+                                <span style={{ color: '#ffd700' }}>{defeatedBosses.length}个</span>
+                                <span style={{ color: '#4CAF50', marginLeft: 4 }}>→ +{(totalBossBonus * 100).toFixed(1)}%</span>
+                            </div>
+                        </div>
+                        {defeatedBosses.length > 0 && (
+                            <div style={{ marginTop: 8, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                                {defeatedBosses.map(bossId => (
+                                    <span key={bossId} style={{
+                                        padding: '2px 6px',
+                                        background: 'rgba(255,107,107,0.2)',
+                                        borderRadius: 3,
+                                        fontSize: 10,
+                                        color: '#ff6b6b'
+                                    }}>
+                                        ✓ {BOSS_BONUS_CONFIG[bossId]?.name || bossId}
+                                    </span>
+                                ))}
+                            </div>
+                        )}
                     </div>
+
+                    {/* 预测加成数值 */}
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10 }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 10px', background: 'rgba(0,0,0,0.2)', borderRadius: 4 }}>
                             <span style={{ color: '#888', fontSize: 12 }}>⭐ 经验值</span>
@@ -6613,6 +6706,8 @@ const RebirthBonusModal = ({ state, onClose }) => {
                             <span style={{ color: '#0070dd', fontWeight: 600, fontSize: 12 }}>+{(predictedResearch * 100).toFixed(1)}%</span>
                         </div>
                     </div>
+
+                    {/* 羁绊池 */}
                     <div style={{ marginTop: 12, padding: '8px 12px', background: 'rgba(255,215,0,0.1)', borderRadius: 6, border: '1px dashed rgba(255,215,0,0.3)' }}>
                         <div style={{ fontSize: 11, color: '#888', marginBottom: 4 }}>羁绊：随机获得以下之一</div>
                         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -6628,6 +6723,11 @@ const RebirthBonusModal = ({ state, onClose }) => {
                                 </span>
                             ))}
                         </div>
+                    </div>
+
+                    {/* 提示：加成不叠加 */}
+                    <div style={{ marginTop: 10, fontSize: 11, color: '#888', textAlign: 'center' }}>
+                        ⚠️ 重生后，上述加成将<span style={{ color: '#ff6b6b' }}>替换</span>当前生效加成（不叠加）
                     </div>
                 </div>
 

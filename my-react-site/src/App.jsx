@@ -5176,10 +5176,10 @@ const TalentPage = ({ state, dispatch }) => {
                                             // 如果已选这一项，则不做切换（避免误触）
                                             if (talents?.[tier] === opt.id) return;
                                             // 如果是占位（预留）行，先不允许选择（避免误导）
-                                            if (tier >= 30) return;
+                                            if (tier >= 50) return;
                                             chooseTalent(tier, opt.id);
                                         }}
-                                        title={locked ? '未解锁' : (tier >= 40 ? '预留天赋，待实现' : '点击选择')}
+                                        title={locked ? '未解锁' : (tier >= 80 ? '预留天赋，待实现' : '点击选择')}
                                     >
                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                                             <div style={{ fontWeight: 700, color: '#fff' }}>{opt.name}</div>

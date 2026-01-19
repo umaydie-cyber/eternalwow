@@ -35,6 +35,7 @@ const CLASSES = {
             { level: 5, skillId: 'shadow_word_pain' },
             { level: 10, skillId: 'mind_blast' },
             { level: 20, skillId: 'power_word_radiance' },
+            { level: 40, skillId: 'penance' },
         ]
     }
 };
@@ -159,6 +160,29 @@ const TALENTS = {
                     name: '暗影魔',
                     description: '每回合造成0.3倍法术强度的暗影伤害',
                     type: 'dot'
+                }
+            ]
+        },
+        {
+            tier: 40,
+            options: [
+                {
+                    id: 'fortune_misfortune',
+                    name: '祸福相依',
+                    description: '惩击和心灵震爆获得buff【祸福相依】，每层使苦修的治疗量提高25%，使用苦修后清空层数',
+                    type: 'on_cast'
+                },
+                {
+                    id: 'ultimate_penance',
+                    name: '终极苦修',
+                    description: '苦修还会对当前目标造成2倍法术强度的伤害',
+                    type: 'aura'
+                },
+                {
+                    id: 'borrowed_time',
+                    name: '争分夺秒',
+                    description: '释放苦修使你的急速提高30%，持续4回合',
+                    type: 'on_cast'
                 }
             ]
         }
@@ -355,6 +379,43 @@ const SKILLS = {
                 duration: 2
             }
         })
+    },
+    penance: {
+        id: 'penance',
+        name: '苦修',
+        icon: '✝️',
+        type: 'heal',
+        limit: 2,
+        description: '对最前排的队友回复3倍法术强度的生命值',
+        calculate: (char, combatContext) => {
+            let healAmount = Math.floor(char.stats.spellPower * 3);
+
+            // 40级天赋：祸福相依 - 每层提高25%治疗量
+            const fortuneStacks = combatContext?.fortuneMisfortuneStacks || 0;
+            if (char.talents?.[40] === 'fortune_misfortune' && fortuneStacks > 0) {
+                healAmount = Math.floor(healAmount * (1 + fortuneStacks * 0.25));
+            }
+
+            const result = {
+                penanceHeal: healAmount,
+                clearFortuneStacks: char.talents?.[40] === 'fortune_misfortune'
+            };
+
+            // 40级天赋：终极苦修 - 还会造成2倍法强伤害
+            if (char.talents?.[40] === 'ultimate_penance') {
+                result.penanceDamage = Math.floor(char.stats.spellPower * 2);
+            }
+
+            // 40级天赋：争分夺秒 - 释放后急速+30%持续4回合
+            if (char.talents?.[40] === 'borrowed_time') {
+                result.applyHasteBuff = {
+                    hasteBonus: 30,
+                    duration: 4
+                };
+            }
+
+            return result;
+        }
     }
 
 
@@ -1581,7 +1642,9 @@ function stepBossCombat(state) {
             }
         };
 
-        const result = skill.calculate(charForCalc);
+        // 传入combatContext给技能计算（用于祸福相依等）
+        const combatContext = { fortuneMisfortuneStacks: p.fortuneMisfortuneStacks || 0 };
+        const result = skill.calculate(charForCalc, combatContext);
 
         // 目标选择逻辑（不变）
         let targetType = 'boss';
@@ -1702,6 +1765,59 @@ function stepBossCombat(state) {
             logs.push(`位置${i + 1} ${p.char.name} 全队治疗 ${heal}`);
         }
 
+        // ===== 苦修技能处理 =====
+        if (result.penanceHeal) {
+            // 苦修治疗最前排队友
+            const frontPlayer = combat.playerStates.find(ps => ps.currentHp > 0);
+            if (frontPlayer) {
+                const fortuneStacks = p.fortuneMisfortuneStacks || 0;
+                let healAmount = result.penanceHeal;
+
+                // 40级天赋：祸福相依 - 已在skill.calculate中计算
+                const newHp = Math.min(frontPlayer.char.stats.maxHp, frontPlayer.currentHp + healAmount);
+                const actualHeal = newHp - frontPlayer.currentHp;
+                frontPlayer.currentHp = newHp;
+
+                let healText = `位置${i + 1} ${p.char.name} 苦修治疗 ${frontPlayer.char.name} ${actualHeal}`;
+                if (fortuneStacks > 0 && p.char.talents?.[40] === 'fortune_misfortune') {
+                    healText += `（祸福相依 ${fortuneStacks} 层加成）`;
+                }
+                logs.push(healText);
+
+                // 40级天赋：终极苦修 - 造成伤害
+                if (result.penanceDamage) {
+                    const targetDefense = targetType === 'boss' ? boss.defense : boss.minion.defense;
+                    const actualDamage = Math.max(1, Math.floor(result.penanceDamage * buffDamageDealtMult - targetDefense));
+
+                    if (targetType === 'boss') {
+                        combat.bossHp -= actualDamage;
+                    } else if (targetIndex >= 0) {
+                        combat.minions[targetIndex].hp -= actualDamage;
+                    } else {
+                        combat.bossHp -= actualDamage;
+                    }
+
+                    logs.push(`位置${i + 1} ${p.char.name}【终极苦修】造成 ${actualDamage} 伤害`);
+                }
+
+                // 40级天赋：争分夺秒 - 急速buff
+                if (result.applyHasteBuff) {
+                    p.buffs = p.buffs || [];
+                    p.buffs.push({
+                        type: 'haste',
+                        hasteBonus: result.applyHasteBuff.hasteBonus,
+                        duration: result.applyHasteBuff.duration
+                    });
+                    logs.push(`【争分夺秒】触发：${p.char.name} 急速+${result.applyHasteBuff.hasteBonus}%，持续${result.applyHasteBuff.duration}回合`);
+                }
+
+                // 清空祸福相依层数
+                if (result.clearFortuneStacks) {
+                    p.fortuneMisfortuneStacks = 0;
+                }
+            }
+        }
+
         if (result.dot) {
 
         }
@@ -1726,6 +1842,12 @@ function stepBossCombat(state) {
         if (skillId === 'basic_attack' && p.char.talents?.[10] === 'plain') {
             p.talentBuffs.attackFlat = (p.talentBuffs.attackFlat || 0) + 5;
             logs.push(`【质朴】触发：攻击+5`);
+        }
+
+        // 40级天赋：祸福相依 - 惩击和心灵震爆累积层数
+        if ((skillId === 'smite' || skillId === 'mind_blast') && p.char.talents?.[40] === 'fortune_misfortune') {
+            p.fortuneMisfortuneStacks = (p.fortuneMisfortuneStacks || 0) + 1;
+            logs.push(`【祸福相依】${p.char.name} 层数+1，当前${p.fortuneMisfortuneStacks}层`);
         }
 
         // 其他天赋类似...
@@ -2280,6 +2402,7 @@ function createCombatState(character, enemy, skillSlots) {
         enemyDebuffs: [], // 怪物身上的 debuff
         validSkills,
         talentBuffs: { attackFlat: 0, blockValueFlat: 0, spellPowerFlat: 0 },
+        fortuneMisfortuneStacks: 0, // 祸福相依层数
         logs: [],
         startedAt: Date.now(),
     };
@@ -2305,6 +2428,9 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1) {
     let talentBuffs = combatState.talentBuffs
         ? { ...combatState.talentBuffs }
         : { attackFlat: 0, blockValueFlat: 0, spellPowerFlat: 0 };
+
+    // 祸福相依层数
+    let fortuneMisfortuneStacks = combatState.fortuneMisfortuneStacks || 0;
 
     const validSkills = Array.isArray(combatState.validSkills) && combatState.validSkills.length > 0
         ? combatState.validSkills
@@ -2352,7 +2478,9 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1) {
             }
         };
 
-        const result = skill.calculate(charForCalc);
+        // 传入combatContext给技能计算（用于祸福相依等）
+        const combatContext = { fortuneMisfortuneStacks };
+        const result = skill.calculate(charForCalc, combatContext);
 
         // ===== 新增：雷霆一击（单体高伤 + 暴击时施加重伤DOT）=====
         if (result.aoeDamage) {
@@ -2606,6 +2734,64 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1) {
                 type: 'heal'
             });
         }
+        // ===== 苦修技能处理 =====
+        else if (result.penanceHeal) {
+            // 苦修治疗自己（普通战斗中只有一个角色，所以治疗自己）
+            const maxHp = character.stats.maxHp ?? character.stats.hp ?? 0;
+            const actualHeal = Math.min(result.penanceHeal, maxHp - charHp);
+            charHp += actualHeal;
+
+            let healText = `苦修治疗 ${actualHeal}`;
+            if (fortuneMisfortuneStacks > 0 && character.talents?.[40] === 'fortune_misfortune') {
+                healText += `（祸福相依 ${fortuneMisfortuneStacks} 层加成）`;
+            }
+
+            logs.push({
+                round,
+                actor: character.name,
+                action: skill.name,
+                target: character.name,
+                value: actualHeal,
+                type: 'heal',
+                text: healText
+            });
+
+            // 40级天赋：终极苦修 - 造成伤害
+            if (result.penanceDamage) {
+                const actualDamage = Math.max(1, result.penanceDamage - (combatState.enemy?.defense ?? 0));
+                enemyHp -= actualDamage;
+                logs.push({
+                    round,
+                    actor: character.name,
+                    action: `${skill.name}(终极苦修)`,
+                    target: combatState.enemy?.name,
+                    value: actualDamage,
+                    type: 'damage',
+                    text: '【终极苦修】造成伤害'
+                });
+            }
+
+            // 40级天赋：争分夺秒 - 急速buff
+            if (result.applyHasteBuff) {
+                buffs.push({
+                    type: 'haste',
+                    hasteBonus: result.applyHasteBuff.hasteBonus,
+                    duration: result.applyHasteBuff.duration
+                });
+                logs.push({
+                    round,
+                    kind: 'proc',
+                    actor: character.name,
+                    proc: '争分夺秒',
+                    text: `【争分夺秒】触发：急速+${result.applyHasteBuff.hasteBonus}%，持续${result.applyHasteBuff.duration}回合`
+                });
+            }
+
+            // 清空祸福相依层数
+            if (result.clearFortuneStacks) {
+                fortuneMisfortuneStacks = 0;
+            }
+        }
 
         if (result.applyAtonement) {
             const actualHeal = 0.2;
@@ -2646,6 +2832,19 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1) {
                 proc: '神圣灌注',
                 value: 2,
                 text: '【神圣灌注】触发，法术强度 +2（本场战斗）'
+            });
+        }
+
+        // 40级天赋：祸福相依 - 惩击和心灵震爆累积层数
+        if ((currentSkillId === 'smite' || currentSkillId === 'mind_blast') && character.talents?.[40] === 'fortune_misfortune') {
+            fortuneMisfortuneStacks += 1;
+            logs.push({
+                round,
+                kind: 'proc',
+                actor: character.name,
+                proc: '祸福相依',
+                value: fortuneMisfortuneStacks,
+                text: `【祸福相依】层数+1，当前${fortuneMisfortuneStacks}层（苦修治疗量+${fortuneMisfortuneStacks * 25}%）`
             });
         }
 
@@ -2803,7 +3002,8 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1) {
             enemyDebuffs,
             validSkills,
             logs,
-            talentBuffs
+            talentBuffs,
+            fortuneMisfortuneStacks
         }
     };
 }
@@ -3724,6 +3924,7 @@ function gameReducer(state, action) {
                 skillIndex: 0,
                 buffs: [],
                 talentBuffs: { attackFlat: 0, blockValueFlat: 0, spellPowerFlat: 0 },
+                fortuneMisfortuneStacks: 0, // 祸福相依层数
                 validSkills: Array.from({ length: 8 }, (_, i) => {
                     const sid = char.skillSlots?.[i] || '';
                     return sid && SKILLS[sid] ? sid : 'rest';
@@ -5179,7 +5380,7 @@ const TalentPage = ({ state, dispatch }) => {
                                             if (tier >= 50) return;
                                             chooseTalent(tier, opt.id);
                                         }}
-                                        title={locked ? '未解锁' : (tier >= 80 ? '预留天赋，待实现' : '点击选择')}
+                                        title={locked ? '未解锁' : (tier >= 50 ? '预留天赋，待实现' : '点击选择')}
                                     >
                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                                             <div style={{ fontWeight: 700, color: '#fff' }}>{opt.name}</div>

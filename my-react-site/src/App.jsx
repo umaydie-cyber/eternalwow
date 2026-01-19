@@ -6480,11 +6480,23 @@ const RebirthBonusModal = ({ state, onClose }) => {
         }
     };
 
+    // 所有可能的羁绊池
+    const ALL_BONDS = ['baoernai', 'jianyue'];
+
     // 统计羁绊出现次数
     const bondCounts = {};
     bonds.forEach(b => {
         bondCounts[b] = (bondCounts[b] || 0) + 1;
     });
+
+    // 计算如果现在重生能获得的加成（基于PERFORM_REBIRTH的公式）
+    const frameBonus = (state.frame || 0) / 20000;
+    const maxLevel = state.characters.reduce((m, c) => Math.max(m, c.level || 0), 0);
+    const levelBonus = maxLevel / 100;
+    const predictedExp = 0.3 + frameBonus + levelBonus;
+    const predictedGold = predictedExp;
+    const predictedDrop = predictedExp * 0.6;
+    const predictedResearch = 0.3;
 
     return (
         <div style={{
@@ -6500,8 +6512,8 @@ const RebirthBonusModal = ({ state, onClose }) => {
             zIndex: 2000
         }} onClick={onClose}>
             <div style={{
-                width: 600,
-                maxHeight: '80vh',
+                width: 650,
+                maxHeight: '85vh',
                 overflowY: 'auto',
                 padding: 30,
                 background: 'linear-gradient(135deg, #1a1510 0%, #0d0a07 100%)',
@@ -6515,117 +6527,199 @@ const RebirthBonusModal = ({ state, onClose }) => {
                     marginBottom: 24,
                     textShadow: '2px 2px 4px rgba(0,0,0,0.8)'
                 }}>
-                    ⚡ 本世重生加成
+                    ⚡ 轮回加成总览
                 </h2>
 
-                {rebirthCount === 0 ? (
-                    <div style={{
-                        textAlign: 'center',
-                        color: '#888',
-                        padding: '40px 20px',
-                        fontSize: 14
-                    }}>
-                        你尚未经历重生轮回，击败霍格后使用「破碎时空的邀请函」开启你的轮回之旅吧！
-                    </div>
-                ) : (
-                    <>
-                        {/* 重生次数 */}
-                        <div style={{
-                            textAlign: 'center',
-                            marginBottom: 24,
-                            padding: '12px 20px',
-                            background: 'rgba(201,162,39,0.15)',
-                            borderRadius: 8,
-                            border: '1px solid rgba(201,162,39,0.3)'
-                        }}>
-                            <span style={{ color: '#c9a227', fontSize: 14 }}>已轮回 </span>
-                            <span style={{ color: '#ffd700', fontSize: 24, fontWeight: 700 }}>{rebirthCount}</span>
-                            <span style={{ color: '#c9a227', fontSize: 14 }}> 世</span>
-                        </div>
+                {/* 重生次数 */}
+                <div style={{
+                    textAlign: 'center',
+                    marginBottom: 24,
+                    padding: '12px 20px',
+                    background: 'rgba(201,162,39,0.15)',
+                    borderRadius: 8,
+                    border: '1px solid rgba(201,162,39,0.3)'
+                }}>
+                    <span style={{ color: '#c9a227', fontSize: 14 }}>已轮回 </span>
+                    <span style={{ color: '#ffd700', fontSize: 24, fontWeight: 700 }}>{rebirthCount}</span>
+                    <span style={{ color: '#c9a227', fontSize: 14 }}> 世</span>
+                </div>
 
-                        {/* 数值加成 */}
-                        <div style={{
-                            background: 'rgba(0,0,0,0.3)',
-                            borderRadius: 8,
-                            padding: 16,
-                            marginBottom: 20,
-                            border: '1px solid #4a3c2a'
-                        }}>
-                            <h3 style={{ color: '#c9a227', fontSize: 14, marginBottom: 12, borderBottom: '1px solid rgba(201,162,39,0.2)', paddingBottom: 8 }}>
-                                📊 累计加成
-                            </h3>
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', background: 'rgba(76,175,80,0.1)', borderRadius: 6, border: '1px solid rgba(76,175,80,0.3)' }}>
-                                    <span style={{ color: '#888' }}>⭐ 经验值</span>
-                                    <span style={{ color: '#4CAF50', fontWeight: 600 }}>+{(bonuses.exp * 100).toFixed(1)}%</span>
-                                </div>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', background: 'rgba(255,215,0,0.1)', borderRadius: 6, border: '1px solid rgba(255,215,0,0.3)' }}>
-                                    <span style={{ color: '#888' }}>🪙 金币</span>
-                                    <span style={{ color: '#ffd700', fontWeight: 600 }}>+{(bonuses.gold * 100).toFixed(1)}%</span>
-                                </div>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', background: 'rgba(163,51,238,0.1)', borderRadius: 6, border: '1px solid rgba(163,51,238,0.3)' }}>
-                                    <span style={{ color: '#888' }}>📦 掉落</span>
-                                    <span style={{ color: '#a335ee', fontWeight: 600 }}>+{(bonuses.drop * 100).toFixed(1)}%</span>
-                                </div>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', background: 'rgba(0,112,221,0.1)', borderRadius: 6, border: '1px solid rgba(0,112,221,0.3)' }}>
-                                    <span style={{ color: '#888' }}>🔬 研究速度</span>
-                                    <span style={{ color: '#0070dd', fontWeight: 600 }}>+{(bonuses.researchSpeed * 100).toFixed(1)}%</span>
-                                </div>
+                {/* 当前累计加成 */}
+                <div style={{
+                    background: 'rgba(0,0,0,0.3)',
+                    borderRadius: 8,
+                    padding: 16,
+                    marginBottom: 20,
+                    border: '1px solid #4a3c2a'
+                }}>
+                    <h3 style={{ color: '#c9a227', fontSize: 14, marginBottom: 12, borderBottom: '1px solid rgba(201,162,39,0.2)', paddingBottom: 8 }}>
+                        📊 当前累计加成
+                    </h3>
+                    {rebirthCount === 0 ? (
+                        <div style={{ color: '#666', textAlign: 'center', padding: 12, fontSize: 13 }}>
+                            尚未轮回，暂无累计加成
+                        </div>
+                    ) : (
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', background: 'rgba(76,175,80,0.1)', borderRadius: 6, border: '1px solid rgba(76,175,80,0.3)' }}>
+                                <span style={{ color: '#888' }}>⭐ 经验值</span>
+                                <span style={{ color: '#4CAF50', fontWeight: 600 }}>+{(bonuses.exp * 100).toFixed(1)}%</span>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', background: 'rgba(255,215,0,0.1)', borderRadius: 6, border: '1px solid rgba(255,215,0,0.3)' }}>
+                                <span style={{ color: '#888' }}>🪙 金币</span>
+                                <span style={{ color: '#ffd700', fontWeight: 600 }}>+{(bonuses.gold * 100).toFixed(1)}%</span>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', background: 'rgba(163,51,238,0.1)', borderRadius: 6, border: '1px solid rgba(163,51,238,0.3)' }}>
+                                <span style={{ color: '#888' }}>📦 掉落</span>
+                                <span style={{ color: '#a335ee', fontWeight: 600 }}>+{(bonuses.drop * 100).toFixed(1)}%</span>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', background: 'rgba(0,112,221,0.1)', borderRadius: 6, border: '1px solid rgba(0,112,221,0.3)' }}>
+                                <span style={{ color: '#888' }}>🔬 研究速度</span>
+                                <span style={{ color: '#0070dd', fontWeight: 600 }}>+{(bonuses.researchSpeed * 100).toFixed(1)}%</span>
                             </div>
                         </div>
+                    )}
+                </div>
 
-                        {/* 羁绊列表 */}
-                        <div style={{
-                            background: 'rgba(0,0,0,0.3)',
-                            borderRadius: 8,
-                            padding: 16,
-                            border: '1px solid #4a3c2a'
-                        }}>
-                            <h3 style={{ color: '#c9a227', fontSize: 14, marginBottom: 12, borderBottom: '1px solid rgba(201,162,39,0.2)', paddingBottom: 8 }}>
-                                🔗 已获得羁绊 ({bonds.length})
-                            </h3>
-                            {bonds.length === 0 ? (
-                                <div style={{ color: '#666', textAlign: 'center', padding: 20 }}>
-                                    暂无羁绊
-                                </div>
-                            ) : (
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                                    {Object.entries(bondCounts).map(([bondId, count]) => {
-                                        const detail = BOND_DETAILS[bondId] || { name: bondId, description: '未知羁绊' };
-                                        return (
-                                            <div key={bondId} style={{
-                                                padding: 12,
-                                                background: 'linear-gradient(135deg, rgba(201,162,39,0.1), rgba(139,115,25,0.05))',
-                                                borderRadius: 6,
-                                                border: '1px solid rgba(201,162,39,0.3)'
-                                            }}>
-                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                                                    <span style={{ color: '#ffd700', fontWeight: 600 }}>
-                                                        {detail.name}
-                                                    </span>
-                                                    {count > 1 && (
-                                                        <span style={{
-                                                            padding: '2px 8px',
-                                                            background: 'rgba(201,162,39,0.3)',
-                                                            borderRadius: 10,
-                                                            fontSize: 11,
-                                                            color: '#c9a227'
-                                                        }}>
-                                                            ×{count}
-                                                        </span>
-                                                    )}
-                                                </div>
-                                                <div style={{ color: '#aaa', fontSize: 12, lineHeight: 1.5 }}>
-                                                    {detail.description}
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            )}
+                {/* 预测：如果现在重生能获得的加成 */}
+                <div style={{
+                    background: 'rgba(255,107,107,0.1)',
+                    borderRadius: 8,
+                    padding: 16,
+                    marginBottom: 20,
+                    border: '1px solid rgba(255,107,107,0.3)'
+                }}>
+                    <h3 style={{ color: '#ff6b6b', fontSize: 14, marginBottom: 12, borderBottom: '1px solid rgba(255,107,107,0.2)', paddingBottom: 8 }}>
+                        🔮 若此刻重生可获得
+                    </h3>
+                    <div style={{ fontSize: 11, color: '#888', marginBottom: 12 }}>
+                        基于当前进度：总帧数 {Math.floor(state.frame || 0)} | 最高等级 Lv.{maxLevel}
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 10px', background: 'rgba(0,0,0,0.2)', borderRadius: 4 }}>
+                            <span style={{ color: '#888', fontSize: 12 }}>⭐ 经验值</span>
+                            <span style={{ color: '#4CAF50', fontWeight: 600, fontSize: 12 }}>+{(predictedExp * 100).toFixed(1)}%</span>
                         </div>
-                    </>
-                )}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 10px', background: 'rgba(0,0,0,0.2)', borderRadius: 4 }}>
+                            <span style={{ color: '#888', fontSize: 12 }}>🪙 金币</span>
+                            <span style={{ color: '#ffd700', fontWeight: 600, fontSize: 12 }}>+{(predictedGold * 100).toFixed(1)}%</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 10px', background: 'rgba(0,0,0,0.2)', borderRadius: 4 }}>
+                            <span style={{ color: '#888', fontSize: 12 }}>📦 掉落</span>
+                            <span style={{ color: '#a335ee', fontWeight: 600, fontSize: 12 }}>+{(predictedDrop * 100).toFixed(1)}%</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 10px', background: 'rgba(0,0,0,0.2)', borderRadius: 4 }}>
+                            <span style={{ color: '#888', fontSize: 12 }}>🔬 研究速度</span>
+                            <span style={{ color: '#0070dd', fontWeight: 600, fontSize: 12 }}>+{(predictedResearch * 100).toFixed(1)}%</span>
+                        </div>
+                    </div>
+                    <div style={{ marginTop: 12, padding: '8px 12px', background: 'rgba(255,215,0,0.1)', borderRadius: 6, border: '1px dashed rgba(255,215,0,0.3)' }}>
+                        <div style={{ fontSize: 11, color: '#888', marginBottom: 4 }}>羁绊：随机获得以下之一</div>
+                        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                            {ALL_BONDS.map(bondId => (
+                                <span key={bondId} style={{
+                                    padding: '3px 8px',
+                                    background: 'rgba(201,162,39,0.2)',
+                                    borderRadius: 4,
+                                    fontSize: 11,
+                                    color: '#ffd700'
+                                }}>
+                                    {BOND_DETAILS[bondId]?.name || bondId}
+                                </span>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+
+                {/* 已获得羁绊列表 */}
+                <div style={{
+                    background: 'rgba(0,0,0,0.3)',
+                    borderRadius: 8,
+                    padding: 16,
+                    marginBottom: 20,
+                    border: '1px solid #4a3c2a'
+                }}>
+                    <h3 style={{ color: '#c9a227', fontSize: 14, marginBottom: 12, borderBottom: '1px solid rgba(201,162,39,0.2)', paddingBottom: 8 }}>
+                        🔗 已获得羁绊 ({bonds.length})
+                    </h3>
+                    {bonds.length === 0 ? (
+                        <div style={{ color: '#666', textAlign: 'center', padding: 20 }}>
+                            暂无羁绊
+                        </div>
+                    ) : (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                            {Object.entries(bondCounts).map(([bondId, count]) => {
+                                const detail = BOND_DETAILS[bondId] || { name: bondId, description: '未知羁绊' };
+                                return (
+                                    <div key={bondId} style={{
+                                        padding: 12,
+                                        background: 'linear-gradient(135deg, rgba(201,162,39,0.1), rgba(139,115,25,0.05))',
+                                        borderRadius: 6,
+                                        border: '1px solid rgba(201,162,39,0.3)'
+                                    }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                                            <span style={{ color: '#ffd700', fontWeight: 600 }}>
+                                                {detail.name}
+                                            </span>
+                                            {count > 1 && (
+                                                <span style={{
+                                                    padding: '2px 8px',
+                                                    background: 'rgba(201,162,39,0.3)',
+                                                    borderRadius: 10,
+                                                    fontSize: 11,
+                                                    color: '#c9a227'
+                                                }}>
+                                                    ×{count}
+                                                </span>
+                                            )}
+                                        </div>
+                                        <div style={{ color: '#aaa', fontSize: 12, lineHeight: 1.5 }}>
+                                            {detail.description}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
+                </div>
+
+                {/* 羁绊池一览 */}
+                <div style={{
+                    background: 'rgba(0,0,0,0.3)',
+                    borderRadius: 8,
+                    padding: 16,
+                    border: '1px solid #4a3c2a'
+                }}>
+                    <h3 style={{ color: '#c9a227', fontSize: 14, marginBottom: 12, borderBottom: '1px solid rgba(201,162,39,0.2)', paddingBottom: 8 }}>
+                        📜 羁绊池一览
+                    </h3>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        {ALL_BONDS.map(bondId => {
+                            const detail = BOND_DETAILS[bondId] || { name: bondId, description: '未知羁绊' };
+                            const ownedCount = bondCounts[bondId] || 0;
+                            return (
+                                <div key={bondId} style={{
+                                    padding: 10,
+                                    background: ownedCount > 0 ? 'rgba(76,175,80,0.1)' : 'rgba(0,0,0,0.2)',
+                                    borderRadius: 6,
+                                    border: ownedCount > 0 ? '1px solid rgba(76,175,80,0.3)' : '1px solid rgba(74,60,42,0.5)'
+                                }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                                        <span style={{ color: ownedCount > 0 ? '#4CAF50' : '#888', fontWeight: 600, fontSize: 13 }}>
+                                            {ownedCount > 0 ? '✓ ' : ''}{detail.name}
+                                        </span>
+                                        {ownedCount > 0 && (
+                                            <span style={{ fontSize: 11, color: '#4CAF50' }}>已获得 ×{ownedCount}</span>
+                                        )}
+                                    </div>
+                                    <div style={{ color: '#777', fontSize: 11, lineHeight: 1.4 }}>
+                                        {detail.description}
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
 
                 <div style={{ textAlign: 'center', marginTop: 24 }}>
                     <Button onClick={onClose} variant="secondary">

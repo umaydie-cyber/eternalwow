@@ -935,6 +935,41 @@ const ZONES = {
         resources: ['草药', '毛皮'],
         unlocked: false,
         unlockLevel: 35
+    },
+    desolace: {
+        id: 'desolace',
+        name: '凄凉之地',
+        level: 35,
+        type: 'explore',
+        enemies: [
+            {
+                name: '毒刺鞭笞者',
+                hp: 28000,
+                attack: 280,
+                defense: 200,
+                exp: 2000,
+                gold: 1800
+            },
+            {
+                name: '萨特潜行者',
+                hp: 26000,
+                attack: 250,
+                defense: 240,
+                exp: 1800,
+                gold: 1600
+            },
+            {
+                name: '半人马可汗',
+                hp: 30000,
+                attack: 300,
+                defense: 180,
+                exp: 2200,
+                gold: 1900
+            }
+        ],
+        resources: ['草药', '毛皮'],
+        unlocked: false,
+        unlockLevel: 35
     }
 
 };
@@ -1027,6 +1062,18 @@ const DROP_TABLES = {
             }
         ]
     },
+    desolace: {
+        equipment: [
+            { id: 'EQ_033', chance: 0.003 }, // 0.3%
+            { id: 'EQ_034', chance: 0.003 }, // 0.1%
+            { id: 'EQ_035', chance: 0.01  }, // 1%
+            { id: 'EQ_036', chance: 0.003 }, // 0.3%
+            { id: 'EQ_037', chance: 0.003 }, // 0.3%
+            { id: 'EQ_038', chance: 0.003 }, // 0.3%
+            { id: 'EQ_039', chance: 0.003 }, // 0.3%
+            { id: 'EQ_040', chance: 0.003 }  // 0.3%
+        ]
+    }
 
 
 };
@@ -1727,6 +1774,164 @@ const FIXED_EQUIPMENTS = {
         icon: '🐉',
         canUse: true,
         description: '使用后，揭露真相，解锁隐藏Boss【普瑞斯托女士】'
+    },
+    EQ_033: {
+        id: 'EQ_033',
+        name: '天选者印记',
+        type: 'equipment',
+        slot: 'trinket2',
+        rarity: 'blue',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            hp: 500,
+            versatility: 10,
+            haste: 10,
+            mastery: 10,
+            critRate: 10
+        },
+        growth: {
+            hp: 2,
+            versatility: 2,
+            haste: 2,
+            mastery: 2,
+            critRate: 2
+        }
+    },
+    EQ_034: {
+        id: 'EQ_034',
+        name: '痛击之刃',
+        type: 'equipment',
+        slot: 'mainHand',
+        rarity: 'blue',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            attack: 350,
+            critRate: 15,
+            critDamage: 0.40
+        },
+        growth: {
+            attack: 2,
+            critRate: 2,
+            critDamage: 2
+        }
+    },
+    EQ_035: {
+        id: 'EQ_035',
+        name: '热情暗影坠饰',
+        type: 'equipment',
+        slot: 'neck',
+        rarity: 'green',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            spellPower: 200,
+            hp: 500
+        },
+        growth: {
+            spellPower: 2,
+            hp: 2
+        }
+    },
+    EQ_036: {
+        id: 'EQ_036',
+        name: '莱瑟德斯之眼',
+        type: 'equipment',
+        slot: 'ring2',
+        rarity: 'blue',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            spellPower: 200,
+            hp: 300,
+            critRate: 5
+        },
+        growth: {
+            spellPower: 2,
+            hp: 2,
+            critRate: 2
+        }
+    },
+    EQ_037: {
+        id: 'EQ_037',
+        name: '发明家的聚焦剑',
+        type: 'equipment',
+        slot: 'mainHand',
+        rarity: 'blue',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            spellPower: 350,
+            critRate: 15,
+            critDamage: 0.40
+        },
+        growth: {
+            spellPower: 2,
+            critRate: 2,
+            critDamage: 2
+        }
+    },
+    EQ_038: {
+        id: 'EQ_038',
+        name: '元素石脊护腿',
+        type: 'equipment',
+        slot: 'legs',
+        rarity: 'blue',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            hp: 400,
+            armor: 50,
+            blockRate: 5
+        },
+        growth: {
+            hp: 2,
+            armor: 2,
+            blockRate: 2
+        }
+    },
+    EQ_039: {
+        id: 'EQ_039',
+        name: '黑石戒指',
+        type: 'equipment',
+        slot: 'ring2',
+        rarity: 'blue',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            attack: 200,
+            hp: 300,
+            armor: 50,
+            versatility: 5
+        },
+        growth: {
+            attack: 2,
+            hp: 2,
+            armor: 2,
+            versatility: 2
+        }
+    },
+    EQ_040: {
+        id: 'EQ_040',
+        name: '吉兹洛克的高科技圆盾',
+        type: 'equipment',
+        slot: 'offHand',
+        rarity: 'blue',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            hp: 600,
+            armor: 100,
+            blockRate: 20,
+            blockValue: 200
+        },
+        growth: {
+            hp: 2,
+            armor: 2,
+            blockRate: 2,
+            blockValue: 2
+        }
     }
 
 };
@@ -1737,14 +1942,10 @@ const REDRIDGE_LV100_SET = ['EQ_014', 'EQ_015', 'EQ_016', 'EQ_017', 'EQ_018'];
 const BARRENS_LV100_SET = ['EQ_019', 'EQ_020', 'EQ_021', 'EQ_022', 'EQ_023', 'EQ_024'];
 
 //荆棘谷6件100级图鉴点亮效果
-const STRANGLETHORN_LV100_SET = [
-    'EQ_027',
-    'EQ_028',
-    'EQ_029',
-    'EQ_030',
-    'EQ_031',
-    'EQ_032'
-];
+const STRANGLETHORN_LV100_SET = ['EQ_027', 'EQ_028', 'EQ_029', 'EQ_030', 'EQ_031', 'EQ_032'];
+
+// 凄凉之地 6 件装备全部达到过 Lv.100 → 全队精通 +5
+const DESOLACE_LV100_SET = ['EQ_035', 'EQ_036', 'EQ_037', 'EQ_038', 'EQ_039', 'EQ_040'];
 
 
 // ==================== RARITY COLORS ====================
@@ -2206,6 +2407,14 @@ function calculateTotalStats(character, partyAuras = { hpMul: 1, spellPowerMul: 
         )
     ) {
         totalStats.haste = (totalStats.haste || 0) + 5;
+    }
+    // 凄凉之地 6 件装备全部达到过 Lv.100 → 全队精通 +5
+    if (
+        gameState &&
+        Array.isArray(gameState.codexEquipLv100) &&
+        DESOLACE_LV100_SET.every(id => gameState.codexEquipLv100.includes(id))
+    ) {
+        totalStats.mastery = (totalStats.mastery || 0) + 5;
     }
 
     // 简约而不简单羁绊：单一职业队伍普通攻击伤害提高150%

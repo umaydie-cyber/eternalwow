@@ -830,7 +830,51 @@ const ZONES = {
         resources: ['毛皮','铁矿'],
         unlocked: false,
         unlockLevel: 25
+    },
+    stranglethorn_vale: {
+        id: 'stranglethorn_vale',
+        name: '荆棘谷',
+        level: 30,
+        type: 'explore',
+        enemies: [
+            {
+                name: '丛林大猩猩',
+                hp: 9000,
+                attack: 140,
+                defense: 100,
+                exp: 1700,
+                gold: 1200
+            },
+            {
+                name: '血顶巨魔',
+                hp: 7000,
+                attack: 150,
+                defense: 110,
+                exp: 1800,
+                gold: 1200
+            },
+            {
+                name: '巴尔瑟拉',
+                hp: 15000,
+                attack: 200,
+                defense: 130,
+                exp: 2500,
+                gold: 1900
+            },
+            {
+                name: '邦加拉什',
+                hp: 12000,
+                attack: 250,
+                defense: 120,
+                exp: 2500,
+                gold: 2000
+            }
+        ],
+        resources: ['毛皮', '草药'],
+        unlocked: false,
+        unlockLevel: 30
     }
+
 };
 
 const DROP_TABLES = {
@@ -896,7 +940,24 @@ const DROP_TABLES = {
             { id: 'EQ_025', chance: 0.003 },  // 0.3%
             { id: 'EQ_026', chance: 0.003 }   // 0.3%
         ]
+    },
+    stranglethorn_vale: {
+        equipment: [
+            { id: 'EQ_027', chance: 0.01 },
+            { id: 'EQ_028', chance: 0.01 },
+            { id: 'EQ_029', chance: 0.01 },
+            { id: 'EQ_030', chance: 0.001 },
+            { id: 'EQ_031', chance: 0.003 },
+            { id: 'EQ_032', chance: 0.003 }
+        ],
+        items: [
+            { id: 'IT_STV_001', chance: 0.005 },
+            { id: 'IT_STV_002', chance: 0.005 },
+            { id: 'IT_STV_003', chance: 0.005 },
+            { id: 'IT_STV_004', chance: 0.005 }
+        ]
     }
+
 };
 
 const FIXED_EQUIPMENTS = {
@@ -1459,6 +1520,136 @@ const FIXED_EQUIPMENTS = {
             hp: 2
         }
     },
+    EQ_027: {
+        id: 'EQ_027',
+        name: '锈水头盔',
+        type: 'equipment',
+        slot: 'head',
+        rarity: 'green',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            hp: 300,
+            armor: 40,
+            haste: 5,
+            mastery: 5
+        },
+        growth: {
+            hp: 2,
+            armor: 2,
+            haste: 2,
+            mastery: 2
+        }
+    },
+
+    EQ_028: {
+        id: 'EQ_028',
+        name: '锈水护肩',
+        type: 'equipment',
+        slot: 'shoulder',
+        rarity: 'green',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            hp: 220,
+            armor: 35,
+            haste: 5,
+            mastery: 5
+        },
+        growth: {
+            hp: 2,
+            armor: 2,
+            haste: 2,
+            mastery: 2
+        }
+    },
+
+    EQ_029: {
+        id: 'EQ_029',
+        name: '锈水护腕',
+        type: 'equipment',
+        slot: 'wrist',
+        rarity: 'green',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            hp: 200,
+            armor: 30,
+            haste: 5,
+            mastery: 5
+        },
+        growth: {
+            hp: 2,
+            armor: 2,
+            haste: 2,
+            mastery: 2
+        }
+    },
+    EQ_030: {
+        id: 'EQ_030',
+        name: '乔丹法杖',
+        type: 'equipment',
+        slot: 'mainHand',
+        rarity: 'purple',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            spellPower: 350,
+            mastery: 10,
+            haste: 10,
+            versatility: 10,
+            critRate: 10
+        },
+        growth: {
+            spellPower: 2,
+            mastery: 2,
+            haste: 2,
+            versatility: 2,
+            critRate: 2
+        }
+    },
+    EQ_031: {
+        id: 'EQ_031',
+        name: '短暂能量护符',
+        type: 'equipment',
+        slot: 'trinket2',
+        rarity: 'blue',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            spellPower: 150
+        },
+        growth: {
+            spellPower: 2
+        },
+        specialEffect: {
+            type: 'skill_slot_buff',
+            slots: [0, 3],
+            spellPowerBonus: 600
+        }
+    },
+    EQ_032: {
+        id: 'EQ_032',
+        name: '强攻护符',
+        type: 'equipment',
+        slot: 'trinket2',
+        rarity: 'blue',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            attack: 150
+        },
+        growth: {
+            attack: 2
+        },
+        specialEffect: {
+            type: 'skill_slot_buff',
+            slots: [0, 3],
+            attackBonus: 600
+        }
+    },
+
+
 
 
 };
@@ -1467,6 +1658,17 @@ const FIXED_EQUIPMENTS = {
 const REDRIDGE_LV100_SET = ['EQ_014', 'EQ_015', 'EQ_016', 'EQ_017', 'EQ_018'];
 // 贫瘠之地毒蛇的拥抱6件装备全部达到过Lv.100 → 全队爆击率+5
 const BARRENS_LV100_SET = ['EQ_019', 'EQ_020', 'EQ_021', 'EQ_022', 'EQ_023', 'EQ_024'];
+
+//荆棘谷6件100级图鉴点亮效果
+const STRANGLETHORN_LV100_SET = [
+    'EQ_027',
+    'EQ_028',
+    'EQ_029',
+    'EQ_030',
+    'EQ_031',
+    'EQ_032'
+];
+
 
 // ==================== RARITY COLORS ====================
 const RARITY_COLORS = {
@@ -1491,7 +1693,36 @@ const ITEMS = {
         rarity: 'white',
         sellPrice: 200,
         icon: '🦊'
+    },
+    IT_STV_001: {
+        id: 'IT_STV_001',
+        name: '荆棘谷的青山·第一章',
+        type: 'junk',
+        rarity: 'white',
+        sellPrice: 5000
+    },
+    IT_STV_002: {
+        id: 'IT_STV_002',
+        name: '荆棘谷的青山·第二章',
+        type: 'junk',
+        rarity: 'white',
+        sellPrice: 5000
+    },
+    IT_STV_003: {
+        id: 'IT_STV_003',
+        name: '荆棘谷的青山·第三章',
+        type: 'junk',
+        rarity: 'white',
+        sellPrice: 5000
+    },
+    IT_STV_004: {
+        id: 'IT_STV_004',
+        name: '荆棘谷的青山·第四章',
+        type: 'junk',
+        rarity: 'white',
+        sellPrice: 5000
     }
+
 };
 
 
@@ -1814,14 +2045,14 @@ function recalcPartyStats(gameState,characters) {
     const auras = getPartyAuraMultipliers(characters);
     return (characters || []).map(c => {
         const next = { ...c };
-        next.stats = calculateTotalStats(next, auras, gameState);
+        next.stats = (next, auras, gameState);
         return next;
     });
 }
 
 
 // 计算角色总属性（基础+装备）
-function calculateTotalStats(character, partyAuras = { hpMul: 1, spellPowerMul: 1 }, gameState) {
+function calculateTotalStats(charactecalculateTotalStatsr, partyAuras = { hpMul: 1, spellPowerMul: 1 }, gameState) {
     const classData = CLASSES[character.classId];
 
     // 先算 max
@@ -1869,6 +2100,17 @@ function calculateTotalStats(character, partyAuras = { hpMul: 1, spellPowerMul: 
     if (gameState && Array.isArray(gameState.codexEquipLv100) &&
         BARRENS_LV100_SET.every(id => gameState.codexEquipLv100.includes(id))) {
         totalStats.critRate = (totalStats.critRate || 0) + 5;
+    }
+
+    // 荆棘谷 6 件装备全部达到过 Lv.100 → 全队急速 +5
+    if (
+        gameState &&
+        Array.isArray(gameState.codexEquipLv100) &&
+        STRANGLETHORN_LV100_SET.every(id =>
+            gameState.codexEquipLv100.includes(id)
+        )
+    ) {
+        totalStats.haste = (totalStats.haste || 0) + 5;
     }
 
     // 简约而不简单羁绊：单一职业队伍普通攻击伤害提高150%
@@ -1955,6 +2197,42 @@ function scaleStats(baseStats = {}, growth = {}, level = 0) {
     return scaled;
 }
 
+// ==================== TRINKET: 技能栏强化（第1/第4格等） ====================
+// 约定：specialEffect.type === 'skill_slot_buff'
+// specialEffect.slots: [0..7]（0=第一格）
+// specialEffect.attackBonus / spellPowerBonus：在该技能格释放技能时，临时加到角色计算用面板
+// 与装备数值一致：满级(100)视为*2，因此这里也做线性缩放：mul = 1 + level/100
+function getSkillSlotBuffBonus(character, slotIndex) {
+    const idx = Number(slotIndex);
+    if (!Number.isFinite(idx)) return { attackBonus: 0, spellPowerBonus: 0 };
+
+    const eqList = Object.values(character?.equipment || {}).filter(Boolean);
+    if (eqList.length === 0) return { attackBonus: 0, spellPowerBonus: 0 };
+
+    let attackBonus = 0;
+    let spellPowerBonus = 0;
+
+    for (const eq of eqList) {
+        const se = eq?.specialEffect;
+        if (!se || se.type !== 'skill_slot_buff') continue;
+
+        const slots = Array.isArray(se.slots) ? se.slots : [];
+        if (!slots.includes(idx)) continue;
+
+        // 线性缩放：lv0=1x, lv100=2x
+        const lv = clamp(Number(eq.currentLevel ?? eq.level) || 0, 0, 100);
+        const mul = 1 + (lv / 100);
+
+        attackBonus += (Number(se.attackBonus) || 0) * mul;
+        spellPowerBonus += (Number(se.spellPowerBonus) || 0) * mul;
+    }
+
+    return {
+        attackBonus: Math.floor(attackBonus),
+        spellPowerBonus: Math.floor(spellPowerBonus)
+    };
+}
+
 // ==================== BOSS战斗一步推进函数（修复版） ====================
 function stepBossCombat(state) {
     if (!state.bossCombat) return state;
@@ -1974,18 +2252,22 @@ function stepBossCombat(state) {
         const p = combat.playerStates[i];
         if (p.currentHp <= 0) continue;
 
+        const slotIndex = p.skillIndex % p.validSkills.length;
         const skillId = p.validSkills[p.skillIndex % p.validSkills.length];
         p.skillIndex += 1;
         const skill = SKILLS[skillId];
         if (!skill) continue;
 
+        // 饰品/装备特效：技能栏强化（例如：第1格与第4格）
+        const slotBuff = getSkillSlotBuffBonus(p.char, slotIndex);
+
         const charForCalc = {
             ...p.char,
             stats: {
                 ...p.char.stats,
-                attack: (p.char.stats.attack || 0) + (p.talentBuffs?.attackFlat || 0),
+                attack: (p.char.stats.attack || 0) + (p.talentBuffs?.attackFlat || 0) + (slotBuff.attackBonus || 0),
                 blockValue: (p.char.stats.blockValue || 0) + (p.talentBuffs?.blockValueFlat || 0),
-                spellPower: (p.char.stats.spellPower || 0) + (p.talentBuffs?.spellPowerFlat || 0)
+                spellPower: (p.char.stats.spellPower || 0) + (p.talentBuffs?.spellPowerFlat || 0) + (slotBuff.spellPowerBonus || 0)
             }
         };
 
@@ -2941,15 +3223,18 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1) {
         round++;
 
         // ===== 角色回合 =====
+        const slotIndex = skillIndex % validSkills.length;
         const currentSkillId = validSkills[skillIndex % validSkills.length];
         const skill = SKILLS[currentSkillId];
+        // 饰品/装备特效：技能栏强化（例如：第1格与第4格）
+        const slotBuff = getSkillSlotBuffBonus(character, slotIndex);
         const charForCalc = {
             ...character,
             stats: {
                 ...character.stats,
-                attack: (character.stats.attack || 0) + (talentBuffs.attackFlat || 0),
+                attack: (character.stats.attack || 0) + (talentBuffs.attackFlat || 0) + (slotBuff.attackBonus || 0),
                 blockValue: (character.stats.blockValue || 0) + (talentBuffs.blockValueFlat || 0),
-                spellPower: (character.stats.spellPower || 0) + (talentBuffs.spellPowerFlat || 0),
+                spellPower: (character.stats.spellPower || 0) + (talentBuffs.spellPowerFlat || 0) + (slotBuff.spellPowerBonus || 0),
             }
         };
 

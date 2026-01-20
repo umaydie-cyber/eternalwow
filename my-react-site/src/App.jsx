@@ -315,7 +315,9 @@ const SKILLS = {
         icon: '⚔️',
         type: 'damage',
         calculate: (char) => {
-            let damage = char.stats.attack * 1.2 * (char.stats.basicAttackMultiplier || 1);
+            // 急速：普通攻击伤害提高（急速 * 2%）
+            const hasteMult = 1 + ((char.stats.haste || 0) * 0.02);
+            let damage = char.stats.attack * 1.2 * (char.stats.basicAttackMultiplier || 1) * hasteMult;
             if (Math.random() < char.stats.critRate/100) {
                 damage *= char.stats.critDamage;
                 return { damage: Math.floor(damage), isCrit: true };
@@ -3673,6 +3675,8 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1) {
                     if (vuln?.mult) dotDamage *= vuln.mult;
                 }
 
+                // 急速：DOT 伤害提高（急速 * 2%）
+                dotDamage *= (1 + ((character.stats.haste || 0) * 0.02));
                 dotDamage = Math.floor(dotDamage);
                 const actualDot = Math.max(1, dotDamage - (combatState.enemy?.defense ?? 0));
                 enemyHp -= actualDot;

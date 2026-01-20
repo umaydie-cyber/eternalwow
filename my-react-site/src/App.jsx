@@ -54,6 +54,7 @@ const CLASSES = {
         skills: [
             { level: 1, skillId: 'basic_attack' },
             { level: 1, skillId: 'rest' },
+            { level: 1, skillId: 'mastery_deep_winter' },
             { level: 3, skillId: 'frostbolt' },
             { level: 5, skillId: 'ice_lance' },
             { level: 10, skillId: 'blizzard' },
@@ -553,6 +554,13 @@ const SKILLS = {
     },
 
     // ==================== 冰霜法师技能 ====================
+    mastery_deep_winter: {
+        id: 'mastery_deep_winter',
+        name: '精通：深冬之寒',
+        icon: '❄️',
+        type: 'passive',
+        description: '被动：冰枪术的基础技能倍率提升(精通/2)%。该数值直接加在基础120%上。'
+    },
     frostbolt: {
         id: 'frostbolt',
         name: '寒冰箭',
@@ -601,7 +609,8 @@ const SKILLS = {
         limit: 8,
         description: '造成1.2倍法术强度的冰霜伤害，爆击伤害额外增加200%',
         calculate: (char, combatContext) => {
-            let damage = char.stats.spellPower * 1.2;
+            const baseMult = char.stats.iceLanceBaseMultiplier ?? 1.2;
+            let damage = char.stats.spellPower * baseMult;
 
             // 冰冷血脉buff：冰霜伤害提高50%
             if (combatContext?.icyVeinsBuff) {
@@ -1642,7 +1651,7 @@ const FIXED_EQUIPMENTS = {
         },
         specialEffect: {
             type: 'skill_slot_buff',
-            slots: [0, 3],
+            slots: [0, 4],
             spellPowerBonus: 600
         }
     },
@@ -1662,7 +1671,7 @@ const FIXED_EQUIPMENTS = {
         },
         specialEffect: {
             type: 'skill_slot_buff',
-            slots: [0, 3],
+            slots: [0, 4],
             attackBonus: 600
         }
     },
@@ -2197,6 +2206,15 @@ function calculateTotalStats(character, partyAuras = { hpMul: 1, spellPowerMul: 
         };
     }
 
+    // ==================== 冰霜法师精通：深冬之寒（1级被动） ====================
+    if (character.classId === 'frost_mage') {
+        const mastery = Number(totalStats.mastery) || 0;
+        // 基础 120% + 精通/2 %
+        const iceLanceBaseMultiplier =
+            1.20 + (mastery / 2) / 100;
+
+        totalStats.iceLanceBaseMultiplier = iceLanceBaseMultiplier;
+    }
 
     totalStats.maxHp = Math.floor((totalStats.hp || 0) * (partyAuras.hpMul || 1));
     totalStats.maxMp = totalStats.mp;
@@ -5279,13 +5297,13 @@ const SkillEditorModal = ({ character, onClose, onSave, state }) => {
                                 <option value="">空</option>
                                 {character.skills // 被动技能仅用于展示，不允许塞进循环技能栏
                                     .filter((sid) => sid && SKILLS[sid] && SKILLS[sid].type !== 'passive').map(sid => {
-                                    const skill = SKILLS[sid];
-                                    return (
-                                        <option key={sid} value={sid}>
-                                            {skill.icon} {skill.name}
-                                        </option>
-                                    );
-                                })}
+                                        const skill = SKILLS[sid];
+                                        return (
+                                            <option key={sid} value={sid}>
+                                                {skill.icon} {skill.name}
+                                            </option>
+                                        );
+                                    })}
                             </select>
                             {skillId && SKILLS[skillId] && (
                                 <div style={{
@@ -5973,6 +5991,34 @@ const ItemDetailsModal = ({ item, onClose, onEquip, characters, state , dispatch
                         </div>
                     ))}
                 </div>
+
+                {/* 特殊效果显示 */}
+                {item.specialEffect && item.specialEffect.type === 'skill_slot_buff' && (
+                    <div style={{
+                        background: 'rgba(255, 152, 0, 0.1)',
+                        border: '1px solid rgba(255, 152, 0, 0.3)',
+                        borderRadius: 8,
+                        padding: 16,
+                        marginBottom: 20
+                    }}>
+                        <h3 style={{ fontSize: 14, color: '#ff9800', marginBottom: 12 }}>⚡ 特殊效果</h3>
+                        <div style={{ fontSize: 12, color: '#ffb74d', lineHeight: 1.6 }}>
+                            在第 <span style={{ color: '#ffd700', fontWeight: 600 }}>
+                                {item.specialEffect.slots.map(s => s + 1).join('、')}
+                            </span> 技能格释放技能时：
+                            {item.specialEffect.attackBonus && (
+                                <div style={{ marginTop: 8, color: '#fff' }}>
+                                    • 攻击强度 <span style={{ color: '#4CAF50', fontWeight: 600 }}>+{item.specialEffect.attackBonus}</span>
+                                </div>
+                            )}
+                            {item.specialEffect.spellPowerBonus && (
+                                <div style={{ marginTop: 8, color: '#fff' }}>
+                                    • 法术强度 <span style={{ color: '#4CAF50', fontWeight: 600 }}>+{item.specialEffect.spellPowerBonus}</span>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
 
                 <div style={{ marginBottom: 16 }}>
                     <label style={{ display: 'block', fontSize: 12, color: '#c9a227', marginBottom: 8 }}>
@@ -7003,6 +7049,21 @@ const InventoryPage = ({ state, dispatch }) => {
                             {item.type === 'equipment' && (
                                 <div style={{ fontSize: 9, color: '#888', marginTop: 4 }}>
                                     Lv.{item.currentLevel ?? item.level ?? 0}
+                                </div>
+                            )}
+                            {/* 显示特殊效果 */}
+                            {item.specialEffect && item.specialEffect.type === 'skill_slot_buff' && (
+                                <div style={{
+                                    fontSize: 9,
+                                    color: '#ff9800',
+                                    marginTop: 4,
+                                    padding: '2px 4px',
+                                    background: 'rgba(255, 152, 0, 0.15)',
+                                    borderRadius: 3
+                                }}>
+                                    ⚡ {item.specialEffect.slots.map(s => s + 1).join('/')}格
+                                    {item.specialEffect.attackBonus ? ` 攻+${item.specialEffect.attackBonus}` : ''}
+                                    {item.specialEffect.spellPowerBonus ? ` 法+${item.specialEffect.spellPowerBonus}` : ''}
                                 </div>
                             )}
                         </div>

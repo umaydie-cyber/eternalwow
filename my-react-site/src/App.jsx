@@ -900,6 +900,41 @@ const ZONES = {
         resources: ['毛皮', '草药'],
         unlocked: false,
         unlockLevel: 30
+    },
+    dustwallow_marsh: {
+        id: 'dustwallow_marsh',
+        name: '尘泥沼泽',
+        level: 35,
+        type: 'explore',
+        enemies: [
+            {
+                name: '奥妮克希亚的爪牙',
+                hp: 28000,
+                attack: 280,
+                defense: 200,
+                exp: 2000,
+                gold: 1800
+            },
+            {
+                name: '石槌食人魔',
+                hp: 26000,
+                attack: 250,
+                defense: 240,
+                exp: 1800,
+                gold: 1600
+            },
+            {
+                name: '利齿鳄鱼',
+                hp: 30000,
+                attack: 300,
+                defense: 180,
+                exp: 2200,
+                gold: 1900
+            }
+        ],
+        resources: ['草药', '毛皮'],
+        unlocked: false,
+        unlockLevel: 35
     }
 
 };
@@ -983,7 +1018,16 @@ const DROP_TABLES = {
             { id: 'IT_STV_003', chance: 0.005 },
             { id: 'IT_STV_004', chance: 0.005 }
         ]
-    }
+    },
+    dustwallow_marsh: {
+        items: [
+            {
+                id: 'IT_BLACK_DRAGON_PROOF',
+                chance: 0.001   // 0.1%，作为剧情钥匙，合理但不泛滥
+            }
+        ]
+    },
+
 
 };
 
@@ -1675,9 +1719,15 @@ const FIXED_EQUIPMENTS = {
             attackBonus: 600
         }
     },
-
-
-
+    IT_BLACK_DRAGON_PROOF: {
+        id: 'IT_BLACK_DRAGON_PROOF',
+        name: '黑龙化身的证明',
+        type: 'consumable',
+        rarity: 'purple',
+        icon: '🐉',
+        canUse: true,
+        description: '使用后，揭露真相，解锁隐藏Boss【普瑞斯托女士】'
+    }
 
 };
 
@@ -1803,6 +1853,24 @@ const ACHIEVEMENTS = {
 const WORLD_BOSSES = {
     hogger: { id: 'hogger', name: '霍格', hp: 18000, attack: 150, defense: 70, rewards: { gold: 5000, exp: 5500, items: ['霍格之爪'] } },
     vancleef: { id: 'vancleef', name: '艾德温·范克里夫', hp: 90000, attack: 400, defense: 250, rewards: { gold: 15000, exp: 6800, items: ['范克里夫之刃'] }, unlockLevel: 30 },
+    prestor_lady: {
+        id: 'prestor_lady',
+        name: '普瑞斯托女士',
+        maxHp: 400000,
+        attack: 1000,
+        defense: 960,
+        unlockCondition: {
+            requireItem: 'IT_BLACK_DRAGON_PROOF'
+        },
+        rewards: {
+            gold: 20000,
+            exp: 8000,
+            items: [
+                // 这里后续可以放黑龙主题紫装
+            ]
+        }
+    }
+
 };
 
 // 装备槽位定义
@@ -4871,6 +4939,7 @@ function gameReducer(state, action) {
             const bossBonus = {
                 hogger: 0.05,      // 霍格 +5%
                 vancleef: 0.10,   // 范克里夫 +10%（预留）
+                prestor_lady: 0.25
             };
             const defeatedBosses = state.defeatedBosses || [];
             const totalBossBonus = defeatedBosses.reduce((sum, bossId) => sum + (bossBonus[bossId] || 0), 0);
@@ -7929,7 +7998,7 @@ const RebirthPlotModal = ({ state, dispatch }) => {
     if (!state.showRebirthPlot) return null;
     const p = state.showRebirthPlot;
     const bossNames = (p.defeatedBosses || []).map(id => {
-        const names = { hogger: '霍格', vancleef: '范克里夫' };
+        const names = { hogger: '霍格', vancleef: '范克里夫' ,prestor_lady:'普瑞斯托女士'};
         return names[id] || id;
     });
     return (
@@ -7978,6 +8047,7 @@ const RebirthBonusModal = ({ state, onClose }) => {
     const BOSS_BONUS_CONFIG = {
         hogger: { name: '霍格', bonus: 0.05 },
         vancleef: { name: '范克里夫', bonus: 0.10 },
+        prestor_lady:{ name: '普瑞斯托女士', bonus: 0.25 },
     };
 
     // 去重后的已获得羁绊

@@ -32,6 +32,7 @@ const CLASSES = {
         skills: [
             { level: 1, skillId: 'basic_attack' },
             { level: 1, skillId: 'rest' },
+            { level: 1, skillId: 'mastery_atonement' },
             { level: 3, skillId: 'smite' },
             { level: 5, skillId: 'shadow_word_pain' },
             { level: 10, skillId: 'mind_blast' },
@@ -446,6 +447,13 @@ const SKILLS = {
                 }
             };
         }
+    },
+    mastery_atonement: {
+        id: 'mastery_atonement',
+        name: '精通：救赎',
+        icon: '✝️',
+        type: 'passive',
+        description: '被动：救赎治疗比例提升(精通/5)%。该数值直接加在基础20%上。'
     },
     smite: {
         id: 'smite',
@@ -2175,6 +2183,20 @@ function calculateTotalStats(character, partyAuras = { hpMul: 1, spellPowerMul: 
         totalStats.blockRate += totalStats.blockRate * masteryBonusPct;
         totalStats.blockValue += totalStats.blockRate * masteryBonusPct;
     }
+
+    // ==================== 戒律牧师精通：救赎（1级被动） ====================
+    if (character.classId === 'discipline_priest') {
+        const mastery = Number(totalStats.mastery) || 0;
+
+        // 基础救赎 20% + 精通/5 %
+        const atonementRate =
+            0.20 + (mastery / 5) / 100;
+
+        totalStats.atonement = {
+            healingRate: atonementRate
+        };
+    }
+
 
     totalStats.maxHp = Math.floor((totalStats.hp || 0) * (partyAuras.hpMul || 1));
     totalStats.maxMp = totalStats.mp;

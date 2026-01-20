@@ -5255,7 +5255,8 @@ const SkillEditorModal = ({ character, onClose, onSave, state }) => {
                                 }}
                             >
                                 <option value="">空</option>
-                                {character.skills.map(sid => {
+                                {character.skills // 被动技能仅用于展示，不允许塞进循环技能栏
+                                    .filter((sid) => sid && SKILLS[sid] && SKILLS[sid].type !== 'passive').map(sid => {
                                     const skill = SKILLS[sid];
                                     return (
                                         <option key={sid} value={sid}>

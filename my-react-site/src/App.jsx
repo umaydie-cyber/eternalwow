@@ -970,7 +970,50 @@ const ZONES = {
         resources: ['草药', '毛皮'],
         unlocked: false,
         unlockLevel: 35
-    }
+    },
+    tanaris: {
+        id: 'tanaris',
+        name: '塔纳利斯',
+        level: 40,
+        type: 'explore',
+        enemies: [
+            {
+                name: '沙项巫医',
+                hp: 42000,
+                attack: 300,
+                defense: 250,
+                exp: 3000,
+                gold: 2500
+            },
+            {
+                name: '钢腭钳嘴龟',
+                hp: 49000,
+                attack: 350,
+                defense: 300,
+                exp: 3200,
+                gold: 3000
+            },
+            {
+                name: '恐须船长',
+                hp: 42000,
+                attack: 400,
+                defense: 280,
+                exp: 3200,
+                gold: 3000
+            },
+            {
+                name: '安图苏尔',
+                hp: 47000,
+                attack: 450,
+                defense: 400,
+                exp: 3500,
+                gold: 4000
+            }
+        ],
+        resources: ['草药', '矿石', '毛皮'],
+        unlocked: false,
+        unlockLevel: 40
+    },
 
 };
 
@@ -1073,8 +1116,18 @@ const DROP_TABLES = {
             { id: 'EQ_039', chance: 0.003 }, // 0.3%
             { id: 'EQ_040', chance: 0.003 }  // 0.3%
         ]
+    },
+    tanaris: {
+        equipment: [
+            { id: 'EQ_041', chance: 0.001 }, // 0.1%
+            { id: 'EQ_042', chance: 0.001 }, // 0.1%
+            { id: 'EQ_043', chance: 0.003 }, // 0.3%
+            { id: 'EQ_045', chance: 0.003 }, // 0.3%
+            { id: 'EQ_046', chance: 0.003 }, // 0.3%
+            { id: 'EQ_047', chance: 0.003 }, // 0.3%
+            { id: 'EQ_048', chance: 0.01  }  // 1%
+        ]
     }
-
 
 };
 
@@ -1932,8 +1985,167 @@ const FIXED_EQUIPMENTS = {
             blockRate: 2,
             blockValue: 2
         }
-    }
-
+    },
+    EQ_041: {
+        id: 'EQ_041',
+        name: '反击者桑萨斯',
+        type: 'equipment',
+        slot: 'mainHand',
+        rarity: 'purple',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            attack: 500,
+            versatility: 20,
+            haste: 20
+        },
+        growth: {
+            attack: 2,
+            versatility: 2,
+            haste: 2
+        }
+    },
+    EQ_042: {
+        id: 'EQ_042',
+        name: '保护者加萨斯',
+        type: 'equipment',
+        slot: 'offHand',
+        rarity: 'purple',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            attack: 500,
+            mastery: 20,
+            critRate: 20
+        },
+        growth: {
+            attack: 2,
+            mastery: 2,
+            critRate: 2
+        }
+    },
+    EQ_043: {
+        id: 'EQ_043',
+        name: '祖穆拉恩的能量法杖',
+        type: 'equipment',
+        slot: 'mainHand',
+        rarity: 'blue',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            spellPower: 550,
+            critRate: 15,
+            mastery: 15
+        },
+        growth: {
+            spellPower: 2,
+            critRate: 2,
+            mastery: 2
+        }
+    },
+    EQ_044: {
+        id: 'EQ_044',
+        name: '鞭笞者苏萨斯',
+        type: 'equipment',
+        slot: 'mainHand',
+        rarity: 'orange',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            attack: 1200,
+            mastery: 10,
+            haste: 10,
+            versatility: 10
+        },
+        growth: {
+            attack: 2,
+            mastery: 2,
+            haste: 2,
+            versatility: 2
+        },
+        // 可选：给图鉴/说明用
+        synth: { from: ['EQ_041', 'EQ_042'], requireLevel: 100 }
+    },
+    EQ_045: {
+        id: 'EQ_045',
+        name: '大坏蛋面具',
+        type: 'equipment',
+        slot: 'head',
+        rarity: 'blue',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            spellPower: 100,
+            hp: 300,
+            armor: 50,
+            versatility: 5
+        },
+        growth: {
+            spellPower: 2,
+            hp: 2,
+            armor: 2,
+            versatility: 2
+        }
+    },
+    EQ_046: {
+        id: 'EQ_046',
+        name: '狂乱者的拥抱',
+        type: 'equipment',
+        slot: 'chest',
+        rarity: 'blue',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            attack: 100,
+            hp: 400,
+            armor: 50,
+            critRate: 5
+        },
+        growth: {
+            attack: 2,
+            hp: 2,
+            armor: 2,
+            critRate: 2
+        }
+    },
+    EQ_047: {
+        id: 'EQ_047',
+        name: '大坏蛋肩甲',
+        type: 'equipment',
+        slot: 'shoulder',
+        rarity: 'blue',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            hp: 300,
+            armor: 50,
+            versatility: 10
+        },
+        growth: {
+            hp: 2,
+            armor: 2,
+            versatility: 2
+        }
+    },
+    EQ_048: {
+        id: 'EQ_048',
+        name: '闪亮腰带',
+        type: 'equipment',
+        slot: 'belt',
+        rarity: 'green',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            hp: 300,
+            armor: 40,
+            versatility: 5
+        },
+        growth: {
+            hp: 2,
+            armor: 2,
+            versatility: 2
+        }
+    },
 };
 
 //赤脊山5件图鉴100级点亮效果
@@ -5349,6 +5561,40 @@ function gameReducer(state, action) {
                 bossCombat: newBossCombat,
             };
         }
+        case 'SYNTHESIZE_EQ_044': {
+            const getLevel = (eq) => (eq?.currentLevel ?? eq?.level ?? 0);
+
+            const idxA = state.inventory.findIndex(i => i?.type === 'equipment' && i.id === 'EQ_041' && getLevel(i) >= 100);
+            const idxB = state.inventory.findIndex(i => i?.type === 'equipment' && i.id === 'EQ_042' && getLevel(i) >= 100);
+            if (idxA === -1 || idxB === -1) return state;
+
+            // 背包空间：移除2件再加1件，一定有空间，不用额外判断
+            const tpl = FIXED_EQUIPMENTS['EQ_044'];
+            if (!tpl) return state;
+
+            const instance = {
+                ...tpl,
+                instanceId: `syn_${Date.now()}_${Math.random().toString(36)}`,
+                qualityColor: getRarityColor(tpl.rarity),
+                currentLevel: 0,
+                stats: scaleStats(tpl.baseStats, tpl.growth, 0)
+            };
+
+            const newInventory = [...state.inventory];
+            newInventory.splice(Math.max(idxA, idxB), 1);
+            newInventory.splice(Math.min(idxA, idxB), 1);
+            newInventory.push(instance);
+
+            let nextState = {
+                ...state,
+                inventory: newInventory
+            };
+
+            // 记录图鉴（跟你合成装备后记图鉴的逻辑一致）:contentReference[oaicite:5]{index=5}
+            nextState = addEquipmentIdToCodex(nextState, instance.id);
+
+            return nextState;
+        }
 
         default:
             return state;
@@ -6360,6 +6606,34 @@ const ItemDetailsModal = ({ item, onClose, onEquip, characters, state , dispatch
                     >
                         装备
                     </Button>
+                    {(() => {
+                        const getLevel = (eq) => (eq?.currentLevel ?? eq?.level ?? 0);
+                        const isMatA = item.id === 'EQ_041' && getLevel(item) >= 100;
+                        const isMatB = item.id === 'EQ_042' && getLevel(item) >= 100;
+
+                        const hasOther =
+                            isMatA
+                                ? state.inventory.some(i => i?.type === 'equipment' && i.id === 'EQ_042' && getLevel(i) >= 100)
+                                : isMatB
+                                ? state.inventory.some(i => i?.type === 'equipment' && i.id === 'EQ_041' && getLevel(i) >= 100)
+                                : false;
+
+                        if (!(hasOther && (isMatA || isMatB))) return null;
+
+                        return (
+                            <Button
+                                onClick={() => {
+                                    if (window.confirm('消耗【反击者桑萨斯 Lv100】与【保护者加萨斯 Lv100】合成【鞭笞者苏萨斯 Lv0】？')) {
+                                        dispatch({ type: 'SYNTHESIZE_EQ_044' });
+                                        onClose();
+                                    }
+                                }}
+                                style={{ flex: 1 }}
+                            >
+                                ⚗️ 合成鞭笞者苏萨斯
+                            </Button>
+                        );
+                    })()}
                     <Button
                         variant="danger"
                         onClick={() => {

@@ -4712,6 +4712,16 @@ function gameReducer(state, action) {
                 };
             }
 
+            //黑龙女王的证明
+            if (item.id === 'IT_BLACK_DRAGON_PROOF') {
+                state.worldBossProgress = {
+                    ...state.worldBossProgress,
+                    prestor_lady: true
+                };
+            }
+
+
+
             const newInventory = [...state.inventory];
             newInventory.splice(idx, 1);
 
@@ -7363,7 +7373,9 @@ const WorldBossPage = ({ state, dispatch }) => {
                 {Object.values(WORLD_BOSSES).map(boss => {
                     const bossData = BOSS_DATA[boss.id] || boss;
                     const unlocked = !boss.unlockLevel || state.characters.some(c => c.level >= (boss.unlockLevel || 0));
-
+                    if (boss.id === 'prestor_lady' && !state.worldBossProgress?.prestor_lady) {
+                        return; // 不显示
+                    }
                     return (
                         <div key={boss.id} style={{
                             padding: 20,

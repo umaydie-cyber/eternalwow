@@ -2063,7 +2063,7 @@ function recalcPartyStats(gameState,characters) {
     const auras = getPartyAuraMultipliers(characters);
     return (characters || []).map(c => {
         const next = { ...c };
-        next.stats = (next, auras, gameState);
+        next.stats = calculateTotalStats(next, auras, gameState);
         return next;
     });
 }

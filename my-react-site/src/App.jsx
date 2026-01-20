@@ -2261,6 +2261,14 @@ const ACHIEVEMENTS = {
     first_blood: { id: 'first_blood', name: '初战告捷', description: '完成第一次战斗', condition: (state) => state.stats.battlesWon >= 1, reward: { goldBonus: 0.05 }, icon: '🩸' },
     collector: { id: 'collector', name: '收藏家', description: '收集10种不同物品', condition: (state) => state.codex.length >= 10, reward: { dropBonus: 0.1 }, icon: '📦' },
     builder: { id: 'builder', name: '建设者', description: '建造5座建筑', condition: (state) => Object.values(state.buildings).reduce((a, b) => a + b, 0) >= 5, reward: { resourceBonus: 0.05 }, icon: '🏗️' },
+    susas: {
+        id: 'susas',
+        name: '鞭笞者苏萨斯',
+        description: '点亮【鞭笞者苏萨斯】Lv.100 图鉴',
+        condition: (state) => Array.isArray(state.codexEquipLv100) && state.codexEquipLv100.includes('EQ_044'),
+        reward: { dropBonus: 0.05 },
+        icon: '🏴‍☠️'
+    },
 };
 
 const WORLD_BOSSES = {
@@ -2492,6 +2500,16 @@ function formatStatForDisplay(stat, value) {
     return Math.floor(value);
 }
 
+function getAchievementDropBonus(state) {
+    const unlocked = state?.achievements || {};
+    let bonus = 0;
+    Object.values(ACHIEVEMENTS).forEach(a => {
+        if (unlocked[a.id] && a.reward?.dropBonus) {
+            bonus += a.reward.dropBonus;
+        }
+    });
+    return bonus; // 例如 0.05 = +5%
+}
 
 function addEquipmentIdToCodex(state, equipmentId) {
     if (!equipmentId) return state;
@@ -2627,6 +2645,14 @@ function calculateTotalStats(character, partyAuras = { hpMul: 1, spellPowerMul: 
         DESOLACE_LV100_SET.every(id => gameState.codexEquipLv100.includes(id))
     ) {
         totalStats.mastery = (totalStats.mastery || 0) + 5;
+    }
+
+    // 鞭笞者苏萨斯（EQ_044）点亮 100级图鉴：全队 全能+5 急速+10 精通+10
+    if (gameState && Array.isArray(gameState.codexEquipLv100) &&
+        gameState.codexEquipLv100.includes('EQ_044')) {
+        totalStats.versatility = (totalStats.versatility || 0) + 5;
+        totalStats.haste = (totalStats.haste || 0) + 10;
+        totalStats.mastery = (totalStats.mastery || 0) + 10;
     }
 
     // 简约而不简单羁绊：单一职业队伍普通攻击伤害提高150%
@@ -3640,11 +3666,15 @@ function calculateOfflineRewards(state, offlineSeconds) {
                 const dropTable = DROP_TABLES[zone.id];
                 if (dropTable?.equipment) {
                     const allowDrop = (id) => state.dropFilters?.[id] !== false; // 默认允许
+                    const achDropBonus = getAchievementDropBonus(state);
                     dropTable.equipment.filter(drop => allowDrop(drop.id)).forEach(drop => {
-                        if (Math.random() < (drop.chance ?? 0)) {
+                        const base = (drop.chance ?? 0);
+                        const effective = Math.min(1, base * (1 + achDropBonus));
+                        if (Math.random() < effective) {
                             rewards.items.push(createEquipmentInstance(drop.id));
                         }
                     });
+
                 }
             }
         }
@@ -4697,11 +4727,18 @@ function gameReducer(state, action) {
                                 const allowDrop = (id) => state.dropFilters?.[id] !== false; // 默认允许
                                 dropTable.equipment.filter(drop => allowDrop(drop.id)).forEach(drop => {
                                     if (newState.inventory.length >= newState.inventorySize) return;
-                                    if (Math.random() < (drop.chance ?? 0)) {
-                                        // 固定装备：用模板创建实例
-                                        newState.inventory.push(createEquipmentInstance(drop.id));
-                                        newState = addEquipmentIdToCodex(newState, drop.id);
-                                    }
+                                    const achDropBonus = getAchievementDropBonus(newState);
+                                    dropTable.equipment.filter(drop => allowDrop(drop.id)).forEach(drop => {
+                                        if (newState.inventory.length >= newState.inventorySize) return;
+
+                                        const base = (drop.chance ?? 0);
+                                        const effective = Math.min(1, base * (1 + achDropBonus)); // 20% *1.05 => 21%
+                                        if (Math.random() < effective) {
+                                            newState.inventory.push(createEquipmentInstance(drop.id));
+                                            newState = addEquipmentIdToCodex(newState, drop.id);
+                                        }
+                                    });
+
                                 });
                             }
 

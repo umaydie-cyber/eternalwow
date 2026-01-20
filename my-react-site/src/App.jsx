@@ -6820,8 +6820,6 @@ const CharacterPage = ({ state, dispatch }) => {
                                     <Button
                                         variant="danger"
                                         onClick={() => {
-                                            e.preventDefault();
-                                            e.stopPropagation(); // 关键：阻止冒泡到角色卡片的 onClick
                                             if (window.confirm("确定要删除该角色吗？")) {
                                                 dispatch({ type: "DELETE_CHARACTER", payload: { characterId: char.id } });
                                             }

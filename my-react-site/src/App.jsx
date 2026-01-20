@@ -10,6 +10,7 @@ const CLASSES = {
         skills: [
             { level: 1, skillId: 'basic_attack' },
             { level: 1, skillId: 'rest' },
+            { level: 1, skillId: 'mastery_precise_block' },
             { level: 3, skillId: 'shield_bash' },
             { level: 5, skillId: 'shield_block' },
             { level: 10, skillId: 'revenge' },
@@ -334,6 +335,13 @@ const SKILLS = {
         icon: '💤',
         type: 'heal',
         calculate: (char) => ({ heal: Math.floor(char.stats.maxHp * 0.05) })
+    },
+    mastery_precise_block: {
+        id: 'mastery_precise_block',
+        name: '精通：精确格挡',
+        icon: '🎯',
+        type: 'passive',
+        description: '被动：格挡率与格挡值提高(10 + 精通/2)%。该提升基于原始格挡率与原始格挡值数值。'
     },
     shield_bash: {
         limit: 3,
@@ -2054,7 +2062,7 @@ function recalcPartyStats(gameState,characters) {
 
 
 // 计算角色总属性（基础+装备）
-function calculateTotalStats(charactecalculateTotalStatsr, partyAuras = { hpMul: 1, spellPowerMul: 1 }, gameState) {
+function calculateTotalStats(character, partyAuras = { hpMul: 1, spellPowerMul: 1 }, gameState) {
     const classData = CLASSES[character.classId];
 
     // 先算 max
@@ -2154,6 +2162,18 @@ function calculateTotalStats(charactecalculateTotalStatsr, partyAuras = { hpMul:
             totalStats.critRate = (totalStats.critRate || 0) + 8;      // 暴击 +8%
             totalStats.critDamage = (totalStats.critDamage || 2.0) + 0.20; // 暴击伤害 +20%（以倍率加成）
         }
+    }
+
+    // ==================== 精通：精确格挡 ====================
+    if (character.classId === 'protection_warrior') {
+        const mastery = totalStats.mastery || 0;
+
+        // (10 + mastery / 2)%
+        const masteryBonusPct = (10 + mastery / 2) / 100;
+
+        // 只放大“原始格挡率 / 原始格挡值”
+        totalStats.blockRate += totalStats.blockRate * masteryBonusPct;
+        totalStats.blockValue += totalStats.blockRate * masteryBonusPct;
     }
 
     totalStats.maxHp = Math.floor((totalStats.hp || 0) * (partyAuras.hpMul || 1));

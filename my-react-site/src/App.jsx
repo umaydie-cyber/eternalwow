@@ -1518,6 +1518,7 @@ const FIXED_EQUIPMENTS = {
     },EQ_019: {
         id: 'EQ_019',
         name: '尖牙手套',
+        icon: "/icons/wow/vanilla/armor/INV_Gauntlets_18.png",
         type: 'equipment',
         slot: 'hands',
         rarity: 'green',
@@ -1832,7 +1833,7 @@ const FIXED_EQUIPMENTS = {
         id: 'EQ_033',
         name: '天选者印记',
         type: 'equipment',
-        slot: 'trinket2',
+        slot: 'trinket1',
         rarity: 'blue',
         level: 0,
         maxLevel: 100,
@@ -2247,6 +2248,36 @@ function getBuildingCost(buildingId, state) {
     }
 
     return cost;
+}
+
+function ItemIcon({ item, size = 28 }) {
+    if (!item) return null;
+
+    if (item.icon) {
+        return (
+            <img
+                src={item.icon}
+                alt={item.name}
+                style={{
+                    width: size,
+                    height: size,
+                    objectFit: "contain",
+                    imageRendering: "pixelated",
+                    background: "#000",
+                    border: "1px solid #444",
+                    borderRadius: 4,
+                }}
+            />
+        );
+    }
+
+    return <span style={{ fontSize: size }}>📦</span>;
+}
+
+function SlotIcon({ slot, size = 28 }) {
+    const info = EQUIPMENT_SLOTS?.[slot];
+    // 没有图片时回退到 emoji
+    return <span style={{ fontSize: size }}>{info?.icon || "📦"}</span>;
 }
 
 
@@ -6364,17 +6395,15 @@ const CharacterDetailsModal = ({ characterId, state, onClose, onUnequip, onEditS
                                             position: 'relative'
                                         }}
                                     >
-                                        <div style={{
-                                            fontSize: 11,
-                                            color: '#888',
-                                            marginBottom: 6,
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            gap: 4
-                                        }}>
-                                            <span>{slotInfo.icon}</span>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                            {equipped ? (
+                                                <ItemIcon item={equipped} size={18} />
+                                            ) : (
+                                                <span>{slotInfo.icon}</span>
+                                            )}
                                             <span>{slotInfo.name}</span>
                                         </div>
+
 
                                         {equipped ? (
                                             <>
@@ -6522,7 +6551,7 @@ const ItemDetailsModal = ({ item, onClose, onEquip, characters, state , dispatch
             }} onClick={(e) => e.stopPropagation()}>
                 <div style={{ textAlign: 'center', marginBottom: 20 }}>
                     <div style={{ fontSize: 48, marginBottom: 12 }}>
-                        {EQUIPMENT_SLOTS[item.slot]?.icon || '📦'}
+                        <ItemIcon item={item} size={32} />
                     </div>
                     <h2 style={{
                         margin: '0 0 8px 0',
@@ -7636,7 +7665,7 @@ const InventoryPage = ({ state, dispatch }) => {
                             }}
                         >
                             <div style={{ fontSize: 28, marginBottom: 8 }}>
-                                {item.type === 'equipment' ? EQUIPMENT_SLOTS[item.slot]?.icon : '📦'}
+                                <ItemIcon item={item} size={32} />
                             </div>
                             <div style={{
                                 fontSize: 11,

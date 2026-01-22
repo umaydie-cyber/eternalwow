@@ -1518,7 +1518,7 @@ const FIXED_EQUIPMENTS = {
     },EQ_019: {
         id: 'EQ_019',
         name: '尖牙手套',
-        icon: "${import.meta.env.BASE_URL}icons/wow/vanilla/armor/INV_Gauntlets_18.png",
+        icon: "icons/wow/vanilla/armor/INV_Gauntlets_18.png",
         type: 'equipment',
         slot: 'hands',
         rarity: 'green',

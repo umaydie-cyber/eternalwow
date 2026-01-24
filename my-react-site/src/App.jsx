@@ -1135,6 +1135,7 @@ const FIXED_EQUIPMENTS = {
     EQ_001: {
         id: 'EQ_001',
         name: '初心者的盾牌',
+        icon: "icons/wow/vanilla/armor/INV_Shield_09.png",
         type: 'equipment',
         slot: 'offHand',
         rarity: 'green',
@@ -1158,6 +1159,7 @@ const FIXED_EQUIPMENTS = {
     EQ_002: {
         id: 'EQ_002',
         name: '初心者的小刀',
+        icon: "icons/wow/vanilla/weapons/INV_Sword_12.png",
         type: 'equipment',
         slot: 'mainHand',
         rarity: 'green',
@@ -1181,6 +1183,7 @@ const FIXED_EQUIPMENTS = {
     EQ_003: {
         id: 'EQ_003',
         name: '神秘森林吊坠',
+        icon: "icons/wow/vanilla/armor/INV_Jewelry_Necklace_11.png",
         type: 'equipment',
         slot: 'neck',
         rarity: 'blue',
@@ -1202,6 +1205,7 @@ const FIXED_EQUIPMENTS = {
     EQ_004: {
         id: 'EQ_004',
         name: '神秘森林戒指',
+        icon: "icons/wow/vanilla/armor/INV_Jewelry_Ring_12.png",
         type: 'equipment',
         slot: 'ring1',
         rarity: 'blue',
@@ -1223,6 +1227,7 @@ const FIXED_EQUIPMENTS = {
     EQ_005: {
         id: 'EQ_005',
         name: '初心者的拐杖',
+        icon: "icons/wow/vanilla/weapons/INV_Staff_02.png",
         type: 'equipment',
         slot: 'mainHand',
         rarity: 'green',
@@ -1244,7 +1249,7 @@ const FIXED_EQUIPMENTS = {
         name: '破碎时空的邀请函',
         type: 'consumable',
         rarity: 'purple',
-        icon: '🌀',
+        icon: 'icons/wow/vanilla/items/INV_Misc_Note_04.png',
         canUse: true,
         description: '使用后解锁重生轮回'
     }
@@ -1252,6 +1257,7 @@ const FIXED_EQUIPMENTS = {
     EQ_006: {
         id: 'EQ_006',
         name: '旅行者的头盔',
+        icon: 'icons/wow/vanilla/armor/INV_Helmet_16.png',
         type: 'equipment',
         slot: 'head',
         rarity: 'green',
@@ -1273,6 +1279,7 @@ const FIXED_EQUIPMENTS = {
     EQ_007: {
         id: 'EQ_007',
         name: '旅行者的护肩',
+        icon: 'icons/wow/vanilla/armor/INV_Shoulder_08.png',
         type: 'equipment',
         slot: 'shoulder',
         rarity: 'green',
@@ -1296,6 +1303,7 @@ const FIXED_EQUIPMENTS = {
     EQ_008: {
         id: 'EQ_008',
         name: '旅行者的胸甲',
+        icon: 'icons/wow/vanilla/armor/INV_Shirt_01.png',
         type: 'equipment',
         slot: 'chest',
         rarity: 'green',
@@ -1317,6 +1325,7 @@ const FIXED_EQUIPMENTS = {
     EQ_009: {
         id: 'EQ_009',
         name: '旅行者的护腕',
+        icon: 'icons/wow/vanilla/armor/INV_Bracer_11.png',
         type: 'equipment',
         slot: 'wrist',
         rarity: 'green',
@@ -1340,6 +1349,7 @@ const FIXED_EQUIPMENTS = {
     EQ_010: {
         id: 'EQ_010',
         name: '旅行者的手套',
+        icon: 'icons/wow/vanilla/armor/INV_Gauntlets_05.png',
         type: 'equipment',
         slot: 'hands',
         rarity: 'green',
@@ -1363,6 +1373,7 @@ const FIXED_EQUIPMENTS = {
     EQ_011: {
         id: 'EQ_011',
         name: '旅行者的护腿',
+        icon: 'icons/wow/vanilla/armor/INV_Pants_01.png',
         type: 'equipment',
         slot: 'legs',
         rarity: 'green',
@@ -1386,6 +1397,7 @@ const FIXED_EQUIPMENTS = {
     EQ_012: {
         id: 'EQ_012',
         name: '旅行者的布靴',
+        icon: 'icons/wow/vanilla/armor/INV_Boots_05.png',
         type: 'equipment',
         slot: 'feet',
         rarity: 'green',
@@ -1407,6 +1419,7 @@ const FIXED_EQUIPMENTS = {
     EQ_013: {
         id: 'EQ_013',
         name: '神秘山脉戒指',
+        icon: 'icons/wow/vanilla/armor/INV_Jewelry_Ring_31.png',
         type: 'equipment',
         slot: 'ring2',
         rarity: 'blue',
@@ -1422,6 +1435,7 @@ const FIXED_EQUIPMENTS = {
     },EQ_014: {
         id: 'EQ_014',
         name: '山脉卫士之刺',
+        icon: 'icons/wow/vanilla/weapons/INV_Sword_12.png',
         type: 'equipment',
         slot: 'mainHand',
         rarity: 'green',
@@ -1441,6 +1455,7 @@ const FIXED_EQUIPMENTS = {
     EQ_015: {
         id: 'EQ_015',
         name: '山脉卫士之噬',
+        icon: 'icons/wow/vanilla/weapons/INV_Staff_06.png',
         type: 'equipment',
         slot: 'mainHand',
         rarity: 'green',
@@ -1460,6 +1475,7 @@ const FIXED_EQUIPMENTS = {
     EQ_016: {
         id: 'EQ_016',
         name: '山脉卫士之盾',
+        icon: 'icons/wow/vanilla/armor/INV_Shield_13.png',
         type: 'equipment',
         slot: 'offHand',
         rarity: 'green',
@@ -1479,6 +1495,7 @@ const FIXED_EQUIPMENTS = {
     EQ_017: {
         id: 'EQ_017',
         name: '山脉卫士魔典',
+        icon: 'icons/wow/vanilla/items/INV_Misc_Orb_02.png',
         type: 'equipment',
         slot: 'offHand',
         rarity: 'green',
@@ -1498,6 +1515,7 @@ const FIXED_EQUIPMENTS = {
     EQ_018: {
         id: 'EQ_018',
         name: '山脉卫士之心',
+        icon: 'icons/wow/vanilla/trade/INV_Stone_01.png',
         type: 'equipment',
         slot: 'trinket1',
         rarity: 'blue',

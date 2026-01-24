@@ -2764,8 +2764,8 @@ const ACHIEVEMENTS = {
 };
 
 const WORLD_BOSSES = {
-    hogger: { id: 'hogger', name: '霍格', hp: 18000, attack: 150, defense: 70, rewards: { gold: 5000, exp: 5500, items: ['霍格之爪'] } },
-    vancleef: { id: 'vancleef', name: '艾德温·范克里夫', hp: 90000, attack: 400, defense: 250, rewards: { gold: 15000, exp: 6800, items: ['范克里夫之刃'] }, unlockLevel: 30 },
+    hogger: { id: 'hogger', name: '霍格',icon:'icons/wow/vanilla/boss/hogger.png', hp: 18000, attack: 150, defense: 70, rewards: { gold: 5000, exp: 5500 } },
+    vancleef: { id: 'vancleef', name: '艾德温·范克里夫', hp: 90000, attack: 400, defense: 250, rewards: { gold: 15000, exp: 6800 }, unlockLevel: 30 },
     prestor_lady: {
         id: 'prestor_lady',
         name: '普瑞斯托女士',
@@ -9252,43 +9252,47 @@ const BossPrepareModal = ({ state, dispatch }) => {
                         display: 'flex',
                         flexDirection: 'column'
                     }}>
-                        {/* BOSS图片区域 */}
-                        <div style={{
-                            width: '100%',
-                            aspectRatio: '1/1',
-                            background: 'linear-gradient(135deg, rgba(100,30,30,0.3) 0%, rgba(40,10,10,0.5) 100%)',
-                            border: '2px solid rgba(180,50,50,0.5)',
-                            borderRadius: 12,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            marginBottom: 16,
-                            position: 'relative',
-                            overflow: 'hidden',
-                            boxShadow: 'inset 0 0 40px rgba(0,0,0,0.5), 0 4px 20px rgba(0,0,0,0.4)'
-                        }}>
-                            {/* 预留BOSS图片位置 */}
-                            {/* <img
-                                src={`/images/bosses/${bossId}.png`}
+                        {/* 从 WORLD_BOSSES 获取 icon */}
+                        {WORLD_BOSSES[bossId]?.icon ? (
+                            <img
+                                src={WORLD_BOSSES[bossId].icon}
                                 alt={boss.name}
                                 style={{
                                     width: '100%',
                                     height: '100%',
-                                    objectFit: 'cover'
+                                    objectFit: 'cover',
+                                    imageRendering: 'auto'
                                 }}
-                            /> */}
+                                onError={(e) => {
+                                    // 图片加载失败时显示占位符
+                                    e.target.style.display = 'none';
+                                    e.target.nextSibling.style.display = 'flex';
+                                }}
+                            />
+                        ) : null}
 
-                            {/* 占位符（当没有图片时显示） */}
-                            <div style={{
-                                fontSize: 80,
-                                opacity: 0.6,
-                                filter: 'drop-shadow(0 0 20px rgba(255,100,100,0.5))'
-                            }}>
-                                🐲
-                            </div>
+                        {/* 占位符（当没有图片或图片加载失败时显示） */}
+                        <div style={{
+                            display: WORLD_BOSSES[bossId]?.icon ? 'none' : 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            width: '100%',
+                            height: '100%',
+                            position: 'absolute',
+                            top: 0,
+                            left: 0
+                        }}>
+                        <span style={{
+                            fontSize: 80,
+                            opacity: 0.6,
+                            filter: 'drop-shadow(0 0 20px rgba(255,100,100,0.5))'
+                        }}>
+                            🐲
+                        </span>
+                        </div>
 
-                            {/* 角落装饰 */}
-                            <div style={{
+                        {/* 角落装饰 */}
+                        <div style={{
                                 position: 'absolute',
                                 top: 0,
                                 left: 0,

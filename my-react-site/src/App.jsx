@@ -8578,34 +8578,157 @@ const WorldBossPage = ({ state, dispatch }) => {
                 {Object.values(WORLD_BOSSES).map(boss => {
                     const bossData = BOSS_DATA[boss.id] || boss;
                     const unlocked = !boss.unlockLevel || state.characters.some(c => c.level >= (boss.unlockLevel || 0));
+
+                    // 普瑞斯托女士特殊解锁条件
                     if (boss.id === 'prestor_lady' && !state.worldBossProgress?.prestor_lady) {
-                        return; // 不显示
+                        return null;
                     }
+
                     return (
                         <div key={boss.id} style={{
                             padding: 20,
-                            background: unlocked ? 'rgba(180,50,50,0.2)' : 'rgba(0,0,0,0.3)',
+                            background: unlocked
+                                ? 'linear-gradient(135deg, rgba(180,50,50,0.2) 0%, rgba(80,20,20,0.3) 100%)'
+                                : 'rgba(0,0,0,0.3)',
                             border: `2px solid ${unlocked ? '#a03030' : '#333'}`,
-                            borderRadius: 8,
-                            opacity: unlocked ? 1 : 0.5
+                            borderRadius: 12,
+                            opacity: unlocked ? 1 : 0.5,
+                            boxShadow: unlocked ? '0 4px 20px rgba(160,48,48,0.3)' : 'none'
                         }}>
-                            <div style={{ fontSize: 48, textAlign: 'center', marginBottom: 12 }}>
-                                {unlocked ? '🐲' : '🔒'}
+                            {/* BOSS图片区域 */}
+                            <div style={{
+                                width: '100%',
+                                height: 180,
+                                background: 'linear-gradient(135deg, rgba(60,20,20,0.5) 0%, rgba(30,10,10,0.6) 100%)',
+                                border: '2px solid rgba(180,50,50,0.4)',
+                                borderRadius: 10,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                marginBottom: 16,
+                                overflow: 'hidden',
+                                position: 'relative',
+                                boxShadow: 'inset 0 0 30px rgba(0,0,0,0.5)'
+                            }}>
+                                {boss.icon ? (
+                                    <img
+                                        src={boss.icon}
+                                        alt={boss.name}
+                                        style={{
+                                            width: '100%',
+                                            height: '100%',
+                                            objectFit: 'cover',
+                                            filter: unlocked ? 'none' : 'grayscale(100%)'
+                                        }}
+                                    />
+                                ) : (
+                                    <div style={{
+                                        fontSize: 64,
+                                        opacity: 0.6,
+                                        filter: unlocked
+                                            ? 'drop-shadow(0 0 15px rgba(255,100,100,0.5))'
+                                            : 'grayscale(100%)'
+                                    }}>
+                                        {unlocked ? '🐲' : '🔒'}
+                                    </div>
+                                )}
+
+                                {/* 锁定遮罩 */}
+                                {!unlocked && (
+                                    <div style={{
+                                        position: 'absolute',
+                                        top: 0,
+                                        left: 0,
+                                        right: 0,
+                                        bottom: 0,
+                                        background: 'rgba(0,0,0,0.6)',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center'
+                                    }}>
+                                        <span style={{ fontSize: 48 }}>🔒</span>
+                                    </div>
+                                )}
+
+                                {/* 底部渐变 */}
+                                <div style={{
+                                    position: 'absolute',
+                                    bottom: 0,
+                                    left: 0,
+                                    right: 0,
+                                    height: '40%',
+                                    background: 'linear-gradient(0deg, rgba(0,0,0,0.8) 0%, transparent 100%)',
+                                    pointerEvents: 'none'
+                                }} />
                             </div>
-                            <h3 style={{ textAlign: 'center', color: unlocked ? '#ff6b6b' : '#666' }}>
+
+                            {/* BOSS名称 */}
+                            <h3 style={{
+                                textAlign: 'center',
+                                color: unlocked ? '#ff6b6b' : '#666',
+                                margin: '0 0 12px 0',
+                                fontSize: 20,
+                                textShadow: unlocked ? '0 0 10px rgba(255,107,107,0.5)' : 'none'
+                            }}>
                                 {boss.name}
                             </h3>
+
+                            {/* BOSS属性预览 */}
+                            {unlocked && (
+                                <div style={{
+                                    display: 'grid',
+                                    gridTemplateColumns: 'repeat(3, 1fr)',
+                                    gap: 8,
+                                    marginBottom: 16,
+                                    padding: 10,
+                                    background: 'rgba(0,0,0,0.3)',
+                                    borderRadius: 6
+                                }}>
+                                    <div style={{ textAlign: 'center' }}>
+                                        <div style={{ fontSize: 10, color: '#888' }}>生命</div>
+                                        <div style={{ fontSize: 12, color: '#f44336', fontWeight: 600 }}>
+                                            {(bossData.maxHp || boss.hp)?.toLocaleString()}
+                                        </div>
+                                    </div>
+                                    <div style={{ textAlign: 'center' }}>
+                                        <div style={{ fontSize: 10, color: '#888' }}>攻击</div>
+                                        <div style={{ fontSize: 12, color: '#ff9800', fontWeight: 600 }}>
+                                            {bossData.attack || boss.attack}
+                                        </div>
+                                    </div>
+                                    <div style={{ textAlign: 'center' }}>
+                                        <div style={{ fontSize: 10, color: '#888' }}>防御</div>
+                                        <div style={{ fontSize: 12, color: '#4CAF50', fontWeight: 600 }}>
+                                            {bossData.defense || boss.defense}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* 挑战按钮 / 解锁条件 */}
                             {unlocked ? (
                                 <Button
                                     variant="danger"
-                                    style={{ width: '100%' }}
+                                    style={{
+                                        width: '100%',
+                                        padding: '10px 16px',
+                                        fontSize: 14,
+                                        fontWeight: 600
+                                    }}
                                     onClick={() => dispatch({ type: 'OPEN_BOSS_PREPARE', payload: boss.id })}
                                 >
-                                    挑战
+                                    ⚔️ 挑战
                                 </Button>
                             ) : (
-                                <div style={{ textAlign: 'center', color: '#666' }}>
-                                    需要等级 {boss.unlockLevel || 0}
+                                <div style={{
+                                    textAlign: 'center',
+                                    color: '#666',
+                                    padding: '10px',
+                                    background: 'rgba(0,0,0,0.2)',
+                                    borderRadius: 6,
+                                    fontSize: 12
+                                }}>
+                                    🔒 需要等级 {boss.unlockLevel || 0}
                                 </div>
                             )}
                         </div>

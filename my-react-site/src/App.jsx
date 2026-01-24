@@ -9252,43 +9252,68 @@ const BossPrepareModal = ({ state, dispatch }) => {
                         display: 'flex',
                         flexDirection: 'column'
                     }}>
-                        {/* 从 WORLD_BOSSES 获取 icon */}
-                        {WORLD_BOSSES[bossId]?.icon ? (
-                            <img
-                                src={WORLD_BOSSES[bossId].icon}
-                                alt={boss.name}
-                                style={{
-                                    width: '100%',
-                                    height: '100%',
-                                    objectFit: 'cover',
-                                    imageRendering: 'auto'
-                                }}
-                                onError={(e) => {
-                                    // 图片加载失败时显示占位符
-                                    e.target.style.display = 'none';
-                                    e.target.nextSibling.style.display = 'flex';
-                                }}
-                            />
-                        ) : null}
-
-                        {/* 占位符（当没有图片或图片加载失败时显示） */}
+                        {/* BOSS图片区域 - 带边框装饰 */}
                         <div style={{
-                            display: WORLD_BOSSES[bossId]?.icon ? 'none' : 'flex',
+                            width: '100%',
+                            aspectRatio: '1/1',
+                            background: 'linear-gradient(135deg, rgba(100,30,30,0.3) 0%, rgba(40,10,10,0.5) 100%)',
+                            border: '3px solid',
+                            borderImage: 'linear-gradient(135deg, #8b3030, #4a1515, #8b3030) 1',
+                            borderRadius: 12,
+                            display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            width: '100%',
-                            height: '100%',
-                            position: 'absolute',
-                            top: 0,
-                            left: 0
+                            marginBottom: 16,
+                            position: 'relative',
+                            overflow: 'hidden',
+                            boxShadow: `
+        inset 0 0 40px rgba(0,0,0,0.5), 
+        0 4px 20px rgba(0,0,0,0.4),
+        0 0 30px rgba(139,48,48,0.3)
+    `
                         }}>
-                        <span style={{
-                            fontSize: 80,
-                            opacity: 0.6,
-                            filter: 'drop-shadow(0 0 20px rgba(255,100,100,0.5))'
-                        }}>
-                            🐲
-                        </span>
+                            {WORLD_BOSSES[bossId]?.icon ? (
+                                <img
+                                    src={WORLD_BOSSES[bossId].icon}
+                                    alt={boss.name}
+                                    style={{
+                                        width: '100%',
+                                        height: '100%',
+                                        objectFit: 'cover',
+                                        filter: 'contrast(1.1) saturate(1.1)'  // 让图片更鲜艳
+                                    }}
+                                />
+                            ) : (
+                                <div style={{
+                                    fontSize: 80,
+                                    opacity: 0.6,
+                                    filter: 'drop-shadow(0 0 20px rgba(255,100,100,0.5))'
+                                }}>
+                                    🐲
+                                </div>
+                            )}
+
+                            {/* 顶部渐变遮罩 - 让图片边缘更融合 */}
+                            <div style={{
+                                position: 'absolute',
+                                top: 0,
+                                left: 0,
+                                right: 0,
+                                height: '30%',
+                                background: 'linear-gradient(180deg, rgba(0,0,0,0.4) 0%, transparent 100%)',
+                                pointerEvents: 'none'
+                            }} />
+
+                            {/* 底部渐变遮罩 */}
+                            <div style={{
+                                position: 'absolute',
+                                bottom: 0,
+                                left: 0,
+                                right: 0,
+                                height: '30%',
+                                background: 'linear-gradient(0deg, rgba(0,0,0,0.6) 0%, transparent 100%)',
+                                pointerEvents: 'none'
+                            }} />
                         </div>
 
                         {/* 角落装饰 */}

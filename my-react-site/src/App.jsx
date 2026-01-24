@@ -9314,10 +9314,9 @@ const BossPrepareModal = ({ state, dispatch }) => {
                                 background: 'linear-gradient(0deg, rgba(0,0,0,0.6) 0%, transparent 100%)',
                                 pointerEvents: 'none'
                             }} />
-                        </div>
 
-                        {/* 角落装饰 */}
-                        <div style={{
+                            {/* 角落装饰 */}
+                            <div style={{
                                 position: 'absolute',
                                 top: 0,
                                 left: 0,
@@ -9327,7 +9326,10 @@ const BossPrepareModal = ({ state, dispatch }) => {
                                 borderImage: 'linear-gradient(45deg, #8b3030, transparent, transparent, #8b3030) 1',
                                 pointerEvents: 'none'
                             }} />
+
                         </div>
+
+
 
                         {/* BOSS属性 */}
                         <div style={{

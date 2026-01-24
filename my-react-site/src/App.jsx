@@ -9158,7 +9158,7 @@ const CodexPage = ({ state, dispatch }) => {
     );
 };
 
-// ==================== Boss准备模态 ====================
+// ==================== Boss准备模态（重新设计版） ====================
 const BossPrepareModal = ({ state, dispatch }) => {
     const bossId = state.prepareBoss;
     if (!bossId) return null;
@@ -9166,95 +9166,732 @@ const BossPrepareModal = ({ state, dispatch }) => {
     const available = state.characters.filter(c => !state.assignments[c.id]);
     const [dragged, setDragged] = useState(null);
 
+    // 计算队伍总属性
+    const teamStats = state.bossTeam.filter(Boolean).reduce((acc, charId) => {
+        const char = state.characters.find(c => c.id === charId);
+        if (char) {
+            acc.totalHp += char.stats.maxHp || 0;
+            acc.totalAttack += char.stats.attack || 0;
+            acc.totalSpellPower += char.stats.spellPower || 0;
+            acc.count += 1;
+        }
+        return acc;
+    }, { totalHp: 0, totalAttack: 0, totalSpellPower: 0, count: 0 });
+
     return (
         <div style={{
-            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-            background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0,0,0,0.92)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: 20
         }}>
-            <div style={{ width: 900, maxHeight: '90vh', overflowY: 'auto', background: '#1a1510', padding: 24, borderRadius: 12, border: '2px solid #c9a227' }}>
-                <h2 style={{ textAlign: 'center', color: '#ffd700' }}>准备挑战 {boss.name}</h2>
+            <div style={{
+                width: 1100,
+                maxWidth: '95vw',
+                maxHeight: '95vh',
+                overflowY: 'auto',
+                background: 'linear-gradient(180deg, #1a1208 0%, #0d0906 100%)',
+                borderRadius: 16,
+                border: '3px solid #8b6914',
+                boxShadow: '0 0 60px rgba(139,105,20,0.4), inset 0 0 100px rgba(0,0,0,0.5)',
+                position: 'relative'
+            }}>
+                {/* 顶部装饰条 */}
+                <div style={{
+                    height: 4,
+                    background: 'linear-gradient(90deg, transparent, #c9a227, #ffd700, #c9a227, transparent)',
+                    borderRadius: '16px 16px 0 0'
+                }} />
 
-                <div style={{ marginBottom: 20, padding: 16, background: 'rgba(100,0,0,0.2)', borderRadius: 8 }}>
-                    <p><strong>技能1：</strong>重击 - 对目标造成 {boss.heavyMultiplier} 倍攻击的物理伤害</p>
-                    <p><strong>技能2：</strong>召唤小弟 - 召唤 {boss.summonCount} 个血量 {boss.minion.maxHp}、攻击 {boss.minion.attack} 的豺狼人小弟</p>
-                    <p><strong>技能循环：</strong>召唤小弟 → 重击 → 重击 → 重击 → 循环</p>
+                {/* 标题区域 */}
+                <div style={{
+                    textAlign: 'center',
+                    padding: '20px 30px',
+                    borderBottom: '1px solid rgba(201,162,39,0.2)',
+                    background: 'linear-gradient(180deg, rgba(139,105,20,0.15) 0%, transparent 100%)'
+                }}>
+                    <div style={{
+                        fontSize: 12,
+                        color: '#888',
+                        letterSpacing: 4,
+                        marginBottom: 8
+                    }}>
+                        ⚔️ 世界首领挑战 ⚔️
+                    </div>
+                    <h2 style={{
+                        margin: 0,
+                        fontSize: 32,
+                        color: '#ffd700',
+                        textShadow: '0 0 20px rgba(255,215,0,0.5), 2px 2px 4px rgba(0,0,0,0.8)',
+                        fontWeight: 700,
+                        letterSpacing: 2
+                    }}>
+                        {boss.name}
+                    </h2>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
-                    <div>
-                        <h3>队伍位置（敌人优先攻击顺序）</h3>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
-                            {[0, 1, 2].map(slot => {
-                                const charId = state.bossTeam[slot];
-                                const char = charId ? state.characters.find(c => c.id === charId) : null;
-                                return (
-                                    <div
-                                        key={slot}
-                                        onDrop={(e) => {
-                                            e.preventDefault();
-                                            if (dragged) dispatch({ type: 'SET_BOSS_TEAM_SLOT', payload: { slot, charId: dragged } });
-                                            setDragged(null);
-                                        }}
-                                        onDragOver={e => e.preventDefault()}
-                                        style={{ padding: 16, border: '2px dashed #4a3c2a', borderRadius: 8, minHeight: 100, background: 'rgba(0,0,0,0.3)' }}
-                                    >
-                                        {char ? `${char.name} Lv.${char.level} ${CLASSES[char.classId].name}` : `位置 ${slot + 1} 空`}
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    </div>
+                {/* 主体内容 */}
+                <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: '320px 1fr',
+                    gap: 0,
+                    minHeight: 500
+                }}>
+                    {/* ==================== 左侧：BOSS信息区 ==================== */}
+                    <div style={{
+                        borderRight: '1px solid rgba(201,162,39,0.2)',
+                        background: 'linear-gradient(180deg, rgba(80,20,20,0.2) 0%, rgba(40,10,10,0.3) 100%)',
+                        padding: 20,
+                        display: 'flex',
+                        flexDirection: 'column'
+                    }}>
+                        {/* BOSS图片区域 */}
+                        <div style={{
+                            width: '100%',
+                            aspectRatio: '1/1',
+                            background: 'linear-gradient(135deg, rgba(100,30,30,0.3) 0%, rgba(40,10,10,0.5) 100%)',
+                            border: '2px solid rgba(180,50,50,0.5)',
+                            borderRadius: 12,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            marginBottom: 16,
+                            position: 'relative',
+                            overflow: 'hidden',
+                            boxShadow: 'inset 0 0 40px rgba(0,0,0,0.5), 0 4px 20px rgba(0,0,0,0.4)'
+                        }}>
+                            {/* 预留BOSS图片位置 */}
+                            {/* <img
+                                src={`/images/bosses/${bossId}.png`}
+                                alt={boss.name}
+                                style={{
+                                    width: '100%',
+                                    height: '100%',
+                                    objectFit: 'cover'
+                                }}
+                            /> */}
 
-                    <div>
-                        <h3>可用角色（拖拽到队伍位置）</h3>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 8 }}>
-                            {available.map(char => (
-                                <div
-                                    key={char.id}
-                                    draggable
-                                    onDragStart={() => setDragged(char.id)}
-                                    style={{ padding: 12, background: 'rgba(0,0,0,0.4)', borderRadius: 6, cursor: 'grab' }}
-                                >
-                                    {char.name} Lv.{char.level} {CLASSES[char.classId].name}
+                            {/* 占位符（当没有图片时显示） */}
+                            <div style={{
+                                fontSize: 80,
+                                opacity: 0.6,
+                                filter: 'drop-shadow(0 0 20px rgba(255,100,100,0.5))'
+                            }}>
+                                🐲
+                            </div>
+
+                            {/* 角落装饰 */}
+                            <div style={{
+                                position: 'absolute',
+                                top: 0,
+                                left: 0,
+                                right: 0,
+                                bottom: 0,
+                                border: '3px solid transparent',
+                                borderImage: 'linear-gradient(45deg, #8b3030, transparent, transparent, #8b3030) 1',
+                                pointerEvents: 'none'
+                            }} />
+                        </div>
+
+                        {/* BOSS属性 */}
+                        <div style={{
+                            background: 'rgba(0,0,0,0.3)',
+                            borderRadius: 8,
+                            padding: 12,
+                            marginBottom: 16,
+                            border: '1px solid rgba(180,50,50,0.3)'
+                        }}>
+                            <div style={{
+                                fontSize: 12,
+                                color: '#ff6b6b',
+                                fontWeight: 600,
+                                marginBottom: 10,
+                                textAlign: 'center',
+                                borderBottom: '1px solid rgba(180,50,50,0.2)',
+                                paddingBottom: 8
+                            }}>
+                                📊 首领属性
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
+                                    <span style={{ color: '#888' }}>❤️ 生命值</span>
+                                    <span style={{ color: '#f44336', fontWeight: 600 }}>{boss.maxHp?.toLocaleString()}</span>
                                 </div>
-                            ))}
+                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
+                                    <span style={{ color: '#888' }}>⚔️ 攻击力</span>
+                                    <span style={{ color: '#ff9800', fontWeight: 600 }}>{boss.attack}</span>
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
+                                    <span style={{ color: '#888' }}>🛡️ 防御力</span>
+                                    <span style={{ color: '#4CAF50', fontWeight: 600 }}>{boss.defense}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* BOSS技能说明 */}
+                        <div style={{
+                            background: 'rgba(0,0,0,0.3)',
+                            borderRadius: 8,
+                            padding: 12,
+                            flex: 1,
+                            border: '1px solid rgba(180,50,50,0.3)'
+                        }}>
+                            <div style={{
+                                fontSize: 12,
+                                color: '#ff6b6b',
+                                fontWeight: 600,
+                                marginBottom: 10,
+                                textAlign: 'center',
+                                borderBottom: '1px solid rgba(180,50,50,0.2)',
+                                paddingBottom: 8
+                            }}>
+                                📜 技能机制
+                            </div>
+
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                                <div style={{
+                                    padding: 10,
+                                    background: 'rgba(255,100,100,0.1)',
+                                    borderRadius: 6,
+                                    borderLeft: '3px solid #f44336'
+                                }}>
+                                    <div style={{ fontSize: 12, color: '#ff6b6b', fontWeight: 600, marginBottom: 4 }}>
+                                        💥 重击
+                                    </div>
+                                    <div style={{ fontSize: 11, color: '#aaa', lineHeight: 1.5 }}>
+                                        对目标造成 <span style={{ color: '#ffd700' }}>{boss.heavyMultiplier}倍</span> 攻击的物理伤害
+                                    </div>
+                                </div>
+
+                                <div style={{
+                                    padding: 10,
+                                    background: 'rgba(156,39,176,0.1)',
+                                    borderRadius: 6,
+                                    borderLeft: '3px solid #9C27B0'
+                                }}>
+                                    <div style={{ fontSize: 12, color: '#ce93d8', fontWeight: 600, marginBottom: 4 }}>
+                                        👥 召唤小弟
+                                    </div>
+                                    <div style={{ fontSize: 11, color: '#aaa', lineHeight: 1.5 }}>
+                                        召唤 <span style={{ color: '#ffd700' }}>{boss.summonCount}</span> 个{boss.minion.name}
+                                        <br/>
+                                        <span style={{ color: '#888' }}>
+                                            (HP:{boss.minion.maxHp} / 攻击:{boss.minion.attack})
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div style={{
+                                marginTop: 12,
+                                padding: 10,
+                                background: 'rgba(255,215,0,0.1)',
+                                borderRadius: 6,
+                                border: '1px dashed rgba(255,215,0,0.3)'
+                            }}>
+                                <div style={{ fontSize: 11, color: '#c9a227', fontWeight: 600, marginBottom: 4 }}>
+                                    🔄 技能循环
+                                </div>
+                                <div style={{ fontSize: 11, color: '#888' }}>
+                                    召唤 → 重击 → 重击 → 重击 → 循环
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* ==================== 右侧：队伍配置区 ==================== */}
+                    <div style={{
+                        padding: 20,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 16
+                    }}>
+                        {/* 队伍配置 */}
+                        <div style={{
+                            background: 'rgba(0,0,0,0.2)',
+                            borderRadius: 10,
+                            padding: 16,
+                            border: '1px solid rgba(201,162,39,0.2)'
+                        }}>
+                            <div style={{
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
+                                marginBottom: 12
+                            }}>
+                                <div style={{
+                                    fontSize: 14,
+                                    color: '#c9a227',
+                                    fontWeight: 600
+                                }}>
+                                    ⚔️ 队伍阵容
+                                </div>
+                                <div style={{
+                                    fontSize: 11,
+                                    color: '#888',
+                                    padding: '4px 10px',
+                                    background: 'rgba(0,0,0,0.3)',
+                                    borderRadius: 4
+                                }}>
+                                    位置1优先受到攻击
+                                </div>
+                            </div>
+
+                            <div style={{
+                                display: 'grid',
+                                gridTemplateColumns: 'repeat(3, 1fr)',
+                                gap: 12
+                            }}>
+                                {[0, 1, 2].map(slot => {
+                                    const charId = state.bossTeam[slot];
+                                    const char = charId ? state.characters.find(c => c.id === charId) : null;
+
+                                    return (
+                                        <div
+                                            key={slot}
+                                            onDrop={(e) => {
+                                                e.preventDefault();
+                                                if (dragged) {
+                                                    dispatch({ type: 'SET_BOSS_TEAM_SLOT', payload: { slot, charId: dragged } });
+                                                }
+                                                setDragged(null);
+                                            }}
+                                            onDragOver={e => e.preventDefault()}
+                                            style={{
+                                                padding: 16,
+                                                borderRadius: 10,
+                                                minHeight: 120,
+                                                background: char
+                                                    ? 'linear-gradient(135deg, rgba(201,162,39,0.15) 0%, rgba(139,115,25,0.1) 100%)'
+                                                    : 'rgba(0,0,0,0.3)',
+                                                border: char
+                                                    ? '2px solid rgba(201,162,39,0.5)'
+                                                    : '2px dashed rgba(74,60,42,0.5)',
+                                                display: 'flex',
+                                                flexDirection: 'column',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                transition: 'all 0.2s',
+                                                cursor: 'default'
+                                            }}
+                                        >
+                                            {/* 位置标签 */}
+                                            <div style={{
+                                                position: 'absolute',
+                                                top: 8,
+                                                left: 8,
+                                                fontSize: 10,
+                                                color: slot === 0 ? '#f44336' : '#888',
+                                                fontWeight: 600,
+                                                padding: '2px 6px',
+                                                background: 'rgba(0,0,0,0.4)',
+                                                borderRadius: 3
+                                            }}>
+                                                位置 {slot + 1} {slot === 0 && '(坦克位)'}
+                                            </div>
+
+                                            {char ? (
+                                                <>
+                                                    <div style={{
+                                                        fontSize: 32,
+                                                        marginBottom: 8
+                                                    }}>
+                                                        {char.classId === 'protection_warrior' ? '🛡️' :
+                                                            char.classId === 'discipline_priest' ? '✝️' :
+                                                                char.classId === 'frost_mage' ? '❄️' : '👤'}
+                                                    </div>
+                                                    <div style={{
+                                                        fontSize: 13,
+                                                        color: '#ffd700',
+                                                        fontWeight: 600,
+                                                        marginBottom: 4
+                                                    }}>
+                                                        {char.name}
+                                                    </div>
+                                                    <div style={{ fontSize: 11, color: '#888' }}>
+                                                        Lv.{char.level} {CLASSES[char.classId].name}
+                                                    </div>
+                                                    <div style={{
+                                                        fontSize: 10,
+                                                        color: '#4CAF50',
+                                                        marginTop: 4
+                                                    }}>
+                                                        HP: {char.stats.maxHp}
+                                                    </div>
+
+                                                    {/* 移除按钮 */}
+                                                    <button
+                                                        onClick={() => dispatch({
+                                                            type: 'SET_BOSS_TEAM_SLOT',
+                                                            payload: { slot, charId: null }
+                                                        })}
+                                                        style={{
+                                                            position: 'absolute',
+                                                            top: 8,
+                                                            right: 8,
+                                                            background: 'rgba(244,67,54,0.3)',
+                                                            border: '1px solid rgba(244,67,54,0.5)',
+                                                            borderRadius: 4,
+                                                            color: '#f44336',
+                                                            fontSize: 10,
+                                                            padding: '2px 6px',
+                                                            cursor: 'pointer'
+                                                        }}
+                                                    >
+                                                        ✕
+                                                    </button>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <div style={{
+                                                        fontSize: 32,
+                                                        opacity: 0.3,
+                                                        marginBottom: 8
+                                                    }}>
+                                                        ➕
+                                                    </div>
+                                                    <div style={{
+                                                        fontSize: 11,
+                                                        color: '#555',
+                                                        textAlign: 'center'
+                                                    }}>
+                                                        拖拽角色到此处
+                                                    </div>
+                                                </>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+
+                            {/* 队伍总属性 */}
+                            {teamStats.count > 0 && (
+                                <div style={{
+                                    marginTop: 12,
+                                    padding: 10,
+                                    background: 'rgba(76,175,80,0.1)',
+                                    borderRadius: 6,
+                                    border: '1px solid rgba(76,175,80,0.2)',
+                                    display: 'flex',
+                                    justifyContent: 'space-around'
+                                }}>
+                                    <div style={{ textAlign: 'center' }}>
+                                        <div style={{ fontSize: 10, color: '#888' }}>队伍总HP</div>
+                                        <div style={{ fontSize: 14, color: '#4CAF50', fontWeight: 600 }}>
+                                            {teamStats.totalHp.toLocaleString()}
+                                        </div>
+                                    </div>
+                                    <div style={{ textAlign: 'center' }}>
+                                        <div style={{ fontSize: 10, color: '#888' }}>总攻击</div>
+                                        <div style={{ fontSize: 14, color: '#ff9800', fontWeight: 600 }}>
+                                            {teamStats.totalAttack}
+                                        </div>
+                                    </div>
+                                    <div style={{ textAlign: 'center' }}>
+                                        <div style={{ fontSize: 10, color: '#888' }}>总法强</div>
+                                        <div style={{ fontSize: 14, color: '#2196F3', fontWeight: 600 }}>
+                                            {teamStats.totalSpellPower}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* 可用角色列表 */}
+                        <div style={{
+                            background: 'rgba(0,0,0,0.2)',
+                            borderRadius: 10,
+                            padding: 16,
+                            border: '1px solid rgba(201,162,39,0.2)',
+                            flex: 1
+                        }}>
+                            <div style={{
+                                fontSize: 14,
+                                color: '#c9a227',
+                                fontWeight: 600,
+                                marginBottom: 12
+                            }}>
+                                👥 可用角色 <span style={{ color: '#888', fontWeight: 400 }}>（拖拽到上方队伍位置）</span>
+                            </div>
+
+                            {available.length === 0 ? (
+                                <div style={{
+                                    textAlign: 'center',
+                                    padding: 30,
+                                    color: '#555'
+                                }}>
+                                    没有可用角色（角色可能已被派遣到其他区域）
+                                </div>
+                            ) : (
+                                <div style={{
+                                    display: 'grid',
+                                    gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
+                                    gap: 10,
+                                    maxHeight: 200,
+                                    overflowY: 'auto',
+                                    padding: 4
+                                }}>
+                                    {available.map(char => {
+                                        const isInTeam = state.bossTeam.includes(char.id);
+                                        return (
+                                            <div
+                                                key={char.id}
+                                                draggable={!isInTeam}
+                                                onDragStart={() => !isInTeam && setDragged(char.id)}
+                                                style={{
+                                                    padding: 12,
+                                                    background: isInTeam
+                                                        ? 'rgba(76,175,80,0.1)'
+                                                        : 'rgba(0,0,0,0.3)',
+                                                    border: isInTeam
+                                                        ? '1px solid rgba(76,175,80,0.3)'
+                                                        : '1px solid rgba(74,60,42,0.5)',
+                                                    borderRadius: 8,
+                                                    cursor: isInTeam ? 'default' : 'grab',
+                                                    opacity: isInTeam ? 0.6 : 1,
+                                                    transition: 'all 0.15s',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: 10
+                                                }}
+                                            >
+                                                <div style={{ fontSize: 24 }}>
+                                                    {char.classId === 'protection_warrior' ? '🛡️' :
+                                                        char.classId === 'discipline_priest' ? '✝️' :
+                                                            char.classId === 'frost_mage' ? '❄️' : '👤'}
+                                                </div>
+                                                <div>
+                                                    <div style={{
+                                                        fontSize: 12,
+                                                        color: isInTeam ? '#4CAF50' : '#ffd700',
+                                                        fontWeight: 600
+                                                    }}>
+                                                        {char.name} {isInTeam && '✓'}
+                                                    </div>
+                                                    <div style={{ fontSize: 10, color: '#888' }}>
+                                                        Lv.{char.level} {CLASSES[char.classId].name}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* 战斗策略 */}
+                        <div style={{
+                            background: 'rgba(0,0,0,0.2)',
+                            borderRadius: 10,
+                            padding: 16,
+                            border: '1px solid rgba(201,162,39,0.2)'
+                        }}>
+                            <div style={{
+                                fontSize: 14,
+                                color: '#c9a227',
+                                fontWeight: 600,
+                                marginBottom: 12
+                            }}>
+                                ⚙️ 战斗策略
+                            </div>
+
+                            <div style={{
+                                display: 'grid',
+                                gridTemplateColumns: '1fr 1fr',
+                                gap: 16
+                            }}>
+                                {/* 攻击优先级 */}
+                                <div style={{
+                                    padding: 12,
+                                    background: 'rgba(0,0,0,0.2)',
+                                    borderRadius: 8,
+                                    border: '1px solid rgba(74,60,42,0.3)'
+                                }}>
+                                    <div style={{ fontSize: 12, color: '#888', marginBottom: 8 }}>
+                                        攻击优先级
+                                    </div>
+                                    <div style={{ display: 'flex', gap: 8 }}>
+                                        <label style={{
+                                            flex: 1,
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: 6,
+                                            padding: '8px 12px',
+                                            background: state.bossStrategy.priorityBoss
+                                                ? 'rgba(244,67,54,0.15)'
+                                                : 'rgba(0,0,0,0.2)',
+                                            border: state.bossStrategy.priorityBoss
+                                                ? '1px solid rgba(244,67,54,0.4)'
+                                                : '1px solid transparent',
+                                            borderRadius: 6,
+                                            cursor: 'pointer',
+                                            fontSize: 11
+                                        }}>
+                                            <input
+                                                type="radio"
+                                                name="priority"
+                                                checked={state.bossStrategy.priorityBoss}
+                                                onChange={() => dispatch({
+                                                    type: 'SET_BOSS_STRATEGY',
+                                                    payload: { key: 'priorityBoss', value: true }
+                                                })}
+                                            />
+                                            <span style={{ color: state.bossStrategy.priorityBoss ? '#f44336' : '#888' }}>
+                                                🎯 优先Boss
+                                            </span>
+                                        </label>
+                                        <label style={{
+                                            flex: 1,
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: 6,
+                                            padding: '8px 12px',
+                                            background: !state.bossStrategy.priorityBoss
+                                                ? 'rgba(156,39,176,0.15)'
+                                                : 'rgba(0,0,0,0.2)',
+                                            border: !state.bossStrategy.priorityBoss
+                                                ? '1px solid rgba(156,39,176,0.4)'
+                                                : '1px solid transparent',
+                                            borderRadius: 6,
+                                            cursor: 'pointer',
+                                            fontSize: 11
+                                        }}>
+                                            <input
+                                                type="radio"
+                                                name="priority"
+                                                checked={!state.bossStrategy.priorityBoss}
+                                                onChange={() => dispatch({
+                                                    type: 'SET_BOSS_STRATEGY',
+                                                    payload: { key: 'priorityBoss', value: false }
+                                                })}
+                                            />
+                                            <span style={{ color: !state.bossStrategy.priorityBoss ? '#ce93d8' : '#888' }}>
+                                                👥 优先小弟
+                                            </span>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                {/* 站位选择 */}
+                                <div style={{
+                                    padding: 12,
+                                    background: 'rgba(0,0,0,0.2)',
+                                    borderRadius: 8,
+                                    border: '1px solid rgba(74,60,42,0.3)'
+                                }}>
+                                    <div style={{ fontSize: 12, color: '#888', marginBottom: 8 }}>
+                                        站位方式
+                                    </div>
+                                    <div style={{ display: 'flex', gap: 8 }}>
+                                        <label style={{
+                                            flex: 1,
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: 6,
+                                            padding: '8px 12px',
+                                            background: state.bossStrategy.stance === 'concentrated'
+                                                ? 'rgba(33,150,243,0.15)'
+                                                : 'rgba(0,0,0,0.2)',
+                                            border: state.bossStrategy.stance === 'concentrated'
+                                                ? '1px solid rgba(33,150,243,0.4)'
+                                                : '1px solid transparent',
+                                            borderRadius: 6,
+                                            cursor: 'pointer',
+                                            fontSize: 11
+                                        }}>
+                                            <input
+                                                type="radio"
+                                                name="stance"
+                                                checked={state.bossStrategy.stance === 'concentrated'}
+                                                onChange={() => dispatch({
+                                                    type: 'SET_BOSS_STRATEGY',
+                                                    payload: { key: 'stance', value: 'concentrated' }
+                                                })}
+                                            />
+                                            <span style={{ color: state.bossStrategy.stance === 'concentrated' ? '#64b5f6' : '#888' }}>
+                                                📍 集中站位
+                                            </span>
+                                        </label>
+                                        <label style={{
+                                            flex: 1,
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: 6,
+                                            padding: '8px 12px',
+                                            background: state.bossStrategy.stance === 'dispersed'
+                                                ? 'rgba(76,175,80,0.15)'
+                                                : 'rgba(0,0,0,0.2)',
+                                            border: state.bossStrategy.stance === 'dispersed'
+                                                ? '1px solid rgba(76,175,80,0.4)'
+                                                : '1px solid transparent',
+                                            borderRadius: 6,
+                                            cursor: 'pointer',
+                                            fontSize: 11
+                                        }}>
+                                            <input
+                                                type="radio"
+                                                name="stance"
+                                                checked={state.bossStrategy.stance === 'dispersed'}
+                                                onChange={() => dispatch({
+                                                    type: 'SET_BOSS_STRATEGY',
+                                                    payload: { key: 'stance', value: 'dispersed' }
+                                                })}
+                                            />
+                                            <span style={{ color: state.bossStrategy.stance === 'dispersed' ? '#81c784' : '#888' }}>
+                                                🔀 分散站位
+                                            </span>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <div style={{ marginTop: 20 }}>
-                    <h3>战斗策略</h3>
-                    <label style={{ display: 'block', marginBottom: 8 }}>
-                        <input
-                            type="checkbox"
-                            checked={state.bossStrategy.priorityBoss}
-                            onChange={e => dispatch({ type: 'SET_BOSS_STRATEGY', payload: { key: 'priorityBoss', value: e.target.checked } })}
-                        />
-                        优先攻击Boss（否则优先清理小弟）
-                    </label>
-                    <div>
-                        站位：
-                        <label style={{ marginRight: 16 }}>
-                            <input type="radio" name="stance" checked={state.bossStrategy.stance === 'concentrated'}
-                                   onChange={() => dispatch({ type: 'SET_BOSS_STRATEGY', payload: { key: 'stance', value: 'concentrated' } })} />
-                            集中站位
-                        </label>
-                        <label>
-                            <input type="radio" name="stance" checked={state.bossStrategy.stance === 'dispersed'}
-                                   onChange={() => dispatch({ type: 'SET_BOSS_STRATEGY', payload: { key: 'stance', value: 'dispersed' } })} />
-                            分散站位
-                        </label>
-                    </div>
-                </div>
-
-                <div style={{ marginTop: 24, textAlign: 'center' }}>
-                    <Button onClick={() => dispatch({ type: 'START_BOSS_COMBAT' })} style={{ marginRight: 12 }}>
-                        开始战斗
+                {/* 底部按钮区 */}
+                <div style={{
+                    padding: '16px 24px',
+                    borderTop: '1px solid rgba(201,162,39,0.2)',
+                    background: 'linear-gradient(180deg, transparent, rgba(139,105,20,0.1))',
+                    display: 'flex',
+                    justifyContent: 'center',
+                    gap: 16
+                }}>
+                    <Button
+                        onClick={() => dispatch({ type: 'START_BOSS_COMBAT' })}
+                        disabled={teamStats.count === 0}
+                        style={{
+                            padding: '12px 40px',
+                            fontSize: 16,
+                            fontWeight: 700
+                        }}
+                    >
+                        ⚔️ 开始战斗
                     </Button>
-                    <Button variant="secondary" onClick={() => dispatch({ type: 'CLOSE_BOSS_PREPARE' })}>
+                    <Button
+                        variant="secondary"
+                        onClick={() => dispatch({ type: 'CLOSE_BOSS_PREPARE' })}
+                        style={{
+                            padding: '12px 30px'
+                        }}
+                    >
                         取消
                     </Button>
                 </div>
+
+                {/* 底部装饰条 */}
+                <div style={{
+                    height: 4,
+                    background: 'linear-gradient(90deg, transparent, #c9a227, #ffd700, #c9a227, transparent)',
+                    borderRadius: '0 0 16px 16px'
+                }} />
             </div>
         </div>
     );

@@ -1180,7 +1180,7 @@ const DROP_TABLES = {
             { id: 'EQ_053', chance: 0.003 },  // 0.3%
             { id: 'EQ_054', chance: 0.003 },  // 0.3%
             { id: 'EQ_055', chance: 0.001 },  // 0.1%
-            { id: 'EQ_056', chance: 0.01 },   // 1%
+            { id: 'EQ_056', chance: 0.003 },   // 0.3%
             { id: 'EQ_057', chance: 0.001 },  // 0.1%
             { id: 'EQ_058', chance: 0.003 },  // 0.3%
             { id: 'EQ_059', chance: 0.003 },  // 0.3%

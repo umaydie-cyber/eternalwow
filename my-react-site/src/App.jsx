@@ -1947,6 +1947,7 @@ const FIXED_EQUIPMENTS = {
     EQ_038: {
         id: 'EQ_038',
         name: '元素石脊护腿',
+        icon: "icons/wow/vanilla/armor/INV_Pants_04.png",
         type: 'equipment',
         slot: 'legs',
         rarity: 'blue',
@@ -1966,6 +1967,7 @@ const FIXED_EQUIPMENTS = {
     EQ_039: {
         id: 'EQ_039',
         name: '黑石戒指',
+        icon: "icons/wow/vanilla/armor/INV_Jewelry_Ring_17.png",
         type: 'equipment',
         slot: 'ring2',
         rarity: 'blue',
@@ -1987,6 +1989,7 @@ const FIXED_EQUIPMENTS = {
     EQ_040: {
         id: 'EQ_040',
         name: '吉兹洛克的高科技圆盾',
+        icon: "icons/wow/vanilla/armor/INV_Shield_10.png",
         type: 'equipment',
         slot: 'offHand',
         rarity: 'blue',
@@ -2008,6 +2011,7 @@ const FIXED_EQUIPMENTS = {
     EQ_041: {
         id: 'EQ_041',
         name: '反击者桑萨斯',
+        icon: "icons/wow/vanilla/weapons/INV_Sword_45.png",
         type: 'equipment',
         slot: 'mainHand',
         rarity: 'purple',
@@ -2027,6 +2031,7 @@ const FIXED_EQUIPMENTS = {
     EQ_042: {
         id: 'EQ_042',
         name: '保护者加萨斯',
+        icon: "icons/wow/vanilla/weapons/INV_Sword_43.png",
         type: 'equipment',
         slot: 'offHand',
         rarity: 'purple',
@@ -2046,6 +2051,7 @@ const FIXED_EQUIPMENTS = {
     EQ_043: {
         id: 'EQ_043',
         name: '祖穆拉恩的能量法杖',
+        icon: "icons/wow/vanilla/weapons/INV_Staff_10.png",
         type: 'equipment',
         slot: 'mainHand',
         rarity: 'blue',
@@ -2065,6 +2071,7 @@ const FIXED_EQUIPMENTS = {
     EQ_044: {
         id: 'EQ_044',
         name: '鞭笞者苏萨斯',
+        icon: "icons/wow/vanilla/weapons/INV_Sword_40.png",
         type: 'equipment',
         slot: 'mainHand',
         rarity: 'orange',
@@ -2088,6 +2095,7 @@ const FIXED_EQUIPMENTS = {
     EQ_045: {
         id: 'EQ_045',
         name: '大坏蛋面具',
+        icon: "icons/wow/vanilla/items/INV_Banner_01.png",
         type: 'equipment',
         slot: 'head',
         rarity: 'blue',
@@ -2109,6 +2117,7 @@ const FIXED_EQUIPMENTS = {
     EQ_046: {
         id: 'EQ_046',
         name: '狂乱者的拥抱',
+        icon: "icons/wow/vanilla/abilities/Ability_Mount_WhiteDireWolf.png",
         type: 'equipment',
         slot: 'chest',
         rarity: 'blue',
@@ -2130,6 +2139,7 @@ const FIXED_EQUIPMENTS = {
     EQ_047: {
         id: 'EQ_047',
         name: '大坏蛋肩甲',
+        icon: "icons/wow/vanilla/armor/INV_Shoulder_01.png",
         type: 'equipment',
         slot: 'shoulder',
         rarity: 'blue',
@@ -2149,6 +2159,7 @@ const FIXED_EQUIPMENTS = {
     EQ_048: {
         id: 'EQ_048',
         name: '闪亮腰带',
+        icon: "icons/wow/vanilla/armor/INV_Belt_22.png",
         type: 'equipment',
         slot: 'belt',
         rarity: 'green',
@@ -8217,7 +8228,7 @@ const CodexPage = ({ state, dispatch }) => {
                                         disabledDrop={disabledDrop}
                                     >
                                         <div style={{ fontSize: 26, marginBottom: 6 }}>
-                                            {icon}
+                                            <ItemIcon item={tpl} size={28} />
                                         </div>
 
                                         <div style={{

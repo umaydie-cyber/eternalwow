@@ -2570,7 +2570,57 @@ const STRANGLETHORN_LV100_SET = ['EQ_027', 'EQ_028', 'EQ_029', 'EQ_030', 'EQ_031
 
 // 凄凉之地 6 件装备全部达到过 Lv.100 → 全队精通 +5
 const DESOLACE_LV100_SET = ['EQ_035', 'EQ_036', 'EQ_037', 'EQ_038', 'EQ_039', 'EQ_040'];
+// 血色修道院 13 件装备全部达到过 Lv.100 → 全队攻击强度+200 法术强度+200
+const SCARLET_MONASTERY_LV100_SET = [
+    'EQ_049', 'EQ_050', 'EQ_051', 'EQ_052', 'EQ_053', 'EQ_054',
+    'EQ_055', 'EQ_056', 'EQ_057', 'EQ_058', 'EQ_059', 'EQ_060', 'EQ_061'
+];
 
+// ==================== 图鉴集齐效果配置 ====================
+const CODEX_SET_EFFECTS = [
+    {
+        id: 'redridge',
+        name: '赤脊山',
+        equipIds: REDRIDGE_LV100_SET,
+        effect: '全队全能 +5',
+        color: '#4CAF50'
+    },
+    {
+        id: 'barrens',
+        name: '贫瘠之地',
+        equipIds: BARRENS_LV100_SET,
+        effect: '全队爆击率 +5%',
+        color: '#ff9800'
+    },
+    {
+        id: 'stranglethorn',
+        name: '荆棘谷',
+        equipIds: STRANGLETHORN_LV100_SET,
+        effect: '全队急速 +5',
+        color: '#2196F3'
+    },
+    {
+        id: 'desolace',
+        name: '凄凉之地',
+        equipIds: DESOLACE_LV100_SET,
+        effect: '全队精通 +5',
+        color: '#9C27B0'
+    },
+    {
+        id: 'scarlet_monastery',
+        name: '血色修道院',
+        equipIds: SCARLET_MONASTERY_LV100_SET,
+        effect: '全队攻击 +200，法强 +200',
+        color: '#f44336'
+    },
+    {
+        id: 'susas',
+        name: '鞭笞者苏萨斯',
+        equipIds: ['EQ_044'],
+        effect: '全队全能 +5，急速 +10，精通 +10',
+        color: '#ff8000'
+    }
+];
 
 // ==================== RARITY COLORS ====================
 const RARITY_COLORS = {
@@ -3096,6 +3146,16 @@ function calculateTotalStats(character, partyAuras = { hpMul: 1, spellPowerMul: 
         totalStats.mastery = (totalStats.mastery || 0) + 5;
     }
 
+    // 血色修道院 13 件装备全部达到过 Lv.100 → 全队攻击强度+200 法术强度+200
+    if (
+        gameState &&
+        Array.isArray(gameState.codexEquipLv100) &&
+        SCARLET_MONASTERY_LV100_SET.every(id => gameState.codexEquipLv100.includes(id))
+    ) {
+        totalStats.attack = (totalStats.attack || 0) + 200;
+        totalStats.spellPower = (totalStats.spellPower || 0) + 200;
+    }
+
     // 鞭笞者苏萨斯（EQ_044）点亮 100级图鉴：全队 全能+5 急速+10 精通+10
     if (gameState && Array.isArray(gameState.codexEquipLv100) &&
         gameState.codexEquipLv100.includes('EQ_044')) {
@@ -3154,7 +3214,7 @@ function calculateTotalStats(character, partyAuras = { hpMul: 1, spellPowerMul: 
 
         // 只放大“原始格挡率 / 原始格挡值”
         //totalStats.blockRate += totalStats.blockRate * masteryBonusPct;
-        totalStats.blockValue += totalStats.blockRate * masteryBonusPct;
+        totalStats.blockValue += totalStats.blockValue * masteryBonusPct;
     }
 
     // ==================== 戒律牧师精通：救赎（1级被动） ====================
@@ -8540,28 +8600,17 @@ const AchievementPage = ({ state }) => {
 
 // ==================== PAGE: CODEX ====================
 const CodexPage = ({ state, dispatch }) => {
-    const [tab, setTab] = React.useState('equipment'); // 'equipment' | 'junk'
+    const [tab, setTab] = React.useState('equipment'); // 'equipment' | 'junk' | 'effects'
 
     const allowDrop = (id) => state.dropFilters?.[id] !== false;
 
     // ===== 装备图鉴 =====
     const allEquipTemplates = Object.values(FIXED_EQUIPMENTS);
     const equipCodexSet = new Set(state.codex || []);
+    const lv100CodexSet = new Set(state.codexEquipLv100 || []);
 
     const hasLevel100 = (equipmentId) => {
-        const inv100 = state.inventory.some(it =>
-            it?.type === 'equipment' &&
-            it?.id === equipmentId &&
-            (it?.currentLevel ?? it?.level ?? 0) >= 100
-        );
-
-        const equip100 = state.characters.some(char =>
-            Object.values(char.equipment || {}).some(eq =>
-                eq?.id === equipmentId && (eq?.currentLevel ?? eq?.level ?? 0) >= 100
-            )
-        );
-
-        return inv100 || equip100;
+        return lv100CodexSet.has(equipmentId);
     };
 
     // ===== 垃圾图鉴 =====
@@ -8644,27 +8693,220 @@ const CodexPage = ({ state, dispatch }) => {
                     borderRadius: 999,
                     border: '1px solid rgba(255,80,80,0.5)'
                 }}>
-                    🚫 禁用掉落
+                    🚫
                 </div>
             )}
         </div>
     );
 
+    // ===== 图鉴集齐效果渲染 =====
+    const renderEffectsTab = () => {
+        return (
+            <div>
+                <div style={{ fontSize: 12, color: '#888', marginBottom: 16 }}>
+                    集齐指定区域的所有装备 Lv.100 图鉴后，全队永久获得对应加成
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    {CODEX_SET_EFFECTS.map(effect => {
+                        const collected = effect.equipIds.filter(id => lv100CodexSet.has(id)).length;
+                        const total = effect.equipIds.length;
+                        const isComplete = collected === total;
+                        const progress = collected / total;
+
+                        return (
+                            <div
+                                key={effect.id}
+                                style={{
+                                    padding: 16,
+                                    background: isComplete
+                                        ? `linear-gradient(135deg, ${effect.color}22, ${effect.color}11)`
+                                        : 'rgba(0,0,0,0.3)',
+                                    border: isComplete
+                                        ? `2px solid ${effect.color}`
+                                        : '1px solid #4a3c2a',
+                                    borderRadius: 10,
+                                    boxShadow: isComplete ? `0 0 20px ${effect.color}33` : 'none',
+                                    transition: 'all 0.3s'
+                                }}
+                            >
+                                <div style={{
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center',
+                                    marginBottom: 10
+                                }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                        <span style={{
+                                            fontSize: 20,
+                                            filter: isComplete ? 'none' : 'grayscale(100%)',
+                                            opacity: isComplete ? 1 : 0.5
+                                        }}>
+                                            {isComplete ? '✅' : '🔒'}
+                                        </span>
+                                        <span style={{
+                                            fontSize: 16,
+                                            fontWeight: 700,
+                                            color: isComplete ? effect.color : '#888'
+                                        }}>
+                                            {effect.name}
+                                        </span>
+                                    </div>
+
+                                    <span style={{
+                                        fontSize: 13,
+                                        fontWeight: 600,
+                                        color: isComplete ? '#4CAF50' : '#888',
+                                        padding: '4px 10px',
+                                        background: isComplete ? 'rgba(76,175,80,0.15)' : 'rgba(0,0,0,0.2)',
+                                        borderRadius: 6,
+                                        border: isComplete ? '1px solid rgba(76,175,80,0.3)' : '1px solid #333'
+                                    }}>
+                                        {collected}/{total}
+                                    </span>
+                                </div>
+
+                                {/* 进度条 */}
+                                <div style={{
+                                    height: 6,
+                                    background: 'rgba(0,0,0,0.4)',
+                                    borderRadius: 3,
+                                    overflow: 'hidden',
+                                    marginBottom: 10
+                                }}>
+                                    <div style={{
+                                        height: '100%',
+                                        width: `${progress * 100}%`,
+                                        background: isComplete
+                                            ? `linear-gradient(90deg, ${effect.color}, ${effect.color}cc)`
+                                            : 'linear-gradient(90deg, #666, #888)',
+                                        borderRadius: 3,
+                                        transition: 'width 0.3s'
+                                    }} />
+                                </div>
+
+                                {/* 效果描述 */}
+                                <div style={{
+                                    fontSize: 13,
+                                    color: isComplete ? '#fff' : '#666',
+                                    padding: '8px 12px',
+                                    background: isComplete ? 'rgba(0,0,0,0.3)' : 'rgba(0,0,0,0.15)',
+                                    borderRadius: 6,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 8
+                                }}>
+                                    <span style={{ color: effect.color, fontWeight: 700 }}>效果：</span>
+                                    <span style={{
+                                        color: isComplete ? '#ffd700' : '#666',
+                                        fontWeight: isComplete ? 600 : 400
+                                    }}>
+                                        {effect.effect}
+                                    </span>
+                                    {isComplete && (
+                                        <span style={{
+                                            marginLeft: 'auto',
+                                            fontSize: 11,
+                                            color: '#4CAF50',
+                                            fontWeight: 700
+                                        }}>
+                                            生效中
+                                        </span>
+                                    )}
+                                </div>
+
+                                {/* 装备列表（折叠显示） */}
+                                <details style={{ marginTop: 10 }}>
+                                    <summary style={{
+                                        cursor: 'pointer',
+                                        fontSize: 11,
+                                        color: '#888',
+                                        outline: 'none'
+                                    }}>
+                                        查看装备列表
+                                    </summary>
+                                    <div style={{
+                                        marginTop: 8,
+                                        display: 'flex',
+                                        flexWrap: 'wrap',
+                                        gap: 6
+                                    }}>
+                                        {effect.equipIds.map(id => {
+                                            const tpl = FIXED_EQUIPMENTS[id];
+                                            const has100 = lv100CodexSet.has(id);
+                                            return (
+                                                <span
+                                                    key={id}
+                                                    style={{
+                                                        fontSize: 10,
+                                                        padding: '3px 8px',
+                                                        borderRadius: 4,
+                                                        background: has100 ? 'rgba(76,175,80,0.2)' : 'rgba(0,0,0,0.3)',
+                                                        border: has100 ? '1px solid rgba(76,175,80,0.5)' : '1px solid #333',
+                                                        color: has100 ? '#4CAF50' : '#666'
+                                                    }}
+                                                >
+                                                    {has100 ? '✓' : '○'} {tpl?.name || id}
+                                                </span>
+                                            );
+                                        })}
+                                    </div>
+                                </details>
+                            </div>
+                        );
+                    })}
+                </div>
+
+                {/* 统计总览 */}
+                <div style={{
+                    marginTop: 20,
+                    padding: 16,
+                    background: 'rgba(201,162,39,0.1)',
+                    border: '1px solid rgba(201,162,39,0.3)',
+                    borderRadius: 10
+                }}>
+                    <div style={{ fontSize: 14, color: '#c9a227', fontWeight: 700, marginBottom: 10 }}>
+                        📊 集齐进度总览
+                    </div>
+                    <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+                        {CODEX_SET_EFFECTS.map(effect => {
+                            const collected = effect.equipIds.filter(id => lv100CodexSet.has(id)).length;
+                            const total = effect.equipIds.length;
+                            const isComplete = collected === total;
+                            return (
+                                <div key={effect.id} style={{
+                                    fontSize: 12,
+                                    color: isComplete ? effect.color : '#666'
+                                }}>
+                                    {isComplete ? '✅' : '⬜'} {effect.name}
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
     return (
         <Panel
-            title="图鉴（点击卡片开关掉落）"
+            title="图鉴"
             actions={
                 <div style={{ display: 'flex', gap: 8 }}>
+                    <TabButton id="effects">⚡ 集齐效果</TabButton>
                     <TabButton id="equipment">🛡️ 装备</TabButton>
                     <TabButton id="junk">🧺 垃圾</TabButton>
                 </div>
             }
         >
+            {/* ===== 集齐效果 ===== */}
+            {tab === 'effects' && renderEffectsTab()}
+
             {/* ===== 装备图鉴 ===== */}
             {tab === 'equipment' && (
                 <>
                     <div style={{ fontSize: 12, color: '#888', marginBottom: 12 }}>
-                        ✅ 点亮：已获得过（state.codex）　|　✨ 亮色边框：该装备已合成到 Lv.100
+                        ✅ 点亮：已获得过　|　✨ 金边：已达 Lv.100　|　点击切换掉落开关
                     </div>
 
                     <div style={{
@@ -8675,7 +8917,6 @@ const CodexPage = ({ state, dispatch }) => {
                         {allEquipTemplates.map((tpl) => {
                             const unlocked = equipCodexSet.has(tpl.id);
                             const lv100 = hasLevel100(tpl.id);
-                            const icon = EQUIPMENT_SLOTS[tpl.slot]?.icon || '📦';
 
                             const dropEnabled = allowDrop(tpl.id);
                             const disabledDrop = !dropEnabled;
@@ -8726,7 +8967,7 @@ const CodexPage = ({ state, dispatch }) => {
                                                 color: '#ffd700',
                                                 fontWeight: 900
                                             }}>
-                                                Lv.100
+                                                Lv.100 ✨
                                             </div>
                                         )}
 
@@ -8743,7 +8984,7 @@ const CodexPage = ({ state, dispatch }) => {
             {tab === 'junk' && (
                 <>
                     <div style={{ fontSize: 12, color: '#888', marginBottom: 12 }}>
-                        ✅ 点亮：已获得过该垃圾（state.codexJunk）
+                        ✅ 点亮：已获得过该垃圾　|　点击切换掉落开关
                     </div>
 
                     <div style={{
@@ -8810,7 +9051,7 @@ const CodexPage = ({ state, dispatch }) => {
 
                         {allJunkTemplates.length === 0 && (
                             <div style={{ color: '#666', fontSize: 12 }}>
-                                当前没有定义垃圾物品（ITEMS 中 type === 'junk' 的条目为空）
+                                当前没有定义垃圾物品
                             </div>
                         )}
                     </div>

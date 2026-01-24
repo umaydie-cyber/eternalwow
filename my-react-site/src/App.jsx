@@ -2377,6 +2377,7 @@ const EQUIPMENT_SLOTS = {
     head: { name: '头部', icon: '⛑️' },
     neck: { name: '项链', icon: '📿' },
     shoulder: { name: '肩膀', icon: '🎽' },
+    cloak: { name: '披风', icon: '🧥' },
     chest: { name: '胸甲', icon: '🛡️' },
     wrist: { name: '手腕', icon: '⌚' },
     hands: { name: '手套', icon: '🧤' },

@@ -2357,7 +2357,7 @@ const FIXED_EQUIPMENTS = {
     EQ_053: {
         id: 'EQ_053',
         name: '血色十字军战靴',
-        icon: "icons/wow/vanilla/armor/INV_Boots_Chain_06.png",
+        icon: "icons/wow/vanilla/armor/INV_Boots_02.png",
         type: 'equipment',
         slot: 'feet',
         rarity: 'blue',
@@ -2427,7 +2427,7 @@ const FIXED_EQUIPMENTS = {
     EQ_056: {
         id: 'EQ_056',
         name: '圣使护符',
-        icon: "icons/wow/vanilla/armor/INV_Jewelry_Necklace_29.png",
+        icon: "icons/wow/vanilla/armor/INV_Jewelry_Amulet_01.png",
         type: 'equipment',
         slot: 'neck',
         rarity: 'blue',

@@ -1057,6 +1057,42 @@ const ZONES = {
         unlocked: false,
         unlockLevel: 45
     },
+    blackrock_depths: {
+        id: 'blackrock_depths',
+        name: '黑石深渊',
+        level: 50,
+        type: 'explore',
+        enemies: [
+            {
+                name: '黑铁矮人守卫',
+                hp: 132000,
+                attack: 1500,
+                defense: 700,
+                exp: 5000,
+                gold: 5500
+            },
+            {
+                name: '被奴役的土元素',
+                hp: 150000,
+                attack: 1300,
+                defense: 900,
+                exp: 5500,
+                gold: 5000
+            },
+            {
+                name: '战斗傀儡',
+                hp: 182000,
+                attack: 1700,
+                defense: 750,
+                exp: 6500,
+                gold: 6000
+            }
+        ],
+        resources: ['铁矿', '矿石'],
+        unlocked: false,
+        unlockLevel: 50
+    },
+
 
 };
 
@@ -1188,6 +1224,13 @@ const DROP_TABLES = {
             { id: 'EQ_061', chance: 0.003 }   // 0.3%
         ]
     },
+    blackrock_depths: {
+        equipment: [
+            { id: 'EQ_062', chance: 0.003 }, // 0.3%
+            { id: 'EQ_063', chance: 0.003 }  // 0.3%
+        ]
+    },
+
 
 };
 
@@ -2539,7 +2582,7 @@ const FIXED_EQUIPMENTS = {
     EQ_061: {
         id: 'EQ_061',
         name: '遗忘先知宝珠',
-        icon: "icons/wow/vanilla/items/INV_Misc_Orb_01.png",
+        icon: "icons/wow/vanilla/items/INV_Misc_Orb_02.png",
         type: 'equipment',
         slot: 'offHand',
         rarity: 'blue',
@@ -2558,6 +2601,34 @@ const FIXED_EQUIPMENTS = {
             haste: 2
         }
     },
+    EQ_062: {
+        id: 'EQ_062',
+        name: '正义之手',
+        icon: "icons/wow/vanilla/armor/INV_Jewelry_Talisman_01.png",
+        type: 'equipment',
+        slot: 'trinket1',
+        rarity: 'blue',
+
+        level: 0,
+        maxLevel: 100,
+
+        baseStats: {
+            attack: 350,
+            haste: 10,
+            mastery: 10
+        },
+        growth: {
+            attack: 2,
+            haste: 2,
+            mastery: 2
+        },
+
+        specialEffect: {
+            type: 'basic_attack_repeat',
+            chance: 0.20
+        }
+    },
+
 };
 
 //赤脊山5件图鉴100级点亮效果

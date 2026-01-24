@@ -5311,24 +5311,33 @@ function gameReducer(state, action) {
                                 }
                             }
 
-                            // ✅ 装备掉落：使用掉落表（例如第一张图 elwynn_forest 掉初心者套装）
+                            // ✅ 新增：记录掉落物品
+                            const droppedItems = [];
+
+                            // ✅ 装备掉落（修改版：记录掉落信息）
                             const dropTable = DROP_TABLES[zone.id];
                             if (dropTable?.equipment && newState.inventory.length < newState.inventorySize) {
-                                const allowDrop = (id) => state.dropFilters?.[id] !== false; // 默认允许
+                                const allowDrop = (id) => state.dropFilters?.[id] !== false;
+                                const achDropBonus = getAchievementDropBonus(newState);
+
                                 dropTable.equipment.filter(drop => allowDrop(drop.id)).forEach(drop => {
                                     if (newState.inventory.length >= newState.inventorySize) return;
-                                    const achDropBonus = getAchievementDropBonus(newState);
-                                    dropTable.equipment.filter(drop => allowDrop(drop.id)).forEach(drop => {
-                                        if (newState.inventory.length >= newState.inventorySize) return;
 
-                                        const base = (drop.chance ?? 0);
-                                        const effective = Math.min(1, base * (1 + achDropBonus)); // 20% *1.05 => 21%
-                                        if (Math.random() < effective) {
-                                            newState.inventory.push(createEquipmentInstance(drop.id));
-                                            newState = addEquipmentIdToCodex(newState, drop.id);
-                                        }
-                                    });
+                                    const baseChance = drop.chance ?? 0;
+                                    const effectiveChance = Math.min(1, baseChance * (1 + achDropBonus));
 
+                                    if (Math.random() < effectiveChance) {
+                                        const instance = createEquipmentInstance(drop.id);
+                                        newState.inventory.push(instance);
+                                        newState = addEquipmentIdToCodex(newState, drop.id);
+
+                                        // ✅ 记录掉落信息
+                                        droppedItems.push({
+                                            name: instance.name,
+                                            rarity: instance.rarity,
+                                            chance: baseChance * 100 // 转换为百分比
+                                        });
+                                    }
                                 });
                             }
 
@@ -5339,7 +5348,9 @@ function gameReducer(state, action) {
 
                                 dropTable.items.filter(drop => allowDrop(drop.id)).forEach(drop => {
                                     if (newState.inventory.length >= newState.inventorySize) return;
-                                    if (Math.random() < (drop.chance ?? 0)) {
+
+                                    const baseChance = drop.chance ?? 0;
+                                    if (Math.random() < baseChance) {
                                         const tpl = ITEMS[drop.id];
                                         if (tpl) {
                                             newState.inventory.push({
@@ -5348,8 +5359,29 @@ function gameReducer(state, action) {
                                                 id: tpl.id,            // 保持模板 id: IT_001
                                             });
                                             newState = addJunkIdToCodex(newState, drop.id);
+
+                                            // ✅ 记录掉落信息
+                                            droppedItems.push({
+                                                name: tpl.name,
+                                                rarity: tpl.rarity || 'white',
+                                                chance: baseChance * 100
+                                            });
                                         }
                                     }
+                                });
+                            }
+
+                            // ✅ 将掉落信息添加到战斗日志
+                            if (droppedItems.length > 0) {
+                                droppedItems.forEach(item => {
+                                    finalLogs.push({
+                                        round: '结算',
+                                        kind: 'drop',
+                                        itemName: item.name,
+                                        rarity: item.rarity,
+                                        chance: item.chance,
+                                        text: `🎁 掉落【${item.name}】，概率：${item.chance < 1 ? item.chance.toFixed(2) : item.chance.toFixed(1)}%`
+                                    });
                                 });
                             }
 
@@ -6627,6 +6659,35 @@ function renderCombatLogLine(entry) {
         );
     }
 
+    // ✅ 新增：掉落日志
+    if (e.kind === 'drop') {
+        const rarityColors = {
+            white: '#d9d9d9',
+            green: '#1eff00',
+            blue: '#0070dd',
+            purple: '#a335ee',
+            orange: '#ff8000'
+        };
+        const color = rarityColors[e.rarity] || '#ffd700';
+
+        return (
+            <>
+                <span style={{ color: '#ffd700' }}>🎁 掉落</span>
+                {' '}
+                <span style={{
+                    color: color,
+                    fontWeight: 600,
+                    textShadow: `0 0 6px ${color}66`
+                }}>
+                    【{e.itemName}】
+                </span>
+                <span style={{ color: '#888', marginLeft: 8, fontSize: '0.9em' }}>
+                    概率：{e.chance < 1 ? e.chance.toFixed(2) : e.chance.toFixed(1)}%
+                </span>
+            </>
+        );
+    }
+
     // 被动触发：不显示“使用”，也不重复显示施放者（统一由文本自身表达）
     if (e.kind === 'proc') {
         return (
@@ -6816,6 +6877,36 @@ const CombatLogsModal = ({ logs, onClose, onClear }) => {
                                         </div>
                                     ))}
                                 </div>
+
+                                {/* 在奖励显示后添加掉落摘要 */}
+                                {log.drops && log.drops.length > 0 && (
+                                    <div style={{
+                                        marginTop: 8,
+                                        paddingTop: 8,
+                                        borderTop: '1px solid rgba(255,255,255,0.1)',
+                                        fontSize: 12
+                                    }}>
+                                        <span style={{ color: '#ffd700', marginRight: 8 }}>🎁 掉落：</span>
+                                        {log.drops.map((drop, idx) => {
+                                            const rarityColors = {
+                                                white: '#d9d9d9',
+                                                green: '#1eff00',
+                                                blue: '#0070dd',
+                                                purple: '#a335ee',
+                                                orange: '#ff8000'
+                                            };
+                                            const color = rarityColors[drop.rarity] || '#ffd700';
+                                            return (
+                                                <span key={idx} style={{ marginRight: 12 }}>
+                                                <span style={{ color: color, fontWeight: 600 }}>{drop.name}</span>
+                                                <span style={{ color: '#666', fontSize: 10, marginLeft: 4 }}>
+                                                    ({drop.chance < 1 ? drop.chance.toFixed(2) : drop.chance.toFixed(1)}%)
+                                                </span>
+                                                </span>
+                                            );
+                                        })}
+                                    </div>
+                                )}
 
                                 {log.rewards && (
                                     <div style={{

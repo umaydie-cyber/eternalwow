@@ -1014,6 +1014,49 @@ const ZONES = {
         unlocked: false,
         unlockLevel: 40
     },
+    scarlet_monastery: {
+        id: 'scarlet_monastery',
+        name: '血色修道院',
+        level: 45,
+        type: 'explore',
+        enemies: [
+            {
+                name: '血色拷问者',
+                hp: 72000,
+                attack: 800,
+                defense: 500,
+                exp: 4000,
+                gold: 4000
+            },
+            {
+                name: '血色僧侣',
+                hp: 100000,
+                attack: 500,
+                defense: 600,
+                exp: 4500,
+                gold: 5000
+            },
+            {
+                name: '血色招魂师',
+                hp: 82000,
+                attack: 700,
+                defense: 550,
+                exp: 4500,
+                gold: 5000
+            },
+            {
+                name: '血色巫师',
+                hp: 90000,
+                attack: 800,
+                defense: 600,
+                exp: 5000,
+                gold: 5500
+            }
+        ],
+        resources: ['草药', '毛皮'],
+        unlocked: false,
+        unlockLevel: 45
+    },
 
 };
 
@@ -1127,7 +1170,24 @@ const DROP_TABLES = {
             { id: 'EQ_047', chance: 0.003 }, // 0.3%
             { id: 'EQ_048', chance: 0.01  }  // 1%
         ]
-    }
+    },
+    scarlet_monastery: {
+        equipment: [
+            { id: 'EQ_049', chance: 0.01 },   // 1%
+            { id: 'EQ_050', chance: 0.003 },  // 0.3%
+            { id: 'EQ_051', chance: 0.003 },  // 0.3%
+            { id: 'EQ_052', chance: 0.01 },   // 1%
+            { id: 'EQ_053', chance: 0.003 },  // 0.3%
+            { id: 'EQ_054', chance: 0.003 },  // 0.3%
+            { id: 'EQ_055', chance: 0.001 },  // 0.1%
+            { id: 'EQ_056', chance: 0.01 },   // 1%
+            { id: 'EQ_057', chance: 0.001 },  // 0.1%
+            { id: 'EQ_058', chance: 0.003 },  // 0.3%
+            { id: 'EQ_059', chance: 0.003 },  // 0.3%
+            { id: 'EQ_060', chance: 0.003 },  // 0.3%
+            { id: 'EQ_061', chance: 0.003 }   // 0.3%
+        ]
+    },
 
 };
 
@@ -2197,6 +2257,307 @@ const FIXED_EQUIPMENTS = {
             versatility: 2
         }
     },
+    // ==================== 血色修道院装备 ====================
+    EQ_049: {
+        id: 'EQ_049',
+        name: '血色十字军腰带',
+        icon: "icons/wow/vanilla/armor/INV_Belt_16.png",
+        type: 'equipment',
+        slot: 'belt',
+        rarity: 'green',
+        setId: 'scarlet_crusader',
+        setName: '血色十字军',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            hp: 500,
+            armor: 50,
+            versatility: 10,
+            blockRate: 2
+        },
+        growth: {
+            hp: 2,
+            armor: 2,
+            versatility: 2,
+            blockRate: 2
+        }
+    },
+    EQ_050: {
+        id: 'EQ_050',
+        name: '血色十字军护胸',
+        icon: "icons/wow/vanilla/armor/INV_Chest_Chain_16.png",
+        type: 'equipment',
+        slot: 'chest',
+        rarity: 'blue',
+        setId: 'scarlet_crusader',
+        setName: '血色十字军',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            hp: 600,
+            armor: 80,
+            mastery: 10,
+            blockRate: 3
+        },
+        growth: {
+            hp: 2,
+            armor: 2,
+            mastery: 2,
+            blockRate: 2
+        }
+    },
+    EQ_051: {
+        id: 'EQ_051',
+        name: '血色十字军护腿',
+        icon: "icons/wow/vanilla/armor/INV_Pants_06.png",
+        type: 'equipment',
+        slot: 'legs',
+        rarity: 'blue',
+        setId: 'scarlet_crusader',
+        setName: '血色十字军',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            hp: 600,
+            armor: 80,
+            mastery: 10,
+            versatility: 10
+        },
+        growth: {
+            hp: 2,
+            armor: 2,
+            mastery: 2,
+            versatility: 2
+        }
+    },
+    EQ_052: {
+        id: 'EQ_052',
+        name: '血色十字军护手',
+        icon: "icons/wow/vanilla/armor/INV_Gauntlets_26.png",
+        type: 'equipment',
+        slot: 'hands',
+        rarity: 'green',
+        setId: 'scarlet_crusader',
+        setName: '血色十字军',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            hp: 500,
+            armor: 50,
+            mastery: 10,
+            blockRate: 2
+        },
+        growth: {
+            hp: 2,
+            armor: 2,
+            mastery: 2,
+            blockRate: 2
+        }
+    },
+    EQ_053: {
+        id: 'EQ_053',
+        name: '血色十字军战靴',
+        icon: "icons/wow/vanilla/armor/INV_Boots_Chain_06.png",
+        type: 'equipment',
+        slot: 'feet',
+        rarity: 'blue',
+        setId: 'scarlet_crusader',
+        setName: '血色十字军',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            hp: 500,
+            armor: 50,
+            versatility: 10,
+            blockRate: 3
+        },
+        growth: {
+            hp: 2,
+            armor: 2,
+            versatility: 2,
+            blockRate: 2
+        }
+    },
+    EQ_054: {
+        id: 'EQ_054',
+        name: '血色十字军腕甲',
+        icon: "icons/wow/vanilla/armor/INV_Bracer_16.png",
+        type: 'equipment',
+        slot: 'wrist',
+        rarity: 'blue',
+        setId: 'scarlet_crusader',
+        setName: '血色十字军',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            hp: 500,
+            armor: 50,
+            mastery: 10,
+            blockValue: 50
+        },
+        growth: {
+            hp: 2,
+            armor: 2,
+            mastery: 2,
+            blockValue: 2
+        }
+    },
+    EQ_055: {
+        id: 'EQ_055',
+        name: '赫洛德的肩铠',
+        icon: "icons/wow/vanilla/armor/INV_Shoulder_25.png",
+        type: 'equipment',
+        slot: 'shoulder',
+        rarity: 'purple',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            hp: 500,
+            armor: 50,
+            critRate: 5,
+            haste: 10
+        },
+        growth: {
+            hp: 2,
+            armor: 2,
+            critRate: 2,
+            haste: 2
+        }
+    },
+    EQ_056: {
+        id: 'EQ_056',
+        name: '圣使护符',
+        icon: "icons/wow/vanilla/armor/INV_Jewelry_Necklace_29.png",
+        type: 'equipment',
+        slot: 'neck',
+        rarity: 'blue',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            hp: 800,
+            mastery: 10,
+            versatility: 10,
+            spellPower: 300
+        },
+        growth: {
+            hp: 2,
+            mastery: 2,
+            versatility: 2,
+            spellPower: 2
+        }
+    },
+    EQ_057: {
+        id: 'EQ_057',
+        name: '破坏者',
+        icon: "icons/wow/vanilla/weapons/INV_Axe_11.png",
+        type: 'equipment',
+        slot: 'mainHand',
+        rarity: 'purple',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            attack: 750,
+            critRate: 20,
+            versatility: 10,
+            critDamage: 0.5
+        },
+        growth: {
+            attack: 2,
+            critRate: 2,
+            versatility: 2,
+            critDamage: 2
+        }
+    },
+    EQ_058: {
+        id: 'EQ_058',
+        name: '公正之手',
+        icon: "icons/wow/vanilla/weapons/INV_Mace_14.png",
+        type: 'equipment',
+        slot: 'mainHand',
+        rarity: 'blue',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            hp: 800,
+            spellPower: 650,
+            mastery: 20,
+            versatility: 10
+        },
+        growth: {
+            hp: 2,
+            spellPower: 2,
+            mastery: 2,
+            versatility: 2
+        }
+    },
+    EQ_059: {
+        id: 'EQ_059',
+        name: '血色指挥官之盾',
+        icon: "icons/wow/vanilla/armor/INV_Shield_06.png",
+        type: 'equipment',
+        slot: 'offHand',
+        rarity: 'blue',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            hp: 1000,
+            armor: 120,
+            mastery: 20,
+            blockRate: 20,
+            blockValue: 300
+        },
+        growth: {
+            hp: 2,
+            armor: 2,
+            mastery: 2,
+            blockRate: 2,
+            blockValue: 2
+        }
+    },
+    EQ_060: {
+        id: 'EQ_060',
+        name: '幻影法杖',
+        icon: "icons/wow/vanilla/weapons/INV_Staff_13.png",
+        type: 'equipment',
+        slot: 'mainHand',
+        rarity: 'blue',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            spellPower: 750,
+            critRate: 10,
+            versatility: 20,
+            haste: 20
+        },
+        growth: {
+            spellPower: 2,
+            critRate: 2,
+            versatility: 2,
+            haste: 2
+        }
+    },
+    EQ_061: {
+        id: 'EQ_061',
+        name: '遗忘先知宝珠',
+        icon: "icons/wow/vanilla/items/INV_Misc_Orb_01.png",
+        type: 'equipment',
+        slot: 'offHand',
+        rarity: 'blue',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            spellPower: 500,
+            mastery: 10,
+            versatility: 10,
+            haste: 10
+        },
+        growth: {
+            spellPower: 2,
+            mastery: 2,
+            versatility: 2,
+            haste: 2
+        }
+    },
 };
 
 //赤脊山5件图鉴100级点亮效果
@@ -2417,6 +2778,12 @@ const SET_BONUSES = {
         tiers: [
             { count: 3, bonus: { versatility: 10 } },
             { count: 6, bonus: { critRate: 10, critDamage: 0.30 } }  // 10%爆击率 + 30%暴击伤害
+        ]
+    },scarlet_crusader: {
+        name: '血色十字军',
+        tiers: [
+            { count: 3, bonus: { armor: 100, blockValue: 50 } },
+            { count: 6, bonus: { hp: 1000, blockRate: 5 } }
         ]
     }
 };

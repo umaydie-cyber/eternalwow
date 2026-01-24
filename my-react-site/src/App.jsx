@@ -6772,9 +6772,15 @@ const CombatLogsModal = ({ logs, onClose, onClear }) => {
                     result: "victory",
                     logs: [x],
                     rewards: { gold: 0, exp: 0 },
+                    drops: [],
+
                 };
             }
-            return { ...x, logs: Array.isArray(x.logs) ? x.logs : [] };
+            return {
+                ...x,
+                logs: Array.isArray(x.logs) ? x.logs : [],
+                drops: Array.isArray(x.drops) ? x.drops : [] // ✅ 新增
+            };
         });
 
     return (

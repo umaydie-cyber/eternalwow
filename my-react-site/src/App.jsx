@@ -2107,7 +2107,10 @@ const FIXED_EQUIPMENTS = {
             haste: 2,
             versatility: 2
         },
-        // 可选：给图鉴/说明用
+        specialEffect: {
+            type: 'basic_attack_repeat',
+            chance: 0.5
+        },
         synth: { from: ['EQ_041', 'EQ_042'], requireLevel: 100 }
     },
     EQ_045: {
@@ -2889,6 +2892,18 @@ function getSkillSlotBuffBonus(character, slotIndex) {
     };
 }
 
+// 检查角色是否有普攻重复特效，返回触发概率
+function getBasicAttackRepeatChance(character) {
+    const eqList = Object.values(character?.equipment || {}).filter(Boolean);
+    for (const eq of eqList) {
+        const se = eq?.specialEffect;
+        if (se && se.type === 'basic_attack_repeat') {
+            return se.chance || 0;
+        }
+    }
+    return 0;
+}
+
 // ==================== BOSS战斗一步推进函数（修复版） ====================
 function stepBossCombat(state) {
     if (!state.bossCombat) return state;
@@ -2962,6 +2977,30 @@ function stepBossCombat(state) {
                 }
             });
         }
+
+        // ==================== 辅助函数：执行一次普通攻击伤害 ====================
+        const executeBasicAttackDamage = (isRepeat = false) => {
+            const basicSkill = SKILLS['basic_attack'];
+            const basicResult = basicSkill.calculate(charForCalc, combatContext);
+
+            if (basicResult.damage) {
+                let damage = basicResult.damage * buffDamageDealtMult;
+                const targetDefense = targetType === 'boss' ? boss.defense : boss.minion.defense;
+                const actualDamage = Math.max(1, Math.floor(damage - targetDefense));
+
+                if (targetType === 'boss') {
+                    combat.bossHp -= actualDamage;
+                } else {
+                    combat.minions[targetIndex].hp -= actualDamage;
+                }
+
+                const repeatText = isRepeat ? '(鞭笞者苏萨斯)' : '';
+                logs.push(`位置${i + 1} ${p.char.name} 使用 普通攻击${repeatText} 对 ${targetType === 'boss' ? boss.name : boss.minion.name} 造成 ${actualDamage} 伤害${basicResult.isCrit ? '（暴击）' : ''}`);
+
+                return actualDamage;
+            }
+            return 0;
+        };
 
         // 新增：支持 AOE 和条件 DOT
         if (result.aoeDamage) {
@@ -3063,6 +3102,15 @@ function stepBossCombat(state) {
             }
 
             logs.push(`位置${i + 1} ${p.char.name} 使用 ${skill.name} 对 ${targetType === 'boss' ? boss.name : boss.minion.name} 造成 ${actualDamage} 伤害${result.isCrit ? '（暴击）' : ''}`);
+
+            // ==================== 新增：鞭笞者苏萨斯特效 - 普攻后50%概率再次普攻 ====================
+            if (skillId === 'basic_attack') {
+                const repeatChance = getBasicAttackRepeatChance(p.char);
+                if (repeatChance > 0 && Math.random() < repeatChance) {
+                    logs.push(`【鞭笞者苏萨斯】触发：再次发动普通攻击！`);
+                    executeBasicAttackDamage(true);
+                }
+            }
         }
 
         if (result.healAll) {
@@ -3875,7 +3923,7 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1) {
             .filter(d => (d.duration ?? 0) > 0);
     };
 
-    const maxRounds = 20;
+    const maxRounds = 200;
 
     for (let i = 0; i < roundsPerTick; i++) {
         if (charHp <= 0 || enemyHp <= 0 || round >= maxRounds) break;
@@ -4118,6 +4166,42 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1) {
                     type: 'heal',
                     text: `因为救赎恢复 ${healFromAtonement} 点生命`
                 });
+            }
+
+            // ==================== 新增：鞭笞者苏萨斯特效 - 普攻后50%概率再次普攻 ====================
+            if (currentSkillId === 'basic_attack') {
+                const repeatChance = getBasicAttackRepeatChance(character);
+                if (repeatChance > 0 && Math.random() < repeatChance) {
+                    logs.push({
+                        round,
+                        kind: 'proc',
+                        actor: character.name,
+                        proc: '鞭笞者苏萨斯',
+                        text: '【鞭笞者苏萨斯】触发：再次发动普通攻击！'
+                    });
+                    // ===== 天赋触发（保持不变）=====
+                    if (currentSkillId === 'basic_attack' && character.talents?.[10] === 'plain') {
+                        talentBuffs.attackFlat = (talentBuffs.attackFlat || 0) + 5;
+                        logs.push({
+                            round,
+                            kind: 'proc',
+                            actor: character.name,
+                            proc: '质朴',
+                            value: 5,
+                            text: '【质朴】触发，攻击强度 +5（本场战斗）'
+                        });
+                    }
+                    enemyHp -= actualDamage;
+                    logs.push({
+                        round,
+                        actor: character.name,
+                        action: skill.name,
+                        target: combatState.enemy?.name,
+                        value: actualDamage,
+                        type: 'damage',
+                        isCrit: result.isCrit
+                    });
+                }
             }
         }
         // ===== 原有其他技能逻辑（保持不变）=====

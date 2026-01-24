@@ -1542,6 +1542,7 @@ const FIXED_EQUIPMENTS = {
     EQ_020: {
         id: 'EQ_020',
         name: '尖牙护腿',
+        icon: "icons/wow/vanilla/armor/INV_Pants_02.png",
         type: 'equipment',
         slot: 'legs',
         rarity: 'blue',
@@ -1565,6 +1566,7 @@ const FIXED_EQUIPMENTS = {
     EQ_021: {
         id: 'EQ_021',
         name: '尖牙铠甲',
+        icon: "icons/wow/vanilla/armor/INV_Chest_Leather_08.png",
         type: 'equipment',
         slot: 'chest',
         rarity: 'blue',
@@ -1588,6 +1590,7 @@ const FIXED_EQUIPMENTS = {
     EQ_022: {
         id: 'EQ_022',
         name: '尖牙腰带',
+        icon: "icons/wow/vanilla/armor/INV_Belt_10.png",
         type: 'equipment',
         slot: 'belt',
         rarity: 'green',

@@ -1614,6 +1614,7 @@ const FIXED_EQUIPMENTS = {
     EQ_023: {
         id: 'EQ_023',
         name: '尖牙足垫',
+        icon: "icons/wow/vanilla/armor/INV_Boots_05.png",
         type: 'equipment',
         slot: 'feet',
         rarity: 'green',
@@ -1637,6 +1638,7 @@ const FIXED_EQUIPMENTS = {
     EQ_024: {
         id: 'EQ_024',
         name: '毒蛇',
+        icon: "icons/wow/vanilla/weapons/INV_Weapon_Bow_10.png",
         type: 'equipment',
         slot: 'mainHand',
         rarity: 'purple',
@@ -1660,6 +1662,7 @@ const FIXED_EQUIPMENTS = {
     EQ_025: {
         id: 'EQ_025',
         name: '生命之根',
+        icon: "icons/wow/vanilla/weapons/INV_Staff_26.png",
         type: 'equipment',
         slot: 'mainHand',
         rarity: 'blue',
@@ -1679,6 +1682,7 @@ const FIXED_EQUIPMENTS = {
     EQ_026: {
         id: 'EQ_026',
         name: '克雷什之背',
+        icon: "icons/wow/vanilla/armor/INV_Shield_18.png",
         type: 'equipment',
         slot: 'offHand',
         rarity: 'blue',
@@ -1698,6 +1702,7 @@ const FIXED_EQUIPMENTS = {
     EQ_027: {
         id: 'EQ_027',
         name: '锈水头盔',
+        icon: "icons/wow/vanilla/armor/INV_Helmet_20.png",
         type: 'equipment',
         slot: 'head',
         rarity: 'green',
@@ -1720,6 +1725,7 @@ const FIXED_EQUIPMENTS = {
     EQ_028: {
         id: 'EQ_028',
         name: '锈水护肩',
+        icon: "icons/wow/vanilla/armor/INV_Shoulder_06.png",
         type: 'equipment',
         slot: 'shoulder',
         rarity: 'green',
@@ -1742,6 +1748,7 @@ const FIXED_EQUIPMENTS = {
     EQ_029: {
         id: 'EQ_029',
         name: '锈水护腕',
+        icon: "icons/wow/vanilla/armor/INV_Bracer_03.png",
         type: 'equipment',
         slot: 'wrist',
         rarity: 'green',
@@ -1763,6 +1770,7 @@ const FIXED_EQUIPMENTS = {
     EQ_030: {
         id: 'EQ_030',
         name: '乔丹法杖',
+        icon: "icons/wow/vanilla/weapons/INV_Wand_06.png",
         type: 'equipment',
         slot: 'mainHand',
         rarity: 'purple',
@@ -1786,6 +1794,7 @@ const FIXED_EQUIPMENTS = {
     EQ_031: {
         id: 'EQ_031',
         name: '短暂能量护符',
+        icon: "icons/wow/vanilla/items/INV_Misc_StoneTablet_11.png",
         type: 'equipment',
         slot: 'trinket2',
         rarity: 'blue',
@@ -1806,6 +1815,7 @@ const FIXED_EQUIPMENTS = {
     EQ_032: {
         id: 'EQ_032',
         name: '强攻护符',
+        icon: "icons/wow/vanilla/items/INV_Misc_Head_Troll_01.png",
         type: 'equipment',
         slot: 'trinket2',
         rarity: 'blue',
@@ -1826,15 +1836,16 @@ const FIXED_EQUIPMENTS = {
     IT_BLACK_DRAGON_PROOF: {
         id: 'IT_BLACK_DRAGON_PROOF',
         name: '黑龙化身的证明',
+        icon: "icons/wow/vanilla/items/INV_Misc_Head_Dragon_01.png",
         type: 'consumable',
         rarity: 'purple',
-        icon: '🐉',
         canUse: true,
         description: '使用后，揭露真相，解锁隐藏Boss【普瑞斯托女士】'
     },
     EQ_033: {
         id: 'EQ_033',
         name: '天选者印记',
+        icon: "icons/wow/vanilla/armor/INV_Jewelry_Talisman_08.png",
         type: 'equipment',
         slot: 'trinket1',
         rarity: 'blue',
@@ -1858,6 +1869,7 @@ const FIXED_EQUIPMENTS = {
     EQ_034: {
         id: 'EQ_034',
         name: '痛击之刃',
+        icon: "icons/wow/vanilla/weapons/INV_Sword_36.png",
         type: 'equipment',
         slot: 'mainHand',
         rarity: 'blue',
@@ -1877,6 +1889,7 @@ const FIXED_EQUIPMENTS = {
     EQ_035: {
         id: 'EQ_035',
         name: '热情暗影坠饰',
+        icon: "icons/wow/vanilla/armor/INV_Jewelry_Necklace_07.png",
         type: 'equipment',
         slot: 'neck',
         rarity: 'green',
@@ -1894,6 +1907,7 @@ const FIXED_EQUIPMENTS = {
     EQ_036: {
         id: 'EQ_036',
         name: '莱瑟德斯之眼',
+        icon: "icons/wow/vanilla/armor/INV_Jewelry_Ring_08.png",
         type: 'equipment',
         slot: 'ring2',
         rarity: 'blue',
@@ -1913,6 +1927,7 @@ const FIXED_EQUIPMENTS = {
     EQ_037: {
         id: 'EQ_037',
         name: '发明家的聚焦剑',
+        icon: "icons/wow/vanilla/weapons/INV_Sword_14.png",
         type: 'equipment',
         slot: 'mainHand',
         rarity: 'blue',

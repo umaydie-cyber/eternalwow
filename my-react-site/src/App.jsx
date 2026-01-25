@@ -9561,6 +9561,9 @@ const CodexPage = ({ state, dispatch }) => {
 // ==================== Boss准备模态（重新设计版） ====================
 const BossPrepareModal = ({ state, dispatch }) => {
     const bossId = state.prepareBoss;
+    console.log('bossId:', bossId);
+    console.log('BOSS_DATA:', BOSS_DATA);
+    console.log('boss:', BOSS_DATA[bossId]);
     if (!bossId) return null;
     const boss = BOSS_DATA[bossId];
     const available = state.characters.filter(c => !state.assignments[c.id]);

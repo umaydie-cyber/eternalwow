@@ -10398,9 +10398,15 @@ const BossPrepareModal = ({ state, dispatch }) => {
 };
 
 // ==================== Boss战斗显示模态 ====================
+// ==================== Boss战斗显示模态 ====================
 const BossCombatModal = ({ combat, state }) => {
     if (!combat) return null;
     const boss = BOSS_DATA[combat.bossId];
+    if (!boss) return null;
+
+    // ✅ 兼容不同类型的小弟（minion 或 cannoneer）
+    const minionConfig = boss.minion || boss.cannoneer || { name: '小弟', maxHp: 100 };
+    const minionName = minionConfig.name || '小弟';
 
     return (
         <div style={{
@@ -10424,12 +10430,25 @@ const BossCombatModal = ({ combat, state }) => {
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, padding: 20, flex: 1, overflow: 'hidden' }}>
-                <div>
-                    <h3 style={{ color: '#4CAF50' }}>队伍</h3>
+                {/* 左侧：队伍 */}
+                <div style={{ overflowY: 'auto' }}>
+                    <h3 style={{ color: '#4CAF50', marginBottom: 12 }}>队伍</h3>
                     {combat.playerStates.map((p, i) => (
                         <div key={i} style={{ marginBottom: 16 }}>
-                            <div style={{ fontSize: 14, marginBottom: 4 }}>
-                                位置{i + 1} {p.char.name} Lv.{p.char.level}
+                            <div style={{ fontSize: 14, marginBottom: 4, display: 'flex', justifyContent: 'space-between' }}>
+                                <span>位置{i + 1} {p.char.name} Lv.{p.char.level}</span>
+                                {/* 显示减疗debuff */}
+                                {p.debuffs?.mortalStrike && (
+                                    <span style={{
+                                        color: '#ff6b6b',
+                                        fontSize: 11,
+                                        padding: '2px 6px',
+                                        background: 'rgba(255,100,100,0.2)',
+                                        borderRadius: 4
+                                    }}>
+                                        减疗 {p.debuffs.mortalStrike.healingReduction * 100}% ({p.debuffs.mortalStrike.duration}回合)
+                                    </span>
+                                )}
                             </div>
                             <StatBar
                                 label="生命值"
@@ -10441,8 +10460,11 @@ const BossCombatModal = ({ combat, state }) => {
                     ))}
                 </div>
 
-                <div>
-                    <h3 style={{ color: '#f44336' }}>敌人</h3>
+                {/* 右侧：敌人 */}
+                <div style={{ overflowY: 'auto' }}>
+                    <h3 style={{ color: '#f44336', marginBottom: 12 }}>敌人</h3>
+
+                    {/* Boss血条 */}
                     <div style={{ marginBottom: 16 }}>
                         <div style={{ fontSize: 14, marginBottom: 4 }}>{boss.name}</div>
                         <StatBar
@@ -10452,26 +10474,71 @@ const BossCombatModal = ({ combat, state }) => {
                             color="#ff4444"
                         />
                     </div>
-                    {combat.minions.length > 0 && (
+
+                    {/* 小弟/火炮手血条 */}
+                    {combat.minions && combat.minions.length > 0 && (
                         <div>
-                            <div style={{ fontSize: 14, marginBottom: 8 }}>豺狼人小弟 ({combat.minions.length}个)</div>
+                            <div style={{ fontSize: 14, marginBottom: 8, color: '#ce93d8' }}>
+                                {minionName} ({combat.minions.length}个)
+                            </div>
                             {combat.minions.map((m, i) => (
-                                <StatBar
-                                    key={i}
-                                    label={`小弟${i + 1} 生命值`}
-                                    current={m.hp}
-                                    max={boss.minion.maxHp}
-                                    color="#ff6666"
-                                />
+                                <div key={i} style={{ marginBottom: 8 }}>
+                                    <div style={{
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        alignItems: 'center',
+                                        marginBottom: 4
+                                    }}>
+                                        <span style={{ fontSize: 12, color: '#aaa' }}>
+                                            {minionName} {i + 1}
+                                        </span>
+                                        {/* 显示免疫状态 */}
+                                        {m.immune && (
+                                            <span style={{
+                                                fontSize: 10,
+                                                color: '#2196F3',
+                                                padding: '2px 6px',
+                                                background: 'rgba(33,150,243,0.2)',
+                                                borderRadius: 4,
+                                                fontWeight: 600
+                                            }}>
+                                                🛡️ 免疫中
+                                            </span>
+                                        )}
+                                    </div>
+                                    <StatBar
+                                        label="生命值"
+                                        current={m.hp}
+                                        max={m.maxHp || minionConfig.maxHp}
+                                        color={m.immune ? "#2196F3" : "#ff6666"}
+                                    />
+                                </div>
                             ))}
                         </div>
                     )}
                 </div>
             </div>
 
-            <div style={{ height: 200, overflowY: 'auto', padding: 16, background: 'rgba(0,0,0,0.5)', fontSize: 12 }}>
-                {combat.logs.map((log, i) => (
-                    <div key={i}>{log}</div>
+            {/* 战斗日志 */}
+            <div style={{
+                height: 200,
+                overflowY: 'auto',
+                padding: 16,
+                background: 'rgba(0,0,0,0.5)',
+                fontSize: 12,
+                borderTop: '1px solid rgba(201,162,39,0.3)'
+            }}>
+                {combat.logs.slice(-30).map((log, i) => (
+                    <div key={i} style={{
+                        padding: '2px 0',
+                        color: log.includes('免疫') ? '#2196F3' :
+                            log.includes('致死打击') ? '#ff6b6b' :
+                                log.includes('火炮手') ? '#ce93d8' :
+                                    log.includes('登上甲板') ? '#64b5f6' :
+                                        '#ccc'
+                    }}>
+                        {log}
+                    </div>
                 ))}
             </div>
         </div>

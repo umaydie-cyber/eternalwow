@@ -945,7 +945,7 @@ const ZONES = {
             {
                 name: '毒刺鞭笞者',
                 hp: 28000,
-                attack: 280,
+                attack: 420,
                 defense: 200,
                 exp: 2000,
                 gold: 1800
@@ -953,7 +953,7 @@ const ZONES = {
             {
                 name: '萨特潜行者',
                 hp: 26000,
-                attack: 250,
+                attack: 3800,
                 defense: 240,
                 exp: 1800,
                 gold: 1600
@@ -961,7 +961,7 @@ const ZONES = {
             {
                 name: '半人马可汗',
                 hp: 30000,
-                attack: 300,
+                attack: 450,
                 defense: 180,
                 exp: 2200,
                 gold: 1900
@@ -980,7 +980,7 @@ const ZONES = {
             {
                 name: '沙项巫医',
                 hp: 42000,
-                attack: 300,
+                attack: 500,
                 defense: 250,
                 exp: 3000,
                 gold: 2500
@@ -988,7 +988,7 @@ const ZONES = {
             {
                 name: '钢腭钳嘴龟',
                 hp: 49000,
-                attack: 350,
+                attack: 550,
                 defense: 300,
                 exp: 3200,
                 gold: 3000
@@ -996,7 +996,7 @@ const ZONES = {
             {
                 name: '恐须船长',
                 hp: 42000,
-                attack: 400,
+                attack: 600,
                 defense: 280,
                 exp: 3200,
                 gold: 3000
@@ -1004,7 +1004,7 @@ const ZONES = {
             {
                 name: '安图苏尔',
                 hp: 47000,
-                attack: 450,
+                attack: 850,
                 defense: 400,
                 exp: 3500,
                 gold: 4000
@@ -1023,7 +1023,7 @@ const ZONES = {
             {
                 name: '血色拷问者',
                 hp: 82000,
-                attack: 1000,
+                attack: 1500,
                 defense: 500,
                 exp: 4000,
                 gold: 4000
@@ -1031,7 +1031,7 @@ const ZONES = {
             {
                 name: '血色僧侣',
                 hp: 100000,
-                attack: 700,
+                attack: 1300,
                 defense: 600,
                 exp: 4500,
                 gold: 5000
@@ -1039,7 +1039,7 @@ const ZONES = {
             {
                 name: '血色招魂师',
                 hp: 82000,
-                attack: 900,
+                attack: 1400,
                 defense: 550,
                 exp: 4500,
                 gold: 5000
@@ -1047,7 +1047,7 @@ const ZONES = {
             {
                 name: '血色巫师',
                 hp: 90000,
-                attack: 1000,
+                attack: 1500,
                 defense: 600,
                 exp: 5000,
                 gold: 5500
@@ -1066,24 +1066,24 @@ const ZONES = {
             {
                 name: '黑铁矮人守卫',
                 hp: 132000,
-                attack: 3000,
-                defense: 700,
+                attack: 4200,
+                defense: 1400,
                 exp: 5000,
                 gold: 5500
             },
             {
                 name: '被奴役的土元素',
                 hp: 150000,
-                attack: 2600,
-                defense: 900,
+                attack: 3400,
+                defense: 1900,
                 exp: 5500,
                 gold: 5000
             },
             {
                 name: '战斗傀儡',
                 hp: 182000,
-                attack: 3400,
-                defense: 750,
+                attack: 4600,
+                defense: 1750,
                 exp: 6500,
                 gold: 6000
             }

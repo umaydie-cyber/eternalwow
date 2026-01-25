@@ -2614,8 +2614,33 @@ const FIXED_EQUIPMENTS = {
 
         baseStats: {
             attack: 350,
-            haste: 10,
-            mastery: 10
+            haste: 10
+        },
+        growth: {
+            attack: 2,
+            haste: 2
+        },
+
+        specialEffect: {
+            type: 'basic_attack_repeat',
+            chance: 0.20
+        }
+    },
+    EQ_063: {
+        id: 'EQ_063',
+        name: '血蚀之刃',
+        icon: "icons/wow/vanilla/weapons/INV_Weapon_ShortBlade_15.png",
+        type: 'equipment',
+        slot: 'offHand',
+        rarity: 'blue',
+
+        level: 0,
+        maxLevel: 100,
+
+        baseStats: {
+            attack: 800,
+            haste: 20,
+            mastery: 20
         },
         growth: {
             attack: 2,
@@ -2628,7 +2653,6 @@ const FIXED_EQUIPMENTS = {
             chance: 0.20
         }
     },
-
 };
 
 //赤脊山5件图鉴100级点亮效果

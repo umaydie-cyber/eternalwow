@@ -2974,14 +2974,14 @@ const BOSS_DATA = {
             duration: 2
         },
         // 火炮手配置
-        cannoneer: {
+        minion: {
             name: '迪菲亚火炮手',
             maxHp: 600,
             attack: 0, // 火炮手不普攻，只AOE
             defense: 300,
             aoeDamageMultiplier: 0.7 // 对全队造成boss攻击×0.7的伤害
         },
-        summonCannoneerCount: 3,
+        summonCount: 3,
         rewards: {
             gold: 25000,
             exp: 19800,

@@ -7526,7 +7526,7 @@ const ItemDetailsModal = ({ item, onClose, onEquip, characters, state , dispatch
                 </div>
 
                 {/* 特殊效果显示 */}
-                {item.specialEffect && item.specialEffect.type === 'skill_slot_buff' && (
+                {item.specialEffect && (
                     <div style={{
                         background: 'rgba(255, 152, 0, 0.1)',
                         border: '1px solid rgba(255, 152, 0, 0.3)',
@@ -7535,21 +7535,46 @@ const ItemDetailsModal = ({ item, onClose, onEquip, characters, state , dispatch
                         marginBottom: 20
                     }}>
                         <h3 style={{ fontSize: 14, color: '#ff9800', marginBottom: 12 }}>⚡ 特殊效果</h3>
-                        <div style={{ fontSize: 12, color: '#ffb74d', lineHeight: 1.6 }}>
-                            在第 <span style={{ color: '#ffd700', fontWeight: 600 }}>
-                                {item.specialEffect.slots.map(s => s + 1).join('、')}
-                            </span> 技能格释放技能时：
-                            {item.specialEffect.attackBonus && (
-                                <div style={{ marginTop: 8, color: '#fff' }}>
-                                    • 攻击强度 <span style={{ color: '#4CAF50', fontWeight: 600 }}>+{item.specialEffect.attackBonus}</span>
+                        {/* skill_slot_buff 类型 */}
+                        {item.specialEffect.type === 'skill_slot_buff' && (
+                            <div style={{ fontSize: 12, color: '#ffb74d', lineHeight: 1.6 }}>
+                                在第 <span style={{ color: '#ffd700', fontWeight: 600 }}>
+                    {item.specialEffect.slots.map(s => s + 1).join('、')}
+                </span> 技能格释放技能时：
+                                {item.specialEffect.attackBonus && (
+                                    <div style={{ marginTop: 8, color: '#fff' }}>
+                                        • 攻击强度 <span style={{ color: '#4CAF50', fontWeight: 600 }}>+{item.specialEffect.attackBonus}</span>
+                                    </div>
+                                )}
+                                {item.specialEffect.spellPowerBonus && (
+                                    <div style={{ marginTop: 8, color: '#fff' }}>
+                                        • 法术强度 <span style={{ color: '#4CAF50', fontWeight: 600 }}>+{item.specialEffect.spellPowerBonus}</span>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {/* basic_attack_repeat 类型 */}
+                        {item.specialEffect.type === 'basic_attack_repeat' && (
+                            <div style={{ fontSize: 12, color: '#ffb74d', lineHeight: 1.6 }}>
+                                <div style={{ marginBottom: 8, color: '#fff' }}>
+                                    使用普通攻击后，有 <span style={{ color: '#ffd700', fontWeight: 600 }}>
+                        {(item.specialEffect.chance * 100).toFixed(0)}%
+                    </span> 概率再次发动一次普通攻击
                                 </div>
-                            )}
-                            {item.specialEffect.spellPowerBonus && (
-                                <div style={{ marginTop: 8, color: '#fff' }}>
-                                    • 法术强度 <span style={{ color: '#4CAF50', fontWeight: 600 }}>+{item.specialEffect.spellPowerBonus}</span>
+                                <div style={{
+                                    marginTop: 12,
+                                    padding: '8px 12px',
+                                    background: 'rgba(255,215,0,0.1)',
+                                    borderRadius: 6,
+                                    border: '1px dashed rgba(255,215,0,0.3)',
+                                    fontSize: 11,
+                                    color: '#c9a227'
+                                }}>
+                                    💡 提示：连击伤害与普通攻击相同，可触发"质朴"等普攻相关天赋
                                 </div>
-                            )}
-                        </div>
+                            </div>
+                        )}
                     </div>
                 )}
 
@@ -8613,7 +8638,7 @@ const InventoryPage = ({ state, dispatch }) => {
                                 </div>
                             )}
                             {/* 显示特殊效果 */}
-                            {item.specialEffect && item.specialEffect.type === 'skill_slot_buff' && (
+                            {item.specialEffect && (
                                 <div style={{
                                     fontSize: 9,
                                     color: '#ff9800',
@@ -8622,9 +8647,20 @@ const InventoryPage = ({ state, dispatch }) => {
                                     background: 'rgba(255, 152, 0, 0.15)',
                                     borderRadius: 3
                                 }}>
-                                    ⚡ {item.specialEffect.slots.map(s => s + 1).join('/')}格
-                                    {item.specialEffect.attackBonus ? ` 攻+${item.specialEffect.attackBonus}` : ''}
-                                    {item.specialEffect.spellPowerBonus ? ` 法+${item.specialEffect.spellPowerBonus}` : ''}
+                                    {/* skill_slot_buff 类型 */}
+                                    {item.specialEffect.type === 'skill_slot_buff' && (
+                                        <>
+                                            ⚡ {item.specialEffect.slots.map(s => s + 1).join('/')}格
+                                            {item.specialEffect.attackBonus ? ` 攻+${item.specialEffect.attackBonus}` : ''}
+                                            {item.specialEffect.spellPowerBonus ? ` 法+${item.specialEffect.spellPowerBonus}` : ''}
+                                        </>
+                                    )}
+                                    {/* basic_attack_repeat 类型 */}
+                                    {item.specialEffect.type === 'basic_attack_repeat' && (
+                                        <>
+                                            ⚔️ 普攻 {(item.specialEffect.chance * 100).toFixed(0)}% 连击
+                                        </>
+                                    )}
                                 </div>
                             )}
                         </div>

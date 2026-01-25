@@ -9790,37 +9790,101 @@ const BossPrepareModal = ({ state, dispatch }) => {
                             </div>
 
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                                <div style={{
-                                    padding: 10,
-                                    background: 'rgba(255,100,100,0.1)',
-                                    borderRadius: 6,
-                                    borderLeft: '3px solid #f44336'
-                                }}>
-                                    <div style={{ fontSize: 12, color: '#ff6b6b', fontWeight: 600, marginBottom: 4 }}>
-                                        💥 重击
-                                    </div>
-                                    <div style={{ fontSize: 11, color: '#aaa', lineHeight: 1.5 }}>
-                                        对目标造成 <span style={{ color: '#ffd700' }}>{boss.heavyMultiplier}倍</span> 攻击的物理伤害
-                                    </div>
-                                </div>
+                                {/* 霍格的技能 */}
+                                {bossId === 'hogger' && (
+                                    <>
+                                        <div style={{
+                                            padding: 10,
+                                            background: 'rgba(255,100,100,0.1)',
+                                            borderRadius: 6,
+                                            borderLeft: '3px solid #f44336'
+                                        }}>
+                                            <div style={{ fontSize: 12, color: '#ff6b6b', fontWeight: 600, marginBottom: 4 }}>
+                                                💥 重击
+                                            </div>
+                                            <div style={{ fontSize: 11, color: '#aaa', lineHeight: 1.5 }}>
+                                                对目标造成 <span style={{ color: '#ffd700' }}>{boss.heavyMultiplier}倍</span> 攻击的物理伤害
+                                            </div>
+                                        </div>
 
-                                <div style={{
-                                    padding: 10,
-                                    background: 'rgba(156,39,176,0.1)',
-                                    borderRadius: 6,
-                                    borderLeft: '3px solid #9C27B0'
-                                }}>
-                                    <div style={{ fontSize: 12, color: '#ce93d8', fontWeight: 600, marginBottom: 4 }}>
-                                        👥 召唤小弟
-                                    </div>
-                                    <div style={{ fontSize: 11, color: '#aaa', lineHeight: 1.5 }}>
-                                        召唤 <span style={{ color: '#ffd700' }}>{boss.summonCount}</span> 个{boss.minion.name}
-                                        <br/>
-                                        <span style={{ color: '#888' }}>
-                                            (HP:{boss.minion.maxHp} / 攻击:{boss.minion.attack})
-                                        </span>
-                                    </div>
-                                </div>
+                                        <div style={{
+                                            padding: 10,
+                                            background: 'rgba(156,39,176,0.1)',
+                                            borderRadius: 6,
+                                            borderLeft: '3px solid #9C27B0'
+                                        }}>
+                                            <div style={{ fontSize: 12, color: '#ce93d8', fontWeight: 600, marginBottom: 4 }}>
+                                                👥 召唤小弟
+                                            </div>
+                                            <div style={{ fontSize: 11, color: '#aaa', lineHeight: 1.5 }}>
+                                                召唤 <span style={{ color: '#ffd700' }}>{boss.summonCount}</span> 个{boss.minion?.name || '小弟'}
+                                                <br/>
+                                                <span style={{ color: '#888' }}>
+                            (HP:{boss.minion?.maxHp} / 攻击:{boss.minion?.attack})
+                        </span>
+                                            </div>
+                                        </div>
+                                    </>
+                                )}
+
+                                {/* 范克里夫的技能 */}
+                                {bossId === 'vancleef' && (
+                                    <>
+                                        <div style={{
+                                            padding: 10,
+                                            background: 'rgba(255,100,100,0.1)',
+                                            borderRadius: 6,
+                                            borderLeft: '3px solid #f44336'
+                                        }}>
+                                            <div style={{ fontSize: 12, color: '#ff6b6b', fontWeight: 600, marginBottom: 4 }}>
+                                                ⚔️ 致死打击
+                                            </div>
+                                            <div style={{ fontSize: 11, color: '#aaa', lineHeight: 1.5 }}>
+                                                对目标造成 <span style={{ color: '#ffd700' }}>{boss.mortalStrikeMultiplier}倍</span> 攻击伤害
+                                                <br/>
+                                                <span style={{ color: '#ff6b6b' }}>
+                            并降低目标受到治疗效果 {(boss.mortalStrikeDebuff?.healingReduction || 0.5) * 100}%，持续{boss.mortalStrikeDebuff?.duration || 2}回合
+                        </span>
+                                            </div>
+                                        </div>
+
+                                        <div style={{
+                                            padding: 10,
+                                            background: 'rgba(156,39,176,0.1)',
+                                            borderRadius: 6,
+                                            borderLeft: '3px solid #9C27B0'
+                                        }}>
+                                            <div style={{ fontSize: 12, color: '#ce93d8', fontWeight: 600, marginBottom: 4 }}>
+                                                🔫 火炮手准备！
+                                            </div>
+                                            <div style={{ fontSize: 11, color: '#aaa', lineHeight: 1.5 }}>
+                                                召唤 <span style={{ color: '#ffd700' }}>{boss.summonCannoneerCount}</span> 个{boss.cannoneer?.name || '火炮手'}
+                                                <br/>
+                                                <span style={{ color: '#888' }}>
+                            (HP:{boss.cannoneer?.maxHp} / 每回合对全队造成Boss攻击×{boss.cannoneer?.aoeDamageMultiplier}伤害)
+                        </span>
+                                            </div>
+                                        </div>
+
+                                        <div style={{
+                                            padding: 10,
+                                            background: 'rgba(33,150,243,0.1)',
+                                            borderRadius: 6,
+                                            borderLeft: '3px solid #2196F3'
+                                        }}>
+                                            <div style={{ fontSize: 12, color: '#64b5f6', fontWeight: 600, marginBottom: 4 }}>
+                                                🛡️ 登上甲板！
+                                            </div>
+                                            <div style={{ fontSize: 11, color: '#aaa', lineHeight: 1.5 }}>
+                                                命令所有火炮手登上甲板
+                                                <br/>
+                                                <span style={{ color: '#2196F3' }}>
+                            火炮手免疫任何伤害
+                        </span>
+                                            </div>
+                                        </div>
+                                    </>
+                                )}
                             </div>
 
                             <div style={{
@@ -9834,7 +9898,9 @@ const BossPrepareModal = ({ state, dispatch }) => {
                                     🔄 技能循环
                                 </div>
                                 <div style={{ fontSize: 11, color: '#888' }}>
-                                    召唤 → 重击 → 重击 → 重击 → 循环
+                                    {bossId === 'hogger' && '召唤 → 重击 → 重击 → 重击 → 循环'}
+                                    {bossId === 'vancleef' && '致死打击 → 火炮手准备 → 致死打击 → 登上甲板 → 循环'}
+                                    {bossId !== 'hogger' && bossId !== 'vancleef' && (boss.cycle?.join(' → ') || '未知')}
                                 </div>
                             </div>
                         </div>

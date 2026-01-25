@@ -4118,14 +4118,14 @@ function stepBossCombat(state) {
         // 火炮手准备
         else if (bossAction === 'summon_cannoneers') {
             const aliveMinions = (combat.minions || []).filter(m => (m.hp ?? 0) > 0);
-            const need = Math.max(0, (boss.summonCannoneerCount || 3) - aliveMinions.length);
+            const need = Math.max(0, (boss.summonCount || 3) - aliveMinions.length);
 
             for (let i = 0; i < need; i++) {
                 combat.minions.push({
-                    hp: boss.cannoneer.maxHp,
-                    maxHp: boss.cannoneer.maxHp,
-                    attack: boss.cannoneer.attack,
-                    defense: boss.cannoneer.defense,
+                    hp: boss.minion.maxHp,
+                    maxHp: boss.minion.maxHp,
+                    attack: boss.minion.attack,
+                    defense: boss.minion.defense,
                     isCannoneer: true,
                     immune: false,
                     dots: []
@@ -4133,7 +4133,7 @@ function stepBossCombat(state) {
             }
 
             if (need > 0) {
-                logs.push(`【${boss.name}】大喊："火炮手准备！" 召唤了 ${need} 个${boss.cannoneer.name}`);
+                logs.push(`【${boss.name}】大喊："火炮手准备！" 召唤了 ${need} 个${boss.minion.name}`);
             } else {
                 logs.push(`【${boss.name}】尝试召唤火炮手，但场上火炮手已满`);
             }

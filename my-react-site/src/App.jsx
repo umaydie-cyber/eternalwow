@@ -2836,7 +2836,7 @@ const ACHIEVEMENTS = {
 
 const WORLD_BOSSES = {
     hogger: { id: 'hogger', name: '霍格',icon:'icons/wow/vanilla/boss/hogger.png', hp: 18000, attack: 150, defense: 70, rewards: { gold: 5000, exp: 5500 } },
-    vancleef: { id: 'vancleef', name: '艾德温·范克里夫', hp: 90000, attack: 400, defense: 250, rewards: { gold: 15000, exp: 6800 }, unlockLevel: 30 },
+    vancleef: { id: 'vancleef', name: '艾德温·范克里夫', icon: 'icons/wow/vanilla/boss/vancleef.png', hp: 140000, attack: 550, defense: 350, rewards: { gold: 25000, exp: 19800 }, unlockLevel: 30 },
     prestor_lady: {
         id: 'prestor_lady',
         name: '普瑞斯托女士',
@@ -2917,24 +2917,55 @@ const BOSS_DATA = {
         maxHp: 18000,
         attack: 150,
         defense: 70,
-        cycle: ['summon', 'strike', 'strike', 'strike'], // 循环：召唤 → 重击 ×3
+        cycle: ['summon', 'strike', 'strike', 'strike'],
         summonCount: 2,
         heavyMultiplier: 2.5,
         minion: {
             name: '豺狼人小弟',
             maxHp: 300,
-            attack: 75, // 0.5 × boss attack
+            attack: 75,
             defense: 20
         },
         rewards: {
             gold: 5000,
             exp: 5500,
             items: [
-                { id: 'REBIRTH_INVITATION' } // 改为使用 FIXED_EQUIPMENTS
+                { id: 'REBIRTH_INVITATION' }
+            ]
+        }
+    },
+    vancleef: {
+        id: 'vancleef',
+        name: '艾德温·范克里夫',
+        maxHp: 140000,
+        attack: 550,
+        defense: 350,
+        // 技能循环：致死打击 → 火炮手准备 → 致死打击 → 登上甲板
+        cycle: ['mortal_strike', 'summon_cannoneers', 'mortal_strike', 'board_the_deck'],
+        // 致死打击：3倍攻击
+        mortalStrikeMultiplier: 3,
+        // 致死打击debuff：减疗50%持续2回合
+        mortalStrikeDebuff: {
+            healingReduction: 0.5,
+            duration: 2
+        },
+        // 火炮手配置
+        cannoneer: {
+            name: '迪菲亚火炮手',
+            maxHp: 600,
+            attack: 0, // 火炮手不普攻，只AOE
+            defense: 300,
+            aoeDamageMultiplier: 0.7 // 对全队造成boss攻击×0.7的伤害
+        },
+        summonCannoneerCount: 3,
+        rewards: {
+            gold: 25000,
+            exp: 19800,
+            items: [
+                // 可以添加范克里夫专属掉落
             ]
         }
     }
-    // 其他boss后续可扩展
 };
 
 // ==================== 羁绊名称映射 ====================
@@ -3402,19 +3433,18 @@ function getBasicAttackRepeatChance(character) {
     return 0;
 }
 
-// ==================== BOSS战斗一步推进函数（修复版） ====================
+// ==================== BOSS战斗一步推进函数 ====================
 function stepBossCombat(state) {
     if (!state.bossCombat) return state;
 
     let combat = { ...state.bossCombat };
-    combat.logs = combat.logs || [];  // ← 安全防护
-    let logs = [...combat.logs]; // immutable
+    combat.logs = combat.logs || [];
+    let logs = [...combat.logs];
 
     const boss = BOSS_DATA[combat.bossId];
     if (!boss) return state;
 
     combat.round += 1;
-
 
     // ==================== 玩家阶段 ====================
     for (let i = 0; i < combat.playerStates.length; i++) {
@@ -3427,7 +3457,7 @@ function stepBossCombat(state) {
         const skill = SKILLS[skillId];
         if (!skill) continue;
 
-        // 饰品/装备特效：技能栏强化（例如：第1格与第4格）
+        // 饰品/装备特效
         const slotBuff = getSkillSlotBuffBonus(p.char, slotIndex);
 
         const charForCalc = {
@@ -3440,33 +3470,35 @@ function stepBossCombat(state) {
             }
         };
 
-        // 传入combatContext给技能计算（用于祸福相依、冰霜法师效果等）
-        // 检查是否有冰冷血脉buff
+        // combatContext
         const icyVeinsBuff = p.buffs?.some(b => b.type === 'icy_veins');
-        // 检查是否有冰风暴DOT激活（用于冰枪术必定爆击）
         const blizzardActive = combat.bossDots?.some(d => d.name === '冰风暴' && d.sourcePlayerId === p.char.id) ||
             combat.minions?.some(m => m.dots?.some(d => d.name === '冰风暴' && d.sourcePlayerId === p.char.id));
 
         const combatContext = {
             fortuneMisfortuneStacks: p.fortuneMisfortuneStacks || 0,
-            // 冰霜法师状态
             icyVeinsBuff,
             blizzardActive,
             fingersOfFrost: p.fingersOfFrost || 0
         };
         const result = skill.calculate(charForCalc, combatContext);
 
-        // 目标选择逻辑（不变）
+        // 目标选择逻辑 - 检查火炮手是否免疫
         let targetType = 'boss';
         let targetIndex = -1;
-        if (!combat.strategy.priorityBoss && combat.minions.some(m => m.hp > 0)) {
-            const aliveMinions = combat.minions.map((m, idx) => ({ idx, hp: m.hp })).filter(m => m.hp > 0);
-            aliveMinions.sort((a, b) => a.hp - b.hp);
-            targetIndex = aliveMinions[0].idx;
+
+        // 检查是否有可攻击的小弟（排除免疫状态的火炮手）
+        const attackableMinions = combat.minions
+            .map((m, idx) => ({ idx, hp: m.hp, immune: m.immune }))
+            .filter(m => m.hp > 0 && !m.immune);
+
+        if (!combat.strategy.priorityBoss && attackableMinions.length > 0) {
+            attackableMinions.sort((a, b) => a.hp - b.hp);
+            targetIndex = attackableMinions[0].idx;
             targetType = 'minion';
         }
 
-        // 40级天赋：无坚不摧之力 - 盾墙期间伤害提高50%
+        // buff伤害加成
         let buffDamageDealtMult = 1;
         if (p.buffs) {
             p.buffs.forEach(b => {
@@ -3476,35 +3508,39 @@ function stepBossCombat(state) {
             });
         }
 
-        // ==================== 辅助函数：执行一次普通攻击伤害 ====================
+        // 普通攻击执行函数
         const executeBasicAttackDamage = (isRepeat = false) => {
             const basicSkill = SKILLS['basic_attack'];
             const basicResult = basicSkill.calculate(charForCalc, combatContext);
 
             if (basicResult.damage) {
                 let damage = basicResult.damage * buffDamageDealtMult;
-                const targetDefense = targetType === 'boss' ? boss.defense : boss.minion.defense;
+                const targetDefense = targetType === 'boss' ? boss.defense : (boss.minion?.defense || boss.cannoneer?.defense || 0);
                 const actualDamage = Math.max(1, Math.floor(damage - targetDefense));
 
                 if (targetType === 'boss') {
                     combat.bossHp -= actualDamage;
                 } else {
+                    // 检查免疫
+                    if (combat.minions[targetIndex]?.immune) {
+                        logs.push(`位置${i + 1} ${p.char.name} 的攻击被【登上甲板】免疫！`);
+                        return 0;
+                    }
                     combat.minions[targetIndex].hp -= actualDamage;
                 }
 
                 const repeatText = isRepeat ? '(鞭笞者苏萨斯)' : '';
-                logs.push(`位置${i + 1} ${p.char.name} 使用 普通攻击${repeatText} 对 ${targetType === 'boss' ? boss.name : boss.minion.name} 造成 ${actualDamage} 伤害${basicResult.isCrit ? '（暴击）' : ''}`);
+                const minionName = boss.minion?.name || boss.cannoneer?.name || '小弟';
+                logs.push(`位置${i + 1} ${p.char.name} 使用 普通攻击${repeatText} 对 ${targetType === 'boss' ? boss.name : minionName} 造成 ${actualDamage} 伤害${basicResult.isCrit ? '（暴击）' : ''}`);
 
                 return actualDamage;
             }
             return 0;
         };
 
-        // 新增：支持 AOE 和条件 DOT
+        // AOE伤害处理
         if (result.aoeDamage) {
             let damage = result.aoeDamage * buffDamageDealtMult;
-
-            // 获取技能名称用于日志
             const skillName = skill.name || '技能';
 
             // 对 Boss 造成伤害
@@ -3512,20 +3548,17 @@ function stepBossCombat(state) {
                 combat.bossHp -= damage;
                 logs.push(`位置${i + 1} ${p.char.name} 的${skillName}对 ${boss.name} 造成 ${Math.floor(damage)} 伤害${result.isCrit ? '（暴击！）' : ''}`);
 
-                // 暴击时对 Boss 施加 DOT
                 if (result.isCrit && result.dotOnCrit) {
                     combat.bossDots = combat.bossDots || [];
                     combat.bossDots.push({ ...result.dotOnCrit, sourcePlayerId: p.char.id });
                     logs.push(`→ ${boss.name} 获得【重伤】，将持续受到 DOT 伤害`);
                 }
 
-                // 冰霜法师40级天赋：冰川突进 - 彗星风暴每造成一次伤害获取一层寒冰指
                 if (result.generateFingerOnHit && p.char.classId === 'frost_mage') {
                     p.fingersOfFrost = (p.fingersOfFrost || 0) + 1;
                     logs.push(`【冰川突进】触发：${p.char.name} 获得1层寒冰指，当前${p.fingersOfFrost}层`);
                 }
 
-                // 30级天赋：挫志怒吼 - 雷霆一击施加debuff，Boss/小弟造成的伤害降低20%
                 if (p.char.talents?.[30] === 'demoralizing_shout') {
                     if (!combat.bossDebuffs?.demoralizingShout) {
                         combat.bossDebuffs = combat.bossDebuffs || {};
@@ -3535,26 +3568,33 @@ function stepBossCombat(state) {
                 }
             }
 
-            // 对所有小弟造成伤害
+            // 对所有小弟造成伤害（检查免疫）
             combat.minions.forEach((m, idx) => {
                 if (m.hp <= 0) return;
+
+                // 检查免疫状态
+                if (m.immune) {
+                    logs.push(`位置${i + 1} ${p.char.name} 的${skillName}被 火炮手${idx + 1}【登上甲板】免疫！`);
+                    return;
+                }
+
                 m.hp -= damage;
-                logs.push(`位置${i + 1} ${p.char.name} 的${skillName}对 小弟${idx + 1} 造成 ${Math.floor(damage)} 伤害${result.isCrit ? '（暴击！）' : ''}`);
+                const minionName = boss.minion?.name || boss.cannoneer?.name || '小弟';
+                logs.push(`位置${i + 1} ${p.char.name} 的${skillName}对 ${minionName}${idx + 1} 造成 ${Math.floor(damage)} 伤害${result.isCrit ? '（暴击！）' : ''}`);
 
                 if (result.isCrit && result.dotOnCrit) {
                     m.dots = m.dots || [];
                     m.dots.push({ ...result.dotOnCrit, sourcePlayerId: p.char.id });
-                    logs.push(`→ 小弟${idx + 1} 获得【重伤】，将持续受到 DOT 伤害`);
+                    logs.push(`→ ${minionName}${idx + 1} 获得【重伤】，将持续受到 DOT 伤害`);
                 }
 
-                // 冰霜法师40级天赋：冰川突进 - 彗星风暴每造成一次伤害获取一层寒冰指
                 if (result.generateFingerOnHit && p.char.classId === 'frost_mage') {
                     p.fingersOfFrost = (p.fingersOfFrost || 0) + 1;
                     logs.push(`【冰川突进】触发：${p.char.name} 获得1层寒冰指，当前${p.fingersOfFrost}层`);
                 }
             });
 
-            // 30级天赋：山丘之王 - 雷霆一击有50%几率再次释放一次
+            // 山丘之王天赋处理
             if (p.char.talents?.[30] === 'mountain_king' && Math.random() < 0.5) {
                 const extraResult = skill.calculate(charForCalc);
                 const extraDamage = extraResult.aoeDamage * buffDamageDealtMult;
@@ -3574,8 +3614,13 @@ function stepBossCombat(state) {
 
                 combat.minions.forEach((m, idx) => {
                     if (m.hp <= 0) return;
+                    if (m.immune) {
+                        logs.push(`雷霆一击(山丘之王)被 火炮手${idx + 1}【登上甲板】免疫！`);
+                        return;
+                    }
                     m.hp -= extraDamage;
-                    logs.push(`位置${i + 1} ${p.char.name} 的雷霆一击(山丘之王)对 小弟${idx + 1} 造成 ${Math.floor(extraDamage)} 伤害${extraResult.isCrit ? '（暴击！）' : ''}`);
+                    const minionName = boss.minion?.name || boss.cannoneer?.name || '小弟';
+                    logs.push(`位置${i + 1} ${p.char.name} 的雷霆一击(山丘之王)对 ${minionName}${idx + 1} 造成 ${Math.floor(extraDamage)} 伤害${extraResult.isCrit ? '（暴击！）' : ''}`);
 
                     if (extraResult.isCrit && extraResult.dotOnCrit) {
                         m.dots = m.dots || [];
@@ -3584,54 +3629,108 @@ function stepBossCombat(state) {
                 });
             }
         }
-
-        // 伤害/治疗/DOT 处理（简化版，保持原有逻辑）
-        if (result.damage) {
+        // 单体伤害处理
+        else if (result.damage) {
             let damage = result.damage;
-            // ...（天赋加成等保持原样）
 
-            const targetDefense = targetType === 'boss' ? boss.defense : boss.minion.defense;
-            const actualDamage = Math.max(1, Math.floor(damage - targetDefense));
-
-            if (targetType === 'boss') {
-                combat.bossHp -= actualDamage;
-            } else {
-                combat.minions[targetIndex].hp -= actualDamage;
+            // 天赋加成
+            if (p.char.talents?.[10] === 'shadow_amp' && result.school === 'shadow') {
+                damage *= 1.2;
             }
+            if (p.char.talents?.[20] === 'dark_side' && skillId === 'mind_blast') {
+                damage *= 1.8;
+            }
+            damage *= buffDamageDealtMult;
 
-            logs.push(`位置${i + 1} ${p.char.name} 使用 ${skill.name} 对 ${targetType === 'boss' ? boss.name : boss.minion.name} 造成 ${actualDamage} 伤害${result.isCrit ? '（暴击）' : ''}`);
+            // 法术易伤
+            const isSpellSchool = (result.school === 'holy' || result.school === 'shadow');
+            let takenMult = 1;
+            if (isSpellSchool) {
+                const vuln = combat.bossDebuffs?.spell_vuln;
+                if (vuln) takenMult *= (vuln.mult ?? 1);
+            }
+            damage = Math.floor(damage * takenMult);
 
-            // ==================== 新增：鞭笞者苏萨斯特效 - 普攻后50%概率再次普攻 ====================
-            if (skillId === 'basic_attack') {
-                const repeatChance = getBasicAttackRepeatChance(p.char);
-                if (repeatChance > 0 && Math.random() < repeatChance) {
-                    logs.push(`【鞭笞者苏萨斯】触发：再次发动普通攻击！`);
-                    executeBasicAttackDamage(true);
+            const targetDefense = targetType === 'boss' ? boss.defense : (boss.minion?.defense || boss.cannoneer?.defense || 0);
+
+            // 检查目标是否免疫
+            if (targetType === 'minion' && combat.minions[targetIndex]?.immune) {
+                logs.push(`位置${i + 1} ${p.char.name} 的${skill.name}被【登上甲板】免疫！`);
+            } else {
+                const actualDamage = Math.max(1, damage - targetDefense);
+
+                if (targetType === 'boss') {
+                    combat.bossHp -= actualDamage;
+                } else {
+                    combat.minions[targetIndex].hp -= actualDamage;
+                }
+
+                const minionName = boss.minion?.name || boss.cannoneer?.name || '小弟';
+                logs.push(`位置${i + 1} ${p.char.name} 使用 ${skill.name} 对 ${targetType === 'boss' ? boss.name : minionName} 造成 ${actualDamage} 伤害${result.isCrit ? '（暴击）' : ''}`);
+
+                // 救赎机制
+                if (p.char.stats.atonement) {
+                    // 检查减疗debuff
+                    let healingMult = 1;
+                    if (p.debuffs?.mortalStrike) {
+                        healingMult = 1 - (p.debuffs.mortalStrike.healingReduction || 0);
+                    }
+                    const healFromAtonement = Math.floor(actualDamage * p.char.stats.atonement.healingRate * healingMult);
+                    const maxHp = p.char.stats.maxHp || 0;
+                    const actualHeal = Math.min(healFromAtonement, maxHp - p.currentHp);
+                    p.currentHp += actualHeal;
+
+                    let healLog = `因为救赎恢复 ${actualHeal} 点生命`;
+                    if (healingMult < 1) {
+                        healLog += `（受到致死打击减疗${Math.round((1 - healingMult) * 100)}%）`;
+                    }
+                    logs.push(healLog);
+                }
+
+                // 鞭笞者苏萨斯特效
+                if (skillId === 'basic_attack') {
+                    const repeatChance = getBasicAttackRepeatChance(p.char);
+                    if (repeatChance > 0 && Math.random() < repeatChance) {
+                        logs.push(`【鞭笞者苏萨斯】触发：再次发动普通攻击！`);
+                        executeBasicAttackDamage(true);
+                    }
                 }
             }
         }
 
+        // 治疗处理 - 需要考虑减疗debuff
         if (result.healAll) {
-            const heal = Math.floor(result.healAll);
+            let heal = Math.floor(result.healAll);
             combat.playerStates.forEach(ps => {
                 if (ps.currentHp > 0) {
-                    const newHp = Math.min(ps.char.stats.maxHp, ps.currentHp + heal);
+                    // 检查减疗debuff
+                    let healingMult = 1;
+                    if (ps.debuffs?.mortalStrike) {
+                        healingMult = 1 - (ps.debuffs.mortalStrike.healingReduction || 0);
+                    }
+                    const actualHeal = Math.floor(heal * healingMult);
+                    const newHp = Math.min(ps.char.stats.maxHp, ps.currentHp + actualHeal);
                     ps.currentHp = newHp;
-                    ps.char.stats.currentHp = newHp; // ✅ 同步角色本体
+                    ps.char.stats.currentHp = newHp;
                 }
             });
             logs.push(`位置${i + 1} ${p.char.name} 全队治疗 ${heal}`);
         }
 
-        // ===== 苦修技能处理 =====
+        // 苦修技能处理 - 需要考虑减疗debuff
         if (result.penanceHeal) {
-            // 苦修治疗最前排队友
             const frontPlayer = combat.playerStates.find(ps => ps.currentHp > 0);
             if (frontPlayer) {
                 const fortuneStacks = p.fortuneMisfortuneStacks || 0;
                 let healAmount = result.penanceHeal;
 
-                // 40级天赋：祸福相依 - 已在skill.calculate中计算
+                // 检查减疗debuff
+                let healingMult = 1;
+                if (frontPlayer.debuffs?.mortalStrike) {
+                    healingMult = 1 - (frontPlayer.debuffs.mortalStrike.healingReduction || 0);
+                }
+                healAmount = Math.floor(healAmount * healingMult);
+
                 const newHp = Math.min(frontPlayer.char.stats.maxHp, frontPlayer.currentHp + healAmount);
                 const actualHeal = newHp - frontPlayer.currentHp;
                 frontPlayer.currentHp = newHp;
@@ -3640,25 +3739,33 @@ function stepBossCombat(state) {
                 if (fortuneStacks > 0 && p.char.talents?.[40] === 'fortune_misfortune') {
                     healText += `（祸福相依 ${fortuneStacks} 层加成）`;
                 }
+                if (healingMult < 1) {
+                    healText += `（受到致死打击减疗${Math.round((1 - healingMult) * 100)}%）`;
+                }
                 logs.push(healText);
 
-                // 40级天赋：终极苦修 - 造成伤害
+                // 终极苦修伤害
                 if (result.penanceDamage) {
-                    const targetDefense = targetType === 'boss' ? boss.defense : boss.minion.defense;
-                    const actualDamage = Math.max(1, Math.floor(result.penanceDamage * buffDamageDealtMult - targetDefense));
+                    const targetDefense = targetType === 'boss' ? boss.defense : (boss.minion?.defense || boss.cannoneer?.defense || 0);
 
-                    if (targetType === 'boss') {
-                        combat.bossHp -= actualDamage;
-                    } else if (targetIndex >= 0) {
-                        combat.minions[targetIndex].hp -= actualDamage;
+                    if (targetType === 'minion' && combat.minions[targetIndex]?.immune) {
+                        logs.push(`【终极苦修】被【登上甲板】免疫！`);
                     } else {
-                        combat.bossHp -= actualDamage;
-                    }
+                        const actualDamage = Math.max(1, Math.floor(result.penanceDamage * buffDamageDealtMult - targetDefense));
 
-                    logs.push(`位置${i + 1} ${p.char.name}【终极苦修】造成 ${actualDamage} 伤害`);
+                        if (targetType === 'boss') {
+                            combat.bossHp -= actualDamage;
+                        } else if (targetIndex >= 0) {
+                            combat.minions[targetIndex].hp -= actualDamage;
+                        } else {
+                            combat.bossHp -= actualDamage;
+                        }
+
+                        logs.push(`位置${i + 1} ${p.char.name}【终极苦修】造成 ${actualDamage} 伤害`);
+                    }
                 }
 
-                // 40级天赋：争分夺秒 - 急速buff
+                // 争分夺秒
                 if (result.applyHasteBuff) {
                     p.buffs = p.buffs || [];
                     p.buffs.push({
@@ -3669,46 +3776,49 @@ function stepBossCombat(state) {
                     logs.push(`【争分夺秒】触发：${p.char.name} 急速+${result.applyHasteBuff.hasteBonus}%，持续${result.applyHasteBuff.duration}回合`);
                 }
 
-                // 清空祸福相依层数
                 if (result.clearFortuneStacks) {
                     p.fortuneMisfortuneStacks = 0;
                 }
             }
         }
 
+        // DOT处理
         if (result.dot) {
-            // 冰风暴DOT处理 - 对当前目标施加
             if (result.dot.name === '冰风暴') {
                 if (targetType === 'boss') {
                     combat.bossDots = combat.bossDots || [];
                     combat.bossDots.push({ ...result.dot, sourcePlayerId: p.char.id });
                     logs.push(`位置${i + 1} ${p.char.name} 对 ${boss.name} 施放【冰风暴】，持续${result.dot.duration}回合`);
-                } else if (targetIndex >= 0) {
+                } else if (targetIndex >= 0 && !combat.minions[targetIndex]?.immune) {
                     combat.minions[targetIndex].dots = combat.minions[targetIndex].dots || [];
                     combat.minions[targetIndex].dots.push({ ...result.dot, sourcePlayerId: p.char.id });
-                    logs.push(`位置${i + 1} ${p.char.name} 对 小弟${targetIndex + 1} 施放【冰风暴】，持续${result.dot.duration}回合`);
+                    logs.push(`位置${i + 1} ${p.char.name} 对 火炮手${targetIndex + 1} 施放冰风暴！`);
+                } else if (targetIndex >= 0 && combat.minions[targetIndex]?.immune) {
+                    logs.push(`冰风暴被 火炮手${targetIndex + 1}【登上甲板】免疫！`);
                 }
             }
         }
 
-        // 处理AOE DOT（寒冰宝珠）
+        // AOE DOT（寒冰宝珠）
         if (result.aoeDot) {
-            // 对Boss施加
             if (combat.bossHp > 0) {
                 combat.bossDots = combat.bossDots || [];
                 combat.bossDots.push({ ...result.aoeDot, sourcePlayerId: p.char.id });
                 logs.push(`位置${i + 1} ${p.char.name} 对 ${boss.name} 施放【${result.aoeDot.name}】，持续${result.aoeDot.duration}回合`);
             }
-            // 对所有小弟施加
             combat.minions.forEach((m, idx) => {
                 if (m.hp <= 0) return;
+                if (m.immune) {
+                    logs.push(`【${result.aoeDot.name}】被 火炮手${idx + 1}【登上甲板】免疫！`);
+                    return;
+                }
                 m.dots = m.dots || [];
                 m.dots.push({ ...result.aoeDot, sourcePlayerId: p.char.id });
-                logs.push(`位置${i + 1} ${p.char.name} 对 小弟${idx + 1} 施放【${result.aoeDot.name}】，持续${result.aoeDot.duration}回合`);
+                logs.push(`位置${i + 1} ${p.char.name} 对 火炮手${idx + 1} 施放【${result.aoeDot.name}】，持续${result.aoeDot.duration}回合`);
             });
         }
 
-        // 新增：支持 buff 类型的 damageTakenMult
+        // buff处理
         if (result.buff) {
             p.buffs = p.buffs || [];
             p.buffs.push({ ...result.buff });
@@ -3723,43 +3833,36 @@ function stepBossCombat(state) {
                 logs.push(buffText);
             }
 
-            // 冰冷血脉buff处理
             if (result.buff.type === 'icy_veins') {
                 logs.push(`位置${i + 1} ${p.char.name} 开启【冰冷血脉】：冰霜伤害+50%，急速+50%，持续${result.buff.duration}回合`);
             }
         }
 
-        // 天赋触发（如质朴）
+        // 天赋触发
         if (skillId === 'basic_attack' && p.char.talents?.[10] === 'plain') {
             p.talentBuffs.attackFlat = (p.talentBuffs.attackFlat || 0) + 5;
             logs.push(`【质朴】触发：攻击+5`);
         }
 
-        // 40级天赋：祸福相依 - 惩击和心灵震爆累积层数
         if ((skillId === 'smite' || skillId === 'mind_blast') && p.char.talents?.[40] === 'fortune_misfortune') {
             p.fortuneMisfortuneStacks = (p.fortuneMisfortuneStacks || 0) + 1;
             logs.push(`【祸福相依】${p.char.name} 层数+1，当前${p.fortuneMisfortuneStacks}层`);
         }
 
-        // ==================== 冰霜法师天赋处理 ====================
-        // 寒冰箭天赋触发
+        // 冰霜法师天赋
         if (skillId === 'frostbolt' && result.triggerFrostboltTalents) {
-            // 10级天赋：延绵寒冷 - 法术强度+5
             if (p.char.talents?.[10] === 'lingering_cold') {
                 p.talentBuffs = p.talentBuffs || {};
                 p.talentBuffs.spellPowerFlat = (p.talentBuffs.spellPowerFlat || 0) + 5;
                 logs.push(`【延绵寒冷】触发：${p.char.name} 法术强度+5`);
             }
 
-            // 20级天赋：寒冰指 - 50%概率获得1层寒冰指
             if (p.char.talents?.[20] === 'fingers_of_frost' && Math.random() < 0.5) {
                 p.fingersOfFrost = (p.fingersOfFrost || 0) + 1;
                 logs.push(`【寒冰指】触发：${p.char.name} 获得1层寒冰指，当前${p.fingersOfFrost}层`);
             }
 
-            // 20级天赋：冰冷智慧 - 概率额外施放冰风暴
             if (p.char.talents?.[20] === 'cold_wisdom' || p.char.talents?.[30] === 'cold_intuition') {
-                // 30级天赋：冰冷直觉 - 触发概率提高到40%
                 const triggerChance = p.char.talents?.[30] === 'cold_intuition' ? 0.4 : 0.25;
                 if (Math.random() < triggerChance) {
                     const blizzardSkill = SKILLS['blizzard'];
@@ -3769,24 +3872,21 @@ function stepBossCombat(state) {
                         combat.bossDots = combat.bossDots || [];
                         combat.bossDots.push({ ...blizzardResult.dot, sourcePlayerId: p.char.id });
                         logs.push(`【冰冷智慧】触发：${p.char.name} 额外对 ${boss.name} 施放冰风暴！`);
-                    } else if (targetIndex >= 0) {
+                    } else if (targetIndex >= 0 && !combat.minions[targetIndex]?.immune) {
                         combat.minions[targetIndex].dots = combat.minions[targetIndex].dots || [];
                         combat.minions[targetIndex].dots.push({ ...blizzardResult.dot, sourcePlayerId: p.char.id });
-                        logs.push(`【冰冷智慧】触发：${p.char.name} 额外对 小弟${targetIndex + 1} 施放冰风暴！`);
+                        logs.push(`【冰冷智慧】触发：${p.char.name} 额外对 火炮手${targetIndex + 1} 施放冰风暴！`);
                     }
                 }
             }
         }
 
-        // 冰枪术消耗寒冰指
         if (skillId === 'ice_lance' && result.consumeFingersOfFrost) {
             p.fingersOfFrost = Math.max(0, (p.fingersOfFrost || 0) - 1);
             logs.push(`【寒冰指】消耗1层，${p.char.name} 剩余${p.fingersOfFrost}层`);
         }
 
-        // 其他天赋类似...
-
-        // ===== 新增：每回合减少 buff 持续时间 =====
+        // buff duration 减少
         if (p.buffs && p.buffs.length > 0) {
             p.buffs = p.buffs
                 .map(b => {
@@ -3797,9 +3897,22 @@ function stepBossCombat(state) {
                 })
                 .filter(b => (b.duration ?? 999) > 0);
         }
+
+        // debuff duration 减少（致死打击减疗等）
+        if (p.debuffs) {
+            Object.keys(p.debuffs).forEach(key => {
+                if (p.debuffs[key].duration !== undefined) {
+                    p.debuffs[key].duration -= 1;
+                    if (p.debuffs[key].duration <= 0) {
+                        delete p.debuffs[key];
+                        logs.push(`位置${i + 1} ${p.char.name} 的【致死打击】减疗效果消失`);
+                    }
+                }
+            });
+        }
     }
 
-    // ===== 玩家阶段结束后添加羁绊效果 =====
+    // 羁绊效果
     if (state.rebirthBonds?.includes('baoernai')) {
         const priests = combat.playerStates.filter(p => p.char.classId === 'discipline_priest' && p.currentHp > 0).length;
         const warriors = combat.playerStates.filter(p => p.char.classId === 'protection_warrior' && p.currentHp > 0).length;
@@ -3810,25 +3923,26 @@ function stepBossCombat(state) {
                 const aoeDamage = Math.floor(blockValue * 0.8);
                 if (aoeDamage > 0) {
                     combat.bossHp -= aoeDamage;
-                    combat.minions.forEach(m => { if (m.hp > 0) m.hp -= aoeDamage; });
+                    combat.minions.forEach(m => {
+                        if (m.hp > 0 && !m.immune) {
+                            m.hp -= aoeDamage;
+                        }
+                    });
                     logs.push(`【包二奶羁绊】防护战士对所有敌人造成 ${aoeDamage} 额外伤害（基于格挡值）`);
                 }
             }
         }
     }
 
-    // DOT 结算 + 清理死亡小弟（保持原逻辑）
-    // ===== DOT 结算（Boss + 小弟）=====
+    // DOT 结算
     if (combat.bossDots) {
         combat.bossDots = combat.bossDots.filter(dot => {
             const dmg = Math.max(1, Math.floor(dot.damagePerTurn));
             combat.bossHp -= dmg;
 
-            // 根据DOT类型显示不同的日志
             const dotName = dot.name || '重伤';
             logs.push(`【${dotName}】对 ${boss.name} 造成 ${dmg} DOT 伤害（剩余${dot.duration - 1}回合）`);
 
-            // 30级天赋：残暴动力 - 重伤伤害的150%治疗自己
             if (dot.sourcePlayerId) {
                 const sourcePlayer = combat.playerStates.find(p => p.char.id === dot.sourcePlayerId);
                 if (sourcePlayer && sourcePlayer.char.talents?.[30] === 'brutal_momentum' && sourcePlayer.currentHp > 0) {
@@ -3841,7 +3955,6 @@ function stepBossCombat(state) {
                     }
                 }
 
-                // 冰霜法师30级天赋：宝珠精通 - 寒冰宝珠DOT有25%概率生成寒冰指
                 if (dot.canGenerateFinger && sourcePlayer && sourcePlayer.char.talents?.[30] === 'orb_mastery') {
                     if (Math.random() < 0.25) {
                         sourcePlayer.fingersOfFrost = (sourcePlayer.fingersOfFrost || 0) + 1;
@@ -3855,18 +3968,24 @@ function stepBossCombat(state) {
         });
     }
 
+    // 小弟DOT结算
     combat.minions = combat.minions.map((m, idx) => {
         if (m.hp <= 0) return m;
         if (m.dots && m.dots.length > 0) {
             m.dots = m.dots.filter(dot => {
+                // 免疫状态下DOT不造成伤害
+                if (m.immune) {
+                    dot.duration -= 1;
+                    return dot.duration > 0;
+                }
+
                 const dmg = Math.max(1, Math.floor(dot.damagePerTurn));
                 m.hp -= dmg;
 
-                // 根据DOT类型显示不同的日志
                 const dotName = dot.name || '重伤';
-                logs.push(`【${dotName}】对 小弟${idx + 1} 造成 ${dmg} DOT 伤害（剩余${dot.duration - 1}回合）`);
+                const minionName = boss.minion?.name || boss.cannoneer?.name || '小弟';
+                logs.push(`【${dotName}】对 ${minionName}${idx + 1} 造成 ${dmg} DOT 伤害（剩余${dot.duration - 1}回合）`);
 
-                // 30级天赋：残暴动力 - 重伤伤害的150%治疗自己
                 if (dot.sourcePlayerId) {
                     const sourcePlayer = combat.playerStates.find(p => p.char.id === dot.sourcePlayerId);
                     if (sourcePlayer && sourcePlayer.char.talents?.[30] === 'brutal_momentum' && sourcePlayer.currentHp > 0) {
@@ -3879,7 +3998,6 @@ function stepBossCombat(state) {
                         }
                     }
 
-                    // 冰霜法师30级天赋：宝珠精通 - 寒冰宝珠DOT有25%概率生成寒冰指
                     if (dot.canGenerateFinger && sourcePlayer && sourcePlayer.char.talents?.[30] === 'orb_mastery') {
                         if (Math.random() < 0.25) {
                             sourcePlayer.fingersOfFrost = (sourcePlayer.fingersOfFrost || 0) + 1;
@@ -3895,8 +4013,7 @@ function stepBossCombat(state) {
         return m;
     });
 
-    // ==================== Boss阶段 + 小弟阶段（保持原逻辑） ====================
-    // 选一个存活玩家位作为目标：固定优先 1号位 → 2号位 → 3号位
+    // ==================== Boss阶段 ====================
     const pickAlivePlayerIndex = () => {
         for (let idx = 0; idx < combat.playerStates.length; idx++) {
             const p = combat.playerStates[idx];
@@ -3905,7 +4022,6 @@ function stepBossCombat(state) {
         return -1;
     };
 
-    // ✅ Boss战：复用“护甲减伤 + 格挡”逻辑（与普通战斗一致）
     const getBuffBlockRate = (playerState) => {
         const buffs = Array.isArray(playerState?.buffs) ? playerState.buffs : [];
         return buffs.reduce((sum, b) => sum + (b?.blockRate || 0), 0);
@@ -3914,11 +4030,8 @@ function stepBossCombat(state) {
     const calcMitigatedAndBlockedDamage = (playerState, rawDamage, isHeavy = false) => {
         const armor = playerState?.char?.stats?.armor || 0;
         const dr = getArmorDamageReduction(armor);
-
-        // 先护甲减伤（至少 1）
         let dmg = applyPhysicalMitigation(rawDamage, armor);
 
-        // 再格挡
         const baseBlockRate = playerState?.char?.stats?.blockRate || 0;
         const buffBlockRate = getBuffBlockRate(playerState);
         const blockChance = Math.max(0, Math.min(0.95, (baseBlockRate + buffBlockRate) / 100));
@@ -3932,9 +4045,7 @@ function stepBossCombat(state) {
             dmg = Math.max(1, dmg - blockedAmount);
         }
 
-        // 最后吃“受到伤害乘区”（如防御姿态）
         const takenMult = playerState?.char?.stats?.damageTakenMult ?? 1;
-        // 新增：buff 中的 damageTakenMult 乘区叠加
         let buffTakenMult = 1;
         if (playerState.buffs) {
             playerState.buffs.forEach(b => {
@@ -3942,85 +4053,173 @@ function stepBossCombat(state) {
                     buffTakenMult *= b.damageTakenMult;
                 }
             });
-            // 清理过期buff
             playerState.buffs = playerState.buffs.filter(b => (b.duration ?? 999) > 0);
         }
 
         const finalTakenMult = takenMult * buffTakenMult;
-        // 30级天赋：挫志怒吼 - 敌人造成的伤害降低20%
         const demoralizingShoutMult = combat.bossDebuffs?.demoralizingShout?.damageMult ?? 1;
         dmg = Math.max(1, Math.floor(dmg * finalTakenMult * demoralizingShoutMult));
 
         return { damage: dmg, dr, blockedAmount, isHeavy };
     };
 
-
-
-    // 计算本回合 boss 动作：按 cycle 循环
+    // Boss 行动
     const bossAction = boss.cycle[(combat.round - 1) % boss.cycle.length];
 
-    // ① Boss 行动
-    if (bossAction === 'summon') {
-        // 统计存活小弟
-        const aliveMinions = (combat.minions || []).filter(m => (m.hp ?? 0) > 0);
-        const need = Math.max(0, (boss.summonCount || 0) - aliveMinions.length);
+    // ==================== 范克里夫特殊技能处理 ====================
+    if (combat.bossId === 'vancleef') {
+        // 致死打击
+        if (bossAction === 'mortal_strike') {
+            const tIdx = pickAlivePlayerIndex();
+            if (tIdx >= 0) {
+                const target = combat.playerStates[tIdx];
+                const raw = Math.floor((boss.attack || 0) * (boss.mortalStrikeMultiplier || 3));
+                const { damage, dr, blockedAmount } = calcMitigatedAndBlockedDamage(target, raw, true);
 
-        for (let i = 0; i < need; i++) {
-            combat.minions.push({
-                hp: boss.minion.maxHp,
-                maxHp: boss.minion.maxHp,
-                attack: boss.minion.attack,
-                defense: boss.minion.defense,
-            });
+                target.currentHp -= damage;
+
+                // 施加减疗debuff
+                target.debuffs = target.debuffs || {};
+                target.debuffs.mortalStrike = {
+                    healingReduction: boss.mortalStrikeDebuff.healingReduction,
+                    duration: boss.mortalStrikeDebuff.duration
+                };
+
+                const drPct = Math.round(dr * 100);
+                const blockText = blockedAmount > 0 ? `，格挡 ${blockedAmount}` : '';
+                logs.push(`【${boss.name}】使用【致死打击】对 位置${tIdx + 1} 造成 ${damage} 伤害（护甲减伤${drPct}%${blockText}）`);
+                logs.push(`→ 位置${tIdx + 1} 受到【致死打击】：受到治疗效果降低50%，持续2回合`);
+            }
+        }
+        // 火炮手准备
+        else if (bossAction === 'summon_cannoneers') {
+            const aliveMinions = (combat.minions || []).filter(m => (m.hp ?? 0) > 0);
+            const need = Math.max(0, (boss.summonCannoneerCount || 3) - aliveMinions.length);
+
+            for (let i = 0; i < need; i++) {
+                combat.minions.push({
+                    hp: boss.cannoneer.maxHp,
+                    maxHp: boss.cannoneer.maxHp,
+                    attack: boss.cannoneer.attack,
+                    defense: boss.cannoneer.defense,
+                    isCannoneer: true,
+                    immune: false,
+                    dots: []
+                });
+            }
+
+            if (need > 0) {
+                logs.push(`【${boss.name}】大喊："火炮手准备！" 召唤了 ${need} 个${boss.cannoneer.name}`);
+            } else {
+                logs.push(`【${boss.name}】尝试召唤火炮手，但场上火炮手已满`);
+            }
+        }
+        // 登上甲板
+        else if (bossAction === 'board_the_deck') {
+            const aliveMinions = combat.minions.filter(m => m.hp > 0 && m.isCannoneer);
+            if (aliveMinions.length > 0) {
+                combat.minions.forEach(m => {
+                    if (m.hp > 0 && m.isCannoneer) {
+                        m.immune = true;
+                    }
+                });
+                logs.push(`【${boss.name}】大喊："登上甲板！" 所有火炮手获得免疫伤害效果！`);
+            } else {
+                logs.push(`【${boss.name}】尝试命令火炮手登上甲板，但场上没有火炮手`);
+            }
+        }
+    }
+    // ==================== 霍格技能处理（保持原有逻辑） ====================
+    else if (combat.bossId === 'hogger') {
+        if (bossAction === 'summon') {
+            const aliveMinions = (combat.minions || []).filter(m => (m.hp ?? 0) > 0);
+            const need = Math.max(0, (boss.summonCount || 0) - aliveMinions.length);
+
+            for (let i = 0; i < need; i++) {
+                combat.minions.push({
+                    hp: boss.minion.maxHp,
+                    maxHp: boss.minion.maxHp,
+                    attack: boss.minion.attack,
+                    defense: boss.minion.defense,
+                });
+            }
+
+            if (need > 0) {
+                logs.push(`【${boss.name}】使用【召唤】呼叫了 ${need} 个${boss.minion.name}`);
+            } else {
+                logs.push(`【${boss.name}】尝试召唤，但场上小弟已满`);
+            }
         }
 
-        if (need > 0) {
-            logs.push(`【${boss.name}】使用【召唤】呼叫了 ${need} 个${boss.minion.name}`);
-        } else {
-            logs.push(`【${boss.name}】尝试召唤，但场上小弟已满`);
+        if (bossAction === 'strike') {
+            const tIdx = pickAlivePlayerIndex();
+            if (tIdx >= 0) {
+                const target = combat.playerStates[tIdx];
+                const raw = Math.floor((boss.attack || 0) * (boss.heavyMultiplier || 1));
+                const { damage, dr, blockedAmount } = calcMitigatedAndBlockedDamage(target, raw, true);
+
+                target.currentHp -= damage;
+
+                const drPct = Math.round(dr * 100);
+                const blockText = blockedAmount > 0 ? `，格挡 ${blockedAmount}` : '';
+                logs.push(`【${boss.name}】使用【重击】对 位置${tIdx + 1} 造成 ${damage} 伤害（护甲减伤${drPct}%${blockText}）`);
+            }
         }
     }
 
-    if (bossAction === 'strike') {
-        const tIdx = pickAlivePlayerIndex();
-        if (tIdx >= 0) {
-            const target = combat.playerStates[tIdx];
+    // ==================== 小弟行动 ====================
+    for (let i = 0; i < (combat.minions || []).length; i++) {
+        const m = combat.minions[i];
+        if ((m.hp ?? 0) <= 0) continue;
 
-            // 重击伤害 = boss.attack * heavyMultiplier - 玩家防御（至少1）
-            const raw = Math.floor((boss.attack || 0) * (boss.heavyMultiplier || 1));
-            const { damage, dr, blockedAmount } = calcMitigatedAndBlockedDamage(target, raw, true);
+        // 范克里夫的火炮手：对全队造成AOE伤害
+        if (combat.bossId === 'vancleef' && m.isCannoneer) {
+            const aoeDamage = Math.floor((boss.attack || 0) * (boss.cannoneer.aoeDamageMultiplier || 0.5));
+
+            combat.playerStates.forEach((ps, pIdx) => {
+                if (ps.currentHp <= 0) return;
+
+                const armor = ps.char?.stats?.armor || 0;
+                const dr = getArmorDamageReduction(armor);
+                let dmg = applyPhysicalMitigation(aoeDamage, armor);
+
+                // 受伤乘区
+                const takenMult = ps.char?.stats?.damageTakenMult ?? 1;
+                let buffTakenMult = 1;
+                if (ps.buffs) {
+                    ps.buffs.forEach(b => {
+                        if (b.damageTakenMult) {
+                            buffTakenMult *= b.damageTakenMult;
+                        }
+                    });
+                }
+                const demoralizingShoutMult = combat.bossDebuffs?.demoralizingShout?.damageMult ?? 1;
+                dmg = Math.max(1, Math.floor(dmg * takenMult * buffTakenMult * demoralizingShoutMult));
+
+                ps.currentHp -= dmg;
+            });
+
+            logs.push(`【${boss.cannoneer.name}${i + 1}】炮击全队，每人受到 ${aoeDamage} 点伤害（护甲减伤后）`);
+        }
+        // 霍格的小弟：普通攻击
+        else {
+            const tIdx = pickAlivePlayerIndex();
+            if (tIdx < 0) break;
+
+            const target = combat.playerStates[tIdx];
+            const raw = Math.floor(m.attack || 0);
+            const { damage, dr, blockedAmount } = calcMitigatedAndBlockedDamage(target, raw, false);
 
             target.currentHp -= damage;
 
             const drPct = Math.round(dr * 100);
             const blockText = blockedAmount > 0 ? `，格挡 ${blockedAmount}` : '';
-            logs.push(`【${boss.name}】使用【重击】对 位置${tIdx + 1} 造成 ${damage} 伤害（护甲减伤${drPct}%${blockText}）`);
+            const minionName = boss.minion?.name || '小弟';
+            logs.push(`【${minionName}】攻击 位置${tIdx + 1} 造成 ${damage} 伤害（护甲减伤${drPct}%${blockText}）`);
         }
     }
 
-    // ② 小弟行动：每个存活小弟各攻击一次
-    for (let i = 0; i < (combat.minions || []).length; i++) {
-        const m = combat.minions[i];
-        if ((m.hp ?? 0) <= 0) continue;
-
-        const tIdx = pickAlivePlayerIndex();
-        if (tIdx < 0) break;
-
-        const target = combat.playerStates[tIdx];
-
-        const raw = Math.floor(m.attack || 0);
-        const { damage, dr, blockedAmount } = calcMitigatedAndBlockedDamage(target, raw, false);
-
-        target.currentHp -= damage;
-
-        const drPct = Math.round(dr * 100);
-        const blockText = blockedAmount > 0 ? `，格挡 ${blockedAmount}` : '';
-        logs.push(`【${boss.minion.name}】攻击 位置${tIdx + 1} 造成 ${damage} 伤害（护甲减伤${drPct}%${blockText}）`);
-
-    }
-
-
-    // ③ 清理死亡小弟（可选：保持数组干净）
+    // 清理死亡小弟
     combat.minions = (combat.minions || []).filter(m => (m.hp ?? 0) > 0);
 
     // ==================== 胜负判定 ====================
@@ -4028,35 +4227,29 @@ function stepBossCombat(state) {
     const bossDead = combat.bossHp <= 0;
 
     if (bossDead || allPlayersDead) {
-        // 创建新 state
         let newState = {
             ...state,
-            bossCombat: null // 关闭战斗
+            bossCombat: null
         };
 
         if (bossDead) {
             logs.push('★★★ 胜利！获得奖励 ★★★');
 
-            // ==================== 记录击杀的Boss ====================
             if (!newState.defeatedBosses) newState.defeatedBosses = [];
             if (!newState.defeatedBosses.includes(combat.bossId)) {
                 newState.defeatedBosses = [...newState.defeatedBosses, combat.bossId];
             }
 
-            // ==================== 胜利霍格后弹出剧情（只弹一次） ====================
             const alreadyDefeated = (state.defeatedBosses || []).includes('hogger');
-
             if (bossDead && combat.bossId === 'hogger' && !alreadyDefeated) {
-                // 只在第一次击败霍格时弹剧情
                 newState.showHoggerPlot = true;
             }
-            // 金币奖励
+
             newState.resources = {
                 ...newState.resources,
                 gold: newState.resources.gold + boss.rewards.gold
             };
 
-            // 经验奖励 + 升级
             newState.characters = newState.characters.map(char => {
                 const p = combat.playerStates.find(ps => ps.char.id === char.id);
                 if (!p) return char;
@@ -4075,14 +4268,10 @@ function stepBossCombat(state) {
                 return newChar;
             });
 
-            // ✅ Boss 物品奖励：统一走“正规生成逻辑”
             boss.rewards.items.forEach(itemTpl => {
-                // 允许两种写法：{id:'xxx'} 或 'xxx'
                 const dropId = (typeof itemTpl === 'string') ? itemTpl : itemTpl?.id;
                 if (!dropId) return;
 
-                // 1) 固定装备（FIXED_EQUIPMENTS）=> 用 createEquipmentInstance
-                // createEquipmentInstance 本来就是从 FIXED_EQUIPMENTS 拿模板生成实例的：:contentReference[oaicite:3]{index=3}
                 if (FIXED_EQUIPMENTS?.[dropId]) {
                     const inst = createEquipmentInstance(dropId);
                     newState.inventory.push(inst);
@@ -4090,8 +4279,6 @@ function stepBossCombat(state) {
                     return;
                 }
 
-                // 2) 普通物品/材料（ITEMS）=> 用 ITEMS 模板生成实例
-                // 你在掉落表 items 已经这样生成过（就是这套“正规写法”）：:contentReference[oaicite:4]{index=4}
                 const tpl = ITEMS?.[dropId];
                 if (tpl) {
                     newState.inventory.push({
@@ -4103,7 +4290,6 @@ function stepBossCombat(state) {
                     return;
                 }
 
-                // 3) 兜底：防止未来写了个未知 id 又变 UNDEFINED
                 newState.inventory.push({
                     instanceId: `boss_${Date.now()}_${Math.random()}`,
                     id: dropId,
@@ -4116,8 +4302,6 @@ function stepBossCombat(state) {
             logs.push('××× 失败，全队阵亡 ×××');
         }
 
-        // 更新日志（可选显示在其他地方）
-        // ✅ 新代码：写成和普通战斗一致的结构
         const bossLogEntry = {
             id: `bosslog_${Date.now()}_${Math.random()}`,
             timestamp: Date.now(),
@@ -4125,7 +4309,7 @@ function stepBossCombat(state) {
             zoneName: '世界首领',
             enemyName: boss.name,
             result: bossDead ? 'victory' : 'defeat',
-            logs: logs, // 这里 logs 本来就是字符串数组，没问题
+            logs: logs,
             rewards: bossDead
                 ? { gold: boss.rewards.gold, exp: boss.rewards.exp }
                 : { gold: 0, exp: 0 },
@@ -4139,7 +4323,6 @@ function stepBossCombat(state) {
     // 继续战斗
     combat.logs = logs.slice(-50);
 
-    // 每tick把 bossCombat 的血量回写到角色本体
     const syncedCharacters = (state.characters || []).map(c => {
         const ps = combat.playerStates?.find(p => p.char?.id === c.id);
         if (!ps) return c;
@@ -4154,7 +4337,6 @@ function stepBossCombat(state) {
     });
 
     return { ...state, characters: syncedCharacters, bossCombat: combat };
-
 }
 
 

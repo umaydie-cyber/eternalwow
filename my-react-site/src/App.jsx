@@ -1066,7 +1066,7 @@ const ZONES = {
             {
                 name: '黑铁矮人守卫',
                 hp: 132000,
-                attack: 4200,
+                attack: 3700,
                 defense: 1400,
                 exp: 5000,
                 gold: 5500
@@ -1074,7 +1074,7 @@ const ZONES = {
             {
                 name: '被奴役的土元素',
                 hp: 150000,
-                attack: 3400,
+                attack: 2900,
                 defense: 1900,
                 exp: 5500,
                 gold: 5000
@@ -1082,7 +1082,7 @@ const ZONES = {
             {
                 name: '战斗傀儡',
                 hp: 182000,
-                attack: 4600,
+                attack: 4100,
                 defense: 1750,
                 exp: 6500,
                 gold: 6000

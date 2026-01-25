@@ -4198,7 +4198,7 @@ function stepBossCombat(state) {
 
         // 范克里夫的火炮手：对全队造成AOE伤害
         if (combat.bossId === 'vancleef' && m.isCannoneer) {
-            const aoeDamage = Math.floor((boss.attack || 0) * (boss.cannoneer.aoeDamageMultiplier || 0.5));
+            const aoeDamage = Math.floor((boss.attack || 0) * (boss.minion.aoeDamageMultiplier || 0.5));
 
             combat.playerStates.forEach((ps, pIdx) => {
                 if (ps.currentHp <= 0) return;
@@ -4223,7 +4223,7 @@ function stepBossCombat(state) {
                 ps.currentHp -= dmg;
             });
 
-            logs.push(`【${boss.cannoneer.name}${i + 1}】炮击全队，每人受到 ${aoeDamage} 点伤害（护甲减伤后）`);
+            logs.push(`【${boss.minion.name}${i + 1}】炮击全队，每人受到 ${aoeDamage} 点伤害（护甲减伤后）`);
         }
         // 霍格的小弟：普通攻击
         else {
@@ -9858,10 +9858,10 @@ const BossPrepareModal = ({ state, dispatch }) => {
                                                 🔫 火炮手准备！
                                             </div>
                                             <div style={{ fontSize: 11, color: '#aaa', lineHeight: 1.5 }}>
-                                                召唤 <span style={{ color: '#ffd700' }}>{boss.summonCannoneerCount}</span> 个{boss.cannoneer?.name || '火炮手'}
+                                                召唤 <span style={{ color: '#ffd700' }}>{boss.summonCount}</span> 个{boss.minion?.name || '火炮手'}
                                                 <br/>
                                                 <span style={{ color: '#888' }}>
-                            (HP:{boss.cannoneer?.maxHp} / 每回合对全队造成Boss攻击×{boss.cannoneer?.aoeDamageMultiplier}伤害)
+                            (HP:{boss.minion?.maxHp} / 每回合对全队造成Boss攻击×{boss.minion?.aoeDamageMultiplier}伤害)
                         </span>
                                             </div>
                                         </div>
@@ -10404,8 +10404,7 @@ const BossCombatModal = ({ combat, state }) => {
     const boss = BOSS_DATA[combat.bossId];
     if (!boss) return null;
 
-    // ✅ 兼容不同类型的小弟（minion 或 cannoneer）
-    const minionConfig = boss.minion || boss.cannoneer || { name: '小弟', maxHp: 100 };
+    const minionConfig = boss.minion || { name: '小弟', maxHp: 100 };
     const minionName = minionConfig.name || '小弟';
 
     return (

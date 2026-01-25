@@ -1022,8 +1022,8 @@ const ZONES = {
         enemies: [
             {
                 name: '血色拷问者',
-                hp: 72000,
-                attack: 800,
+                hp: 82000,
+                attack: 1000,
                 defense: 500,
                 exp: 4000,
                 gold: 4000
@@ -1031,7 +1031,7 @@ const ZONES = {
             {
                 name: '血色僧侣',
                 hp: 100000,
-                attack: 500,
+                attack: 700,
                 defense: 600,
                 exp: 4500,
                 gold: 5000
@@ -1039,7 +1039,7 @@ const ZONES = {
             {
                 name: '血色招魂师',
                 hp: 82000,
-                attack: 700,
+                attack: 900,
                 defense: 550,
                 exp: 4500,
                 gold: 5000
@@ -1047,7 +1047,7 @@ const ZONES = {
             {
                 name: '血色巫师',
                 hp: 90000,
-                attack: 800,
+                attack: 1000,
                 defense: 600,
                 exp: 5000,
                 gold: 5500
@@ -1066,7 +1066,7 @@ const ZONES = {
             {
                 name: '黑铁矮人守卫',
                 hp: 132000,
-                attack: 1500,
+                attack: 3000,
                 defense: 700,
                 exp: 5000,
                 gold: 5500
@@ -1074,7 +1074,7 @@ const ZONES = {
             {
                 name: '被奴役的土元素',
                 hp: 150000,
-                attack: 1300,
+                attack: 2600,
                 defense: 900,
                 exp: 5500,
                 gold: 5000
@@ -1082,7 +1082,7 @@ const ZONES = {
             {
                 name: '战斗傀儡',
                 hp: 182000,
-                attack: 1700,
+                attack: 3400,
                 defense: 750,
                 exp: 6500,
                 gold: 6000

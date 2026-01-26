@@ -350,7 +350,7 @@ const SKILLS = {
         id: 'shield_bash',
         name: '盾牌猛击',
         description: '造成基于攻击强度和格挡值的伤害',
-        icon: '🛡️',
+        icon: 'icons/wow/vanilla/spells/Spell_Fire_FireArmor.png',
         type: 'damage',
         calculate: (char) => {
             let damage = char.stats.attack * 1.5 + char.stats.blockValue * 0.3;

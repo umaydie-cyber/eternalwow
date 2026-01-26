@@ -6773,7 +6773,19 @@ const SkillEditorModal = ({ character, onClose, onSave, state }) => {
                                             <option key={sid} value={sid}>
                                                 {
                                                     skill.iconUrl ? (
-                                                        <img src={skill.iconUrl} alt={skill.name} />
+                                                        <img
+                                                            src={skill.iconUrl}
+                                                            alt={skill.name}
+                                                            style={{
+                                                                width: 6,
+                                                                height: 6,
+                                                                objectFit: "contain",
+                                                                imageRendering: "pixelated",
+                                                                background: "#000",
+                                                                border: "1px solid #444",
+                                                                borderRadius: 4,
+                                                            }}
+                                                        />
                                                     ) : (
                                                         <span>{skill.icon} {skill.name}</span>
                                                     )
@@ -6789,7 +6801,19 @@ const SkillEditorModal = ({ character, onClose, onSave, state }) => {
                                 }}>
                                     {
                                         SKILLS[skillId].iconUrl ? (
-                                            <img src={SKILLS[skillId].iconUrl} alt={SKILLS[skillId].name} />
+                                            <img
+                                                src={SKILLS[skillId].iconUrl}
+                                                alt={SKILLS[skillId].name}
+                                                style={{
+                                                        width: 24,
+                                                        height: 24,
+                                                        objectFit: "contain",
+                                                        imageRendering: "pixelated",
+                                                        background: "#000",
+                                                        border: "1px solid #444",
+                                                        borderRadius: 4,
+                                                }}
+                                            />
                                         ) : (
                                             SKILLS[skillId].icon
                                         )
@@ -6895,7 +6919,19 @@ const SkillViewerModal = ({ character, onClose }) => {
                                         <div style={{ fontSize: 26 }}>
                                             {
                                                 skill.iconUrl ? (
-                                                    <img src={skill.iconUrl} alt={skill.name} />
+                                                    <img
+                                                        src={skill.iconUrl}
+                                                        alt={skill.name}
+                                                        style={{
+                                                            width: 26,
+                                                            height: 26,
+                                                            objectFit: "contain",
+                                                            imageRendering: "pixelated",
+                                                            background: "#000",
+                                                            border: "1px solid #444",
+                                                            borderRadius: 4,
+                                                        }}
+                                                    />
                                                 ) : (
                                                     skill.icon
                                                 )

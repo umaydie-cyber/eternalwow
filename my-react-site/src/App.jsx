@@ -6771,7 +6771,7 @@ const SkillEditorModal = ({ character, onClose, onSave, state }) => {
                                         const skill = SKILLS[sid];
                                         return (
                                             <option key={sid} value={sid}>
-                                                <span>{skill.icon} {skill.name}</span>
+                                                {skill.icon} {skill.name}
                                             </option>
                                         );
                                     })}

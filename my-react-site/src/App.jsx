@@ -350,7 +350,8 @@ const SKILLS = {
         id: 'shield_bash',
         name: '盾牌猛击',
         description: '造成基于攻击强度和格挡值的伤害',
-        icon: 'icons/wow/vanilla/spells/Spell_Fire_FireArmor.png',
+        icon: '🛡️',
+        iconUrl : 'icons/wow/vanilla/spells/Spell_Fire_FireArmor.png',
         type: 'damage',
         calculate: (char) => {
             let damage = char.stats.attack * 1.5 + char.stats.blockValue * 0.3;
@@ -6770,7 +6771,13 @@ const SkillEditorModal = ({ character, onClose, onSave, state }) => {
                                         const skill = SKILLS[sid];
                                         return (
                                             <option key={sid} value={sid}>
-                                                {skill.icon} {skill.name}
+                                                {
+                                                    skill.iconUrl ? (
+                                                        <img src={skill.iconUrl} alt={skill.name} />
+                                                    ) : (
+                                                        <span>{skill.icon} {skill.name}</span>
+                                                    )
+                                                }
                                             </option>
                                         );
                                     })}
@@ -6780,7 +6787,13 @@ const SkillEditorModal = ({ character, onClose, onSave, state }) => {
                                     fontSize: 24,
                                     marginTop: 8
                                 }}>
-                                    {SKILLS[skillId].icon}
+                                    {
+                                        SKILLS[skillId].iconUrl ? (
+                                            <img src={SKILLS[skillId].iconUrl} alt={SKILLS[skillId].name} />
+                                        ) : (
+                                            SKILLS[skillId].icon
+                                        )
+                                    }
                                 </div>
                             )}
                         </div>
@@ -6879,7 +6892,15 @@ const SkillViewerModal = ({ character, onClose }) => {
                                     padding: 14
                                 }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-                                        <div style={{ fontSize: 26 }}>{skill.icon}</div>
+                                        <div style={{ fontSize: 26 }}>
+                                            {
+                                                skill.iconUrl ? (
+                                                    <img src={skill.iconUrl} alt={skill.name} />
+                                                ) : (
+                                                    skill.icon
+                                                )
+                                            }
+                                        </div>
                                         <div style={{ flex: 1 }}>
                                             <div style={{ color: '#ffd700', fontWeight: 700, fontSize: 13 }}>
                                                 {skill.name}

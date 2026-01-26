@@ -6771,25 +6771,7 @@ const SkillEditorModal = ({ character, onClose, onSave, state }) => {
                                         const skill = SKILLS[sid];
                                         return (
                                             <option key={sid} value={sid}>
-                                                {
-                                                    skill.iconUrl ? (
-                                                        <img
-                                                            src={skill.iconUrl}
-                                                            alt={skill.name}
-                                                            style={{
-                                                                width: 6,
-                                                                height: 6,
-                                                                objectFit: "contain",
-                                                                imageRendering: "pixelated",
-                                                                background: "#000",
-                                                                border: "1px solid #444",
-                                                                borderRadius: 4,
-                                                            }}
-                                                        />
-                                                    ) : (
-                                                        <span>{skill.icon} {skill.name}</span>
-                                                    )
-                                                }
+                                                <span>{skill.icon} {skill.name}</span>
                                             </option>
                                         );
                                     })}

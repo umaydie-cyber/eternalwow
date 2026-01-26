@@ -342,6 +342,7 @@ const SKILLS = {
         id: 'mastery_precise_block',
         name: '精通：精确格挡',
         icon: '🎯',
+        iconUrl : 'icons/wow/vanilla/abilities/Ability_Warrior_DefensiveStance.png',
         type: 'passive',
         description: '被动：格挡值提高(10 + 精通/2)%。该提升基于原始格挡数值。'
     },
@@ -370,6 +371,7 @@ const SKILLS = {
         name: '盾牌格挡',
         description: '获得40%格挡率加成，持续2帧',
         icon: '🔰',
+        iconUrl : 'icons/wow/vanilla/abilities/Ability_Defend.png',
         type: 'buff',
         duration: 2,
         calculate: () => ({ buff: { blockRate: 0.4, duration: 2 } })
@@ -380,6 +382,7 @@ const SKILLS = {
         name: '复仇',
         description: '造成基于攻击强度的高额伤害',
         icon: '💥',
+        iconUrl : 'icons/wow/vanilla/abilities/Ability_Warrior_Revenge.png',
         type: 'damage',
         calculate: (char) => {
             let damage = char.stats.attack * 2.5;
@@ -395,6 +398,7 @@ const SKILLS = {
         id: 'thunder_strike',
         name: '雷霆一击',
         icon: '⚡',
+        iconUrl : 'icons/wow/vanilla/abilities/Ability_ThunderClap.png',
         type: 'aoe_damage',
         limit: 2,
         description: '对所有敌人造成0.8倍攻击强度的伤害，暴击时对每个目标施加重伤（DOT 0.5倍攻击强度，持续4回合）',
@@ -431,6 +435,7 @@ const SKILLS = {
         id: 'shield_wall',
         name: '盾墙',
         icon: '🛡️',
+        iconUrl : 'icons/wow/vanilla/abilities/Ability_Warrior_ShieldWall.png',
         type: 'buff',
         limit: 1, // 基础1次，护卫神盾天赋可提升到2次
         description: '受到的所有伤害降低50%，持续3回合',
@@ -454,6 +459,7 @@ const SKILLS = {
         id: 'mastery_atonement',
         name: '精通：救赎',
         icon: '✝️',
+        iconUrl : 'icons/wow/vanilla/items/INV_Banner_01.png',
         type: 'passive',
         description: '被动：救赎治疗比例提升(精通/5)%。该数值直接加在基础20%上。'
     },
@@ -461,6 +467,7 @@ const SKILLS = {
         id: 'smite',
         name: '惩击',
         icon: '✨',
+        iconUrl : 'icons/wow/vanilla/spells/Spell_Holy_HolySmite.png',
         type: 'damage',
         limit: 3,
         description: '造成基于法术强度的神圣伤害',
@@ -476,6 +483,7 @@ const SKILLS = {
         id: 'shadow_word_pain',
         name: '真言术：痛',
         icon: '🩸',
+        iconUrl : 'icons/wow/vanilla/spells/Spell_Shadow_ShadowWordPain.png',
         type: 'dot',
         limit: 2,
         description: '持续3回合造成暗影伤害',
@@ -491,6 +499,7 @@ const SKILLS = {
         id: 'mind_blast',
         name: '心灵震爆',
         icon: '🧠',
+        iconUrl : 'icons/wow/vanilla/spells/Spell_Shadow_UnholyFrenzy.png',
         type: 'damage',
         limit: 2,
         description: '造成高额暗影伤害',
@@ -506,6 +515,7 @@ const SKILLS = {
         id: 'power_word_radiance',
         name: '真言术：耀',
         icon: '🌟',
+        iconUrl : 'icons/wow/vanilla/spells/Spell_Holy_Renew.png',
         type: 'heal',
         limit: 2,
         description: '为全队治疗并施加【救赎】',
@@ -520,6 +530,7 @@ const SKILLS = {
         id: 'penance',
         name: '苦修',
         icon: '✝️',
+        iconUrl : 'icons/wow/vanilla/spells/Spell_Holy_Purify.png',
         type: 'heal',
         limit: 2,
         description: '对最前排的队友回复3倍法术强度的生命值',

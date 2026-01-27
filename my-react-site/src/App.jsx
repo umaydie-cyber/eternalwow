@@ -9082,9 +9082,9 @@ const CityPage = ({ state, dispatch }) => {
                 }}>
                     {Object.entries(state.resources).map(([key, value]) => {
                         const icons = {
-                            gold: '🪙',
+                            gold: '🟡',
                             wood: '🪵',
-                            ironOre: '�ite',
+                            ironOre: '🪙',
                             ironIngot: '🔩',
                             herb: '🌿',
                             leather: '🦌',

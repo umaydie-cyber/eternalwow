@@ -7,6 +7,7 @@ const CLASSES = {
         id: 'protection_warrior',
         name: '防护战士',
         baseStats: { hp: 150, mp: 50, attack: 15, spellPower: 5, armor: 30, magicResist: 10, blockValue: 20},
+        baseGatherStats: { proficiency: 5, precision: 3, perception: 2 },
         skills: [
             { level: 1, skillId: 'basic_attack' },
             { level: 1, skillId: 'rest' },
@@ -29,6 +30,7 @@ const CLASSES = {
             armor: 10,
             magicResist: 20,
         },
+        baseGatherStats: { proficiency: 5, precision: 3, perception: 2 },
         skills: [
             { level: 1, skillId: 'basic_attack' },
             { level: 1, skillId: 'rest' },
@@ -51,6 +53,7 @@ const CLASSES = {
             armor: 8,
             magicResist: 25,
         },
+        baseGatherStats: { proficiency: 5, precision: 3, perception: 2 },
         skills: [
             { level: 1, skillId: 'basic_attack' },
             { level: 1, skillId: 'rest' },

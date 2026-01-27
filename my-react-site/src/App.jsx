@@ -7,6 +7,7 @@ const CLASSES = {
         id: 'protection_warrior',
         name: '防护战士',
         baseStats: { hp: 150, mp: 50, attack: 15, spellPower: 5, armor: 30, magicResist: 10, blockValue: 20},
+        baseGatherStats: { proficiency: 5, precision: 3, perception: 2 },
         skills: [
             { level: 1, skillId: 'basic_attack' },
             { level: 1, skillId: 'rest' },
@@ -29,6 +30,7 @@ const CLASSES = {
             armor: 10,
             magicResist: 20,
         },
+        baseGatherStats: { proficiency: 5, precision: 3, perception: 2 },
         skills: [
             { level: 1, skillId: 'basic_attack' },
             { level: 1, skillId: 'rest' },
@@ -51,6 +53,7 @@ const CLASSES = {
             armor: 8,
             magicResist: 25,
         },
+        baseGatherStats: { proficiency: 5, precision: 3, perception: 2 },
         skills: [
             { level: 1, skillId: 'basic_attack' },
             { level: 1, skillId: 'rest' },
@@ -63,6 +66,114 @@ const CLASSES = {
             { level: 40, skillId: 'comet_storm' },
         ]
     }
+};
+
+// ==================== 资源建筑（不可建造，用于派遣采集） ====================
+const RESOURCE_BUILDINGS = {
+    lumber_mill: {
+        id: 'lumber_mill',
+        name: '伐木场',
+        icon: '🪓',
+        description: '派遣角色砍伐木材',
+        resourceType: 'wood',
+        baseProduction: 5,
+        maxWorkers: 3,
+        // 属性权重：熟练60%、精细20%、感知20%
+        statWeights: { proficiency: 0.6, precision: 0.2, perception: 0.2 }
+    },
+    iron_mine: {
+        id: 'iron_mine',
+        name: '铁矿场',
+        icon: '⛏️',
+        description: '派遣角色开采铁矿',
+        resourceType: 'ironOre',
+        baseProduction: 3,
+        maxWorkers: 3,
+        statWeights: { proficiency: 0.5, precision: 0.3, perception: 0.2 }
+    },
+    gathering_hut: {
+        id: 'gathering_hut',
+        name: '采集所',
+        icon: '🌿',
+        description: '派遣角色采集草药',
+        resourceType: 'herb',
+        baseProduction: 4,
+        maxWorkers: 3,
+        statWeights: { proficiency: 0.3, precision: 0.3, perception: 0.4 }
+    },
+    hunter_lodge: {
+        id: 'hunter_lodge',
+        name: '猎人小屋',
+        icon: '🏹',
+        description: '派遣角色狩猎获取毛皮',
+        resourceType: 'leather',
+        baseProduction: 3,
+        maxWorkers: 3,
+        statWeights: { proficiency: 0.4, precision: 0.4, perception: 0.2 }
+    },
+    mana_well: {
+        id: 'mana_well',
+        name: '魔力之源',
+        icon: '💎',
+        description: '派遣角色汲取魔法精华',
+        resourceType: 'magicEssence',
+        baseProduction: 1,
+        maxWorkers: 2,
+        statWeights: { proficiency: 0.2, precision: 0.3, perception: 0.5 }
+    },
+    foundry: {
+        id: 'foundry',
+        name: '铸造厂',
+        icon: '🔥',
+        description: '派遣角色将铁矿炼成铁锭（消耗铁矿）',
+        resourceType: 'ironIngot',
+        baseProduction: 2,
+        maxWorkers: 2,
+        consumption: { ironOre: 3 },
+        statWeights: { proficiency: 0.5, precision: 0.4, perception: 0.1 }
+    },
+    alchemy_lab: {
+        id: 'alchemy_lab',
+        name: '炼金实验室',
+        icon: '⚗️',
+        description: '派遣角色炼制炼金油（消耗草药）',
+        resourceType: 'alchemyOil',
+        baseProduction: 2,
+        maxWorkers: 2,
+        consumption: { herb: 2 },
+        statWeights: { proficiency: 0.3, precision: 0.5, perception: 0.2 }
+    },
+};
+
+// ==================== 功能建筑（可建造多个） ====================
+const FUNCTIONAL_BUILDINGS = {
+    plaza_fountain: {
+        id: 'plaza_fountain',
+        name: '广场喷泉',
+        icon: '⛲',
+        description: '所有脱战英雄每秒额外回复1点生命',
+        cost: { gold: 10000, wood: 10000, ironOre: 8000 },
+        maxCount: 500,
+        effect: { type: 'regen', value: 1 }
+    },
+    warehouse: {
+        id: 'warehouse',
+        name: '仓库',
+        icon: '🏚️',
+        description: '增加1个背包格子',
+        cost: { gold: 80000, ironOre: 30000,ironIngot: 15000, magicEssence: 15000,alchemyOil:10000},
+        maxCount: 150,
+        effect: { type: 'inventorySize', value: 1 }
+    },
+    training_dummy: {
+        id: 'training_dummy',
+        name: '训练假人',
+        icon: '🎯',
+        description: '所有角色经验获取提高1%',
+        cost: { gold: 500000, leather: 30000, ironOre: 30000,ironIngot: 15000, magicEssence: 15000 },
+        maxCount: 30,
+        effect: { type: 'expBonus', value: 0.01 }
+    },
 };
 
 // ==================== TALENTS ====================
@@ -2751,6 +2862,56 @@ const getRarityColor = (rarity) => {
     return RARITY_COLORS[rarity] || '#4a3c2a';
 };
 
+// ==================== 计算角色采集属性 ====================
+function calculateGatherStats(character) {
+    const classData = CLASSES[character.classId];
+    const baseGather = classData.baseGatherStats || { proficiency: 5, precision: 5, perception: 5 };
+
+    // 基础值 + 等级加成
+    const levelBonus = Math.floor(character.level / 5);
+
+    return {
+        proficiency: baseGather.proficiency + levelBonus,
+        precision: baseGather.precision + levelBonus,
+        perception: baseGather.perception + levelBonus,
+    };
+}
+
+// ==================== 计算建筑产出 ====================
+function calculateBuildingProduction(building, workers, gameState) {
+    if (!workers || workers.length === 0) return 0;
+
+    const buildingData = RESOURCE_BUILDINGS[building];
+    if (!buildingData) return 0;
+
+    let totalProduction = 0;
+
+    workers.forEach(charId => {
+        const char = gameState.characters.find(c => c.id === charId);
+        if (!char) return;
+
+        const gatherStats = calculateGatherStats(char);
+        const weights = buildingData.statWeights;
+
+        // 效率计算：基础产量 * (1 + 加权属性/100)
+        const weightedStat =
+            gatherStats.proficiency * weights.proficiency +
+            gatherStats.precision * weights.precision +
+            gatherStats.perception * weights.perception;
+
+        const efficiency = 1 + weightedStat / 50;
+        const production = buildingData.baseProduction * efficiency;
+
+        // 精细属性：有概率获得双倍产出
+        const doubleChance = gatherStats.precision / 200;
+        const finalProduction = Math.random() < doubleChance ? production * 2 : production;
+
+        totalProduction += finalProduction;
+    });
+
+    return totalProduction;
+}
+
 const ITEMS = {
     IT_001: {
         id: 'IT_001',
@@ -2810,20 +2971,6 @@ const BUILDINGS = {
         // 效果在 gameReducer 的 TICK 中实现（见下文）
     },
 };
-
-function getBuildingCost(buildingId, state) {
-    const building = BUILDINGS[buildingId];
-    const builtCount = state.buildings[buildingId] || 0;
-
-    const multiplier = 1 + builtCount * 0.1;
-
-    const cost = {};
-    for (const [res, amount] of Object.entries(building.cost)) {
-        cost[res] = Math.ceil(amount * multiplier);
-    }
-
-    return cost;
-}
 
 function ItemIcon({ item, size = 28 }) {
     if (!item) return null;
@@ -4403,9 +4550,11 @@ const initialState = {
         population: 0,
         maxPopulation: 0,
     },
-    buildings: {},
+    // 功能建筑数量
+    functionalBuildings: {},
+    // 资源建筑工人分配 { buildingId: [charId1, charId2, ...] }
+    resourceAssignments: {},
     research: {},
-    cityAssignments: {}, // { [charId]: buildingId } 主城采集派遣
     currentResearch: null,
     researchProgress: 0,
     inventory: [],
@@ -5300,6 +5449,24 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1) {
     };
 }
 
+// ==================== 计算功能建筑动态成本 ====================
+function getFunctionalBuildingCost(buildingId, state) {
+    const building = FUNCTIONAL_BUILDINGS[buildingId];
+    if (!building) return {};
+
+    const builtCount = state.functionalBuildings?.[buildingId] || 0;
+
+    // 每多建造一座，成本增加20%
+    const multiplier = Math.pow(1.2, builtCount);
+
+    const cost = {};
+    Object.entries(building.cost).forEach(([res, amount]) => {
+        cost[res] = Math.ceil(amount * multiplier);
+    });
+
+    return cost;
+}
+
 // ==================== GAME REDUCER ====================
 function gameReducer(state, action) {
     switch (action.type) {
@@ -5451,6 +5618,52 @@ function gameReducer(state, action) {
             newState.lastOnlineTime = Date.now();
 
             let newResources = { ...newState.resources };
+
+            // ===== 资源建筑产出 =====
+            Object.entries(newState.resourceAssignments || {}).forEach(([buildingId, workers]) => {
+                if (!workers || workers.length === 0) return;
+
+                const buildingData = RESOURCE_BUILDINGS[buildingId];
+                if (!buildingData) return;
+
+                // 检查消耗资源是否足够
+                if (buildingData.consumption) {
+                    let canProduce = true;
+                    Object.entries(buildingData.consumption).forEach(([res, amount]) => {
+                        if ((newResources[res] || 0) < amount * workers.length) {
+                            canProduce = false;
+                        }
+                    });
+                    if (!canProduce) return;
+
+                    // 扣除消耗
+                    Object.entries(buildingData.consumption).forEach(([res, amount]) => {
+                        newResources[res] -= amount * workers.length;
+                    });
+                }
+
+                // 计算产出
+                const production = calculateBuildingProduction(buildingId, workers, newState);
+                const resourceType = buildingData.resourceType;
+                newResources[resourceType] = (newResources[resourceType] || 0) + production * deltaSeconds;
+            });
+
+            // ===== 功能建筑效果 =====
+            const fountainCount = newState.functionalBuildings?.plaza_fountain || 0;
+            const trainingCount = newState.functionalBuildings?.training_dummy || 0;
+            const warehouseCount = newState.functionalBuildings?.warehouse || 0;
+
+            // 仓库增加背包大小
+            const bonusInventorySize = warehouseCount * 1;
+            newState.inventorySize = 40 + bonusInventorySize;
+
+            newState.resources = newResources;
+
+            // ===== 脱战回血（喷泉加成） =====
+            const REGEN_DELAY_MS = 5000;
+            const REGEN_PER_SECOND = 10;
+            const now = Date.now();
+
             const researchBonus = {};
             Object.entries(newState.research).forEach(([id, level]) => {
                 const research = RESEARCH[id];
@@ -5497,8 +5710,6 @@ function gameReducer(state, action) {
                 }
             }
 
-            // ===== 广场喷泉：所有脱战英雄每秒回血 +1点（每座喷泉 +1，可叠加） =====
-            const fountainCount = state.buildings.plaza_fountain || 0;
 
             // Boss战斗推进
             if (newState.bossCombat) {
@@ -5709,10 +5920,6 @@ function gameReducer(state, action) {
                 }
             });
 
-            // ✅ 离开战斗 5 秒后开始回血：每秒 +10+喷泉数量
-            const REGEN_DELAY_MS = 5000;
-            const REGEN_PER_SECOND = 10;
-            const now = Date.now();
 
             newState.characters = newState.characters.map(char => {
                 const maxHp = char.stats?.maxHp ?? char.stats?.hp ?? 0;
@@ -5977,9 +6184,14 @@ function gameReducer(state, action) {
         case 'ASSIGN_ZONE': {
             const { characterId, zoneId } = action.payload;
 
-            // ✅ 检查角色是否在主城采集
-            if (state.cityAssignments[characterId]) {
-                // 角色正在主城采集，不能派遣到地图
+            // 检查角色是否在主城资源建筑工作
+            const isInResourceBuilding = Object.values(state.resourceAssignments || {})
+                .flat()
+                .includes(characterId);
+
+            if (isInResourceBuilding) {
+                // 角色正在主城采集，不能派遣去地图
+                console.warn(`角色 ${characterId} 正在主城采集，无法派遣到地图`);
                 return state;
             }
 
@@ -6392,7 +6604,6 @@ function gameReducer(state, action) {
             newState.currentMenu = 'map';
             newState.lifeFrame = 0; // 新一世从0开始计
             newState.defeatedBosses = []; // 清空本世击杀的Boss
-            newState.cityAssignments = {}; // ✅ 清空主城采集派遣
             return newState;
         }
         case 'CHEAT_ADD_GOLD': {
@@ -6560,32 +6771,86 @@ function gameReducer(state, action) {
             return nextState;
         }
 
-        case 'ASSIGN_CITY': {
+        // ===== 资源建筑派遣 =====
+        case 'ASSIGN_RESOURCE_BUILDING': {
             const { characterId, buildingId } = action.payload;
+            const building = RESOURCE_BUILDINGS[buildingId];
+            if (!building) return state;
 
-            // ✅ 检查角色是否在地图打怪
+            // 检查角色是否在地图打怪
             if (state.assignments[characterId]) {
-                // 角色正在地图打怪，不能安排到主城采集
+                // 角色正在地图打怪，不能派遣去主城采集
+                console.warn(`角色 ${characterId} 正在地图打怪，无法派遣到主城采集`);
                 return state;
             }
 
+            const currentWorkers = state.resourceAssignments?.[buildingId] || [];
+
+            // 检查是否已达上限
+            if (currentWorkers.length >= building.maxWorkers) return state;
+
+            // 检查角色是否已在其他建筑工作
+            let newAssignments = { ...state.resourceAssignments };
+            Object.keys(newAssignments).forEach(bid => {
+                newAssignments[bid] = (newAssignments[bid] || []).filter(id => id !== characterId);
+            });
+
+            // 添加到新建筑
+            newAssignments[buildingId] = [...(newAssignments[buildingId] || []), characterId];
+
             return {
                 ...state,
-                cityAssignments: {
-                    ...state.cityAssignments,
-                    [characterId]: buildingId
+                resourceAssignments: newAssignments
+            };
+        }
+
+        case 'UNASSIGN_RESOURCE_BUILDING': {
+            const { characterId, buildingId } = action.payload;
+            const currentWorkers = state.resourceAssignments?.[buildingId] || [];
+
+            return {
+                ...state,
+                resourceAssignments: {
+                    ...state.resourceAssignments,
+                    [buildingId]: currentWorkers.filter(id => id !== characterId)
                 }
             };
         }
 
-        case 'UNASSIGN_CITY': {
-            const { characterId } = action.payload;
-            const newCityAssignments = { ...state.cityAssignments };
-            delete newCityAssignments[characterId];
+        // ===== 功能建筑建造 =====
+        case 'BUILD_FUNCTIONAL': {
+            const { buildingId } = action.payload;
+            const building = FUNCTIONAL_BUILDINGS[buildingId];
+            if (!building) return state;
+
+            const currentCount = state.functionalBuildings?.[buildingId] || 0;
+
+            // 检查是否达到上限
+            if (currentCount >= building.maxCount) return state;
+
+            // ✅ 使用动态成本
+            const dynamicCost = getFunctionalBuildingCost(buildingId, state);
+
+            // 检查资源
+            let canBuild = true;
+            Object.entries(dynamicCost).forEach(([res, amount]) => {
+                if ((state.resources[res] || 0) < amount) canBuild = false;
+            });
+            if (!canBuild) return state;
+
+            // 扣除资源
+            const newResources = { ...state.resources };
+            Object.entries(dynamicCost).forEach(([res, amount]) => {
+                newResources[res] -= amount;
+            });
 
             return {
                 ...state,
-                cityAssignments: newCityAssignments
+                resources: newResources,
+                functionalBuildings: {
+                    ...state.functionalBuildings,
+                    [buildingId]: currentCount + 1
+                }
             };
         }
 
@@ -8070,11 +8335,6 @@ const MapPage = ({ state, dispatch }) => {
     const [draggedChar, setDraggedChar] = useState(null);
 
     const handleDragStart = (e, charId) => {
-        // ✅ 检查角色是否在主城采集
-        if (state.cityAssignments[charId]) {
-            e.preventDefault();
-            return;
-        }
         setDraggedChar(charId);
         e.dataTransfer.effectAllowed = 'move';
     };
@@ -8087,11 +8347,6 @@ const MapPage = ({ state, dispatch }) => {
     const handleDrop = (e, zoneId) => {
         e.preventDefault();
         if (draggedChar) {
-            // ✅ 再次检查（防止拖拽过程中状态变化）
-            if (state.cityAssignments[draggedChar]) {
-                setDraggedChar(null);
-                return;
-            }
             dispatch({
                 type: 'ASSIGN_ZONE',
                 payload: { characterId: draggedChar, zoneId }
@@ -8100,13 +8355,15 @@ const MapPage = ({ state, dispatch }) => {
         }
     };
 
-    // ✅ 未分配角色：排除已派遣到地图的 AND 排除已在主城采集的
-    const unassignedChars = state.characters.filter(c =>
-        !state.assignments[c.id] && !state.cityAssignments[c.id]
+    // 获取所有在主城资源建筑工作的角色ID
+    const resourceAssignedIds = new Set(
+        Object.values(state.resourceAssignments || {}).flat()
     );
 
-    // ✅ 在主城采集的角色（单独显示）
-    const cityChars = state.characters.filter(c => state.cityAssignments[c.id]);
+    // 过滤：既不在地图打怪，也不在主城采集
+    const unassignedChars = state.characters.filter(c =>
+        !state.assignments[c.id] && !resourceAssignedIds.has(c.id)
+    );
 
     return (
         <div>
@@ -8157,61 +8414,6 @@ const MapPage = ({ state, dispatch }) => {
                         fontStyle: 'italic'
                     }}>
                         💡 拖拽角色到区域进行分配
-                    </div>
-                </Panel>
-            )}
-
-            {/* ✅ 新增：在主城采集的角色（不可派遣） */}
-            {cityChars.length > 0 && (
-                <Panel title="正在主城采集" style={{ marginBottom: 16 }}>
-                    <div style={{
-                        display: 'flex',
-                        gap: 12,
-                        flexWrap: 'wrap'
-                    }}>
-                        {cityChars.map(char => {
-                            const buildingId = state.cityAssignments[char.id];
-                            const building = BUILDINGS[buildingId];
-                            return (
-                                <div
-                                    key={char.id}
-                                    style={{
-                                        padding: '12px 16px',
-                                        background: 'rgba(100,100,100,0.2)',
-                                        border: '2px solid #666',
-                                        borderRadius: 6,
-                                        opacity: 0.7,
-                                        cursor: 'not-allowed'
-                                    }}
-                                >
-                                    <div style={{ fontSize: 14, color: '#aaa', fontWeight: 600 }}>
-                                        {char.name}
-                                    </div>
-                                    <div style={{ fontSize: 11, color: '#666', marginTop: 4 }}>
-                                        Lv.{char.level} {CLASSES[char.classId].name}
-                                    </div>
-                                    <div style={{
-                                        fontSize: 10,
-                                        color: '#4CAF50',
-                                        marginTop: 4,
-                                        padding: '2px 6px',
-                                        background: 'rgba(76,175,80,0.1)',
-                                        borderRadius: 3,
-                                        display: 'inline-block'
-                                    }}>
-                                        🏰 {building?.name || '主城'}采集中
-                                    </div>
-                                </div>
-                            );
-                        })}
-                    </div>
-                    <div style={{
-                        marginTop: 12,
-                        fontSize: 12,
-                        color: '#888',
-                        fontStyle: 'italic'
-                    }}>
-                        ⚠️ 这些角色正在主城采集，需要先从主城召回才能派遣到地图
                     </div>
                 </Panel>
             )}
@@ -8852,194 +9054,483 @@ const InventoryPage = ({ state, dispatch }) => {
     );
 };
 
-// ==================== PAGE: CITY ====================
+// ==================== PAGE: CITY (重新设计) ====================
 const CityPage = ({ state, dispatch }) => {
-    // ✅ 可用于采集的角色：未派遣到地图 AND 未在主城采集
-    const availableChars = state.characters.filter(c =>
-        !state.assignments[c.id] && !state.cityAssignments[c.id]
-    );
+    const [draggedChar, setDraggedChar] = useState(null);
+    const [activeTab, setActiveTab] = useState('resources'); // 'resources' | 'functional'
 
-    // ✅ 正在地图打怪的角色
-    const mapChars = state.characters.filter(c => state.assignments[c.id]);
+    // 获取未被派遣的角色（不在地图也不在资源建筑）
+    const getAvailableChars = () => {
+        const mapAssigned = new Set(Object.keys(state.assignments || {}));
+        const resourceAssigned = new Set(
+            Object.values(state.resourceAssignments || {}).flat()
+        );
+
+        return state.characters.filter(c =>
+            !mapAssigned.has(c.id) && !resourceAssigned.has(c.id)
+        );
+    };
+
+    const availableChars = getAvailableChars();
+
+    // 获取某建筑的工人
+    const getWorkers = (buildingId) => {
+        return (state.resourceAssignments?.[buildingId] || [])
+            .map(id => state.characters.find(c => c.id === id))
+            .filter(Boolean);
+    };
+
+    const handleDragStart = (e, charId) => {
+        setDraggedChar(charId);
+        e.dataTransfer.effectAllowed = 'move';
+    };
+
+    const handleDragOver = (e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+    };
+
+    const handleDrop = (e, buildingId) => {
+        e.preventDefault();
+        if (draggedChar) {
+            dispatch({
+                type: 'ASSIGN_RESOURCE_BUILDING',
+                payload: { characterId: draggedChar, buildingId }
+            });
+            setDraggedChar(null);
+        }
+    };
+
+    // ✅ 资源显示配置（过滤掉 population 和 maxPopulation）
+    const resourceConfig = {
+        gold: { icon: '🟡', name: '金币' },
+        wood: { icon: '🪵', name: '木材' },
+        ironOre: { icon: '🪙', name: '铁矿' },
+        ironIngot: { icon: '🔩', name: '铁锭' },
+        herb: { icon: '🌿', name: '草药' },
+        leather: { icon: '🦌', name: '毛皮' },
+        magicEssence: { icon: '💎', name: '魔法精华' },
+        alchemyOil: { icon: '⚗️', name: '炼金油' }
+    };
+
+    // ✅ 只显示配置中定义的资源
+    const displayedResources = Object.entries(state.resources)
+        .filter(([key]) => resourceConfig[key]);
 
     return (
         <div>
-            <Panel title="资源">
+            {/* 资源总览 */}
+            <Panel title="📦 资源总览">
                 <div style={{
                     display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))',
-                    gap: 12
+                    gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))',
+                    gap: 10
                 }}>
-                    {Object.entries(state.resources).map(([key, value]) => (
-                        <div
-                            key={key}
-                            style={{
+                    {displayedResources.map(([key, value]) => {
+                        const config = resourceConfig[key];
+                        return (
+                            <div key={key} style={{
                                 padding: 12,
                                 background: 'rgba(0,0,0,0.3)',
                                 border: '1px solid #4a3c2a',
-                                borderRadius: 6,
+                                borderRadius: 8,
                                 textAlign: 'center'
-                            }}
-                        >
-                            <div style={{ fontSize: 11, color: '#888', marginBottom: 4 }}>
-                                {key}
-                            </div>
-                            <div style={{ fontSize: 16, color: '#ffd700', fontWeight: 600 }}>
-                                {Math.floor(value)}
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            </Panel>
-
-            {/* ✅ 新增：采集派遣区域 */}
-            <Panel title="采集派遣">
-                <div style={{ fontSize: 12, color: '#888', marginBottom: 16 }}>
-                    派遣角色到建筑进行采集，可提升资源产出效率。
-                    <br/>
-                    <span style={{ color: '#ff9800' }}>⚠️ 角色在主城采集时无法派遣到地图打怪</span>
-                </div>
-
-                {/* 可派遣角色列表 */}
-                {availableChars.length > 0 && (
-                    <div style={{ marginBottom: 16 }}>
-                        <div style={{ fontSize: 13, color: '#c9a227', marginBottom: 8 }}>
-                            可派遣角色
-                        </div>
-                        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                            {availableChars.map(char => (
-                                <div
-                                    key={char.id}
-                                    style={{
-                                        padding: '8px 12px',
-                                        background: 'rgba(201,162,39,0.15)',
-                                        border: '1px solid rgba(201,162,39,0.4)',
-                                        borderRadius: 4,
-                                        fontSize: 12
-                                    }}
-                                >
-                                    <span style={{ color: '#ffd700' }}>{char.name}</span>
-                                    <span style={{ color: '#888', marginLeft: 6 }}>Lv.{char.level}</span>
+                            }}>
+                                <div style={{ fontSize: 24, marginBottom: 4 }}>{config.icon}</div>
+                                <div style={{ fontSize: 11, color: '#888', marginBottom: 2 }}>{config.name}</div>
+                                <div style={{ fontSize: 16, color: '#ffd700', fontWeight: 600 }}>
+                                    {Math.floor(value)}
                                 </div>
-                            ))}
-                        </div>
-                    </div>
-                )}
-
-                {/* 正在地图打怪的角色（不可派遣） */}
-                {mapChars.length > 0 && (
-                    <div style={{ marginBottom: 16 }}>
-                        <div style={{ fontSize: 13, color: '#666', marginBottom: 8 }}>
-                            正在地图探索（不可派遣）
-                        </div>
-                        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                            {mapChars.map(char => {
-                                const zoneId = state.assignments[char.id];
-                                const zone = state.zones[zoneId];
-                                return (
-                                    <div
-                                        key={char.id}
-                                        style={{
-                                            padding: '8px 12px',
-                                            background: 'rgba(100,100,100,0.15)',
-                                            border: '1px solid #555',
-                                            borderRadius: 4,
-                                            fontSize: 12,
-                                            opacity: 0.6
-                                        }}
-                                    >
-                                        <span style={{ color: '#aaa' }}>{char.name}</span>
-                                        <span style={{ color: '#666', marginLeft: 6 }}>
-                                            📍{zone?.name || '地图'}
-                                        </span>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    </div>
-                )}
-            </Panel>
-
-            <Panel title="建筑">
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: 12 }}>
-                    {Object.values(BUILDINGS).map(building => {
-                        const count = state.buildings[building.id] || 0;
-
-                        // ✅ 每多一座 +10%
-                        const multiplier = 1 + count * 0.1;
-
-                        // ✅ 动态成本（向上取整）
-                        const dynamicCost = {};
-                        Object.entries(building.cost).forEach(([resource, amount]) => {
-                            dynamicCost[resource] = Math.ceil(amount * multiplier);
-                        });
-
-                        // ✅ 按动态成本判断是否可建造
-                        let canBuild = true;
-                        Object.entries(dynamicCost).forEach(([resource, amount]) => {
-                            if ((state.resources[resource] || 0) < amount) canBuild = false;
-                        });
-
-                        return (
-                            <div
-                                key={building.id}
-                                style={{
-                                    padding: 16,
-                                    background: 'rgba(0,0,0,0.3)',
-                                    border: '2px solid #4a3c2a',
-                                    borderRadius: 6,
-                                }}
-                            >
-                                <div style={{
-                                    display: 'flex',
-                                    justifyContent: 'space-between',
-                                    alignItems: 'center',
-                                    marginBottom: 12
-                                }}>
-                                    <h4 style={{ margin: 0, fontSize: 14, color: '#ffd700' }}>
-                                        {building.name}
-                                    </h4>
-                                    <span style={{
-                                        padding: '4px 8px',
-                                        background: 'rgba(201,162,39,0.2)',
-                                        borderRadius: 4,
-                                        fontSize: 12,
-                                        color: '#c9a227'
-                                    }}>
-                                    ×{count}</span>
-                                </div>
-
-                                <div style={{ fontSize: 11, color: '#aaa', marginBottom: 8 }}>
-                                    <div style={{ marginBottom: 4 }}>
-                                        成本: {Object.entries(dynamicCost).map(([r, a]) => `${r}:${a}`).join(', ')}
-                                    </div>
-
-                                    {Object.keys(building.production || {}).length > 0 && (
-                                        <div style={{ color: '#4CAF50' }}>
-                                            产出: {Object.entries(building.production).map(([r, a]) => `${r}:+${a}`).join(', ')}
-                                        </div>
-                                    )}
-
-                                    {Object.keys(building.consumption || {}).length > 0 && (
-                                        <div style={{ color: '#f44336' }}>
-                                            消耗: {Object.entries(building.consumption).map(([r, a]) => `${r}:-${a}`).join(', ')}
-                                        </div>
-                                    )}
-                                </div>
-
-                                <Button
-                                    onClick={() => dispatch({ type: 'BUILD', payload: { buildingId: building.id } })}
-                                    disabled={!canBuild}
-                                    style={{ width: '100%' }}
-                                >
-                                    建造
-                                </Button>
                             </div>
                         );
                     })}
                 </div>
             </Panel>
 
+            {/* 可派遣角色 */}
+            {availableChars.length > 0 && (
+                <Panel title="👥 可派遣角色" style={{ marginBottom: 16 }}>
+                    <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                        {availableChars.map(char => {
+                            const gatherStats = calculateGatherStats(char);
+                            return (
+                                <div
+                                    key={char.id}
+                                    draggable
+                                    onDragStart={(e) => handleDragStart(e, char.id)}
+                                    style={{
+                                        padding: 12,
+                                        background: 'linear-gradient(135deg, rgba(201,162,39,0.2), rgba(139,115,25,0.1))',
+                                        border: '2px solid #c9a227',
+                                        borderRadius: 8,
+                                        cursor: 'grab',
+                                        transition: 'all 0.2s',
+                                        minWidth: 140
+                                    }}
+                                >
+                                    <div style={{ fontSize: 14, color: '#ffd700', fontWeight: 600, marginBottom: 4 }}>
+                                        {char.name}
+                                    </div>
+                                    <div style={{ fontSize: 11, color: '#888', marginBottom: 8 }}>
+                                        Lv.{char.level} {CLASSES[char.classId].name}
+                                    </div>
+                                    <div style={{ fontSize: 10, color: '#aaa', display: 'flex', gap: 8 }}>
+                                        <span title="熟练">🔧{gatherStats.proficiency}</span>
+                                        <span title="精细">🎯{gatherStats.precision}</span>
+                                        <span title="感知">👁️{gatherStats.perception}</span>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                    <div style={{ marginTop: 12, fontSize: 12, color: '#888', fontStyle: 'italic' }}>
+                        💡 拖拽角色到下方建筑进行派遣采集
+                    </div>
+                </Panel>
+            )}
+
+            {/* Tab 切换 */}
+            <div style={{
+                display: 'flex',
+                gap: 4,
+                marginBottom: 16,
+                padding: 4,
+                background: 'rgba(0,0,0,0.3)',
+                borderRadius: 8,
+                border: '1px solid #3a3a3a'
+            }}>
+                <button
+                    onClick={() => setActiveTab('resources')}
+                    style={{
+                        flex: 1,
+                        padding: '10px 16px',
+                        background: activeTab === 'resources'
+                            ? 'linear-gradient(180deg, rgba(201,162,39,0.3), rgba(139,115,25,0.2))'
+                            : 'transparent',
+                        border: activeTab === 'resources' ? '1px solid #c9a227' : '1px solid transparent',
+                        borderRadius: 6,
+                        color: activeTab === 'resources' ? '#ffd700' : '#888',
+                        cursor: 'pointer',
+                        fontFamily: 'inherit',
+                        fontSize: 14,
+                        fontWeight: 600
+                    }}
+                >
+                    ⛏️ 资源建筑
+                </button>
+                <button
+                    onClick={() => setActiveTab('functional')}
+                    style={{
+                        flex: 1,
+                        padding: '10px 16px',
+                        background: activeTab === 'functional'
+                            ? 'linear-gradient(180deg, rgba(201,162,39,0.3), rgba(139,115,25,0.2))'
+                            : 'transparent',
+                        border: activeTab === 'functional' ? '1px solid #c9a227' : '1px solid transparent',
+                        borderRadius: 6,
+                        color: activeTab === 'functional' ? '#ffd700' : '#888',
+                        cursor: 'pointer',
+                        fontFamily: 'inherit',
+                        fontSize: 14,
+                        fontWeight: 600
+                    }}
+                >
+                    🏛️ 功能建筑
+                </button>
+            </div>
+
+            {/* 资源建筑区域 */}
+            {activeTab === 'resources' && (
+                <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
+                    gap: 16
+                }}>
+                    {Object.values(RESOURCE_BUILDINGS).map(building => {
+                        const workers = getWorkers(building.id);
+                        const currentProduction = workers.length > 0
+                            ? calculateBuildingProduction(building.id, workers.map(w => w.id), state)
+                            : 0;
+
+                        return (
+                            <div
+                                key={building.id}
+                                onDragOver={handleDragOver}
+                                onDrop={(e) => handleDrop(e, building.id)}
+                                style={{
+                                    background: 'linear-gradient(135deg, rgba(40,35,30,0.9), rgba(25,20,15,0.95))',
+                                    border: workers.length > 0 ? '2px solid #c9a227' : '2px solid #4a3c2a',
+                                    borderRadius: 12,
+                                    overflow: 'hidden',
+                                    transition: 'all 0.2s'
+                                }}
+                            >
+                                {/* 建筑头部 */}
+                                <div style={{
+                                    padding: 16,
+                                    background: workers.length > 0
+                                        ? 'linear-gradient(180deg, rgba(201,162,39,0.15), transparent)'
+                                        : 'linear-gradient(180deg, rgba(60,50,40,0.3), transparent)',
+                                    borderBottom: '1px solid rgba(201,162,39,0.2)'
+                                }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                                        <div style={{
+                                            width: 50,
+                                            height: 50,
+                                            background: 'rgba(0,0,0,0.4)',
+                                            borderRadius: 8,
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            fontSize: 28,
+                                            border: '1px solid rgba(201,162,39,0.3)'
+                                        }}>
+                                            {building.icon}
+                                        </div>
+                                        <div style={{ flex: 1 }}>
+                                            <div style={{ fontSize: 16, color: '#ffd700', fontWeight: 600 }}>
+                                                {building.name}
+                                            </div>
+                                            <div style={{ fontSize: 11, color: '#888', marginTop: 2 }}>
+                                                {building.description}
+                                            </div>
+                                        </div>
+                                        <div style={{ textAlign: 'right' }}>
+                                            <div style={{ fontSize: 11, color: '#888' }}>工人</div>
+                                            <div style={{
+                                                fontSize: 14,
+                                                color: workers.length >= building.maxWorkers ? '#f44336' : '#4CAF50',
+                                                fontWeight: 600
+                                            }}>
+                                                {workers.length}/{building.maxWorkers}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* 产出信息 */}
+                                <div style={{
+                                    padding: '12px 16px',
+                                    background: 'rgba(0,0,0,0.2)',
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center'
+                                }}>
+                                    <div>
+                                        <span style={{ fontSize: 11, color: '#888' }}>当前产出：</span>
+                                        <span style={{
+                                            fontSize: 14,
+                                            color: currentProduction > 0 ? '#4CAF50' : '#666',
+                                            fontWeight: 600,
+                                            marginLeft: 4
+                                        }}>
+                                            +{currentProduction.toFixed(1)}/秒
+                                        </span>
+                                    </div>
+                                    {building.consumption && (
+                                        <div style={{ fontSize: 11, color: '#f44336' }}>
+                                            消耗: {Object.entries(building.consumption).map(([r, a]) =>
+                                            `${r}×${a}`
+                                        ).join(', ')}/人
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* 工人区域 */}
+                                <div style={{
+                                    padding: 16,
+                                    minHeight: 80,
+                                    background: 'rgba(201,162,39,0.03)',
+                                    borderTop: '1px dashed rgba(201,162,39,0.2)'
+                                }}>
+                                    {workers.length > 0 ? (
+                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                                            {workers.map(char => {
+                                                const gatherStats = calculateGatherStats(char);
+                                                return (
+                                                    <div key={char.id} style={{
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        gap: 8,
+                                                        padding: '8px 12px',
+                                                        background: 'rgba(201,162,39,0.1)',
+                                                        border: '1px solid rgba(201,162,39,0.3)',
+                                                        borderRadius: 6
+                                                    }}>
+                                                        <div>
+                                                            <div style={{ fontSize: 12, color: '#ffd700' }}>
+                                                                {char.name}
+                                                            </div>
+                                                            <div style={{ fontSize: 10, color: '#888' }}>
+                                                                🔧{gatherStats.proficiency} 🎯{gatherStats.precision} 👁️{gatherStats.perception}
+                                                            </div>
+                                                        </div>
+                                                        <button
+                                                            onClick={() => dispatch({
+                                                                type: 'UNASSIGN_RESOURCE_BUILDING',
+                                                                payload: { characterId: char.id, buildingId: building.id }
+                                                            })}
+                                                            style={{
+                                                                background: 'rgba(244,67,54,0.2)',
+                                                                border: '1px solid rgba(244,67,54,0.5)',
+                                                                borderRadius: 4,
+                                                                color: '#f44336',
+                                                                padding: '4px 8px',
+                                                                fontSize: 10,
+                                                                cursor: 'pointer'
+                                                            }}
+                                                        >
+                                                            召回
+                                                        </button>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    ) : (
+                                        <div style={{
+                                            height: '100%',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            color: '#555',
+                                            fontSize: 12,
+                                            fontStyle: 'italic'
+                                        }}>
+                                            拖拽角色到此处开始采集
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            )}
+
+            {/* 功能建筑区域 */}
+            {activeTab === 'functional' && (
+                <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+                    gap: 16
+                }}>
+                    {Object.values(FUNCTIONAL_BUILDINGS).map(building => {
+                        const currentCount = state.functionalBuildings?.[building.id] || 0;
+                        const isMaxed = currentCount >= building.maxCount;
+
+                        // ✅ 获取动态成本
+                        const dynamicCost = getFunctionalBuildingCost(building.id, state);
+
+                        // 检查资源是否足够
+                        let canBuild = true;
+                        Object.entries(dynamicCost).forEach(([res, amount]) => {
+                            if ((state.resources[res] || 0) < amount) canBuild = false;
+                        });
+
+                        return (
+                            <div key={building.id} style={{
+                                padding: 20,
+                                background: currentCount > 0
+                                    ? 'linear-gradient(135deg, rgba(76,175,80,0.1), rgba(40,35,30,0.9))'
+                                    : 'rgba(0,0,0,0.3)',
+                                border: currentCount > 0 ? '2px solid #4CAF50' : '2px solid #4a3c2a',
+                                borderRadius: 12
+                            }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+                                    <div style={{
+                                        width: 48,
+                                        height: 48,
+                                        background: 'rgba(0,0,0,0.4)',
+                                        borderRadius: 8,
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        fontSize: 26
+                                    }}>
+                                        {building.icon}
+                                    </div>
+                                    <div style={{ flex: 1 }}>
+                                        <div style={{ fontSize: 16, color: '#ffd700', fontWeight: 600 }}>
+                                            {building.name}
+                                        </div>
+                                        <div style={{
+                                            fontSize: 12,
+                                            color: currentCount > 0 ? '#4CAF50' : '#888'
+                                        }}>
+                                            已建造: {currentCount}/{building.maxCount}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div style={{
+                                    fontSize: 12,
+                                    color: '#aaa',
+                                    marginBottom: 12,
+                                    padding: 10,
+                                    background: 'rgba(0,0,0,0.2)',
+                                    borderRadius: 6
+                                }}>
+                                    {building.description}
+                                </div>
+
+                                {/* ✅ 显示动态成本 */}
+                                <div style={{
+                                    fontSize: 11,
+                                    color: '#888',
+                                    marginBottom: 12,
+                                    padding: 10,
+                                    background: 'rgba(0,0,0,0.15)',
+                                    borderRadius: 6
+                                }}>
+                                    <div style={{ marginBottom: 4, color: '#aaa' }}>
+                                        建造成本 {currentCount > 0 && (
+                                        <span style={{ color: '#ff9800', fontSize: 10 }}>
+                                                (+{((Math.pow(1.2, currentCount) - 1) * 100).toFixed(0)}%)
+                                            </span>
+                                    )}：
+                                    </div>
+                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                                        {Object.entries(dynamicCost).map(([res, amount]) => {
+                                            const names = {
+                                                gold: '🟡 金币',
+                                                wood: '🪵 木材',
+                                                ironOre: '🪙 铁矿',
+                                                ironIngot: '🔩 铁锭',
+                                                herb: '🌿 草药',
+                                                leather: '🦌 毛皮',
+                                                magicEssence: '💎 魔法精华',
+                                                alchemyOil: '⚗️ 炼金油'
+                                            };
+                                            const hasEnough = (state.resources[res] || 0) >= amount;
+                                            return (
+                                                <span key={res} style={{
+                                                    color: hasEnough ? '#4CAF50' : '#f44336',
+                                                    padding: '2px 6px',
+                                                    background: hasEnough ? 'rgba(76,175,80,0.1)' : 'rgba(244,67,54,0.1)',
+                                                    borderRadius: 4,
+                                                    border: `1px solid ${hasEnough ? 'rgba(76,175,80,0.3)' : 'rgba(244,67,54,0.3)'}`
+                                                }}>
+                                                    {names[res] || res}: {amount.toLocaleString()}
+                                                </span>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+
+                                <Button
+                                    onClick={() => dispatch({
+                                        type: 'BUILD_FUNCTIONAL',
+                                        payload: { buildingId: building.id }
+                                    })}
+                                    disabled={!canBuild || isMaxed}
+                                    style={{ width: '100%' }}
+                                >
+                                    {isMaxed ? '已达上限' : '建造'}
+                                </Button>
+                            </div>
+                        );
+                    })}
+                </div>
+            )}
         </div>
     );
 };
@@ -10676,7 +11167,6 @@ const BossPrepareModal = ({ state, dispatch }) => {
 };
 
 // ==================== Boss战斗显示模态 ====================
-// ==================== Boss战斗显示模态 ====================
 const BossCombatModal = ({ combat, state }) => {
     if (!combat) return null;
     const boss = BOSS_DATA[combat.bossId];
@@ -10684,6 +11174,10 @@ const BossCombatModal = ({ combat, state }) => {
 
     const minionConfig = boss.minion || { name: '小弟', maxHp: 100 };
     const minionName = minionConfig.name || '小弟';
+
+    // 计算存活人数
+    const aliveCount = combat.playerStates.filter(p => p.currentHp > 0).length;
+    const totalCount = combat.playerStates.length;
 
     return (
         <div style={{
@@ -10693,104 +11187,529 @@ const BossCombatModal = ({ combat, state }) => {
             width: '90%',
             maxWidth: 1200,
             height: '90%',
-            background: 'rgba(20,10,10,0.98)',
+            background: 'linear-gradient(135deg, rgba(30,15,15,0.98) 0%, rgba(15,8,8,0.99) 100%)',
             display: 'flex',
             flexDirection: 'column',
             zIndex: 1000,
             border: '4px solid #c9a227',
             borderRadius: 16,
             overflow: 'hidden',
-            boxShadow: '0 0 40px rgba(201,162,39,0.6)'
+            boxShadow: '0 0 60px rgba(201,162,39,0.4), inset 0 0 100px rgba(0,0,0,0.5)'
         }}>
-            <div style={{ padding: 16, textAlign: 'center', color: '#ffd700', fontSize: 24 }}>
-                正在挑战 {boss.name} - 第 {combat.round} 回合
+            {/* 顶部标题栏 */}
+            <div style={{
+                padding: '16px 24px',
+                textAlign: 'center',
+                background: 'linear-gradient(180deg, rgba(139,105,20,0.2) 0%, transparent 100%)',
+                borderBottom: '1px solid rgba(201,162,39,0.3)'
+            }}>
+                <div style={{
+                    fontSize: 12,
+                    color: '#888',
+                    letterSpacing: 3,
+                    marginBottom: 6
+                }}>
+                    ⚔️ 世界首领战斗进行中 ⚔️
+                </div>
+                <div style={{
+                    fontSize: 28,
+                    color: '#ffd700',
+                    fontWeight: 700,
+                    textShadow: '0 0 20px rgba(255,215,0,0.5), 2px 2px 4px rgba(0,0,0,0.8)'
+                }}>
+                    {boss.name}
+                </div>
+                <div style={{
+                    marginTop: 8,
+                    display: 'flex',
+                    justifyContent: 'center',
+                    gap: 20,
+                    fontSize: 13
+                }}>
+                    <span style={{ color: '#4CAF50' }}>
+                        第 <span style={{ fontSize: 18, fontWeight: 700 }}>{combat.round}</span> 回合
+                    </span>
+                    <span style={{ color: '#888' }}>|</span>
+                    <span style={{ color: aliveCount > 0 ? '#4CAF50' : '#f44336' }}>
+                        存活: {aliveCount}/{totalCount}
+                    </span>
+                </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, padding: 20, flex: 1, overflow: 'hidden' }}>
-                {/* 左侧：队伍 */}
-                <div style={{ overflowY: 'auto' }}>
-                    <h3 style={{ color: '#4CAF50', marginBottom: 12 }}>队伍</h3>
-                    {combat.playerStates.map((p, i) => (
-                        <div key={i} style={{ marginBottom: 16 }}>
-                            <div style={{ fontSize: 14, marginBottom: 4, display: 'flex', justifyContent: 'space-between' }}>
-                                <span>位置{i + 1} {p.char.name} Lv.{p.char.level}</span>
-                                {/* 显示减疗debuff */}
-                                {p.debuffs?.mortalStrike && (
-                                    <span style={{
-                                        color: '#ff6b6b',
+            {/* 主战斗区域 */}
+            <div style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr',
+                gap: 0,
+                flex: 1,
+                overflow: 'hidden'
+            }}>
+                {/* 左侧：我方队伍 */}
+                <div style={{
+                    borderRight: '1px solid rgba(201,162,39,0.2)',
+                    padding: 20,
+                    overflowY: 'auto',
+                    background: 'linear-gradient(135deg, rgba(76,175,80,0.05) 0%, transparent 100%)'
+                }}>
+                    <h3 style={{
+                        color: '#4CAF50',
+                        marginBottom: 16,
+                        paddingBottom: 10,
+                        borderBottom: '1px solid rgba(76,175,80,0.3)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 8
+                    }}>
+                        <span style={{ fontSize: 20 }}>🛡️</span>
+                        我方队伍
+                    </h3>
+
+                    {combat.playerStates.map((p, i) => {
+                        // ✅ 关键修复：确保显示的血量不小于0
+                        const displayHp = Math.max(0, Math.floor(p.currentHp));
+                        const maxHp = p.char.stats.maxHp || 1;
+                        const isDead = p.currentHp <= 0;
+                        const hpPercent = Math.max(0, Math.min(100, (displayHp / maxHp) * 100));
+
+                        // 根据血量百分比决定颜色
+                        const getHpColor = () => {
+                            if (isDead) return '#666';
+                            if (hpPercent > 50) return '#4CAF50';
+                            if (hpPercent > 25) return '#ff9800';
+                            return '#f44336';
+                        };
+
+                        return (
+                            <div
+                                key={i}
+                                style={{
+                                    marginBottom: 16,
+                                    padding: 14,
+                                    background: isDead
+                                        ? 'rgba(0,0,0,0.4)'
+                                        : 'rgba(0,0,0,0.25)',
+                                    borderRadius: 10,
+                                    border: isDead
+                                        ? '1px solid rgba(100,100,100,0.3)'
+                                        : '1px solid rgba(76,175,80,0.2)',
+                                    opacity: isDead ? 0.6 : 1,
+                                    transition: 'all 0.3s',
+                                    position: 'relative',
+                                    overflow: 'hidden'
+                                }}
+                            >
+                                {/* 死亡遮罩 */}
+                                {isDead && (
+                                    <div style={{
+                                        position: 'absolute',
+                                        top: 0,
+                                        left: 0,
+                                        right: 0,
+                                        bottom: 0,
+                                        background: 'repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(0,0,0,0.1) 10px, rgba(0,0,0,0.1) 20px)',
+                                        pointerEvents: 'none',
+                                        zIndex: 1
+                                    }} />
+                                )}
+
+                                {/* 角色信息头部 */}
+                                <div style={{
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center',
+                                    marginBottom: 10,
+                                    position: 'relative',
+                                    zIndex: 2
+                                }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                        {/* 位置标识 */}
+                                        <div style={{
+                                            width: 28,
+                                            height: 28,
+                                            borderRadius: '50%',
+                                            background: isDead
+                                                ? 'rgba(100,100,100,0.3)'
+                                                : i === 0
+                                                    ? 'linear-gradient(135deg, #f44336, #c62828)'
+                                                    : 'linear-gradient(135deg, #4CAF50, #2e7d32)',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            fontSize: 12,
+                                            fontWeight: 700,
+                                            color: '#fff',
+                                            boxShadow: isDead ? 'none' : '0 2px 8px rgba(0,0,0,0.3)'
+                                        }}>
+                                            {i + 1}
+                                        </div>
+
+                                        {/* 职业图标 */}
+                                        <span style={{ fontSize: 20, filter: isDead ? 'grayscale(100%)' : 'none' }}>
+                                            {p.char.classId === 'protection_warrior' ? '🛡️' :
+                                                p.char.classId === 'discipline_priest' ? '✝️' :
+                                                    p.char.classId === 'frost_mage' ? '❄️' : '👤'}
+                                        </span>
+
+                                        {/* 名字和等级 */}
+                                        <div>
+                                            <div style={{
+                                                fontSize: 14,
+                                                fontWeight: 600,
+                                                color: isDead ? '#888' : '#ffd700'
+                                            }}>
+                                                {p.char.name}
+                                            </div>
+                                            <div style={{ fontSize: 11, color: '#888' }}>
+                                                Lv.{p.char.level} {CLASSES[p.char.classId]?.name || ''}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* 状态标签 */}
+                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
+                                        {isDead ? (
+                                            <span style={{
+                                                padding: '4px 10px',
+                                                background: 'linear-gradient(135deg, rgba(100,100,100,0.4), rgba(60,60,60,0.4))',
+                                                borderRadius: 4,
+                                                fontSize: 12,
+                                                fontWeight: 700,
+                                                color: '#aaa',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: 4,
+                                                border: '1px solid rgba(100,100,100,0.3)'
+                                            }}>
+                                                💀 死亡
+                                            </span>
+                                        ) : (
+                                            <>
+                                                {/* 减疗debuff */}
+                                                {p.debuffs?.mortalStrike && (
+                                                    <span style={{
+                                                        padding: '3px 8px',
+                                                        background: 'rgba(255,100,100,0.2)',
+                                                        borderRadius: 4,
+                                                        fontSize: 10,
+                                                        color: '#ff6b6b',
+                                                        border: '1px solid rgba(255,100,100,0.3)'
+                                                    }}>
+                                                        🩸 减疗 {(p.debuffs.mortalStrike.healingReduction * 100)}% ({p.debuffs.mortalStrike.duration}回合)
+                                                    </span>
+                                                )}
+
+                                                {/* Buff显示 */}
+                                                {p.buffs && p.buffs.length > 0 && (
+                                                    <div style={{ display: 'flex', gap: 4 }}>
+                                                        {p.buffs.slice(0, 3).map((buff, bi) => (
+                                                            <span key={bi} style={{
+                                                                padding: '2px 6px',
+                                                                background: 'rgba(76,175,80,0.2)',
+                                                                borderRadius: 3,
+                                                                fontSize: 9,
+                                                                color: '#4CAF50'
+                                                            }}>
+                                                                {buff.type === 'icy_veins' ? '❄️' : '✨'} {buff.duration}
+                                                            </span>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* ✅ 美化后的血条 */}
+                                <div style={{ position: 'relative', zIndex: 2 }}>
+                                    <div style={{
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
                                         fontSize: 11,
-                                        padding: '2px 6px',
-                                        background: 'rgba(255,100,100,0.2)',
-                                        borderRadius: 4
+                                        color: isDead ? '#666' : '#aaa',
+                                        marginBottom: 4
                                     }}>
-                                        减疗 {p.debuffs.mortalStrike.healingReduction * 100}% ({p.debuffs.mortalStrike.duration}回合)
-                                    </span>
+                                        <span>生命值</span>
+                                        <span style={{
+                                            color: isDead ? '#666' : getHpColor(),
+                                            fontWeight: 600
+                                        }}>
+                                            {/* ✅ 关键：显示0而不是负数 */}
+                                            {displayHp} / {Math.floor(maxHp)}
+                                            {isDead && ' (死亡)'}
+                                        </span>
+                                    </div>
+                                    <div style={{
+                                        height: 12,
+                                        background: 'rgba(0,0,0,0.5)',
+                                        borderRadius: 6,
+                                        overflow: 'hidden',
+                                        border: '1px solid rgba(255,255,255,0.1)',
+                                        boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.3)'
+                                    }}>
+                                        <div style={{
+                                            height: '100%',
+                                            // ✅ 关键：血条宽度基于修正后的百分比
+                                            width: `${hpPercent}%`,
+                                            background: isDead
+                                                ? '#444'
+                                                : `linear-gradient(90deg, ${getHpColor()}, ${getHpColor()}cc)`,
+                                            transition: 'width 0.3s ease-out, background 0.3s',
+                                            boxShadow: isDead ? 'none' : `0 0 10px ${getHpColor()}66`,
+                                            borderRadius: 6
+                                        }} />
+                                    </div>
+                                </div>
+
+                                {/* 寒冰指/祸福相依层数显示 */}
+                                {!isDead && (p.fingersOfFrost > 0 || p.fortuneMisfortuneStacks > 0) && (
+                                    <div style={{
+                                        marginTop: 8,
+                                        display: 'flex',
+                                        gap: 8,
+                                        position: 'relative',
+                                        zIndex: 2
+                                    }}>
+                                        {p.fingersOfFrost > 0 && (
+                                            <span style={{
+                                                padding: '2px 8px',
+                                                background: 'rgba(33,150,243,0.2)',
+                                                borderRadius: 4,
+                                                fontSize: 10,
+                                                color: '#64b5f6',
+                                                border: '1px solid rgba(33,150,243,0.3)'
+                                            }}>
+                                                ❄️ 寒冰指 ×{p.fingersOfFrost}
+                                            </span>
+                                        )}
+                                        {p.fortuneMisfortuneStacks > 0 && (
+                                            <span style={{
+                                                padding: '2px 8px',
+                                                background: 'rgba(255,215,0,0.2)',
+                                                borderRadius: 4,
+                                                fontSize: 10,
+                                                color: '#ffd700',
+                                                border: '1px solid rgba(255,215,0,0.3)'
+                                            }}>
+                                                ☯️ 祸福 ×{p.fortuneMisfortuneStacks}
+                                            </span>
+                                        )}
+                                    </div>
                                 )}
                             </div>
-                            <StatBar
-                                label="生命值"
-                                current={p.currentHp}
-                                max={p.char.stats.maxHp}
-                                color="#f44336"
-                            />
-                        </div>
-                    ))}
+                        );
+                    })}
                 </div>
 
                 {/* 右侧：敌人 */}
-                <div style={{ overflowY: 'auto' }}>
-                    <h3 style={{ color: '#f44336', marginBottom: 12 }}>敌人</h3>
+                <div style={{
+                    padding: 20,
+                    overflowY: 'auto',
+                    background: 'linear-gradient(135deg, rgba(244,67,54,0.05) 0%, transparent 100%)'
+                }}>
+                    <h3 style={{
+                        color: '#f44336',
+                        marginBottom: 16,
+                        paddingBottom: 10,
+                        borderBottom: '1px solid rgba(244,67,54,0.3)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 8
+                    }}>
+                        <span style={{ fontSize: 20 }}>👹</span>
+                        敌方单位
+                    </h3>
 
                     {/* Boss血条 */}
-                    <div style={{ marginBottom: 16 }}>
-                        <div style={{ fontSize: 14, marginBottom: 4 }}>{boss.name}</div>
-                        <StatBar
-                            label="生命值"
-                            current={combat.bossHp}
-                            max={boss.maxHp}
-                            color="#ff4444"
-                        />
+                    <div style={{
+                        marginBottom: 20,
+                        padding: 16,
+                        background: 'linear-gradient(135deg, rgba(244,67,54,0.1) 0%, rgba(0,0,0,0.3) 100%)',
+                        borderRadius: 12,
+                        border: '2px solid rgba(244,67,54,0.3)',
+                        boxShadow: '0 4px 20px rgba(244,67,54,0.2)'
+                    }}>
+                        <div style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            marginBottom: 12
+                        }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                <span style={{ fontSize: 28 }}>🐲</span>
+                                <div>
+                                    <div style={{
+                                        fontSize: 18,
+                                        fontWeight: 700,
+                                        color: '#ff6b6b',
+                                        textShadow: '0 0 10px rgba(255,107,107,0.5)'
+                                    }}>
+                                        {boss.name}
+                                    </div>
+                                    <div style={{ fontSize: 11, color: '#888' }}>世界首领</div>
+                                </div>
+                            </div>
+                            <div style={{
+                                fontSize: 14,
+                                color: '#ff6b6b',
+                                fontWeight: 600
+                            }}>
+                                {Math.max(0, Math.floor(combat.bossHp)).toLocaleString()} / {boss.maxHp.toLocaleString()}
+                            </div>
+                        </div>
+
+                        {/* Boss血条 */}
+                        <div style={{
+                            height: 20,
+                            background: 'rgba(0,0,0,0.5)',
+                            borderRadius: 10,
+                            overflow: 'hidden',
+                            border: '1px solid rgba(255,107,107,0.3)',
+                            boxShadow: 'inset 0 2px 6px rgba(0,0,0,0.4)'
+                        }}>
+                            <div style={{
+                                height: '100%',
+                                width: `${Math.max(0, Math.min(100, (combat.bossHp / boss.maxHp) * 100))}%`,
+                                background: 'linear-gradient(90deg, #f44336, #ff6b6b, #f44336)',
+                                transition: 'width 0.3s ease-out',
+                                boxShadow: '0 0 15px rgba(244,67,54,0.6)',
+                                borderRadius: 10,
+                                position: 'relative',
+                                overflow: 'hidden'
+                            }}>
+                                {/* 血条闪光效果 */}
+                                <div style={{
+                                    position: 'absolute',
+                                    top: 0,
+                                    left: 0,
+                                    right: 0,
+                                    height: '50%',
+                                    background: 'linear-gradient(180deg, rgba(255,255,255,0.3), transparent)',
+                                    borderRadius: '10px 10px 0 0'
+                                }} />
+                            </div>
+                        </div>
+
+                        {/* Boss DOT显示 */}
+                        {combat.bossDots && combat.bossDots.length > 0 && (
+                            <div style={{
+                                marginTop: 10,
+                                display: 'flex',
+                                flexWrap: 'wrap',
+                                gap: 6
+                            }}>
+                                {combat.bossDots.map((dot, di) => (
+                                    <span key={di} style={{
+                                        padding: '3px 8px',
+                                        background: 'rgba(156,39,176,0.2)',
+                                        borderRadius: 4,
+                                        fontSize: 10,
+                                        color: '#ce93d8',
+                                        border: '1px solid rgba(156,39,176,0.3)'
+                                    }}>
+                                        🔥 {dot.name || 'DOT'} ({dot.duration}回合)
+                                    </span>
+                                ))}
+                            </div>
+                        )}
                     </div>
 
                     {/* 小弟/火炮手血条 */}
                     {combat.minions && combat.minions.length > 0 && (
                         <div>
-                            <div style={{ fontSize: 14, marginBottom: 8, color: '#ce93d8' }}>
-                                {minionName} ({combat.minions.length}个)
+                            <div style={{
+                                fontSize: 14,
+                                marginBottom: 12,
+                                color: '#ce93d8',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 8
+                            }}>
+                                <span style={{ fontSize: 16 }}>👥</span>
+                                {minionName} ({combat.minions.filter(m => m.hp > 0).length}/{combat.minions.length} 存活)
                             </div>
-                            {combat.minions.map((m, i) => (
-                                <div key={i} style={{ marginBottom: 8 }}>
-                                    <div style={{
-                                        display: 'flex',
-                                        justifyContent: 'space-between',
-                                        alignItems: 'center',
-                                        marginBottom: 4
-                                    }}>
-                                        <span style={{ fontSize: 12, color: '#aaa' }}>
-                                            {minionName} {i + 1}
-                                        </span>
-                                        {/* 显示免疫状态 */}
-                                        {m.immune && (
-                                            <span style={{
-                                                fontSize: 10,
-                                                color: '#2196F3',
-                                                padding: '2px 6px',
-                                                background: 'rgba(33,150,243,0.2)',
-                                                borderRadius: 4,
-                                                fontWeight: 600
+
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                                {combat.minions.map((m, i) => {
+                                    const minionMaxHp = m.maxHp || minionConfig.maxHp;
+                                    const minionDisplayHp = Math.max(0, Math.floor(m.hp));
+                                    const minionIsDead = m.hp <= 0;
+                                    const minionHpPercent = Math.max(0, Math.min(100, (minionDisplayHp / minionMaxHp) * 100));
+
+                                    return (
+                                        <div key={i} style={{
+                                            padding: 12,
+                                            background: minionIsDead
+                                                ? 'rgba(0,0,0,0.3)'
+                                                : m.immune
+                                                    ? 'rgba(33,150,243,0.1)'
+                                                    : 'rgba(156,39,176,0.1)',
+                                            borderRadius: 8,
+                                            border: minionIsDead
+                                                ? '1px solid rgba(100,100,100,0.2)'
+                                                : m.immune
+                                                    ? '1px solid rgba(33,150,243,0.3)'
+                                                    : '1px solid rgba(156,39,176,0.3)',
+                                            opacity: minionIsDead ? 0.5 : 1
+                                        }}>
+                                            <div style={{
+                                                display: 'flex',
+                                                justifyContent: 'space-between',
+                                                alignItems: 'center',
+                                                marginBottom: 6
                                             }}>
-                                                🛡️ 免疫中
-                                            </span>
-                                        )}
-                                    </div>
-                                    <StatBar
-                                        label="生命值"
-                                        current={m.hp}
-                                        max={m.maxHp || minionConfig.maxHp}
-                                        color={m.immune ? "#2196F3" : "#ff6666"}
-                                    />
-                                </div>
-                            ))}
+                                                <span style={{
+                                                    fontSize: 12,
+                                                    color: minionIsDead ? '#666' : m.immune ? '#64b5f6' : '#ce93d8'
+                                                }}>
+                                                    {minionName} {i + 1}
+                                                    {minionIsDead && ' (死亡)'}
+                                                </span>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                                    {/* 免疫状态 */}
+                                                    {m.immune && !minionIsDead && (
+                                                        <span style={{
+                                                            fontSize: 10,
+                                                            color: '#2196F3',
+                                                            padding: '2px 6px',
+                                                            background: 'rgba(33,150,243,0.2)',
+                                                            borderRadius: 4,
+                                                            fontWeight: 600
+                                                        }}>
+                                                            🛡️ 免疫中
+                                                        </span>
+                                                    )}
+                                                    <span style={{
+                                                        fontSize: 11,
+                                                        color: minionIsDead ? '#666' : '#aaa'
+                                                    }}>
+                                                        {minionDisplayHp} / {minionMaxHp}
+                                                    </span>
+                                                </div>
+                                            </div>
+
+                                            {/* 小弟血条 */}
+                                            <div style={{
+                                                height: 8,
+                                                background: 'rgba(0,0,0,0.4)',
+                                                borderRadius: 4,
+                                                overflow: 'hidden'
+                                            }}>
+                                                <div style={{
+                                                    height: '100%',
+                                                    width: `${minionHpPercent}%`,
+                                                    background: minionIsDead
+                                                        ? '#444'
+                                                        : m.immune
+                                                            ? 'linear-gradient(90deg, #2196F3, #64b5f6)'
+                                                            : 'linear-gradient(90deg, #9C27B0, #ce93d8)',
+                                                    transition: 'width 0.3s',
+                                                    borderRadius: 4
+                                                }} />
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
                         </div>
                     )}
                 </div>
@@ -10798,21 +11717,36 @@ const BossCombatModal = ({ combat, state }) => {
 
             {/* 战斗日志 */}
             <div style={{
-                height: 200,
+                height: 180,
                 overflowY: 'auto',
-                padding: 16,
-                background: 'rgba(0,0,0,0.5)',
+                padding: '12px 16px',
+                background: 'linear-gradient(180deg, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.4) 100%)',
                 fontSize: 12,
-                borderTop: '1px solid rgba(201,162,39,0.3)'
+                borderTop: '2px solid rgba(201,162,39,0.3)',
+                fontFamily: 'monospace'
             }}>
-                {combat.logs.slice(-30).map((log, i) => (
+                <div style={{
+                    fontSize: 11,
+                    color: '#888',
+                    marginBottom: 8,
+                    borderBottom: '1px solid rgba(255,255,255,0.1)',
+                    paddingBottom: 6
+                }}>
+                    📜 战斗日志（最近200条）
+                </div>
+                {combat.logs.slice(-200).map((log, i) => (
                     <div key={i} style={{
-                        padding: '2px 0',
-                        color: log.includes('免疫') ? '#2196F3' :
-                            log.includes('致死打击') ? '#ff6b6b' :
-                                log.includes('火炮手') ? '#ce93d8' :
-                                    log.includes('登上甲板') ? '#64b5f6' :
-                                        '#ccc'
+                        padding: '3px 0',
+                        borderBottom: '1px solid rgba(255,255,255,0.03)',
+                        color: log.includes('死亡') || log.includes('阵亡') ? '#f44336' :
+                            log.includes('免疫') ? '#2196F3' :
+                                log.includes('致死打击') ? '#ff6b6b' :
+                                    log.includes('火炮手') || log.includes('召唤') ? '#ce93d8' :
+                                        log.includes('登上甲板') ? '#64b5f6' :
+                                            log.includes('治疗') || log.includes('恢复') ? '#4CAF50' :
+                                                log.includes('暴击') ? '#ff9800' :
+                                                    log.includes('胜利') ? '#ffd700' :
+                                                        '#ccc'
                     }}>
                         {log}
                     </div>

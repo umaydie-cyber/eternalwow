@@ -153,7 +153,7 @@ const FUNCTIONAL_BUILDINGS = {
         icon: '⛲',
         description: '所有脱战英雄每秒额外回复1点生命',
         cost: { gold: 10000, wood: 10000, ironOre: 8000 },
-        maxCount: 5,
+        maxCount: 500,
         effect: { type: 'regen', value: 1 }
     },
     warehouse: {
@@ -161,8 +161,8 @@ const FUNCTIONAL_BUILDINGS = {
         name: '仓库',
         icon: '🏚️',
         description: '增加1个背包格子',
-        cost: { gold: 8000, wood: 5000, ironOre: 2000 },
-        maxCount: 5,
+        cost: { gold: 80000, ironOre: 30000,ironIngot: 15000, magicEssence: 15000,alchemyOil:10000},
+        maxCount: 150,
         effect: { type: 'inventorySize', value: 1 }
     },
     training_dummy: {
@@ -170,8 +170,8 @@ const FUNCTIONAL_BUILDINGS = {
         name: '训练假人',
         icon: '🎯',
         description: '所有角色经验获取提高1%',
-        cost: { gold: 5000, wood: 3000 },
-        maxCount: 3,
+        cost: { gold: 500000, leather: 30000, ironOre: 30000,ironIngot: 15000, magicEssence: 15000 },
+        maxCount: 30,
         effect: { type: 'expBonus', value: 0.01 }
     },
 };

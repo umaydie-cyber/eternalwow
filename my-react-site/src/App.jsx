@@ -4405,6 +4405,7 @@ const initialState = {
     },
     buildings: {},
     research: {},
+    cityAssignments: {}, // { [charId]: buildingId } 主城采集派遣
     currentResearch: null,
     researchProgress: 0,
     inventory: [],
@@ -5975,6 +5976,13 @@ function gameReducer(state, action) {
 
         case 'ASSIGN_ZONE': {
             const { characterId, zoneId } = action.payload;
+
+            // ✅ 检查角色是否在主城采集
+            if (state.cityAssignments[characterId]) {
+                // 角色正在主城采集，不能派遣到地图
+                return state;
+            }
+
             return {
                 ...state,
                 assignments: {
@@ -6384,6 +6392,7 @@ function gameReducer(state, action) {
             newState.currentMenu = 'map';
             newState.lifeFrame = 0; // 新一世从0开始计
             newState.defeatedBosses = []; // 清空本世击杀的Boss
+            newState.cityAssignments = {}; // ✅ 清空主城采集派遣
             return newState;
         }
         case 'CHEAT_ADD_GOLD': {
@@ -6549,6 +6558,35 @@ function gameReducer(state, action) {
             nextState = addEquipmentIdToCodex(nextState, instance.id);
 
             return nextState;
+        }
+
+        case 'ASSIGN_CITY': {
+            const { characterId, buildingId } = action.payload;
+
+            // ✅ 检查角色是否在地图打怪
+            if (state.assignments[characterId]) {
+                // 角色正在地图打怪，不能安排到主城采集
+                return state;
+            }
+
+            return {
+                ...state,
+                cityAssignments: {
+                    ...state.cityAssignments,
+                    [characterId]: buildingId
+                }
+            };
+        }
+
+        case 'UNASSIGN_CITY': {
+            const { characterId } = action.payload;
+            const newCityAssignments = { ...state.cityAssignments };
+            delete newCityAssignments[characterId];
+
+            return {
+                ...state,
+                cityAssignments: newCityAssignments
+            };
         }
 
         default:
@@ -8032,6 +8070,11 @@ const MapPage = ({ state, dispatch }) => {
     const [draggedChar, setDraggedChar] = useState(null);
 
     const handleDragStart = (e, charId) => {
+        // ✅ 检查角色是否在主城采集
+        if (state.cityAssignments[charId]) {
+            e.preventDefault();
+            return;
+        }
         setDraggedChar(charId);
         e.dataTransfer.effectAllowed = 'move';
     };
@@ -8044,6 +8087,11 @@ const MapPage = ({ state, dispatch }) => {
     const handleDrop = (e, zoneId) => {
         e.preventDefault();
         if (draggedChar) {
+            // ✅ 再次检查（防止拖拽过程中状态变化）
+            if (state.cityAssignments[draggedChar]) {
+                setDraggedChar(null);
+                return;
+            }
             dispatch({
                 type: 'ASSIGN_ZONE',
                 payload: { characterId: draggedChar, zoneId }
@@ -8052,7 +8100,13 @@ const MapPage = ({ state, dispatch }) => {
         }
     };
 
-    const unassignedChars = state.characters.filter(c => !state.assignments[c.id]);
+    // ✅ 未分配角色：排除已派遣到地图的 AND 排除已在主城采集的
+    const unassignedChars = state.characters.filter(c =>
+        !state.assignments[c.id] && !state.cityAssignments[c.id]
+    );
+
+    // ✅ 在主城采集的角色（单独显示）
+    const cityChars = state.characters.filter(c => state.cityAssignments[c.id]);
 
     return (
         <div>
@@ -8103,6 +8157,61 @@ const MapPage = ({ state, dispatch }) => {
                         fontStyle: 'italic'
                     }}>
                         💡 拖拽角色到区域进行分配
+                    </div>
+                </Panel>
+            )}
+
+            {/* ✅ 新增：在主城采集的角色（不可派遣） */}
+            {cityChars.length > 0 && (
+                <Panel title="正在主城采集" style={{ marginBottom: 16 }}>
+                    <div style={{
+                        display: 'flex',
+                        gap: 12,
+                        flexWrap: 'wrap'
+                    }}>
+                        {cityChars.map(char => {
+                            const buildingId = state.cityAssignments[char.id];
+                            const building = BUILDINGS[buildingId];
+                            return (
+                                <div
+                                    key={char.id}
+                                    style={{
+                                        padding: '12px 16px',
+                                        background: 'rgba(100,100,100,0.2)',
+                                        border: '2px solid #666',
+                                        borderRadius: 6,
+                                        opacity: 0.7,
+                                        cursor: 'not-allowed'
+                                    }}
+                                >
+                                    <div style={{ fontSize: 14, color: '#aaa', fontWeight: 600 }}>
+                                        {char.name}
+                                    </div>
+                                    <div style={{ fontSize: 11, color: '#666', marginTop: 4 }}>
+                                        Lv.{char.level} {CLASSES[char.classId].name}
+                                    </div>
+                                    <div style={{
+                                        fontSize: 10,
+                                        color: '#4CAF50',
+                                        marginTop: 4,
+                                        padding: '2px 6px',
+                                        background: 'rgba(76,175,80,0.1)',
+                                        borderRadius: 3,
+                                        display: 'inline-block'
+                                    }}>
+                                        🏰 {building?.name || '主城'}采集中
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                    <div style={{
+                        marginTop: 12,
+                        fontSize: 12,
+                        color: '#888',
+                        fontStyle: 'italic'
+                    }}>
+                        ⚠️ 这些角色正在主城采集，需要先从主城召回才能派遣到地图
                     </div>
                 </Panel>
             )}
@@ -8745,6 +8854,14 @@ const InventoryPage = ({ state, dispatch }) => {
 
 // ==================== PAGE: CITY ====================
 const CityPage = ({ state, dispatch }) => {
+    // ✅ 可用于采集的角色：未派遣到地图 AND 未在主城采集
+    const availableChars = state.characters.filter(c =>
+        !state.assignments[c.id] && !state.cityAssignments[c.id]
+    );
+
+    // ✅ 正在地图打怪的角色
+    const mapChars = state.characters.filter(c => state.assignments[c.id]);
+
     return (
         <div>
             <Panel title="资源">
@@ -8773,6 +8890,74 @@ const CityPage = ({ state, dispatch }) => {
                         </div>
                     ))}
                 </div>
+            </Panel>
+
+            {/* ✅ 新增：采集派遣区域 */}
+            <Panel title="采集派遣">
+                <div style={{ fontSize: 12, color: '#888', marginBottom: 16 }}>
+                    派遣角色到建筑进行采集，可提升资源产出效率。
+                    <br/>
+                    <span style={{ color: '#ff9800' }}>⚠️ 角色在主城采集时无法派遣到地图打怪</span>
+                </div>
+
+                {/* 可派遣角色列表 */}
+                {availableChars.length > 0 && (
+                    <div style={{ marginBottom: 16 }}>
+                        <div style={{ fontSize: 13, color: '#c9a227', marginBottom: 8 }}>
+                            可派遣角色
+                        </div>
+                        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                            {availableChars.map(char => (
+                                <div
+                                    key={char.id}
+                                    style={{
+                                        padding: '8px 12px',
+                                        background: 'rgba(201,162,39,0.15)',
+                                        border: '1px solid rgba(201,162,39,0.4)',
+                                        borderRadius: 4,
+                                        fontSize: 12
+                                    }}
+                                >
+                                    <span style={{ color: '#ffd700' }}>{char.name}</span>
+                                    <span style={{ color: '#888', marginLeft: 6 }}>Lv.{char.level}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {/* 正在地图打怪的角色（不可派遣） */}
+                {mapChars.length > 0 && (
+                    <div style={{ marginBottom: 16 }}>
+                        <div style={{ fontSize: 13, color: '#666', marginBottom: 8 }}>
+                            正在地图探索（不可派遣）
+                        </div>
+                        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                            {mapChars.map(char => {
+                                const zoneId = state.assignments[char.id];
+                                const zone = state.zones[zoneId];
+                                return (
+                                    <div
+                                        key={char.id}
+                                        style={{
+                                            padding: '8px 12px',
+                                            background: 'rgba(100,100,100,0.15)',
+                                            border: '1px solid #555',
+                                            borderRadius: 4,
+                                            fontSize: 12,
+                                            opacity: 0.6
+                                        }}
+                                    >
+                                        <span style={{ color: '#aaa' }}>{char.name}</span>
+                                        <span style={{ color: '#666', marginLeft: 6 }}>
+                                            📍{zone?.name || '地图'}
+                                        </span>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                )}
             </Panel>
 
             <Panel title="建筑">

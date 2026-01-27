@@ -65,6 +65,114 @@ const CLASSES = {
     }
 };
 
+// ==================== 资源建筑（不可建造，用于派遣采集） ====================
+const RESOURCE_BUILDINGS = {
+    lumber_mill: {
+        id: 'lumber_mill',
+        name: '伐木场',
+        icon: '🪓',
+        description: '派遣角色砍伐木材',
+        resourceType: 'wood',
+        baseProduction: 5,
+        maxWorkers: 3,
+        // 属性权重：熟练60%、精细20%、感知20%
+        statWeights: { proficiency: 0.6, precision: 0.2, perception: 0.2 }
+    },
+    iron_mine: {
+        id: 'iron_mine',
+        name: '铁矿场',
+        icon: '⛏️',
+        description: '派遣角色开采铁矿',
+        resourceType: 'ironOre',
+        baseProduction: 3,
+        maxWorkers: 3,
+        statWeights: { proficiency: 0.5, precision: 0.3, perception: 0.2 }
+    },
+    gathering_hut: {
+        id: 'gathering_hut',
+        name: '采集所',
+        icon: '🌿',
+        description: '派遣角色采集草药',
+        resourceType: 'herb',
+        baseProduction: 4,
+        maxWorkers: 3,
+        statWeights: { proficiency: 0.3, precision: 0.3, perception: 0.4 }
+    },
+    hunter_lodge: {
+        id: 'hunter_lodge',
+        name: '猎人小屋',
+        icon: '🏹',
+        description: '派遣角色狩猎获取毛皮',
+        resourceType: 'leather',
+        baseProduction: 3,
+        maxWorkers: 3,
+        statWeights: { proficiency: 0.4, precision: 0.4, perception: 0.2 }
+    },
+    mana_well: {
+        id: 'mana_well',
+        name: '魔力之源',
+        icon: '💎',
+        description: '派遣角色汲取魔法精华',
+        resourceType: 'magicEssence',
+        baseProduction: 1,
+        maxWorkers: 2,
+        statWeights: { proficiency: 0.2, precision: 0.3, perception: 0.5 }
+    },
+    foundry: {
+        id: 'foundry',
+        name: '铸造厂',
+        icon: '🔥',
+        description: '派遣角色将铁矿炼成铁锭（消耗铁矿）',
+        resourceType: 'ironIngot',
+        baseProduction: 2,
+        maxWorkers: 2,
+        consumption: { ironOre: 3 },
+        statWeights: { proficiency: 0.5, precision: 0.4, perception: 0.1 }
+    },
+    alchemy_lab: {
+        id: 'alchemy_lab',
+        name: '炼金实验室',
+        icon: '⚗️',
+        description: '派遣角色炼制炼金油（消耗草药）',
+        resourceType: 'alchemyOil',
+        baseProduction: 2,
+        maxWorkers: 2,
+        consumption: { herb: 2 },
+        statWeights: { proficiency: 0.3, precision: 0.5, perception: 0.2 }
+    },
+};
+
+// ==================== 功能建筑（可建造多个） ====================
+const FUNCTIONAL_BUILDINGS = {
+    plaza_fountain: {
+        id: 'plaza_fountain',
+        name: '广场喷泉',
+        icon: '⛲',
+        description: '所有脱战英雄每秒额外回复1点生命',
+        cost: { gold: 10000, wood: 10000, ironOre: 8000 },
+        maxCount: 5,
+        effect: { type: 'regen', value: 1 }
+    },
+    warehouse: {
+        id: 'warehouse',
+        name: '仓库',
+        icon: '🏚️',
+        description: '增加1个背包格子',
+        cost: { gold: 8000, wood: 5000, ironOre: 2000 },
+        maxCount: 5,
+        effect: { type: 'inventorySize', value: 1 }
+    },
+    training_dummy: {
+        id: 'training_dummy',
+        name: '训练假人',
+        icon: '🎯',
+        description: '所有角色经验获取提高1%',
+        cost: { gold: 5000, wood: 3000 },
+        maxCount: 3,
+        effect: { type: 'expBonus', value: 0.01 }
+    },
+};
+
 // ==================== TALENTS ====================
 // 天赋触发类型（用于未来扩展）
 const TALENT_TYPES = {
@@ -2751,6 +2859,56 @@ const getRarityColor = (rarity) => {
     return RARITY_COLORS[rarity] || '#4a3c2a';
 };
 
+// ==================== 计算角色采集属性 ====================
+function calculateGatherStats(character) {
+    const classData = CLASSES[character.classId];
+    const baseGather = classData.baseGatherStats || { proficiency: 5, precision: 5, perception: 5 };
+
+    // 基础值 + 等级加成
+    const levelBonus = Math.floor(character.level / 5);
+
+    return {
+        proficiency: baseGather.proficiency + levelBonus,
+        precision: baseGather.precision + levelBonus,
+        perception: baseGather.perception + levelBonus,
+    };
+}
+
+// ==================== 计算建筑产出 ====================
+function calculateBuildingProduction(building, workers, gameState) {
+    if (!workers || workers.length === 0) return 0;
+
+    const buildingData = RESOURCE_BUILDINGS[building];
+    if (!buildingData) return 0;
+
+    let totalProduction = 0;
+
+    workers.forEach(charId => {
+        const char = gameState.characters.find(c => c.id === charId);
+        if (!char) return;
+
+        const gatherStats = calculateGatherStats(char);
+        const weights = buildingData.statWeights;
+
+        // 效率计算：基础产量 * (1 + 加权属性/100)
+        const weightedStat =
+            gatherStats.proficiency * weights.proficiency +
+            gatherStats.precision * weights.precision +
+            gatherStats.perception * weights.perception;
+
+        const efficiency = 1 + weightedStat / 50;
+        const production = buildingData.baseProduction * efficiency;
+
+        // 精细属性：有概率获得双倍产出
+        const doubleChance = gatherStats.precision / 200;
+        const finalProduction = Math.random() < doubleChance ? production * 2 : production;
+
+        totalProduction += finalProduction;
+    });
+
+    return totalProduction;
+}
+
 const ITEMS = {
     IT_001: {
         id: 'IT_001',
@@ -4403,7 +4561,10 @@ const initialState = {
         population: 0,
         maxPopulation: 0,
     },
-    buildings: {},
+    // 功能建筑数量
+    functionalBuildings: {},
+    // 资源建筑工人分配 { buildingId: [charId1, charId2, ...] }
+    resourceAssignments: {},
     research: {},
     currentResearch: null,
     researchProgress: 0,
@@ -4440,6 +4601,116 @@ const initialState = {
     rebirthBonds: [],
     defeatedBosses: [] // 本世击杀的Boss列表
 };
+
+// ==================== UI COMPONENTS ====================
+const Panel = ({ title, children, actions, style }) => (
+    <div style={{
+        background: 'linear-gradient(135deg, rgba(30,25,20,0.95) 0%, rgba(20,15,12,0.98) 100%)',
+        border: '2px solid #4a3c2a',
+        borderRadius: 8,
+        padding: 20,
+        marginBottom: 16,
+        boxShadow: '0 4px 16px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.05)',
+        ...style
+    }}>
+        <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: title ? 16 : 0,
+            paddingBottom: title ? 12 : 0,
+            borderBottom: title ? '1px solid rgba(201,162,39,0.2)' : 'none'
+        }}>
+            {title && (
+                <h3 style={{
+                    margin: 0,
+                    fontSize: 18,
+                    color: '#c9a227',
+                    textShadow: '1px 1px 2px rgba(0,0,0,0.8)',
+                    fontWeight: 600
+                }}>
+                    {title}
+                </h3>
+            )}
+            {actions && <div style={{ display: 'flex', gap: 8 }}>{actions}</div>}
+        </div>
+        {children}
+    </div>
+);
+
+const Button = ({ children, onClick, variant = 'primary', disabled, style }) => {
+    const variants = {
+        primary: {
+            background: disabled
+                ? 'rgba(60,60,60,0.5)'
+                : 'linear-gradient(180deg, rgba(201,162,39,0.9), rgba(139,115,25,0.9))',
+            color: disabled ? '#666' : '#fff',
+            border: `2px solid ${disabled ? '#444' : '#c9a227'}`,
+        },
+        secondary: {
+            background: 'rgba(40,35,30,0.8)',
+            color: '#c9a227',
+            border: '2px solid #5a4c3a',
+        },
+        danger: {
+            background: 'linear-gradient(180deg, rgba(180,50,50,0.9), rgba(120,30,30,0.9))',
+            color: '#fff',
+            border: '2px solid #a03030',
+        }
+    };
+
+    return (
+        <button
+            onClick={onClick}
+            disabled={disabled}
+            style={{
+                padding: '8px 16px',
+                ...variants[variant],
+                borderRadius: 4,
+                cursor: disabled ? 'not-allowed' : 'pointer',
+                fontFamily: 'inherit',
+                fontSize: 13,
+                fontWeight: 600,
+                transition: 'all 0.2s',
+                boxShadow: disabled ? 'none' : '0 2px 6px rgba(0,0,0,0.4)',
+                textShadow: disabled ? 'none' : '1px 1px 2px rgba(0,0,0,0.6)',
+                ...style
+            }}
+        >
+            {children}
+        </button>
+    );
+};
+
+const StatBar = ({ label, current, max, color = '#4CAF50' }) => (
+    <div style={{ marginBottom: 8 }}>
+        <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            fontSize: 11,
+            color: '#aaa',
+            marginBottom: 4
+        }}>
+            <span>{label}</span>
+            <span>{Math.floor(current)} / {Math.floor(max)}</span>
+        </div>
+        <div style={{
+            height: 8,
+            background: 'rgba(0,0,0,0.5)',
+            borderRadius: 4,
+            overflow: 'hidden',
+            border: '1px solid rgba(255,255,255,0.1)'
+        }}>
+            <div style={{
+                height: '100%',
+                width: `${Math.min(100, (current / max) * 100)}%`,
+                background: `linear-gradient(90deg, ${color}, ${color}dd)`,
+                transition: 'width 0.3s',
+                boxShadow: `0 0 8px ${color}88`
+            }} />
+        </div>
+    </div>
+);
 
 // ==================== BASE64 ENCODING (支持中文) ====================
 function encodeBase64(str) {
@@ -5450,6 +5721,52 @@ function gameReducer(state, action) {
             newState.lastOnlineTime = Date.now();
 
             let newResources = { ...newState.resources };
+
+            // ===== 资源建筑产出 =====
+            Object.entries(newState.resourceAssignments || {}).forEach(([buildingId, workers]) => {
+                if (!workers || workers.length === 0) return;
+
+                const buildingData = RESOURCE_BUILDINGS[buildingId];
+                if (!buildingData) return;
+
+                // 检查消耗资源是否足够
+                if (buildingData.consumption) {
+                    let canProduce = true;
+                    Object.entries(buildingData.consumption).forEach(([res, amount]) => {
+                        if ((newResources[res] || 0) < amount * workers.length) {
+                            canProduce = false;
+                        }
+                    });
+                    if (!canProduce) return;
+
+                    // 扣除消耗
+                    Object.entries(buildingData.consumption).forEach(([res, amount]) => {
+                        newResources[res] -= amount * workers.length;
+                    });
+                }
+
+                // 计算产出
+                const production = calculateBuildingProduction(buildingId, workers, newState);
+                const resourceType = buildingData.resourceType;
+                newResources[resourceType] = (newResources[resourceType] || 0) + production * deltaSeconds;
+            });
+
+            // ===== 功能建筑效果 =====
+            const fountainCount = newState.functionalBuildings?.plaza_fountain || 0;
+            const trainingCount = newState.functionalBuildings?.training_dummy || 0;
+            const warehouseCount = newState.functionalBuildings?.warehouse || 0;
+
+            // 仓库增加背包大小
+            const bonusInventorySize = warehouseCount * 1;
+            newState.inventorySize = 40 + bonusInventorySize;
+
+            newState.resources = newResources;
+
+            // ===== 脱战回血（喷泉加成） =====
+            const REGEN_DELAY_MS = 5000;
+            const REGEN_PER_SECOND = 10;
+            const now = Date.now();
+
             const researchBonus = {};
             Object.entries(newState.research).forEach(([id, level]) => {
                 const research = RESEARCH[id];
@@ -5496,8 +5813,6 @@ function gameReducer(state, action) {
                 }
             }
 
-            // ===== 广场喷泉：所有脱战英雄每秒回血 +1点（每座喷泉 +1，可叠加） =====
-            const fountainCount = state.buildings.plaza_fountain || 0;
 
             // Boss战斗推进
             if (newState.bossCombat) {
@@ -5708,10 +6023,6 @@ function gameReducer(state, action) {
                 }
             });
 
-            // ✅ 离开战斗 5 秒后开始回血：每秒 +10+喷泉数量
-            const REGEN_DELAY_MS = 5000;
-            const REGEN_PER_SECOND = 10;
-            const now = Date.now();
 
             newState.characters = newState.characters.map(char => {
                 const maxHp = char.stats?.maxHp ?? char.stats?.hp ?? 0;
@@ -6549,6 +6860,83 @@ function gameReducer(state, action) {
             nextState = addEquipmentIdToCodex(nextState, instance.id);
 
             return nextState;
+        }
+
+        // ===== 资源建筑派遣 =====
+        case 'ASSIGN_RESOURCE_BUILDING': {
+            const { characterId, buildingId } = action.payload;
+            const building = RESOURCE_BUILDINGS[buildingId];
+            if (!building) return state;
+
+            const currentWorkers = state.resourceAssignments?.[buildingId] || [];
+
+            // 检查是否已达上限
+            if (currentWorkers.length >= building.maxWorkers) return state;
+
+            // 检查角色是否已在其他建筑工作
+            let newAssignments = { ...state.resourceAssignments };
+            Object.keys(newAssignments).forEach(bid => {
+                newAssignments[bid] = (newAssignments[bid] || []).filter(id => id !== characterId);
+            });
+
+            // 添加到新建筑
+            newAssignments[buildingId] = [...(newAssignments[buildingId] || []), characterId];
+
+            return {
+                ...state,
+                resourceAssignments: newAssignments
+            };
+        }
+
+        case 'UNASSIGN_RESOURCE_BUILDING': {
+            const { characterId, buildingId } = action.payload;
+            const currentWorkers = state.resourceAssignments?.[buildingId] || [];
+
+            return {
+                ...state,
+                resourceAssignments: {
+                    ...state.resourceAssignments,
+                    [buildingId]: currentWorkers.filter(id => id !== characterId)
+                }
+            };
+        }
+
+        // ===== 功能建筑建造 =====
+        case 'BUILD_FUNCTIONAL': {
+            const { buildingId } = action.payload;
+            const building = FUNCTIONAL_BUILDINGS[buildingId];
+            if (!building) return state;
+
+            const currentCount = state.functionalBuildings?.[buildingId] || 0;
+
+            // 检查是否达到上限
+            if (currentCount >= building.maxCount) return state;
+
+            // 检查资源
+            let canBuild = true;
+            Object.entries(building.cost).forEach(([res, amount]) => {
+                if ((state.resources[res] || 0) < amount) canBuild = false;
+            });
+            if (!canBuild) return state;
+
+            // 扣除资源
+            const newResources = { ...state.resources };
+            Object.entries(building.cost).forEach(([res, amount]) => {
+                newResources[res] -= amount;
+            });
+
+            return {
+                ...state,
+                resources: newResources,
+                functionalBuildings: {
+                    ...state.functionalBuildings,
+                    [buildingId]: currentCount + 1
+                }
+            };
+        }
+
+        case 'SET_MENU': {
+            return { ...state, currentMenu: action.payload };
         }
 
         default:
@@ -8743,118 +9131,458 @@ const InventoryPage = ({ state, dispatch }) => {
     );
 };
 
-// ==================== PAGE: CITY ====================
+// ==================== PAGE: CITY (重新设计) ====================
 const CityPage = ({ state, dispatch }) => {
+    const [draggedChar, setDraggedChar] = useState(null);
+    const [activeTab, setActiveTab] = useState('resources'); // 'resources' | 'functional'
+
+    // 获取未被派遣的角色（不在地图也不在资源建筑）
+    const getAvailableChars = () => {
+        const mapAssigned = new Set(Object.keys(state.assignments || {}));
+        const resourceAssigned = new Set(
+            Object.values(state.resourceAssignments || {}).flat()
+        );
+
+        return state.characters.filter(c =>
+            !mapAssigned.has(c.id) && !resourceAssigned.has(c.id)
+        );
+    };
+
+    const availableChars = getAvailableChars();
+
+    // 获取某建筑的工人
+    const getWorkers = (buildingId) => {
+        return (state.resourceAssignments?.[buildingId] || [])
+            .map(id => state.characters.find(c => c.id === id))
+            .filter(Boolean);
+    };
+
+    const handleDragStart = (e, charId) => {
+        setDraggedChar(charId);
+        e.dataTransfer.effectAllowed = 'move';
+    };
+
+    const handleDragOver = (e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+    };
+
+    const handleDrop = (e, buildingId) => {
+        e.preventDefault();
+        if (draggedChar) {
+            dispatch({
+                type: 'ASSIGN_RESOURCE_BUILDING',
+                payload: { characterId: draggedChar, buildingId }
+            });
+            setDraggedChar(null);
+        }
+    };
+
     return (
         <div>
-            <Panel title="资源">
+            {/* 资源总览 */}
+            <Panel title="📦 资源总览">
                 <div style={{
                     display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))',
-                    gap: 12
+                    gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))',
+                    gap: 10
                 }}>
-                    {Object.entries(state.resources).map(([key, value]) => (
-                        <div
-                            key={key}
-                            style={{
+                    {Object.entries(state.resources).map(([key, value]) => {
+                        const icons = {
+                            gold: '🪙',
+                            wood: '🪵',
+                            ironOre: '�ite',
+                            ironIngot: '🔩',
+                            herb: '🌿',
+                            leather: '🦌',
+                            magicEssence: '💎',
+                            alchemyOil: '⚗️'
+                        };
+                        const names = {
+                            gold: '金币',
+                            wood: '木材',
+                            ironOre: '铁矿',
+                            ironIngot: '铁锭',
+                            herb: '草药',
+                            leather: '毛皮',
+                            magicEssence: '魔法精华',
+                            alchemyOil: '炼金油'
+                        };
+                        return (
+                            <div key={key} style={{
                                 padding: 12,
                                 background: 'rgba(0,0,0,0.3)',
                                 border: '1px solid #4a3c2a',
-                                borderRadius: 6,
+                                borderRadius: 8,
                                 textAlign: 'center'
-                            }}
-                        >
-                            <div style={{ fontSize: 11, color: '#888', marginBottom: 4 }}>
-                                {key}
-                            </div>
-                            <div style={{ fontSize: 16, color: '#ffd700', fontWeight: 600 }}>
-                                {Math.floor(value)}
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            </Panel>
-
-            <Panel title="建筑">
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: 12 }}>
-                    {Object.values(BUILDINGS).map(building => {
-                        const count = state.buildings[building.id] || 0;
-
-                        // ✅ 每多一座 +10%
-                        const multiplier = 1 + count * 0.1;
-
-                        // ✅ 动态成本（向上取整）
-                        const dynamicCost = {};
-                        Object.entries(building.cost).forEach(([resource, amount]) => {
-                            dynamicCost[resource] = Math.ceil(amount * multiplier);
-                        });
-
-                        // ✅ 按动态成本判断是否可建造
-                        let canBuild = true;
-                        Object.entries(dynamicCost).forEach(([resource, amount]) => {
-                            if ((state.resources[resource] || 0) < amount) canBuild = false;
-                        });
-
-                        return (
-                            <div
-                                key={building.id}
-                                style={{
-                                    padding: 16,
-                                    background: 'rgba(0,0,0,0.3)',
-                                    border: '2px solid #4a3c2a',
-                                    borderRadius: 6,
-                                }}
-                            >
-                                <div style={{
-                                    display: 'flex',
-                                    justifyContent: 'space-between',
-                                    alignItems: 'center',
-                                    marginBottom: 12
-                                }}>
-                                    <h4 style={{ margin: 0, fontSize: 14, color: '#ffd700' }}>
-                                        {building.name}
-                                    </h4>
-                                    <span style={{
-                                        padding: '4px 8px',
-                                        background: 'rgba(201,162,39,0.2)',
-                                        borderRadius: 4,
-                                        fontSize: 12,
-                                        color: '#c9a227'
-                                    }}>
-                                    ×{count}</span>
+                            }}>
+                                <div style={{ fontSize: 24, marginBottom: 4 }}>{icons[key] || '📦'}</div>
+                                <div style={{ fontSize: 11, color: '#888', marginBottom: 2 }}>{names[key] || key}</div>
+                                <div style={{ fontSize: 16, color: '#ffd700', fontWeight: 600 }}>
+                                    {Math.floor(value)}
                                 </div>
-
-                                <div style={{ fontSize: 11, color: '#aaa', marginBottom: 8 }}>
-                                    <div style={{ marginBottom: 4 }}>
-                                        成本: {Object.entries(dynamicCost).map(([r, a]) => `${r}:${a}`).join(', ')}
-                                    </div>
-
-                                    {Object.keys(building.production || {}).length > 0 && (
-                                        <div style={{ color: '#4CAF50' }}>
-                                            产出: {Object.entries(building.production).map(([r, a]) => `${r}:+${a}`).join(', ')}
-                                        </div>
-                                    )}
-
-                                    {Object.keys(building.consumption || {}).length > 0 && (
-                                        <div style={{ color: '#f44336' }}>
-                                            消耗: {Object.entries(building.consumption).map(([r, a]) => `${r}:-${a}`).join(', ')}
-                                        </div>
-                                    )}
-                                </div>
-
-                                <Button
-                                    onClick={() => dispatch({ type: 'BUILD', payload: { buildingId: building.id } })}
-                                    disabled={!canBuild}
-                                    style={{ width: '100%' }}
-                                >
-                                    建造
-                                </Button>
                             </div>
                         );
                     })}
                 </div>
             </Panel>
 
+            {/* 可派遣角色 */}
+            {availableChars.length > 0 && (
+                <Panel title="👥 可派遣角色" style={{ marginBottom: 16 }}>
+                    <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                        {availableChars.map(char => {
+                            const gatherStats = calculateGatherStats(char);
+                            return (
+                                <div
+                                    key={char.id}
+                                    draggable
+                                    onDragStart={(e) => handleDragStart(e, char.id)}
+                                    style={{
+                                        padding: 12,
+                                        background: 'linear-gradient(135deg, rgba(201,162,39,0.2), rgba(139,115,25,0.1))',
+                                        border: '2px solid #c9a227',
+                                        borderRadius: 8,
+                                        cursor: 'grab',
+                                        transition: 'all 0.2s',
+                                        minWidth: 140
+                                    }}
+                                >
+                                    <div style={{ fontSize: 14, color: '#ffd700', fontWeight: 600, marginBottom: 4 }}>
+                                        {char.name}
+                                    </div>
+                                    <div style={{ fontSize: 11, color: '#888', marginBottom: 8 }}>
+                                        Lv.{char.level} {CLASSES[char.classId].name}
+                                    </div>
+                                    <div style={{ fontSize: 10, color: '#aaa', display: 'flex', gap: 8 }}>
+                                        <span title="熟练">🔧{gatherStats.proficiency}</span>
+                                        <span title="精细">🎯{gatherStats.precision}</span>
+                                        <span title="感知">👁️{gatherStats.perception}</span>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                    <div style={{ marginTop: 12, fontSize: 12, color: '#888', fontStyle: 'italic' }}>
+                        💡 拖拽角色到下方建筑进行派遣采集
+                    </div>
+                </Panel>
+            )}
+
+            {/* Tab 切换 */}
+            <div style={{
+                display: 'flex',
+                gap: 4,
+                marginBottom: 16,
+                padding: 4,
+                background: 'rgba(0,0,0,0.3)',
+                borderRadius: 8,
+                border: '1px solid #3a3a3a'
+            }}>
+                <button
+                    onClick={() => setActiveTab('resources')}
+                    style={{
+                        flex: 1,
+                        padding: '10px 16px',
+                        background: activeTab === 'resources'
+                            ? 'linear-gradient(180deg, rgba(201,162,39,0.3), rgba(139,115,25,0.2))'
+                            : 'transparent',
+                        border: activeTab === 'resources' ? '1px solid #c9a227' : '1px solid transparent',
+                        borderRadius: 6,
+                        color: activeTab === 'resources' ? '#ffd700' : '#888',
+                        cursor: 'pointer',
+                        fontFamily: 'inherit',
+                        fontSize: 14,
+                        fontWeight: 600
+                    }}
+                >
+                    ⛏️ 资源建筑
+                </button>
+                <button
+                    onClick={() => setActiveTab('functional')}
+                    style={{
+                        flex: 1,
+                        padding: '10px 16px',
+                        background: activeTab === 'functional'
+                            ? 'linear-gradient(180deg, rgba(201,162,39,0.3), rgba(139,115,25,0.2))'
+                            : 'transparent',
+                        border: activeTab === 'functional' ? '1px solid #c9a227' : '1px solid transparent',
+                        borderRadius: 6,
+                        color: activeTab === 'functional' ? '#ffd700' : '#888',
+                        cursor: 'pointer',
+                        fontFamily: 'inherit',
+                        fontSize: 14,
+                        fontWeight: 600
+                    }}
+                >
+                    🏛️ 功能建筑
+                </button>
+            </div>
+
+            {/* 资源建筑区域 */}
+            {activeTab === 'resources' && (
+                <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
+                    gap: 16
+                }}>
+                    {Object.values(RESOURCE_BUILDINGS).map(building => {
+                        const workers = getWorkers(building.id);
+                        const currentProduction = workers.length > 0
+                            ? calculateBuildingProduction(building.id, workers.map(w => w.id), state)
+                            : 0;
+
+                        return (
+                            <div
+                                key={building.id}
+                                onDragOver={handleDragOver}
+                                onDrop={(e) => handleDrop(e, building.id)}
+                                style={{
+                                    background: 'linear-gradient(135deg, rgba(40,35,30,0.9), rgba(25,20,15,0.95))',
+                                    border: workers.length > 0 ? '2px solid #c9a227' : '2px solid #4a3c2a',
+                                    borderRadius: 12,
+                                    overflow: 'hidden',
+                                    transition: 'all 0.2s'
+                                }}
+                            >
+                                {/* 建筑头部 */}
+                                <div style={{
+                                    padding: 16,
+                                    background: workers.length > 0
+                                        ? 'linear-gradient(180deg, rgba(201,162,39,0.15), transparent)'
+                                        : 'linear-gradient(180deg, rgba(60,50,40,0.3), transparent)',
+                                    borderBottom: '1px solid rgba(201,162,39,0.2)'
+                                }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                                        <div style={{
+                                            width: 50,
+                                            height: 50,
+                                            background: 'rgba(0,0,0,0.4)',
+                                            borderRadius: 8,
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            fontSize: 28,
+                                            border: '1px solid rgba(201,162,39,0.3)'
+                                        }}>
+                                            {building.icon}
+                                        </div>
+                                        <div style={{ flex: 1 }}>
+                                            <div style={{ fontSize: 16, color: '#ffd700', fontWeight: 600 }}>
+                                                {building.name}
+                                            </div>
+                                            <div style={{ fontSize: 11, color: '#888', marginTop: 2 }}>
+                                                {building.description}
+                                            </div>
+                                        </div>
+                                        <div style={{ textAlign: 'right' }}>
+                                            <div style={{ fontSize: 11, color: '#888' }}>工人</div>
+                                            <div style={{
+                                                fontSize: 14,
+                                                color: workers.length >= building.maxWorkers ? '#f44336' : '#4CAF50',
+                                                fontWeight: 600
+                                            }}>
+                                                {workers.length}/{building.maxWorkers}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* 产出信息 */}
+                                <div style={{
+                                    padding: '12px 16px',
+                                    background: 'rgba(0,0,0,0.2)',
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center'
+                                }}>
+                                    <div>
+                                        <span style={{ fontSize: 11, color: '#888' }}>当前产出：</span>
+                                        <span style={{
+                                            fontSize: 14,
+                                            color: currentProduction > 0 ? '#4CAF50' : '#666',
+                                            fontWeight: 600,
+                                            marginLeft: 4
+                                        }}>
+                                            +{currentProduction.toFixed(1)}/秒
+                                        </span>
+                                    </div>
+                                    {building.consumption && (
+                                        <div style={{ fontSize: 11, color: '#f44336' }}>
+                                            消耗: {Object.entries(building.consumption).map(([r, a]) =>
+                                            `${r}×${a}`
+                                        ).join(', ')}/人
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* 工人区域 */}
+                                <div style={{
+                                    padding: 16,
+                                    minHeight: 80,
+                                    background: 'rgba(201,162,39,0.03)',
+                                    borderTop: '1px dashed rgba(201,162,39,0.2)'
+                                }}>
+                                    {workers.length > 0 ? (
+                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                                            {workers.map(char => {
+                                                const gatherStats = calculateGatherStats(char);
+                                                return (
+                                                    <div key={char.id} style={{
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        gap: 8,
+                                                        padding: '8px 12px',
+                                                        background: 'rgba(201,162,39,0.1)',
+                                                        border: '1px solid rgba(201,162,39,0.3)',
+                                                        borderRadius: 6
+                                                    }}>
+                                                        <div>
+                                                            <div style={{ fontSize: 12, color: '#ffd700' }}>
+                                                                {char.name}
+                                                            </div>
+                                                            <div style={{ fontSize: 10, color: '#888' }}>
+                                                                🔧{gatherStats.proficiency} 🎯{gatherStats.precision} 👁️{gatherStats.perception}
+                                                            </div>
+                                                        </div>
+                                                        <button
+                                                            onClick={() => dispatch({
+                                                                type: 'UNASSIGN_RESOURCE_BUILDING',
+                                                                payload: { characterId: char.id, buildingId: building.id }
+                                                            })}
+                                                            style={{
+                                                                background: 'rgba(244,67,54,0.2)',
+                                                                border: '1px solid rgba(244,67,54,0.5)',
+                                                                borderRadius: 4,
+                                                                color: '#f44336',
+                                                                padding: '4px 8px',
+                                                                fontSize: 10,
+                                                                cursor: 'pointer'
+                                                            }}
+                                                        >
+                                                            召回
+                                                        </button>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    ) : (
+                                        <div style={{
+                                            height: '100%',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            color: '#555',
+                                            fontSize: 12,
+                                            fontStyle: 'italic'
+                                        }}>
+                                            拖拽角色到此处开始采集
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            )}
+
+            {/* 功能建筑区域 */}
+            {activeTab === 'functional' && (
+                <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+                    gap: 16
+                }}>
+                    {Object.values(FUNCTIONAL_BUILDINGS).map(building => {
+                        const currentCount = state.functionalBuildings?.[building.id] || 0;
+                        const isMaxed = currentCount >= building.maxCount;
+
+                        // 检查资源是否足够
+                        let canBuild = true;
+                        Object.entries(building.cost).forEach(([res, amount]) => {
+                            if ((state.resources[res] || 0) < amount) canBuild = false;
+                        });
+
+                        return (
+                            <div key={building.id} style={{
+                                padding: 20,
+                                background: currentCount > 0
+                                    ? 'linear-gradient(135deg, rgba(76,175,80,0.1), rgba(40,35,30,0.9))'
+                                    : 'rgba(0,0,0,0.3)',
+                                border: currentCount > 0 ? '2px solid #4CAF50' : '2px solid #4a3c2a',
+                                borderRadius: 12
+                            }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+                                    <div style={{
+                                        width: 48,
+                                        height: 48,
+                                        background: 'rgba(0,0,0,0.4)',
+                                        borderRadius: 8,
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        fontSize: 26
+                                    }}>
+                                        {building.icon}
+                                    </div>
+                                    <div style={{ flex: 1 }}>
+                                        <div style={{ fontSize: 16, color: '#ffd700', fontWeight: 600 }}>
+                                            {building.name}
+                                        </div>
+                                        <div style={{
+                                            fontSize: 12,
+                                            color: currentCount > 0 ? '#4CAF50' : '#888'
+                                        }}>
+                                            已建造: {currentCount}/{building.maxCount}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div style={{
+                                    fontSize: 12,
+                                    color: '#aaa',
+                                    marginBottom: 12,
+                                    padding: 10,
+                                    background: 'rgba(0,0,0,0.2)',
+                                    borderRadius: 6
+                                }}>
+                                    {building.description}
+                                </div>
+
+                                <div style={{
+                                    fontSize: 11,
+                                    color: '#888',
+                                    marginBottom: 12
+                                }}>
+                                    建造成本：{Object.entries(building.cost).map(([res, amount]) => {
+                                    const names = { gold: '金币', wood: '木材', ironOre: '铁矿' };
+                                    const hasEnough = (state.resources[res] || 0) >= amount;
+                                    return (
+                                        <span key={res} style={{
+                                            color: hasEnough ? '#4CAF50' : '#f44336',
+                                            marginRight: 8
+                                        }}>
+                                                {names[res] || res}: {amount}
+                                            </span>
+                                    );
+                                })}
+                                </div>
+
+                                <Button
+                                    onClick={() => dispatch({
+                                        type: 'BUILD_FUNCTIONAL',
+                                        payload: { buildingId: building.id }
+                                    })}
+                                    disabled={!canBuild || isMaxed}
+                                    style={{ width: '100%' }}
+                                >
+                                    {isMaxed ? '已达上限' : '建造'}
+                                </Button>
+                            </div>
+                        );
+                    })}
+                </div>
+            )}
         </div>
     );
 };

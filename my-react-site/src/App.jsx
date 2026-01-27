@@ -4558,7 +4558,7 @@ const initialState = {
     currentResearch: null,
     researchProgress: 0,
     inventory: [],
-    inventorySize: 40,
+    inventorySize: 80,
     achievements: {},
     codex: [],
     codexJunk: [],
@@ -5655,7 +5655,7 @@ function gameReducer(state, action) {
 
             // 仓库增加背包大小
             const bonusInventorySize = warehouseCount * 1;
-            newState.inventorySize = 40 + bonusInventorySize;
+            newState.inventorySize = 80 + bonusInventorySize;
 
             newState.resources = newResources;
 

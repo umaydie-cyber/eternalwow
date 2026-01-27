@@ -2972,20 +2972,6 @@ const BUILDINGS = {
     },
 };
 
-function getBuildingCost(buildingId, state) {
-    const building = BUILDINGS[buildingId];
-    const builtCount = state.buildings[buildingId] || 0;
-
-    const multiplier = 1 + builtCount * 0.1;
-
-    const cost = {};
-    for (const [res, amount] of Object.entries(building.cost)) {
-        cost[res] = Math.ceil(amount * multiplier);
-    }
-
-    return cost;
-}
-
 function ItemIcon({ item, size = 28 }) {
     if (!item) return null;
 
@@ -5463,6 +5449,24 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1) {
     };
 }
 
+// ==================== 计算功能建筑动态成本 ====================
+function getFunctionalBuildingCost(buildingId, state) {
+    const building = FUNCTIONAL_BUILDINGS[buildingId];
+    if (!building) return {};
+
+    const builtCount = state.functionalBuildings?.[buildingId] || 0;
+
+    // 每多建造一座，成本增加20%
+    const multiplier = Math.pow(1.2, builtCount);
+
+    const cost = {};
+    Object.entries(building.cost).forEach(([res, amount]) => {
+        cost[res] = Math.ceil(amount * multiplier);
+    });
+
+    return cost;
+}
+
 // ==================== GAME REDUCER ====================
 function gameReducer(state, action) {
     switch (action.type) {
@@ -6805,16 +6809,19 @@ function gameReducer(state, action) {
             // 检查是否达到上限
             if (currentCount >= building.maxCount) return state;
 
+            // ✅ 使用动态成本
+            const dynamicCost = getFunctionalBuildingCost(buildingId, state);
+
             // 检查资源
             let canBuild = true;
-            Object.entries(building.cost).forEach(([res, amount]) => {
+            Object.entries(dynamicCost).forEach(([res, amount]) => {
                 if ((state.resources[res] || 0) < amount) canBuild = false;
             });
             if (!canBuild) return state;
 
             // 扣除资源
             const newResources = { ...state.resources };
-            Object.entries(building.cost).forEach(([res, amount]) => {
+            Object.entries(dynamicCost).forEach(([res, amount]) => {
                 newResources[res] -= amount;
             });
 
@@ -9387,9 +9394,12 @@ const CityPage = ({ state, dispatch }) => {
                         const currentCount = state.functionalBuildings?.[building.id] || 0;
                         const isMaxed = currentCount >= building.maxCount;
 
+                        // ✅ 获取动态成本
+                        const dynamicCost = getFunctionalBuildingCost(building.id, state);
+
                         // 检查资源是否足够
                         let canBuild = true;
-                        Object.entries(building.cost).forEach(([res, amount]) => {
+                        Object.entries(dynamicCost).forEach(([res, amount]) => {
                             if ((state.resources[res] || 0) < amount) canBuild = false;
                         });
 
@@ -9439,23 +9449,48 @@ const CityPage = ({ state, dispatch }) => {
                                     {building.description}
                                 </div>
 
+                                {/* ✅ 显示动态成本 */}
                                 <div style={{
                                     fontSize: 11,
                                     color: '#888',
-                                    marginBottom: 12
+                                    marginBottom: 12,
+                                    padding: 10,
+                                    background: 'rgba(0,0,0,0.15)',
+                                    borderRadius: 6
                                 }}>
-                                    建造成本：{Object.entries(building.cost).map(([res, amount]) => {
-                                    const names = { gold: '金币', wood: '木材', ironOre: '铁矿' };
-                                    const hasEnough = (state.resources[res] || 0) >= amount;
-                                    return (
-                                        <span key={res} style={{
-                                            color: hasEnough ? '#4CAF50' : '#f44336',
-                                            marginRight: 8
-                                        }}>
-                                                {names[res] || res}: {amount}
+                                    <div style={{ marginBottom: 4, color: '#aaa' }}>
+                                        建造成本 {currentCount > 0 && (
+                                        <span style={{ color: '#ff9800', fontSize: 10 }}>
+                                                (+{((Math.pow(1.2, currentCount) - 1) * 100).toFixed(0)}%)
                                             </span>
-                                    );
-                                })}
+                                    )}：
+                                    </div>
+                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                                        {Object.entries(dynamicCost).map(([res, amount]) => {
+                                            const names = {
+                                                gold: '🟡 金币',
+                                                wood: '🪵 木材',
+                                                ironOre: '🪙 铁矿',
+                                                ironIngot: '🔩 铁锭',
+                                                herb: '🌿 草药',
+                                                leather: '🦌 毛皮',
+                                                magicEssence: '💎 魔法精华',
+                                                alchemyOil: '⚗️ 炼金油'
+                                            };
+                                            const hasEnough = (state.resources[res] || 0) >= amount;
+                                            return (
+                                                <span key={res} style={{
+                                                    color: hasEnough ? '#4CAF50' : '#f44336',
+                                                    padding: '2px 6px',
+                                                    background: hasEnough ? 'rgba(76,175,80,0.1)' : 'rgba(244,67,54,0.1)',
+                                                    borderRadius: 4,
+                                                    border: `1px solid ${hasEnough ? 'rgba(76,175,80,0.3)' : 'rgba(244,67,54,0.3)'}`
+                                                }}>
+                                                    {names[res] || res}: {amount.toLocaleString()}
+                                                </span>
+                                            );
+                                        })}
+                                    </div>
                                 </div>
 
                                 <Button

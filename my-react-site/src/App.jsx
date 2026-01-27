@@ -11144,7 +11144,6 @@ const BossPrepareModal = ({ state, dispatch }) => {
 };
 
 // ==================== Boss战斗显示模态 ====================
-// ==================== Boss战斗显示模态 ====================
 const BossCombatModal = ({ combat, state }) => {
     if (!combat) return null;
     const boss = BOSS_DATA[combat.bossId];
@@ -11152,6 +11151,10 @@ const BossCombatModal = ({ combat, state }) => {
 
     const minionConfig = boss.minion || { name: '小弟', maxHp: 100 };
     const minionName = minionConfig.name || '小弟';
+
+    // 计算存活人数
+    const aliveCount = combat.playerStates.filter(p => p.currentHp > 0).length;
+    const totalCount = combat.playerStates.length;
 
     return (
         <div style={{
@@ -11161,104 +11164,529 @@ const BossCombatModal = ({ combat, state }) => {
             width: '90%',
             maxWidth: 1200,
             height: '90%',
-            background: 'rgba(20,10,10,0.98)',
+            background: 'linear-gradient(135deg, rgba(30,15,15,0.98) 0%, rgba(15,8,8,0.99) 100%)',
             display: 'flex',
             flexDirection: 'column',
             zIndex: 1000,
             border: '4px solid #c9a227',
             borderRadius: 16,
             overflow: 'hidden',
-            boxShadow: '0 0 40px rgba(201,162,39,0.6)'
+            boxShadow: '0 0 60px rgba(201,162,39,0.4), inset 0 0 100px rgba(0,0,0,0.5)'
         }}>
-            <div style={{ padding: 16, textAlign: 'center', color: '#ffd700', fontSize: 24 }}>
-                正在挑战 {boss.name} - 第 {combat.round} 回合
+            {/* 顶部标题栏 */}
+            <div style={{
+                padding: '16px 24px',
+                textAlign: 'center',
+                background: 'linear-gradient(180deg, rgba(139,105,20,0.2) 0%, transparent 100%)',
+                borderBottom: '1px solid rgba(201,162,39,0.3)'
+            }}>
+                <div style={{
+                    fontSize: 12,
+                    color: '#888',
+                    letterSpacing: 3,
+                    marginBottom: 6
+                }}>
+                    ⚔️ 世界首领战斗进行中 ⚔️
+                </div>
+                <div style={{
+                    fontSize: 28,
+                    color: '#ffd700',
+                    fontWeight: 700,
+                    textShadow: '0 0 20px rgba(255,215,0,0.5), 2px 2px 4px rgba(0,0,0,0.8)'
+                }}>
+                    {boss.name}
+                </div>
+                <div style={{
+                    marginTop: 8,
+                    display: 'flex',
+                    justifyContent: 'center',
+                    gap: 20,
+                    fontSize: 13
+                }}>
+                    <span style={{ color: '#4CAF50' }}>
+                        第 <span style={{ fontSize: 18, fontWeight: 700 }}>{combat.round}</span> 回合
+                    </span>
+                    <span style={{ color: '#888' }}>|</span>
+                    <span style={{ color: aliveCount > 0 ? '#4CAF50' : '#f44336' }}>
+                        存活: {aliveCount}/{totalCount}
+                    </span>
+                </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, padding: 20, flex: 1, overflow: 'hidden' }}>
-                {/* 左侧：队伍 */}
-                <div style={{ overflowY: 'auto' }}>
-                    <h3 style={{ color: '#4CAF50', marginBottom: 12 }}>队伍</h3>
-                    {combat.playerStates.map((p, i) => (
-                        <div key={i} style={{ marginBottom: 16 }}>
-                            <div style={{ fontSize: 14, marginBottom: 4, display: 'flex', justifyContent: 'space-between' }}>
-                                <span>位置{i + 1} {p.char.name} Lv.{p.char.level}</span>
-                                {/* 显示减疗debuff */}
-                                {p.debuffs?.mortalStrike && (
-                                    <span style={{
-                                        color: '#ff6b6b',
+            {/* 主战斗区域 */}
+            <div style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr',
+                gap: 0,
+                flex: 1,
+                overflow: 'hidden'
+            }}>
+                {/* 左侧：我方队伍 */}
+                <div style={{
+                    borderRight: '1px solid rgba(201,162,39,0.2)',
+                    padding: 20,
+                    overflowY: 'auto',
+                    background: 'linear-gradient(135deg, rgba(76,175,80,0.05) 0%, transparent 100%)'
+                }}>
+                    <h3 style={{
+                        color: '#4CAF50',
+                        marginBottom: 16,
+                        paddingBottom: 10,
+                        borderBottom: '1px solid rgba(76,175,80,0.3)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 8
+                    }}>
+                        <span style={{ fontSize: 20 }}>🛡️</span>
+                        我方队伍
+                    </h3>
+
+                    {combat.playerStates.map((p, i) => {
+                        // ✅ 关键修复：确保显示的血量不小于0
+                        const displayHp = Math.max(0, Math.floor(p.currentHp));
+                        const maxHp = p.char.stats.maxHp || 1;
+                        const isDead = p.currentHp <= 0;
+                        const hpPercent = Math.max(0, Math.min(100, (displayHp / maxHp) * 100));
+
+                        // 根据血量百分比决定颜色
+                        const getHpColor = () => {
+                            if (isDead) return '#666';
+                            if (hpPercent > 50) return '#4CAF50';
+                            if (hpPercent > 25) return '#ff9800';
+                            return '#f44336';
+                        };
+
+                        return (
+                            <div
+                                key={i}
+                                style={{
+                                    marginBottom: 16,
+                                    padding: 14,
+                                    background: isDead
+                                        ? 'rgba(0,0,0,0.4)'
+                                        : 'rgba(0,0,0,0.25)',
+                                    borderRadius: 10,
+                                    border: isDead
+                                        ? '1px solid rgba(100,100,100,0.3)'
+                                        : '1px solid rgba(76,175,80,0.2)',
+                                    opacity: isDead ? 0.6 : 1,
+                                    transition: 'all 0.3s',
+                                    position: 'relative',
+                                    overflow: 'hidden'
+                                }}
+                            >
+                                {/* 死亡遮罩 */}
+                                {isDead && (
+                                    <div style={{
+                                        position: 'absolute',
+                                        top: 0,
+                                        left: 0,
+                                        right: 0,
+                                        bottom: 0,
+                                        background: 'repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(0,0,0,0.1) 10px, rgba(0,0,0,0.1) 20px)',
+                                        pointerEvents: 'none',
+                                        zIndex: 1
+                                    }} />
+                                )}
+
+                                {/* 角色信息头部 */}
+                                <div style={{
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center',
+                                    marginBottom: 10,
+                                    position: 'relative',
+                                    zIndex: 2
+                                }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                        {/* 位置标识 */}
+                                        <div style={{
+                                            width: 28,
+                                            height: 28,
+                                            borderRadius: '50%',
+                                            background: isDead
+                                                ? 'rgba(100,100,100,0.3)'
+                                                : i === 0
+                                                    ? 'linear-gradient(135deg, #f44336, #c62828)'
+                                                    : 'linear-gradient(135deg, #4CAF50, #2e7d32)',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            fontSize: 12,
+                                            fontWeight: 700,
+                                            color: '#fff',
+                                            boxShadow: isDead ? 'none' : '0 2px 8px rgba(0,0,0,0.3)'
+                                        }}>
+                                            {i + 1}
+                                        </div>
+
+                                        {/* 职业图标 */}
+                                        <span style={{ fontSize: 20, filter: isDead ? 'grayscale(100%)' : 'none' }}>
+                                            {p.char.classId === 'protection_warrior' ? '🛡️' :
+                                                p.char.classId === 'discipline_priest' ? '✝️' :
+                                                    p.char.classId === 'frost_mage' ? '❄️' : '👤'}
+                                        </span>
+
+                                        {/* 名字和等级 */}
+                                        <div>
+                                            <div style={{
+                                                fontSize: 14,
+                                                fontWeight: 600,
+                                                color: isDead ? '#888' : '#ffd700'
+                                            }}>
+                                                {p.char.name}
+                                            </div>
+                                            <div style={{ fontSize: 11, color: '#888' }}>
+                                                Lv.{p.char.level} {CLASSES[p.char.classId]?.name || ''}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* 状态标签 */}
+                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
+                                        {isDead ? (
+                                            <span style={{
+                                                padding: '4px 10px',
+                                                background: 'linear-gradient(135deg, rgba(100,100,100,0.4), rgba(60,60,60,0.4))',
+                                                borderRadius: 4,
+                                                fontSize: 12,
+                                                fontWeight: 700,
+                                                color: '#aaa',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: 4,
+                                                border: '1px solid rgba(100,100,100,0.3)'
+                                            }}>
+                                                💀 死亡
+                                            </span>
+                                        ) : (
+                                            <>
+                                                {/* 减疗debuff */}
+                                                {p.debuffs?.mortalStrike && (
+                                                    <span style={{
+                                                        padding: '3px 8px',
+                                                        background: 'rgba(255,100,100,0.2)',
+                                                        borderRadius: 4,
+                                                        fontSize: 10,
+                                                        color: '#ff6b6b',
+                                                        border: '1px solid rgba(255,100,100,0.3)'
+                                                    }}>
+                                                        🩸 减疗 {(p.debuffs.mortalStrike.healingReduction * 100)}% ({p.debuffs.mortalStrike.duration}回合)
+                                                    </span>
+                                                )}
+
+                                                {/* Buff显示 */}
+                                                {p.buffs && p.buffs.length > 0 && (
+                                                    <div style={{ display: 'flex', gap: 4 }}>
+                                                        {p.buffs.slice(0, 3).map((buff, bi) => (
+                                                            <span key={bi} style={{
+                                                                padding: '2px 6px',
+                                                                background: 'rgba(76,175,80,0.2)',
+                                                                borderRadius: 3,
+                                                                fontSize: 9,
+                                                                color: '#4CAF50'
+                                                            }}>
+                                                                {buff.type === 'icy_veins' ? '❄️' : '✨'} {buff.duration}
+                                                            </span>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* ✅ 美化后的血条 */}
+                                <div style={{ position: 'relative', zIndex: 2 }}>
+                                    <div style={{
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
                                         fontSize: 11,
-                                        padding: '2px 6px',
-                                        background: 'rgba(255,100,100,0.2)',
-                                        borderRadius: 4
+                                        color: isDead ? '#666' : '#aaa',
+                                        marginBottom: 4
                                     }}>
-                                        减疗 {p.debuffs.mortalStrike.healingReduction * 100}% ({p.debuffs.mortalStrike.duration}回合)
-                                    </span>
+                                        <span>生命值</span>
+                                        <span style={{
+                                            color: isDead ? '#666' : getHpColor(),
+                                            fontWeight: 600
+                                        }}>
+                                            {/* ✅ 关键：显示0而不是负数 */}
+                                            {displayHp} / {Math.floor(maxHp)}
+                                            {isDead && ' (死亡)'}
+                                        </span>
+                                    </div>
+                                    <div style={{
+                                        height: 12,
+                                        background: 'rgba(0,0,0,0.5)',
+                                        borderRadius: 6,
+                                        overflow: 'hidden',
+                                        border: '1px solid rgba(255,255,255,0.1)',
+                                        boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.3)'
+                                    }}>
+                                        <div style={{
+                                            height: '100%',
+                                            // ✅ 关键：血条宽度基于修正后的百分比
+                                            width: `${hpPercent}%`,
+                                            background: isDead
+                                                ? '#444'
+                                                : `linear-gradient(90deg, ${getHpColor()}, ${getHpColor()}cc)`,
+                                            transition: 'width 0.3s ease-out, background 0.3s',
+                                            boxShadow: isDead ? 'none' : `0 0 10px ${getHpColor()}66`,
+                                            borderRadius: 6
+                                        }} />
+                                    </div>
+                                </div>
+
+                                {/* 寒冰指/祸福相依层数显示 */}
+                                {!isDead && (p.fingersOfFrost > 0 || p.fortuneMisfortuneStacks > 0) && (
+                                    <div style={{
+                                        marginTop: 8,
+                                        display: 'flex',
+                                        gap: 8,
+                                        position: 'relative',
+                                        zIndex: 2
+                                    }}>
+                                        {p.fingersOfFrost > 0 && (
+                                            <span style={{
+                                                padding: '2px 8px',
+                                                background: 'rgba(33,150,243,0.2)',
+                                                borderRadius: 4,
+                                                fontSize: 10,
+                                                color: '#64b5f6',
+                                                border: '1px solid rgba(33,150,243,0.3)'
+                                            }}>
+                                                ❄️ 寒冰指 ×{p.fingersOfFrost}
+                                            </span>
+                                        )}
+                                        {p.fortuneMisfortuneStacks > 0 && (
+                                            <span style={{
+                                                padding: '2px 8px',
+                                                background: 'rgba(255,215,0,0.2)',
+                                                borderRadius: 4,
+                                                fontSize: 10,
+                                                color: '#ffd700',
+                                                border: '1px solid rgba(255,215,0,0.3)'
+                                            }}>
+                                                ☯️ 祸福 ×{p.fortuneMisfortuneStacks}
+                                            </span>
+                                        )}
+                                    </div>
                                 )}
                             </div>
-                            <StatBar
-                                label="生命值"
-                                current={p.currentHp}
-                                max={p.char.stats.maxHp}
-                                color="#f44336"
-                            />
-                        </div>
-                    ))}
+                        );
+                    })}
                 </div>
 
                 {/* 右侧：敌人 */}
-                <div style={{ overflowY: 'auto' }}>
-                    <h3 style={{ color: '#f44336', marginBottom: 12 }}>敌人</h3>
+                <div style={{
+                    padding: 20,
+                    overflowY: 'auto',
+                    background: 'linear-gradient(135deg, rgba(244,67,54,0.05) 0%, transparent 100%)'
+                }}>
+                    <h3 style={{
+                        color: '#f44336',
+                        marginBottom: 16,
+                        paddingBottom: 10,
+                        borderBottom: '1px solid rgba(244,67,54,0.3)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 8
+                    }}>
+                        <span style={{ fontSize: 20 }}>👹</span>
+                        敌方单位
+                    </h3>
 
                     {/* Boss血条 */}
-                    <div style={{ marginBottom: 16 }}>
-                        <div style={{ fontSize: 14, marginBottom: 4 }}>{boss.name}</div>
-                        <StatBar
-                            label="生命值"
-                            current={combat.bossHp}
-                            max={boss.maxHp}
-                            color="#ff4444"
-                        />
+                    <div style={{
+                        marginBottom: 20,
+                        padding: 16,
+                        background: 'linear-gradient(135deg, rgba(244,67,54,0.1) 0%, rgba(0,0,0,0.3) 100%)',
+                        borderRadius: 12,
+                        border: '2px solid rgba(244,67,54,0.3)',
+                        boxShadow: '0 4px 20px rgba(244,67,54,0.2)'
+                    }}>
+                        <div style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            marginBottom: 12
+                        }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                <span style={{ fontSize: 28 }}>🐲</span>
+                                <div>
+                                    <div style={{
+                                        fontSize: 18,
+                                        fontWeight: 700,
+                                        color: '#ff6b6b',
+                                        textShadow: '0 0 10px rgba(255,107,107,0.5)'
+                                    }}>
+                                        {boss.name}
+                                    </div>
+                                    <div style={{ fontSize: 11, color: '#888' }}>世界首领</div>
+                                </div>
+                            </div>
+                            <div style={{
+                                fontSize: 14,
+                                color: '#ff6b6b',
+                                fontWeight: 600
+                            }}>
+                                {Math.max(0, Math.floor(combat.bossHp)).toLocaleString()} / {boss.maxHp.toLocaleString()}
+                            </div>
+                        </div>
+
+                        {/* Boss血条 */}
+                        <div style={{
+                            height: 20,
+                            background: 'rgba(0,0,0,0.5)',
+                            borderRadius: 10,
+                            overflow: 'hidden',
+                            border: '1px solid rgba(255,107,107,0.3)',
+                            boxShadow: 'inset 0 2px 6px rgba(0,0,0,0.4)'
+                        }}>
+                            <div style={{
+                                height: '100%',
+                                width: `${Math.max(0, Math.min(100, (combat.bossHp / boss.maxHp) * 100))}%`,
+                                background: 'linear-gradient(90deg, #f44336, #ff6b6b, #f44336)',
+                                transition: 'width 0.3s ease-out',
+                                boxShadow: '0 0 15px rgba(244,67,54,0.6)',
+                                borderRadius: 10,
+                                position: 'relative',
+                                overflow: 'hidden'
+                            }}>
+                                {/* 血条闪光效果 */}
+                                <div style={{
+                                    position: 'absolute',
+                                    top: 0,
+                                    left: 0,
+                                    right: 0,
+                                    height: '50%',
+                                    background: 'linear-gradient(180deg, rgba(255,255,255,0.3), transparent)',
+                                    borderRadius: '10px 10px 0 0'
+                                }} />
+                            </div>
+                        </div>
+
+                        {/* Boss DOT显示 */}
+                        {combat.bossDots && combat.bossDots.length > 0 && (
+                            <div style={{
+                                marginTop: 10,
+                                display: 'flex',
+                                flexWrap: 'wrap',
+                                gap: 6
+                            }}>
+                                {combat.bossDots.map((dot, di) => (
+                                    <span key={di} style={{
+                                        padding: '3px 8px',
+                                        background: 'rgba(156,39,176,0.2)',
+                                        borderRadius: 4,
+                                        fontSize: 10,
+                                        color: '#ce93d8',
+                                        border: '1px solid rgba(156,39,176,0.3)'
+                                    }}>
+                                        🔥 {dot.name || 'DOT'} ({dot.duration}回合)
+                                    </span>
+                                ))}
+                            </div>
+                        )}
                     </div>
 
                     {/* 小弟/火炮手血条 */}
                     {combat.minions && combat.minions.length > 0 && (
                         <div>
-                            <div style={{ fontSize: 14, marginBottom: 8, color: '#ce93d8' }}>
-                                {minionName} ({combat.minions.length}个)
+                            <div style={{
+                                fontSize: 14,
+                                marginBottom: 12,
+                                color: '#ce93d8',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 8
+                            }}>
+                                <span style={{ fontSize: 16 }}>👥</span>
+                                {minionName} ({combat.minions.filter(m => m.hp > 0).length}/{combat.minions.length} 存活)
                             </div>
-                            {combat.minions.map((m, i) => (
-                                <div key={i} style={{ marginBottom: 8 }}>
-                                    <div style={{
-                                        display: 'flex',
-                                        justifyContent: 'space-between',
-                                        alignItems: 'center',
-                                        marginBottom: 4
-                                    }}>
-                                        <span style={{ fontSize: 12, color: '#aaa' }}>
-                                            {minionName} {i + 1}
-                                        </span>
-                                        {/* 显示免疫状态 */}
-                                        {m.immune && (
-                                            <span style={{
-                                                fontSize: 10,
-                                                color: '#2196F3',
-                                                padding: '2px 6px',
-                                                background: 'rgba(33,150,243,0.2)',
-                                                borderRadius: 4,
-                                                fontWeight: 600
+
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                                {combat.minions.map((m, i) => {
+                                    const minionMaxHp = m.maxHp || minionConfig.maxHp;
+                                    const minionDisplayHp = Math.max(0, Math.floor(m.hp));
+                                    const minionIsDead = m.hp <= 0;
+                                    const minionHpPercent = Math.max(0, Math.min(100, (minionDisplayHp / minionMaxHp) * 100));
+
+                                    return (
+                                        <div key={i} style={{
+                                            padding: 12,
+                                            background: minionIsDead
+                                                ? 'rgba(0,0,0,0.3)'
+                                                : m.immune
+                                                    ? 'rgba(33,150,243,0.1)'
+                                                    : 'rgba(156,39,176,0.1)',
+                                            borderRadius: 8,
+                                            border: minionIsDead
+                                                ? '1px solid rgba(100,100,100,0.2)'
+                                                : m.immune
+                                                    ? '1px solid rgba(33,150,243,0.3)'
+                                                    : '1px solid rgba(156,39,176,0.3)',
+                                            opacity: minionIsDead ? 0.5 : 1
+                                        }}>
+                                            <div style={{
+                                                display: 'flex',
+                                                justifyContent: 'space-between',
+                                                alignItems: 'center',
+                                                marginBottom: 6
                                             }}>
-                                                🛡️ 免疫中
-                                            </span>
-                                        )}
-                                    </div>
-                                    <StatBar
-                                        label="生命值"
-                                        current={m.hp}
-                                        max={m.maxHp || minionConfig.maxHp}
-                                        color={m.immune ? "#2196F3" : "#ff6666"}
-                                    />
-                                </div>
-                            ))}
+                                                <span style={{
+                                                    fontSize: 12,
+                                                    color: minionIsDead ? '#666' : m.immune ? '#64b5f6' : '#ce93d8'
+                                                }}>
+                                                    {minionName} {i + 1}
+                                                    {minionIsDead && ' (死亡)'}
+                                                </span>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                                    {/* 免疫状态 */}
+                                                    {m.immune && !minionIsDead && (
+                                                        <span style={{
+                                                            fontSize: 10,
+                                                            color: '#2196F3',
+                                                            padding: '2px 6px',
+                                                            background: 'rgba(33,150,243,0.2)',
+                                                            borderRadius: 4,
+                                                            fontWeight: 600
+                                                        }}>
+                                                            🛡️ 免疫中
+                                                        </span>
+                                                    )}
+                                                    <span style={{
+                                                        fontSize: 11,
+                                                        color: minionIsDead ? '#666' : '#aaa'
+                                                    }}>
+                                                        {minionDisplayHp} / {minionMaxHp}
+                                                    </span>
+                                                </div>
+                                            </div>
+
+                                            {/* 小弟血条 */}
+                                            <div style={{
+                                                height: 8,
+                                                background: 'rgba(0,0,0,0.4)',
+                                                borderRadius: 4,
+                                                overflow: 'hidden'
+                                            }}>
+                                                <div style={{
+                                                    height: '100%',
+                                                    width: `${minionHpPercent}%`,
+                                                    background: minionIsDead
+                                                        ? '#444'
+                                                        : m.immune
+                                                            ? 'linear-gradient(90deg, #2196F3, #64b5f6)'
+                                                            : 'linear-gradient(90deg, #9C27B0, #ce93d8)',
+                                                    transition: 'width 0.3s',
+                                                    borderRadius: 4
+                                                }} />
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
                         </div>
                     )}
                 </div>
@@ -11266,21 +11694,36 @@ const BossCombatModal = ({ combat, state }) => {
 
             {/* 战斗日志 */}
             <div style={{
-                height: 200,
+                height: 180,
                 overflowY: 'auto',
-                padding: 16,
-                background: 'rgba(0,0,0,0.5)',
+                padding: '12px 16px',
+                background: 'linear-gradient(180deg, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.4) 100%)',
                 fontSize: 12,
-                borderTop: '1px solid rgba(201,162,39,0.3)'
+                borderTop: '2px solid rgba(201,162,39,0.3)',
+                fontFamily: 'monospace'
             }}>
-                {combat.logs.slice(-30).map((log, i) => (
+                <div style={{
+                    fontSize: 11,
+                    color: '#888',
+                    marginBottom: 8,
+                    borderBottom: '1px solid rgba(255,255,255,0.1)',
+                    paddingBottom: 6
+                }}>
+                    📜 战斗日志（最近200条）
+                </div>
+                {combat.logs.slice(-200).map((log, i) => (
                     <div key={i} style={{
-                        padding: '2px 0',
-                        color: log.includes('免疫') ? '#2196F3' :
-                            log.includes('致死打击') ? '#ff6b6b' :
-                                log.includes('火炮手') ? '#ce93d8' :
-                                    log.includes('登上甲板') ? '#64b5f6' :
-                                        '#ccc'
+                        padding: '3px 0',
+                        borderBottom: '1px solid rgba(255,255,255,0.03)',
+                        color: log.includes('死亡') || log.includes('阵亡') ? '#f44336' :
+                            log.includes('免疫') ? '#2196F3' :
+                                log.includes('致死打击') ? '#ff6b6b' :
+                                    log.includes('火炮手') || log.includes('召唤') ? '#ce93d8' :
+                                        log.includes('登上甲板') ? '#64b5f6' :
+                                            log.includes('治疗') || log.includes('恢复') ? '#4CAF50' :
+                                                log.includes('暴击') ? '#ff9800' :
+                                                    log.includes('胜利') ? '#ffd700' :
+                                                        '#ccc'
                     }}>
                         {log}
                     </div>

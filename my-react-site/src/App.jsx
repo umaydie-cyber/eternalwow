@@ -9071,6 +9071,22 @@ const CityPage = ({ state, dispatch }) => {
         }
     };
 
+    // ✅ 资源显示配置（过滤掉 population 和 maxPopulation）
+    const resourceConfig = {
+        gold: { icon: '🟡', name: '金币' },
+        wood: { icon: '🪵', name: '木材' },
+        ironOre: { icon: '🪙', name: '铁矿' },
+        ironIngot: { icon: '🔩', name: '铁锭' },
+        herb: { icon: '🌿', name: '草药' },
+        leather: { icon: '🦌', name: '毛皮' },
+        magicEssence: { icon: '💎', name: '魔法精华' },
+        alchemyOil: { icon: '⚗️', name: '炼金油' }
+    };
+
+    // ✅ 只显示配置中定义的资源
+    const displayedResources = Object.entries(state.resources)
+        .filter(([key]) => resourceConfig[key]);
+
     return (
         <div>
             {/* 资源总览 */}
@@ -9080,27 +9096,8 @@ const CityPage = ({ state, dispatch }) => {
                     gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))',
                     gap: 10
                 }}>
-                    {Object.entries(state.resources).map(([key, value]) => {
-                        const icons = {
-                            gold: '🟡',
-                            wood: '🪵',
-                            ironOre: '🪙',
-                            ironIngot: '🔩',
-                            herb: '🌿',
-                            leather: '🦌',
-                            magicEssence: '💎',
-                            alchemyOil: '⚗️'
-                        };
-                        const names = {
-                            gold: '金币',
-                            wood: '木材',
-                            ironOre: '铁矿',
-                            ironIngot: '铁锭',
-                            herb: '草药',
-                            leather: '毛皮',
-                            magicEssence: '魔法精华',
-                            alchemyOil: '炼金油'
-                        };
+                    {displayedResources.map(([key, value]) => {
+                        const config = resourceConfig[key];
                         return (
                             <div key={key} style={{
                                 padding: 12,
@@ -9109,8 +9106,8 @@ const CityPage = ({ state, dispatch }) => {
                                 borderRadius: 8,
                                 textAlign: 'center'
                             }}>
-                                <div style={{ fontSize: 24, marginBottom: 4 }}>{icons[key] || '📦'}</div>
-                                <div style={{ fontSize: 11, color: '#888', marginBottom: 2 }}>{names[key] || key}</div>
+                                <div style={{ fontSize: 24, marginBottom: 4 }}>{config.icon}</div>
+                                <div style={{ fontSize: 11, color: '#888', marginBottom: 2 }}>{config.name}</div>
                                 <div style={{ fontSize: 16, color: '#ffd700', fontWeight: 600 }}>
                                     {Math.floor(value)}
                                 </div>

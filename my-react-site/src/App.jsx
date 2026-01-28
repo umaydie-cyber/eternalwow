@@ -3773,7 +3773,6 @@ function stepBossCombat(state) {
                 const minionName = boss.minion?.name || boss.cannoneer?.name || '小弟';
                 logs.push(`位置${i + 1} ${p.char.name} 使用 普通攻击${repeatText} 对 ${targetType === 'boss' ? boss.name : minionName} 造成 ${actualDamage} 伤害${basicResult.isCrit ? '（暴击）' : ''}`);
 
-                / ===== 50级天赋：圣剑 - 普攻额外造成格挡值伤害 =====
                 if (basicResult.holySwordDamage && basicResult.holySwordDamage > 0) {
                     const holySwordActualDamage = Math.max(1, Math.floor(basicResult.holySwordDamage));
 

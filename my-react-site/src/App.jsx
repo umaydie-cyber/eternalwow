@@ -220,7 +220,30 @@ const TALENTS = {
                 { id: 'fortified_wall', type: TALENT_TYPES.AURA, name: '坚毅长城', description: '盾墙的减伤提高到75%。' },
             ]
         },
-        ...[50, 60, 70].map(tier => ({
+        {
+            tier: 50,
+            options: [
+                {
+                    id: 'crit_breakthrough',
+                    type: TALENT_TYPES.AURA,
+                    name: '爆发突破',
+                    description: '超过100%的暴击率会直接转化为对总伤害的加成。'
+                },
+                {
+                    id: 'block_breakthrough',
+                    type: TALENT_TYPES.AURA,
+                    name: '格挡突破',
+                    description: '超过95%的格挡率会直接转化为对总格挡值的加成。'
+                },
+                {
+                    id: 'holy_sword',
+                    type: TALENT_TYPES.ON_HIT,
+                    name: '圣剑',
+                    description: '普通攻击会额外造成100%结算格挡值的伤害。'
+                },
+            ]
+        },
+        ...[60, 70].map(tier => ({
             tier,
             options: [
                 { id: `t${tier}_a`, name: '（预留）天赋A', description: '待实现' },
@@ -432,12 +455,39 @@ const SKILLS = {
             // 急速：普通攻击伤害提高（急速 * 2%）
             const hasteMult = 1 + ((char.stats.haste || 0) * 0.02);
             let damage = char.stats.attack * 1.2 * (char.stats.basicAttackMultiplier || 1) * hasteMult;
-            if (Math.random() < char.stats.critRate/100) {
-                damage *= char.stats.critDamage;
-                return { damage: Math.floor(damage), isCrit: true };
+
+            // ===== 50级天赋：爆发突破 - 超过100%的暴击率转化为伤害加成 =====
+            let effectiveCritRate = char.stats.critRate || 0;
+            let critBreakthroughBonus = 1;
+            if (char.talents?.[50] === 'crit_breakthrough' && effectiveCritRate > 100) {
+                const excessCrit = effectiveCritRate - 100;
+                critBreakthroughBonus = 1 + (excessCrit / 100); // 超出部分直接加成
+                effectiveCritRate = 100; // 暴击率封顶100%
             }
+            damage *= critBreakthroughBonus;
+
+            // 暴击判定
+            if (Math.random() < effectiveCritRate / 100) {
+                damage *= char.stats.critDamage;
+                return {
+                    damage: Math.floor(damage),
+                    isCrit: true,
+                    // 50级天赋：圣剑 - 普攻额外造成格挡值伤害
+                    holySwordDamage: char.talents?.[50] === 'holy_sword'
+                        ? Math.floor((char.stats.blockValue || 0) * 1.0)
+                        : 0
+                };
+            }
+
             damage *= (1 + char.stats.versatility / 100);
-            return { damage: Math.floor(damage), isCrit: false };
+            return {
+                damage: Math.floor(damage),
+                isCrit: false,
+                // 50级天赋：圣剑 - 普攻额外造成格挡值伤害
+                holySwordDamage: char.talents?.[50] === 'holy_sword'
+                    ? Math.floor((char.stats.blockValue || 0) * 1.0)
+                    : 0
+            };
         }
     },
     rest: {
@@ -3723,6 +3773,19 @@ function stepBossCombat(state) {
                 const minionName = boss.minion?.name || boss.cannoneer?.name || '小弟';
                 logs.push(`位置${i + 1} ${p.char.name} 使用 普通攻击${repeatText} 对 ${targetType === 'boss' ? boss.name : minionName} 造成 ${actualDamage} 伤害${basicResult.isCrit ? '（暴击）' : ''}`);
 
+                / ===== 50级天赋：圣剑 - 普攻额外造成格挡值伤害 =====
+                if (basicResult.holySwordDamage && basicResult.holySwordDamage > 0) {
+                    const holySwordActualDamage = Math.max(1, Math.floor(basicResult.holySwordDamage));
+
+                    if (targetType === 'boss') {
+                        combat.bossHp -= holySwordActualDamage;
+                    } else if (!combat.minions[targetIndex]?.immune) {
+                        combat.minions[targetIndex].hp -= holySwordActualDamage;
+                    }
+
+                    logs.push(`【圣剑】触发：${p.char.name} 额外造成 ${holySwordActualDamage} 点真实伤害`);
+                }
+
                 return actualDamage;
             }
             return 0;
@@ -4222,9 +4285,21 @@ function stepBossCombat(state) {
         const dr = getArmorDamageReduction(armor);
         let dmg = applyPhysicalMitigation(rawDamage, armor);
 
-        const baseBlockRate = playerState?.char?.stats?.blockRate || 0;
+        // ===== 50级天赋：格挡突破 =====
+        let baseBlockRate = playerState?.char?.stats?.blockRate || 0;
         const buffBlockRate = getBuffBlockRate(playerState);
-        const blockChance = Math.max(0, Math.min(0.95, (baseBlockRate + buffBlockRate) / 100));
+        let totalBlockRate = baseBlockRate + buffBlockRate;
+        let blockBreakthroughBonusValue = 0;
+
+        if (playerState?.char?.talents?.[50] === 'block_breakthrough' && totalBlockRate > 95) {
+            const excessBlockRate = totalBlockRate - 95;
+            blockBreakthroughBonusValue = Math.floor(
+                (playerState?.char?.stats?.blockValue || 0) * (excessBlockRate / 100)
+            );
+            totalBlockRate = 95;
+        }
+
+        const blockChance = Math.max(0, Math.min(0.95, totalBlockRate / 100));
 
         let blockedAmount = 0;
         if (Math.random() < blockChance) {
@@ -5076,6 +5151,20 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1) {
                         type: 'damage',
                         isCrit: result.isCrit
                     });
+
+                    // ===== 50级天赋：圣剑 - 普攻额外造成格挡值伤害 =====
+                    if (result.holySwordDamage && result.holySwordDamage > 0) {
+                        const holySwordActualDamage = Math.max(1, result.holySwordDamage);
+                        enemyHp -= holySwordActualDamage;
+
+                        logs.push({
+                            round,
+                            kind: 'proc',
+                            actor: character.name,
+                            proc: '圣剑',
+                            text: `【圣剑】触发：额外造成 ${holySwordActualDamage} 点真实伤害（无视防御）`
+                        });
+                    }
                 }
             }
         }
@@ -5366,6 +5455,17 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1) {
         const dr = getArmorDamageReduction(character.stats.armor);
         const rawEnemyDamage = applyPhysicalMitigation(combatState.enemy?.attack ?? 0, character.stats.armor);
 
+        // ===== 50级天赋：格挡突破 - 超过95%的格挡率转化为格挡值加成 =====
+        let baseBlockRate = (character.stats.blockRate || 0) + getBuffBlockRate();
+        let blockBreakthroughBonusValue = 0;
+
+        if (character.talents?.[50] === 'block_breakthrough' && baseBlockRate > 95) {
+            const excessBlockRate = baseBlockRate - 95;
+            // 超出部分转化为格挡值百分比加成
+            blockBreakthroughBonusValue = Math.floor((character.stats.blockValue || 0) * (excessBlockRate / 100));
+            baseBlockRate = 95; // 格挡率封顶95%
+        }
+
         const blockChance = Math.max(
             0,
             Math.min(
@@ -5378,7 +5478,12 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1) {
         let blockedAmount = 0;
 
         if (Math.random() < blockChance) {
-            const blockValue = Math.floor((character.stats.blockValue || 0) + (talentBuffs.blockValueFlat || 0));
+            // 格挡值 = 基础格挡值 + 天赋加成 + 格挡突破加成
+            const blockValue = Math.floor(
+                (character.stats.blockValue || 0) +
+                (talentBuffs.blockValueFlat || 0) +
+                blockBreakthroughBonusValue
+            );
             blockedAmount = Math.min(finalDamage - 1, blockValue);
             finalDamage = Math.max(1, finalDamage - blockedAmount);
         }

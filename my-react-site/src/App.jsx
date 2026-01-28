@@ -4364,14 +4364,14 @@ function stepBossCombat(state) {
 
         // 范克里夫的火炮手：对全队造成AOE伤害
         if (combat.bossId === 'vancleef' && m.isCannoneer) {
-            const aoeDamage = Math.floor((boss.attack || 0) * (boss.minion.aoeDamageMultiplier || 0.5));
+            const baseAoeDamage = Math.floor((boss.attack || 0) * (boss.minion.aoeDamageMultiplier || 0.5));
 
             combat.playerStates.forEach((ps, pIdx) => {
                 if (ps.currentHp <= 0) return;
 
                 const armor = ps.char?.stats?.armor || 0;
                 const dr = getArmorDamageReduction(armor);
-                let dmg = applyPhysicalMitigation(aoeDamage, armor);
+                let dmg = applyPhysicalMitigation(baseAoeDamage, armor);
 
                 // 受伤乘区
                 const takenMult = ps.char?.stats?.damageTakenMult ?? 1;
@@ -4387,9 +4387,11 @@ function stepBossCombat(state) {
                 dmg = Math.max(1, Math.floor(dmg * takenMult * buffTakenMult * demoralizingShoutMult));
 
                 ps.currentHp -= dmg;
-            });
 
-            logs.push(`【${boss.minion.name}${i + 1}】炮击全队，每人受到 ${aoeDamage} 点伤害（护甲减伤后）`);
+                // 为每个角色单独打印日志，显示实际受到的伤害
+                const drPct = Math.round(dr * 100);
+                logs.push(`【${boss.minion.name}${i + 1}】炮击 位置${pIdx + 1} ${ps.char.name}，造成 ${dmg} 点伤害（护甲减伤${drPct}%）`);
+            });
         }
         // 霍格的小弟：普通攻击
         else {

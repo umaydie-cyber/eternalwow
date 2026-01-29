@@ -3355,18 +3355,14 @@ const WORLD_BOSSES = {
     prestor_lady: {
         id: 'prestor_lady',
         name: '普瑞斯托女士',
-        maxHp: 400000,
-        attack: 1000,
-        defense: 960,
+        icon: 'icons/wow/vanilla/boss/prestor_lady.png', // 需要添加对应图标
+        hp: 800000,
+        attack: 2000,
+        defense: 800,
+        rewards: { gold: 100000, exp: 50000 },
+        // 特殊解锁条件：需要使用【黑龙化身的证明】物品
         unlockCondition: {
             requireItem: 'IT_BLACK_DRAGON_PROOF'
-        },
-        rewards: {
-            gold: 20000,
-            exp: 8000,
-            items: [
-                // 这里后续可以放黑龙主题紫装
-            ]
         }
     }
 
@@ -3478,6 +3474,30 @@ const BOSS_DATA = {
             exp: 19800,
             items: [
                 // 可以添加范克里夫专属掉落
+            ]
+        }
+    },
+    prestor_lady: {
+        id: 'prestor_lady',
+        name: '普瑞斯托女士',
+        maxHp: 800000,
+        attack: 2000,
+        defense: 800,
+        // 技能循环：谍报 → 黑龙之炎 → 尖牙与利爪 → 普通攻击
+        cycle: ['espionage', 'black_dragon_flame', 'fangs_and_claws', 'normal_attack'],
+        // 谍报：总共10倍攻击的暗影伤害，分散站位只打坦克
+        espionageDamageMultiplier: 10,
+        // 黑龙之炎：每层DOT 0.2倍攻击
+        blackFlameDoTMultiplier: 0.2,
+        // 尖牙与利爪：3倍攻击 + 流血DOT
+        fangsMultiplier: 3,
+        bleedDoTMultiplier: 0.8,
+        bleedDuration: 3,
+        rewards: {
+            gold: 100000,
+            exp: 50000,
+            items: [
+                // 可以添加黑龙主题紫装掉落
             ]
         }
     }
@@ -4676,6 +4696,150 @@ function stepBossCombat(state) {
             }
         }
     }
+    // ==================== 普瑞斯托女士技能处理 ====================
+    else if (combat.bossId === 'prestor_lady') {
+        // 谍报：对当前目标和周围队友造成总共boss攻击力×10的暗影伤害
+        // 集中站位：伤害由所有存活角色分担
+        // 分散站位：只打1号位坦克
+        if (bossAction === 'espionage') {
+            const totalDamage = Math.floor((boss.attack || 0) * (boss.espionageDamageMultiplier || 10));
+            const alivePlayers = combat.playerStates.filter(p => p.currentHp > 0);
+
+            if (alivePlayers.length === 0) {
+                logs.push(`【${boss.name}】施放【谍报】，但没有存活目标`);
+            } else if (combat.strategy.stance === 'dispersed') {
+                // 分散站位：只打1号位
+                const tIdx = pickAlivePlayerIndex();
+                if (tIdx >= 0) {
+                    const target = combat.playerStates[tIdx];
+                    // 暗影伤害，使用魔法抗性减免
+                    const magicResist = target.char?.stats?.magicResist || 0;
+                    const resistReduction = magicResist / (magicResist + 500); // 简化的魔抗公式
+                    let damage = Math.floor(totalDamage * (1 - resistReduction));
+
+                    // 应用受伤减免
+                    const takenMult = target.char?.stats?.damageTakenMult ?? 1;
+                    let buffTakenMult = 1;
+                    if (target.buffs) {
+                        target.buffs.forEach(b => {
+                            if (b.damageTakenMult) buffTakenMult *= b.damageTakenMult;
+                        });
+                    }
+                    damage = Math.max(1, Math.floor(damage * takenMult * buffTakenMult));
+
+                    target.currentHp -= damage;
+                    logs.push(`【${boss.name}】施放【谍报】（分散站位）对 位置${tIdx + 1} 造成 ${damage} 点暗影伤害`);
+                }
+            } else {
+                // 集中站位：伤害分摊给所有存活角色
+                const damagePerPlayer = Math.floor(totalDamage / alivePlayers.length);
+
+                logs.push(`【${boss.name}】施放【谍报】（集中站位），${alivePlayers.length}名角色分摊伤害`);
+
+                combat.playerStates.forEach((ps, pIdx) => {
+                    if (ps.currentHp <= 0) return;
+
+                    const magicResist = ps.char?.stats?.magicResist || 0;
+                    const resistReduction = magicResist / (magicResist + 500);
+                    let damage = Math.floor(damagePerPlayer * (1 - resistReduction));
+
+                    const takenMult = ps.char?.stats?.damageTakenMult ?? 1;
+                    let buffTakenMult = 1;
+                    if (ps.buffs) {
+                        ps.buffs.forEach(b => {
+                            if (b.damageTakenMult) buffTakenMult *= b.damageTakenMult;
+                        });
+                    }
+                    damage = Math.max(1, Math.floor(damage * takenMult * buffTakenMult));
+
+                    ps.currentHp -= damage;
+                    logs.push(`→ 位置${pIdx + 1} ${ps.char.name} 受到 ${damage} 点暗影伤害`);
+                });
+            }
+        }
+        // 黑龙之炎：对所有角色施加1层黑龙之炎DOT
+        else if (bossAction === 'black_dragon_flame') {
+            logs.push(`【${boss.name}】施放【黑龙之炎】，所有角色获得1层黑龙之炎！`);
+
+            combat.playerStates.forEach((ps, pIdx) => {
+                if (ps.currentHp <= 0) return;
+
+                // 初始化玩家DOT数组
+                ps.dots = ps.dots || [];
+
+                // 检查是否已有黑龙之炎DOT，如果有则叠加层数
+                const existingFlame = ps.dots.find(d => d.name === '黑龙之炎');
+                if (existingFlame) {
+                    existingFlame.stacks = (existingFlame.stacks || 1) + 1;
+                    existingFlame.damagePerTurn = Math.floor(
+                        (boss.attack || 0) * (boss.blackFlameDoTMultiplier || 0.2) * existingFlame.stacks
+                    );
+                    logs.push(`→ 位置${pIdx + 1} ${ps.char.name} 的黑龙之炎叠加至 ${existingFlame.stacks} 层`);
+                } else {
+                    ps.dots.push({
+                        name: '黑龙之炎',
+                        type: 'dot',
+                        school: 'shadow',
+                        stacks: 1,
+                        damagePerTurn: Math.floor((boss.attack || 0) * (boss.blackFlameDoTMultiplier || 0.2)),
+                        duration: 999, // 持续整场战斗
+                        isPermanent: true
+                    });
+                    logs.push(`→ 位置${pIdx + 1} ${ps.char.name} 获得黑龙之炎（1层）`);
+                }
+            });
+        }
+        // 尖牙与利爪：对1号位造成3倍攻击伤害 + 流血DOT
+        else if (bossAction === 'fangs_and_claws') {
+            const tIdx = pickAlivePlayerIndex();
+            if (tIdx >= 0) {
+                const target = combat.playerStates[tIdx];
+                const raw = Math.floor((boss.attack || 0) * (boss.fangsMultiplier || 3));
+                const { damage, dr, blockedAmount } = calcMitigatedAndBlockedDamage(target, raw, true);
+
+                target.currentHp -= damage;
+
+                const drPct = Math.round(dr * 100);
+                const blockText = blockedAmount > 0 ? `，格挡 ${blockedAmount}` : '';
+                logs.push(`【${boss.name}】使用【尖牙与利爪】对 位置${tIdx + 1} 造成 ${damage} 点物理伤害（护甲减伤${drPct}%${blockText}）`);
+
+                // 施加流血DOT
+                target.dots = target.dots || [];
+                const bleedDamage = Math.floor((boss.attack || 0) * (boss.bleedDoTMultiplier || 0.8));
+
+                // 检查是否已有流血DOT，如果有则刷新持续时间
+                const existingBleed = target.dots.find(d => d.name === '撕裂伤口');
+                if (existingBleed) {
+                    existingBleed.duration = boss.bleedDuration || 3;
+                    logs.push(`→ 位置${tIdx + 1} 的【撕裂伤口】持续时间刷新`);
+                } else {
+                    target.dots.push({
+                        name: '撕裂伤口',
+                        type: 'dot',
+                        school: 'physical',
+                        damagePerTurn: bleedDamage,
+                        duration: boss.bleedDuration || 3
+                    });
+                    logs.push(`→ 位置${tIdx + 1} 获得【撕裂伤口】：每回合 ${bleedDamage} 点流血伤害，持续 ${boss.bleedDuration || 3} 回合`);
+                }
+            }
+        }
+        // 普通攻击
+        else if (bossAction === 'normal_attack') {
+            const tIdx = pickAlivePlayerIndex();
+            if (tIdx >= 0) {
+                const target = combat.playerStates[tIdx];
+                const raw = Math.floor(boss.attack || 0);
+                const { damage, dr, blockedAmount } = calcMitigatedAndBlockedDamage(target, raw, false);
+
+                target.currentHp -= damage;
+
+                const drPct = Math.round(dr * 100);
+                const blockText = blockedAmount > 0 ? `，格挡 ${blockedAmount}` : '';
+                logs.push(`【${boss.name}】普通攻击 位置${tIdx + 1} 造成 ${damage} 点伤害（护甲减伤${drPct}%${blockText}）`);
+            }
+        }
+    }
     // ==================== 霍格技能处理（保持原有逻辑） ====================
     else if (combat.bossId === 'hogger') {
         if (bossAction === 'summon') {
@@ -4770,6 +4934,26 @@ function stepBossCombat(state) {
 
     // 清理死亡小弟
     combat.minions = (combat.minions || []).filter(m => (m.hp ?? 0) > 0);
+
+    // ==================== 玩家身上的DOT结算 ====================
+    combat.playerStates.forEach((ps, pIdx) => {
+        if (ps.currentHp <= 0) return;
+        if (!ps.dots || ps.dots.length === 0) return;
+
+        ps.dots = ps.dots.filter(dot => {
+            const dmg = Math.max(1, Math.floor(dot.damagePerTurn));
+            ps.currentHp -= dmg;
+
+            const stackText = dot.stacks ? `（${dot.stacks}层）` : '';
+            logs.push(`【${dot.name}】${stackText}对 位置${pIdx + 1} ${ps.char.name} 造成 ${dmg} 点${dot.school === 'physical' ? '流血' : ''}伤害（剩余${dot.duration - 1}回合）`);
+
+            // 永久DOT不减少持续时间
+            if (!dot.isPermanent) {
+                dot.duration -= 1;
+            }
+            return dot.duration > 0 || dot.isPermanent;
+        });
+    });
 
     // ==================== 胜负判定 ====================
     const allPlayersDead = combat.playerStates.every(p => p.currentHp <= 0);
@@ -7243,6 +7427,38 @@ function gameReducer(state, action) {
                 }
             };
         }
+        case 'SORT_INVENTORY': {
+            const sortedInventory = [...state.inventory].sort((a, b) => {
+                // 1. 装备优先于非装备
+                const aIsEquip = a.type === 'equipment' ? 1 : 0;
+                const bIsEquip = b.type === 'equipment' ? 1 : 0;
+                if (aIsEquip !== bIsEquip) return bIsEquip - aIsEquip; // 装备在前
+
+                // 2. 对于装备，按 ID 排序（EQ_001, EQ_002...）
+                if (a.type === 'equipment' && b.type === 'equipment') {
+                    // 提取数字部分进行比较（EQ_001 -> 1, EQ_002 -> 2）
+                    const aIdNum = parseInt((a.id || '').replace(/\D/g, '')) || 0;
+                    const bIdNum = parseInt((b.id || '').replace(/\D/g, '')) || 0;
+
+                    if (aIdNum !== bIdNum) {
+                        return bIdNum - aIdNum; // ID 从大到小
+                    }
+
+                    // 3. 同ID装备按等级排序（从大到小）
+                    const aLevel = a.currentLevel ?? a.level ?? 0;
+                    const bLevel = b.currentLevel ?? b.level ?? 0;
+                    return bLevel - aLevel; // 等级从大到小
+                }
+
+                // 4. 非装备物品按ID字母排序
+                return (a.id || '').localeCompare(b.id || '');
+            });
+
+            return {
+                ...state,
+                inventory: sortedInventory
+            };
+        }
 
         default:
             return state;
@@ -9251,24 +9467,33 @@ const InventoryPage = ({ state, dispatch }) => {
             <Panel
                 title={`道具栏 (${state.inventory.length}/${state.inventorySize})`}
                 actions={
-                    <Button
-                        variant="secondary"
-                        onClick={() => {
-                            const junkItems = state.inventory.filter(i => i?.type === 'junk' && (i.sellPrice || 0) > 0);
-                            const totalGold = junkItems.reduce((sum, it) => sum + (it.sellPrice || 0), 0);
+                    <div style={{ display: 'flex', gap: 8 }}>
+                        {/* 新增：整理背包按钮 */}
+                        <Button
+                            variant="secondary"
+                            onClick={() => dispatch({ type: 'SORT_INVENTORY' })}
+                        >
+                            📦 整理背包
+                        </Button>
+                        <Button
+                            variant="secondary"
+                            onClick={() => {
+                                const junkItems = state.inventory.filter(i => i?.type === 'junk' && (i.sellPrice || 0) > 0);
+                                const totalGold = junkItems.reduce((sum, it) => sum + (it.sellPrice || 0), 0);
 
-                            if (junkItems.length === 0) {
-                                alert('没有可出售的垃圾。');
-                                return;
-                            }
+                                if (junkItems.length === 0) {
+                                    alert('没有可出售的垃圾。');
+                                    return;
+                                }
 
-                            if (window.confirm(`一键出售 ${junkItems.length} 件垃圾，获得 🪙${totalGold} 金币？`)) {
-                                dispatch({ type: 'SELL_ALL_JUNK' });
-                            }
-                        }}
-                    >
-                        🔘 一键卖垃圾
-                    </Button>
+                                if (window.confirm(`一键出售 ${junkItems.length} 件垃圾，获得 🪙${totalGold} 金币？`)) {
+                                    dispatch({ type: 'SELL_ALL_JUNK' });
+                                }
+                            }}
+                        >
+                            🔘 一键卖垃圾
+                        </Button>
+                    </div>
                 }
             >
 

@@ -9556,13 +9556,8 @@ const InventoryPage = ({ state, dispatch }) => {
                             }}
                             onDragEnd={() => setDraggedItemId(null)}
                             onClick={(e) => {
-                                // 邀请函直接使用（不管是不是 equipment）
-                                if (item.id === 'REBIRTH_INVITATION') {
-                                    dispatch({ type: 'USE_ITEM', payload: { itemInstanceId: item.instanceId || item.id } });
-                                    return;
-                                }
-                                // 黑龙化身的证明直接使用
-                                if (item.id === 'IT_BLACK_DRAGON_PROOF') {
+                                // ✅ 通用：所有 canUse 为 true 的消耗品都可以点击使用
+                                if (item.type === 'consumable' && item.canUse) {
                                     dispatch({ type: 'USE_ITEM', payload: { itemInstanceId: item.instanceId || item.id } });
                                     return;
                                 }

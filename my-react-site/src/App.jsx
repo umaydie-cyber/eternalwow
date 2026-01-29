@@ -3244,7 +3244,7 @@ const ITEMS = {
         type: 'junk',
         rarity: 'white',
         sellPrice: 200,
-        icon: '🦊'
+        icon: 'icons/wow/vanilla/item/INV_Banner_03.png'
     },
     IT_STV_001: {
         id: 'IT_STV_001',

@@ -4909,6 +4909,7 @@ const initialState = {
         population: 0,
         maxPopulation: 0,
     },
+    buildings: {},  // ← 添加这一行
     // 功能建筑数量
     functionalBuildings: {},
     // 资源建筑工人分配 { buildingId: [charId1, charId2, ...] }

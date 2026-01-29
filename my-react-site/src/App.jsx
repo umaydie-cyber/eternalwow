@@ -9729,13 +9729,15 @@ const CityPage = ({ state, dispatch }) => {
 
     const handleDrop = (e, buildingId) => {
         e.preventDefault();
-        if (draggedChar) {
+        // ✅ 修复：直接从 dataTransfer 获取数据，而不是依赖 React 状态
+        const charId = e.dataTransfer.getData('text/plain');
+        if (charId) {
             dispatch({
                 type: 'ASSIGN_RESOURCE_BUILDING',
-                payload: { characterId: draggedChar, buildingId }
+                payload: { characterId: charId, buildingId }
             });
-            setDraggedChar(null);
         }
+        setDraggedChar(null);
     };
 
     // ✅ 资源显示配置（过滤掉 population 和 maxPopulation）

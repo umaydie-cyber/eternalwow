@@ -178,7 +178,7 @@ const FUNCTIONAL_BUILDINGS = {
         id: 'mechanical_arm',
         name: '机械臂',
         icon: '🦾',
-        description: '每秒自动合成背包前N格的装备至满级（N为建筑数量，最多10）',
+        description: '强化一个背包栏位，使其自动合成',
         cost: { gold: 500000, ironIngot: 300, magicEssence: 20000, alchemyOil: 1500 },
         maxCount: 10,
         effect: { type: 'autoMerge', value: 1 }

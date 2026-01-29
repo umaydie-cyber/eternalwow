@@ -10958,6 +10958,22 @@ const BossPrepareModal = ({ state, dispatch }) => {
     const available = state.characters.filter(c => !state.assignments[c.id]);
     const [dragged, setDragged] = useState(null);
 
+    const BOSS_ACTION_NAME = {
+        espionage: '谍报',
+        black_dragon_flame: '黑龙之炎',
+        fangs_and_claws: '尖牙与利爪',
+        normal_attack: '普通攻击',
+        // 其他boss也可以逐步补齐
+        mortal_strike: '致死打击',
+        summon_cannoneers: '火炮手准备',
+        board_the_deck: '登上甲板',
+        summon: '召唤',
+        strike: '重击',
+    };
+
+    const formatBossCycle = (boss) =>
+        (boss?.cycle || []).map(id => BOSS_ACTION_NAME[id] || id).join(' → ');
+
     // 计算队伍总属性
     const teamStats = state.bossTeam.filter(Boolean).reduce((acc, charId) => {
         const char = state.characters.find(c => c.id === charId);
@@ -11274,6 +11290,53 @@ const BossPrepareModal = ({ state, dispatch }) => {
                                         </div>
                                     </>
                                 )}
+
+                                {bossId === 'prestor_lady' && (
+                                    <div style={{
+                                        marginTop: 12,
+                                        padding: 12,
+                                        background: 'rgba(120,30,30,0.12)',
+                                        borderRadius: 8,
+                                        border: '1px solid rgba(255,80,80,0.25)'
+                                    }}>
+                                        <div style={{ fontSize: 12, color: '#ffb3b3', fontWeight: 700, marginBottom: 8 }}>
+                                            🐉 隐藏世界Boss：普瑞斯托女士（黑龙化身）
+                                        </div>
+
+                                        <div style={{ display: 'grid', gap: 10, fontSize: 11, color: '#ddd', lineHeight: 1.6 }}>
+                                            <div style={{ padding: 10, background: 'rgba(0,0,0,0.25)', borderRadius: 6 }}>
+                                                <div style={{ color: '#ffd700', fontWeight: 700, marginBottom: 4 }}>技能1：谍报</div>
+                                                <div>
+                                                    对当前目标及周围队友造成总计 <b>Boss攻击力×{boss.espionageDamageMultiplier ?? 10}</b> 的暗影伤害。<br/>
+                                                    <span style={{ color: '#aaa' }}>分散站位：只命中1号位；集中站位：存活成员分摊。</span>
+                                                </div>
+                                            </div>
+
+                                            <div style={{ padding: 10, background: 'rgba(0,0,0,0.25)', borderRadius: 6 }}>
+                                                <div style={{ color: '#ffd700', fontWeight: 700, marginBottom: 4 }}>技能2：黑龙之炎</div>
+                                                <div>
+                                                    对所有角色施加 <b>1层</b> 黑龙之炎（可叠加）。每回合损失
+                                                    <b> Boss攻击力×{boss.blackFlameDoTMultiplier ?? 0.2}×层数</b>。<br/>
+                                                    <span style={{ color: '#aaa' }}>默认持续整场战斗（永久DOT）。</span>
+                                                </div>
+                                            </div>
+
+                                            <div style={{ padding: 10, background: 'rgba(0,0,0,0.25)', borderRadius: 6 }}>
+                                                <div style={{ color: '#ffd700', fontWeight: 700, marginBottom: 4 }}>技能3：尖牙与利爪</div>
+                                                <div>
+                                                    对1号位造成 <b>Boss攻击力×{boss.fangsMultiplier ?? 3}</b> 的物理伤害，附加流血。<br/>
+                                                    流血：每回合 <b>Boss攻击力×{boss.bleedDoTMultiplier ?? 0.8}</b>，持续 <b>{boss.bleedDuration ?? 3}</b> 回合。
+                                                </div>
+                                            </div>
+
+                                            <div style={{ padding: 10, background: 'rgba(255,215,0,0.08)', borderRadius: 6 }}>
+                                                <div style={{ color: '#c9a227', fontWeight: 700, marginBottom: 4 }}>🔄 循环</div>
+                                                <div>{formatBossCycle(boss)}</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
                             </div>
 
                             <div style={{
@@ -11289,7 +11352,7 @@ const BossPrepareModal = ({ state, dispatch }) => {
                                 <div style={{ fontSize: 11, color: '#888' }}>
                                     {bossId === 'hogger' && '召唤 → 重击 → 重击 → 重击 → 循环'}
                                     {bossId === 'vancleef' && '致死打击 → 火炮手准备 → 致死打击 → 登上甲板 → 循环'}
-                                    {bossId !== 'hogger' && bossId !== 'vancleef' && (boss.cycle?.join(' → ') || '未知')}
+                                    {bossId !== 'hogger' && bossId !== 'vancleef' && (formatBossCycle(boss) || '未知')}
                                 </div>
                             </div>
                         </div>

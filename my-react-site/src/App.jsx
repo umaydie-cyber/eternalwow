@@ -174,6 +174,15 @@ const FUNCTIONAL_BUILDINGS = {
         maxCount: 30,
         effect: { type: 'expBonus', value: 0.01 }
     },
+    mechanical_arm: {
+        id: 'mechanical_arm',
+        name: '机械臂',
+        icon: '🦾',
+        description: '每秒自动合成背包前N格的装备至满级（N为建筑数量，最多10）',
+        cost: { gold: 500000, ironIngot: 30000, magicEssence: 20000, alchemyOil: 15000 },
+        maxCount: 10,
+        effect: { type: 'autoMerge', value: 1 }
+    },
 };
 
 // ==================== TALENTS ====================
@@ -6513,6 +6522,55 @@ function gameReducer(state, action) {
                 };
             });
 
+            // ==================== 新增：机械臂自动满级前N格装备 ====================
+            const mechanicalArmCount = newState.functionalBuildings?.mechanical_arm ?? 0;
+            const autoMergeSlots = Math.min(10, mechanicalArmCount); // N，最多10
+
+            if (autoMergeSlots > 0 && newState.inventory?.length > 0) {
+                const newInventory = [...newState.inventory];
+
+                let upgradedCount = 0; // 可选：记录本次升级了多少件，用于日志或成就
+
+                for (let i = 0; i < autoMergeSlots && i < newInventory.length; i++) {
+                    const item = newInventory[i];
+
+                    // 只处理装备且未满级的物品
+                    if (
+                        item &&
+                        item.type === 'equipment' &&
+                        (item.currentLevel ?? 1) < (item.maxLevel ?? 100)
+                    ) {
+                        newInventory[i] = {
+                            ...item,
+                            currentLevel: item.maxLevel ?? 100,
+                            stats: scaleStats(
+                                item.baseStats,
+                                item.growth,
+                                item.maxLevel ?? 100
+                            ),
+                            // 可选：加个标记表示是机械臂自动满级的
+                            autoUpgraded: true
+                        };
+                        upgradedCount++;
+                    }
+                }
+
+                newState.inventory = newInventory;
+
+                // 可选：添加一条全局日志（如果你有全局日志系统）
+                if (upgradedCount > 0) {
+                    newState.combatLogs = [
+                        ...(newState.combatLogs || []),
+                        `机械臂自动将 ${upgradedCount} 件装备升至满级`
+                    ];
+                }
+            }
+            // ==================== 机械臂逻辑结束 ====================
+
+            // 其他 TICK 后续处理（如帧数累计等）
+            newState.frame = (newState.frame || 0) + deltaSeconds;
+            newState.lifeFrame = (newState.lifeFrame || 0) + deltaSeconds;
+
             return newState;
         }
 
@@ -9518,6 +9576,10 @@ const InventoryPage = ({ state, dispatch }) => {
     const [selectedItem, setSelectedItem] = useState(null);
     const [draggedItemId, setDraggedItemId] = useState(null);
 
+    // ===== 新增：计算机械臂自动满级的格子数量 =====
+    const mechanicalArmCount = state.functionalBuildings?.mechanical_arm ?? 0;
+    const autoMergeSlots = Math.min(10, mechanicalArmCount);
+
     return (
         <div>
             {selectedItem && selectedItem.type === 'equipment' && (
@@ -9571,7 +9633,7 @@ const InventoryPage = ({ state, dispatch }) => {
                     gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))',
                     gap: 8
                 }}>
-                    {state.inventory.map(item => (
+                    {state.inventory.map((item, index) => (  // ← 这里加了 index 参数
                         <div
                             key={item.instanceId || item.id}
                             draggable={item.type === 'equipment'}
@@ -9582,7 +9644,6 @@ const InventoryPage = ({ state, dispatch }) => {
                                 e.dataTransfer.effectAllowed = 'move';
                             }}
                             onDragOver={(e) => {
-                                // 允许放到“另一个装备”上
                                 if (item.type !== 'equipment') return;
                                 e.preventDefault();
                                 e.dataTransfer.dropEffect = 'move';
@@ -9602,7 +9663,6 @@ const InventoryPage = ({ state, dispatch }) => {
                                 if (!fromItem || !toItem) return;
                                 if (fromItem.type !== 'equipment' || toItem.type !== 'equipment') return;
 
-                                // ✅ 只能同模板 id 合成（EQ_001 + EQ_001 / EQ_002 + EQ_002）
                                 if (fromItem.id !== toItem.id) {
                                     alert('只能拖拽到同款装备上合成！');
                                     setDraggedItemId(null);
@@ -9618,14 +9678,13 @@ const InventoryPage = ({ state, dispatch }) => {
                             }}
                             onDragEnd={() => setDraggedItemId(null)}
                             onClick={(e) => {
-                                // ✅ 通用：所有 canUse 为 true 的消耗品都可以点击使用
                                 if (item.type === 'consumable' && item.canUse) {
                                     dispatch({ type: 'USE_ITEM', payload: { itemInstanceId: item.instanceId || item.id } });
                                     return;
                                 }
 
                                 if (item.type !== 'equipment') return;
-                                // Shift + 左键：把背包里同款装备依次合成到该装备上，直到 Lv100 或没有同款
+
                                 if (e.shiftKey && item.instanceId) {
                                     e.preventDefault();
                                     dispatch({ type: 'MERGE_EQUIPMENT_CHAIN', payload: { targetInstanceId: item.instanceId } });
@@ -9648,6 +9707,7 @@ const InventoryPage = ({ state, dispatch }) => {
                             }}
 
                             style={{
+                                position: 'relative',   // ← 必须加这个，让提示能 absolute 定位
                                 padding: 12,
                                 background: item.type === 'equipment'
                                     ? `linear-gradient(135deg, ${(item.qualityColor || getRarityColor(item.rarity))}22, rgba(0,0,0,0.3))`
@@ -9700,7 +9760,6 @@ const InventoryPage = ({ state, dispatch }) => {
                                     background: 'rgba(255, 152, 0, 0.15)',
                                     borderRadius: 3
                                 }}>
-                                    {/* skill_slot_buff 类型 */}
                                     {item.specialEffect.type === 'skill_slot_buff' && (
                                         <>
                                             ⚡ {item.specialEffect.slots.map(s => s + 1).join('/')}格
@@ -9708,7 +9767,6 @@ const InventoryPage = ({ state, dispatch }) => {
                                             {item.specialEffect.spellPowerBonus ? ` 法+${item.specialEffect.spellPowerBonus}` : ''}
                                         </>
                                     )}
-                                    {/* basic_attack_repeat 类型 */}
                                     {item.specialEffect.type === 'basic_attack_repeat' && (
                                         <>
                                             ⚔️ 普攻 {(item.specialEffect.chance * 100).toFixed(0)}% 连击
@@ -9716,6 +9774,28 @@ const InventoryPage = ({ state, dispatch }) => {
                                     )}
                                 </div>
                             )}
+
+                            {/* ===== 新增：机械臂自动满级提示（仅装备且在前 N 格） ===== */}
+                            {index < autoMergeSlots && item?.type === 'equipment' && (
+                                <div style={{
+                                    position: 'absolute',
+                                    top: 4,
+                                    right: 4,
+                                    background: 'rgba(76,175,80,0.85)',
+                                    color: '#fff',
+                                    fontSize: 10,
+                                    padding: '3px 7px',
+                                    borderRadius: 4,
+                                    pointerEvents: 'none',
+                                    zIndex: 10,
+                                    border: '1px solid rgba(255,255,255,0.3)',
+                                    boxShadow: '0 0 8px rgba(76,175,80,0.6)',
+                                    fontWeight: 600
+                                }}>
+                                    🦾 自动满级
+                                </div>
+                            )}
+                            {/* ===== 结束 ===== */}
                         </div>
                     ))}
                     {Array.from({ length: Math.max(0, state.inventorySize - state.inventory.length) }).map((_, i) => (

@@ -7512,14 +7512,15 @@ function gameReducer(state, action) {
                     gold: Number(gold) || 0,
                     drop: Number(drop) || 0,
                     researchSpeed: Number(researchSpeed) || 0,
-                }
+                },
             };
 
-            // 关键：轮回加成会影响最终属性，和你项目里其它地方一致，统一重算全队
-            nextState.characters = recalcPartyStats(nextState, nextState.characters); :contentReference[oaicite:4]{index=4}
-
-            return nextState;
+            return {
+                ...nextState,
+                characters: recalcPartyStats(nextState, nextState.characters),
+            };
         }
+
 
         default:
             return state;

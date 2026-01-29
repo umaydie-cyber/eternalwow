@@ -3338,7 +3338,7 @@ const ACHIEVEMENTS = {
     novice: { id: 'novice', name: '初出茅庐', description: '角色升级到10级', condition: (state) => state.characters.some(c => c.level >= 10), reward: { expBonus: 0.02 }, icon: '⚔️' },
     first_blood: { id: 'first_blood', name: '初战告捷', description: '完成第一次战斗', condition: (state) => state.stats.battlesWon >= 1, reward: { goldBonus: 0.05 }, icon: '🩸' },
     collector: { id: 'collector', name: '收藏家', description: '收集10种不同物品', condition: (state) => state.codex.length >= 10, reward: { dropBonus: 0.1 }, icon: '📦' },
-    builder: { id: 'builder', name: '建设者', description: '建造5座建筑', condition: (state) => Object.values(state.buildings).reduce((a, b) => a + b, 0) >= 5, reward: { resourceBonus: 0.05 }, icon: '🏗️' },
+    builder: { id: 'builder', name: '建设者', description: '建造5座建筑', condition: (state) => Object.values(state.buildings||{}).reduce((a, b) => a + b, 0) >= 5, reward: { resourceBonus: 0.05 }, icon: '🏗️' },
     susas: {
         id: 'susas',
         name: '鞭笞者苏萨斯',
@@ -6062,7 +6062,7 @@ function gameReducer(state, action) {
                 }
             });
 
-            Object.entries(newState.buildings).forEach(([buildingId, count]) => {
+            Object.entries(newState.buildings || {}).forEach(([buildingId, count]) => {
                 if (count > 0) {
                     const building = BUILDINGS[buildingId];
                     Object.entries(building.production || {}).forEach(([resource, amount]) => {
@@ -6077,7 +6077,7 @@ function gameReducer(state, action) {
             });
 
             const maxPopBonus = researchBonus.population || 0;
-            const houseCount = newState.buildings.house || 0;
+            const houseCount = (newState.buildings||{}).house || 0;
             newResources.maxPopulation = Math.floor(houseCount * 2 * (1 + maxPopBonus));
 
             newState.resources = newResources;

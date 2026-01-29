@@ -8941,6 +8941,8 @@ const MapPage = ({ state, dispatch }) => {
 
     const handleDragStart = (e, charId) => {
         setDraggedChar(charId);
+        // ✅ Edge/部分浏览器需要 setData 才会认为这是“有效拖拽”
+        e.dataTransfer.setData('text/plain', charId);
         e.dataTransfer.effectAllowed = 'move';
     };
 
@@ -9697,6 +9699,10 @@ const CityPage = ({ state, dispatch }) => {
 
     const handleDragStart = (e, charId) => {
         setDraggedChar(charId);
+
+        // ✅ Edge/部分浏览器需要 setData 才会认为这是“有效拖拽”
+        e.dataTransfer.setData('text/plain', charId);
+
         e.dataTransfer.effectAllowed = 'move';
     };
 

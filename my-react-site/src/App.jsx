@@ -39,7 +39,7 @@ const CLASSES = {
             { level: 5, skillId: 'shadow_word_pain' },
             { level: 10, skillId: 'mind_blast' },
             { level: 20, skillId: 'power_word_radiance' },
-            { level: 40, skillId: 'penance' },
+            { level: 30, skillId: 'penance' },
         ]
     },
     frost_mage: {

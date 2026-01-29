@@ -3298,27 +3298,19 @@ const BUILDINGS = {
 };
 
 function ItemIcon({ item, size = 28 }) {
-    if (!item) return null;
+    const src = item?.iconUrl || item?.icon;
+    const isImg = typeof src === 'string' && (src.includes('/') || src.endsWith('.png'));
 
-    if (item.icon) {
+    if (isImg) {
         return (
             <img
-                src={item.icon}
-                alt={item.name}
-                style={{
-                    width: size,
-                    height: size,
-                    objectFit: "contain",
-                    imageRendering: "pixelated",
-                    background: "#000",
-                    border: "1px solid #444",
-                    borderRadius: 4,
-                }}
+                src={src}
+                alt={item?.name || 'icon'}
+                style={{ width: size, height: size, objectFit: 'contain', imageRendering: 'pixelated' }}
             />
         );
     }
-
-    return <span style={{ fontSize: size }}>📦</span>;
+    return <span style={{ fontSize: size }}>{src || '📦'}</span>;
 }
 
 function SlotIcon({ slot, size = 28 }) {
@@ -10883,7 +10875,6 @@ const CodexPage = ({ state, dispatch }) => {
                     }}>
                         {allJunkTemplates.map((tpl) => {
                             const unlocked = junkCodexSet.has(tpl.id);
-                            const icon = tpl.icon || '🧺';
 
                             const dropEnabled = allowDrop(tpl.id);
                             const disabledDrop = !dropEnabled;
@@ -10903,7 +10894,7 @@ const CodexPage = ({ state, dispatch }) => {
                                         disabledDrop={disabledDrop}
                                     >
                                         <div style={{ fontSize: 26, marginBottom: 6 }}>
-                                            {icon}
+                                            <ItemIcon item={tpl} size={26} />
                                         </div>
 
                                         <div style={{

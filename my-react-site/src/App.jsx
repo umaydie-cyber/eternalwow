@@ -11405,10 +11405,6 @@ const BossPrepareModal = ({ state, dispatch }) => {
                                                 </div>
                                             </div>
 
-                                            <div style={{ padding: 10, background: 'rgba(255,215,0,0.08)', borderRadius: 6 }}>
-                                                <div style={{ color: '#c9a227', fontWeight: 700, marginBottom: 4 }}>🔄 循环</div>
-                                                <div>{formatBossCycle(boss)}</div>
-                                            </div>
                                         </div>
                                     </div>
                                 )}

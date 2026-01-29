@@ -9556,11 +9556,17 @@ const InventoryPage = ({ state, dispatch }) => {
                             }}
                             onDragEnd={() => setDraggedItemId(null)}
                             onClick={(e) => {
-                                // ✅ 新增：邀请函直接使用（不管是不是 equipment）
+                                // 邀请函直接使用（不管是不是 equipment）
                                 if (item.id === 'REBIRTH_INVITATION') {
                                     dispatch({ type: 'USE_ITEM', payload: { itemInstanceId: item.instanceId || item.id } });
                                     return;
                                 }
+                                // 黑龙化身的证明直接使用
+                                if (item.id === 'IT_BLACK_DRAGON_PROOF') {
+                                    dispatch({ type: 'USE_ITEM', payload: { itemInstanceId: item.instanceId || item.id } });
+                                    return;
+                                }
+
                                 if (item.type !== 'equipment') return;
                                 // Shift + 左键：把背包里同款装备依次合成到该装备上，直到 Lv100 或没有同款
                                 if (e.shiftKey && item.instanceId) {

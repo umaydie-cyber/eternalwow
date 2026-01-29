@@ -7501,6 +7501,25 @@ function gameReducer(state, action) {
                 inventory: sortedInventory
             };
         }
+        case 'CHEAT_SET_REBIRTH_BONUS': {
+            const { exp, gold, drop, researchSpeed } = action.payload || {};
+
+            const nextState = {
+                ...state,
+                rebirthBonuses: {
+                    ...(state.rebirthBonuses || {}),
+                    exp: Number(exp) || 0,
+                    gold: Number(gold) || 0,
+                    drop: Number(drop) || 0,
+                    researchSpeed: Number(researchSpeed) || 0,
+                }
+            };
+
+            // 关键：轮回加成会影响最终属性，和你项目里其它地方一致，统一重算全队
+            nextState.characters = recalcPartyStats(nextState, nextState.characters); :contentReference[oaicite:4]{index=4}
+
+            return nextState;
+        }
 
         default:
             return state;
@@ -13093,6 +13112,18 @@ export default function WoWIdleGame() {
                 dispatch({ type: 'CHEAT_ADD_EXP', payload: { amount, charIndex } });
                 const char = state.characters[charIndex];
                 setConsoleLogs(prev => [...prev, `✓ 成功给 ${char.name} (第${index1Based}个角色) 添加 ${amount} 经验`]);
+            }// ===== 新增：add rebirth bonus exp,gold,drop,researchSpeed =====
+            else if (subCmd === 'rebirth' && parts[2]?.toLowerCase() === 'bonus' && parts[3]) {
+                const values = parts[3].split(',').map(s => parseFloat(s.trim()));
+                if (values.length !== 4 || values.some(v => Number.isNaN(v)) || values.some(v => v < 0)) {
+                    setConsoleLogs(prev => [...prev, '✗ 错误：用法 add rebirth bonus <exp,gold,drop,researchSpeed>（4个非负数字）']);
+                    setConsoleLogs(prev => [...prev, '   示例：add rebirth bonus 0.2,0.2,0.1,0.1']);
+                    return;
+                }
+
+                const [exp, gold, drop, researchSpeed] = values;
+                dispatch({ type: 'CHEAT_SET_REBIRTH_BONUS', payload: { exp, gold, drop, researchSpeed } });
+                setConsoleLogs(prev => [...prev, `✓ 已设置轮回加成：exp=${exp}, gold=${gold}, drop=${drop}, research=${researchSpeed}`]);
             }
             else {
                 setConsoleLogs(prev => [...prev, '✗ 用法：']);

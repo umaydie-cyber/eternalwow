@@ -2317,7 +2317,7 @@ const FIXED_EQUIPMENTS = {
         name: '黑石戒指',
         icon: "icons/wow/vanilla/armor/INV_Jewelry_Ring_17.png",
         type: 'equipment',
-        slot: 'ring2',
+        slot: 'EQ_032',
         rarity: 'blue',
         level: 0,
         maxLevel: 100,
@@ -6975,12 +6975,28 @@ function gameReducer(state, action) {
         case 'IMPORT_SAVE': {
             try {
                 const decoded = JSON.parse(decodeBase64(action.payload));
+
+                // ===== 1️⃣ 补老存档字段（防御性）=====
+                decoded.rebirthBonuses ??= {};
+                decoded.rebirthBonuses.exp ??= 0;
+                decoded.rebirthBonuses.gold ??= 0;
+                decoded.rebirthBonds ??= [];
+                decoded.codexEquipLv100 ??= [];
+
+                // ===== 2️⃣ 关键：重算全队属性 =====
+                const fixedCharacters = recalcPartyStats(
+                    decoded,
+                    decoded.characters
+                );
+
                 return {
                     ...decoded,
+                    characters: fixedCharacters,
                     lastOnlineTime: Date.now(),
                     offlineRewards: null
                 };
-            } catch {
+            } catch (e) {
+                console.error('IMPORT_SAVE failed', e);
                 return state;
             }
         }

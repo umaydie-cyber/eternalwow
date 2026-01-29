@@ -6522,52 +6522,98 @@ function gameReducer(state, action) {
                 };
             });
 
-            // ==================== 新增：机械臂自动满级前N格装备 ====================
+            // ==================== 新增：机械臂自动合成前N格装备 ====================
             const mechanicalArmCount = newState.functionalBuildings?.mechanical_arm ?? 0;
-            const autoMergeSlots = Math.min(10, mechanicalArmCount); // N，最多10
+            const autoMergeSlots = Math.min(10, mechanicalArmCount);
 
-            if (autoMergeSlots > 0 && newState.inventory?.length > 0) {
-                const newInventory = [...newState.inventory];
+            // 计时器（每30秒执行一次）
+            let timer = (newState.autoMergeTimer || 0) + deltaSeconds;
+            let executions = 0;
+            while (timer >= 30) {
+                timer -= 30;
+                executions++;
+            }
+            newState.autoMergeTimer = timer;
 
-                let upgradedCount = 0; // 可选：记录本次升级了多少件，用于日志或成就
+            if (executions > 0 && autoMergeSlots > 0 && newState.inventory?.length > 0) {
+                let newInventory = [...newState.inventory];
 
-                for (let i = 0; i < autoMergeSlots && i < newInventory.length; i++) {
-                    const item = newInventory[i];
+                for (let exec = 0; exec < executions; exec++) {
+                    let changed = false;
 
-                    // 只处理装备且未满级的物品
-                    if (
-                        item &&
-                        item.type === 'equipment' &&
-                        (item.currentLevel ?? 1) < (item.maxLevel ?? 100)
-                    ) {
-                        newInventory[i] = {
-                            ...item,
-                            currentLevel: item.maxLevel ?? 100,
-                            stats: scaleStats(
-                                item.baseStats,
-                                item.growth,
-                                item.maxLevel ?? 100
-                            ),
-                            // 可选：加个标记表示是机械臂自动满级的
-                            autoUpgraded: true
-                        };
-                        upgradedCount++;
+                    // 从前到后处理前 N 格目标
+                    for (let slot = 0; slot < autoMergeSlots && slot < newInventory.length; slot++) {
+                        let target = newInventory[slot];
+
+                        if (!target || target.type !== 'equipment' || (target.currentLevel ?? 1) >= 100) {
+                            continue;
+                        }
+
+                        const oldLevel = target.currentLevel ?? 1;
+
+                        // 链式吃同款（只吃后面的）
+                        while (true) {
+                            let sourceIndex = -1;
+                            for (let j = slot + 1; j < newInventory.length; j++) {
+                                const source = newInventory[j];
+                                if (source &&
+                                    source.type === 'equipment' &&
+                                    source.id === target.id &&
+                                    source.instanceId !== target.instanceId) {
+                                    sourceIndex = j;
+                                    break;
+                                }
+                            }
+
+                            if (sourceIndex === -1) break; // 没同款了
+
+                            const source = newInventory[sourceIndex];
+
+                            // 新规则：等级 = 目标当前等级 + 来源等级 + 1
+                            target.currentLevel = Math.min(100,
+                                (target.currentLevel ?? 1) + (source.currentLevel ?? 1) + 1
+                            );
+
+                            // 更新属性
+                            target.stats = scaleStats(
+                                target.baseStats,
+                                target.growth,
+                                target.currentLevel
+                            );
+
+                            // 移除被吃的装备
+                            newInventory.splice(sourceIndex, 1);
+
+                            changed = true;
+
+                            // 满级后停止吃（避免无意义继续找）
+                            if (target.currentLevel >= 100) break;
+                        }
+
+                        // 写回
+                        newInventory[slot] = target;
+
+                        // Lv100 图鉴解锁
+                        if (oldLevel < 100 && target.currentLevel >= 100) {
+                            newState.lv100Codex = {
+                                ...(newState.lv100Codex || {}),
+                                [target.id]: true
+                            };
+                            newState.combatLogs = [
+                                ...(newState.combatLogs || []),
+                                `机械臂自动合成：${target.name} 达到 Lv100，图鉴解锁！`
+                            ];
+                        }
                     }
+
+                    if (!changed) break; // 本次执行没合成任何东西，提前结束
                 }
 
                 newState.inventory = newInventory;
-
-                // 可选：添加一条全局日志（如果你有全局日志系统）
-                if (upgradedCount > 0) {
-                    newState.combatLogs = [
-                        ...(newState.combatLogs || []),
-                        `机械臂自动将 ${upgradedCount} 件装备升至满级`
-                    ];
-                }
             }
             // ==================== 机械臂逻辑结束 ====================
 
-            // 其他 TICK 后续处理（如帧数累计等）
+            // 帧数累计
             newState.frame = (newState.frame || 0) + deltaSeconds;
             newState.lifeFrame = (newState.lifeFrame || 0) + deltaSeconds;
 
@@ -9792,7 +9838,7 @@ const InventoryPage = ({ state, dispatch }) => {
                                     boxShadow: '0 0 8px rgba(76,175,80,0.6)',
                                     fontWeight: 600
                                 }}>
-                                    🦾 自动满级
+                                    🦾 自动合成
                                 </div>
                             )}
                             {/* ===== 结束 ===== */}

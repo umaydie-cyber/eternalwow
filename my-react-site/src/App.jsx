@@ -3355,7 +3355,7 @@ const WORLD_BOSSES = {
     prestor_lady: {
         id: 'prestor_lady',
         name: '普瑞斯托女士',
-        icon: 'icons/wow/vanilla/boss/prestor_lady.png', // 需要添加对应图标
+        icon: 'icons/wow/vanilla/boss/prestor_lady.jpg', // 需要添加对应图标
         hp: 800000,
         attack: 2000,
         defense: 800,

@@ -7363,8 +7363,18 @@ function gameReducer(state, action) {
         // ===== 资源建筑派遣 =====
         case 'ASSIGN_RESOURCE_BUILDING': {
             const { characterId, buildingId } = action.payload;
+
+            // ✅ 防御性检查
+            if (!characterId || !buildingId) {
+                console.warn('ASSIGN_RESOURCE_BUILDING: 缺少 characterId 或 buildingId');
+                return state;
+            }
+
             const building = RESOURCE_BUILDINGS[buildingId];
-            if (!building) return state;
+            if (!building) {
+                console.warn(`ASSIGN_RESOURCE_BUILDING: 找不到建筑 ${buildingId}`);
+                return state;
+            }
 
             // 检查角色是否在地图打怪
             if (state.assignments[characterId]) {
@@ -7373,20 +7383,25 @@ function gameReducer(state, action) {
                 return state;
             }
 
-            const currentWorkers = state.resourceAssignments?.[buildingId] || [];
+            // ✅ 确保 resourceAssignments 是对象
+            const currentResourceAssignments = state.resourceAssignments || {};
+            const currentWorkers = currentResourceAssignments[buildingId] || [];
 
             // 检查是否已达上限
-            if (currentWorkers.length >= building.maxWorkers) return state;
+            if (currentWorkers.length >= building.maxWorkers) {
+                console.warn(`建筑 ${buildingId} 已达最大工人数 ${building.maxWorkers}`);
+                return state;
+            }
 
             // 检查角色是否已在其他建筑工作
-            let newAssignments = { ...state.resourceAssignments };
+            let newAssignments = { ...currentResourceAssignments };
             Object.keys(newAssignments).forEach(bid => {
                 newAssignments[bid] = (newAssignments[bid] || []).filter(id => id !== characterId);
             });
 
             // 添加到新建筑
             newAssignments[buildingId] = [...(newAssignments[buildingId] || []), characterId];
-
+            console.log(`✓ 成功派遣角色 ${characterId} 到 ${buildingId}`);
             return {
                 ...state,
                 resourceAssignments: newAssignments
@@ -9729,13 +9744,19 @@ const CityPage = ({ state, dispatch }) => {
 
     const handleDrop = (e, buildingId) => {
         e.preventDefault();
-        // ✅ 修复：直接从 dataTransfer 获取数据，而不是依赖 React 状态
+
+        // ✅ 直接从 dataTransfer 获取数据
         const charId = e.dataTransfer.getData('text/plain');
+
+        console.log('handleDrop 触发:', { charId, buildingId }); // 调试日志
+
         if (charId) {
             dispatch({
                 type: 'ASSIGN_RESOURCE_BUILDING',
                 payload: { characterId: charId, buildingId }
             });
+        } else {
+            console.warn('handleDrop: 没有获取到 charId');
         }
         setDraggedChar(null);
     };

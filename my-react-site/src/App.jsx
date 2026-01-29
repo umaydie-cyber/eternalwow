@@ -3784,7 +3784,6 @@ function calculateTotalStats(character, partyAuras = { hpMul: 1, spellPowerMul: 
     // 沉默的神庙 10 件装备全部达到过 Lv.100 → 全队精通 +10，急速 +10
     if (
         gameState &&
-        Array.isArray(gameState.codexEquipLv100) &&
         SUNKEN_TEMPLE_LV100_SET.every(id => gameState.codexEquipLv100.includes(id))
     ) {
         totalStats.versatility = (totalStats.versatility || 0) + 10;
@@ -8696,7 +8695,7 @@ const TalentPage = ({ state, dispatch }) => {
                                             // 如果已选这一项，则不做切换（避免误触）
                                             if (talents?.[tier] === opt.id) return;
                                             // 如果是占位（预留）行，先不允许选择（避免误导）
-                                            if (tier >= 50) return;
+                                            if (tier >= 80) return;
                                             chooseTalent(tier, opt.id);
                                         }}
                                         title={locked ? '未解锁' : (tier >= 50 ? '预留天赋，待实现' : '点击选择')}

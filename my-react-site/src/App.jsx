@@ -7364,7 +7364,6 @@ function gameReducer(state, action) {
         case 'ASSIGN_RESOURCE_BUILDING': {
             const { characterId, buildingId } = action.payload;
 
-            // ✅ 防御性检查
             if (!characterId || !buildingId) {
                 console.warn('ASSIGN_RESOURCE_BUILDING: 缺少 characterId 或 buildingId');
                 return state;
@@ -7376,16 +7375,26 @@ function gameReducer(state, action) {
                 return state;
             }
 
+            // 检查角色是否存在
+            const charExists = state.characters.some(c => c.id === characterId);
+            if (!charExists) {
+                console.warn(`ASSIGN_RESOURCE_BUILDING: 找不到角色 ${characterId}`);
+                return state;
+            }
+
             // 检查角色是否在地图打怪
-            if (state.assignments[characterId]) {
-                // 角色正在地图打怪，不能派遣去主城采集
+            if (state.assignments?.[characterId]) {
                 console.warn(`角色 ${characterId} 正在地图打怪，无法派遣到主城采集`);
                 return state;
             }
 
             // ✅ 确保 resourceAssignments 是对象
             const currentResourceAssignments = state.resourceAssignments || {};
-            const currentWorkers = currentResourceAssignments[buildingId] || [];
+
+            // ✅ 关键修复：过滤掉不存在的角色ID
+            const existingCharIds = new Set(state.characters.map(c => c.id));
+            const currentWorkers = (currentResourceAssignments[buildingId] || [])
+                .filter(id => existingCharIds.has(id));
 
             // 检查是否已达上限
             if (currentWorkers.length >= building.maxWorkers) {
@@ -7393,15 +7402,18 @@ function gameReducer(state, action) {
                 return state;
             }
 
-            // 检查角色是否已在其他建筑工作
-            let newAssignments = { ...currentResourceAssignments };
-            Object.keys(newAssignments).forEach(bid => {
-                newAssignments[bid] = (newAssignments[bid] || []).filter(id => id !== characterId);
+            // ✅ 清理所有建筑中不存在的角色，并移除当前角色的旧分配
+            let newAssignments = {};
+            Object.keys(currentResourceAssignments).forEach(bid => {
+                newAssignments[bid] = (currentResourceAssignments[bid] || [])
+                    .filter(id => existingCharIds.has(id) && id !== characterId);
             });
 
             // 添加到新建筑
             newAssignments[buildingId] = [...(newAssignments[buildingId] || []), characterId];
+
             console.log(`✓ 成功派遣角色 ${characterId} 到 ${buildingId}`);
+
             return {
                 ...state,
                 resourceAssignments: newAssignments
@@ -9721,11 +9733,11 @@ const CityPage = ({ state, dispatch }) => {
 
     const availableChars = getAvailableChars();
 
-    // 获取某建筑的工人
+    // 获取某建筑的工人（过滤掉不存在的角色）
     const getWorkers = (buildingId) => {
         return (state.resourceAssignments?.[buildingId] || [])
             .map(id => state.characters.find(c => c.id === id))
-            .filter(Boolean);
+            .filter(Boolean);  // ✅ 这行已经能过滤掉找不到的角色
     };
 
     const handleDragStart = (e, charId) => {

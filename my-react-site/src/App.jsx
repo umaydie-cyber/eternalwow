@@ -6882,11 +6882,18 @@ function gameReducer(state, action) {
                 };
             }
 
-            //黑龙女王的证明
+            // ✅ 修复：黑龙化身的证明 - 需要正确返回新state
             if (item.id === 'IT_BLACK_DRAGON_PROOF') {
-                state.worldBossProgress = {
-                    ...state.worldBossProgress,
-                    prestor_lady: true
+                const newInventory = [...state.inventory];
+                newInventory.splice(idx, 1);
+
+                return {
+                    ...state,
+                    inventory: newInventory,
+                    worldBossProgress: {
+                        ...state.worldBossProgress,
+                        prestor_lady: true
+                    }
                 };
             }
 

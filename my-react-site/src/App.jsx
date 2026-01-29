@@ -12618,8 +12618,15 @@ export default function WoWIdleGame() {
                 ...initialState,
                 ...savedState,
 
-                zones: JSON.parse(JSON.stringify(ZONES)),
+                // ✅ 关键：防止旧存档把对象字段覆盖成 null
+                buildings: savedState.buildings && typeof savedState.buildings === 'object' ? savedState.buildings : {},
+                functionalBuildings: savedState.functionalBuildings && typeof savedState.functionalBuildings === 'object' ? savedState.functionalBuildings : {},
+                resourceAssignments: savedState.resourceAssignments && typeof savedState.resourceAssignments === 'object' ? savedState.resourceAssignments : {},
+                assignments: savedState.assignments && typeof savedState.assignments === 'object' ? savedState.assignments : {},
+                research: savedState.research && typeof savedState.research === 'object' ? savedState.research : {},
+                dropFilters: savedState.dropFilters && typeof savedState.dropFilters === 'object' ? savedState.dropFilters : {},
 
+                zones: JSON.parse(JSON.stringify(ZONES)),
                 combatLogs: savedState.combatLogs || [],
                 offlineRewards: null
             };

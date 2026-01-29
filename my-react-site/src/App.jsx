@@ -9450,7 +9450,7 @@ const CharacterPage = ({ state, dispatch }) => {
                                         ? '⚔️ 战斗中'
                                         : (Date.now() - (char.lastCombatTime || 0) < 5000
                                                 ? `🕒 脱战回血 ${(Math.ceil((5000 - (Date.now() - (char.lastCombatTime || 0))) / 1000))} 秒后开始`
-                                                : '💚 脱战回血中：每秒 +10'
+                                                : `💚 脱战回血中：每秒 +${10 + (state.functionalBuildings?.plaza_fountain || 0) * 2}`
                                         )
                                     }
                                 </div>

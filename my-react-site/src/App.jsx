@@ -1272,7 +1272,41 @@ const ZONES = {
         unlocked: false,
         unlockLevel: 50
     },
-
+    sunken_temple: {
+        id: 'sunken_temple',
+        name: '沉没的神庙',
+        level: 50,
+        type: 'explore',
+        enemies: [
+            {
+                name: '绿龙守卫',
+                hp: 140000,
+                attack: 3600,
+                defense: 1300,
+                exp: 5600,
+                gold: 5500
+            },
+            {
+                name: '潜伏的食腐者',
+                hp: 150000,
+                attack: 3800,
+                defense: 1850,
+                exp: 6600,
+                gold: 5800
+            },
+            {
+                name: '哈卡之子',
+                hp: 200000,
+                attack: 4000,
+                defense: 1950,
+                exp: 7000,
+                gold: 6500
+            }
+        ],
+        resources: ['草药', '魔法精华'],
+        unlocked: false,
+        unlockLevel: 50
+    },
 
 };
 
@@ -1410,7 +1444,20 @@ const DROP_TABLES = {
             { id: 'EQ_063', chance: 0.003 }  // 0.3%
         ]
     },
-
+    sunken_temple: {
+        equipment: [
+            { id: 'EQ_064', chance: 0.003 },  // 0.3%
+            { id: 'EQ_065', chance: 0.003 },  // 0.3%
+            { id: 'EQ_066', chance: 0.003 },  // 0.3%
+            { id: 'EQ_067', chance: 0.003 },  // 0.3%
+            { id: 'EQ_068', chance: 0.003 },  // 0.3%
+            { id: 'EQ_069', chance: 0.003 },  // 0.3%
+            { id: 'EQ_070', chance: 0.003 },  // 0.3%
+            { id: 'EQ_071', chance: 0.001 },  // 0.1% 稀有
+            { id: 'EQ_072', chance: 0.001 },  // 0.1% 稀有
+            { id: 'EQ_073', chance: 0.001 }   // 0.1% 稀有
+        ]
+    },
 
 };
 
@@ -2833,6 +2880,225 @@ const FIXED_EQUIPMENTS = {
             chance: 0.20
         }
     },
+    // ==================== 沉默的神庙装备 ====================
+    EQ_064: {
+        id: 'EQ_064',
+        name: '意志之力',
+        icon: "icons/wow/vanilla/armor/INV_Jewelry_Talisman_07.png",
+        type: 'equipment',
+        slot: 'trinket1',
+        rarity: 'blue',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            hp: 1000,
+            mastery: 10,
+            blockRate: 5,
+            blockValue: 300
+        },
+        growth: {
+            hp: 2,
+            mastery: 2,
+            blockRate: 2,
+            blockValue: 2
+        }
+    },
+    EQ_065: {
+        id: 'EQ_065',
+        name: '至高徽记之盾',
+        icon: "icons/wow/vanilla/armor/INV_Shield_15.png",
+        type: 'equipment',
+        slot: 'offHand',
+        rarity: 'blue',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            hp: 1200,
+            armor: 150,
+            blockRate: 25,
+            blockValue: 400,
+            mastery: 15
+        },
+        growth: {
+            hp: 2,
+            armor: 2,
+            blockRate: 2,
+            blockValue: 2,
+            mastery: 2
+        }
+    },
+    EQ_066: {
+        id: 'EQ_066',
+        name: '战士的拥抱',
+        icon: "icons/wow/vanilla/armor/INV_Chest_Chain_15.png",
+        type: 'equipment',
+        slot: 'chest',
+        rarity: 'blue',
+        setName: '拥抱套装',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            hp: 1000,
+            armor: 120,
+            attack: 200,
+            versatility: 10,
+            critRate: 10
+        },
+        growth: {
+            hp: 2,
+            armor: 2,
+            attack: 2,
+            versatility: 2,
+            critRate: 2
+        }
+    },
+    EQ_067: {
+        id: 'EQ_067',
+        name: '风蛇的拥抱',
+        icon: "icons/wow/vanilla/armor/INV_Chest_Leather_09.png",
+        type: 'equipment',
+        slot: 'chest',
+        rarity: 'blue',
+        setId: 'embrace_set',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            hp: 800,
+            armor: 80,
+            spellPower: 300,
+            haste: 15,
+            critRate: 10
+        },
+        growth: {
+            hp: 2,
+            armor: 2,
+            spellPower: 2,
+            haste: 2,
+            critRate: 2
+        }
+    },
+    EQ_068: {
+        id: 'EQ_068',
+        name: '阿塔莱预言者法衣',
+        icon: "icons/wow/vanilla/armor/INV_Chest_Cloth_43.png",
+        type: 'equipment',
+        slot: 'chest',
+        rarity: 'purple',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            hp: 600,
+            spellPower: 400,
+            mastery: 20
+        },
+        growth: {
+            hp: 2,
+            spellPower: 2,
+            mastery: 20
+        }
+    },
+    EQ_069: {
+        id: 'EQ_069',
+        name: '龙之召唤',
+        icon: "icons/wow/vanilla/weapons/INV_Sword_39.png",
+        type: 'equipment',
+        slot: 'mainHand',
+        rarity: 'purple',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            attack: 800,
+            versatility: 60
+        },
+        growth: {
+            attack: 2,
+            versatility: 2
+        }
+    },
+    EQ_070: {
+        id: 'EQ_070',
+        name: '伊兰尼库斯之角',
+        icon: "icons/wow/vanilla/armor/INV_Helmet_08.png",
+        type: 'equipment',
+        slot: 'head',
+        rarity: 'purple',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            hp: 1000,
+            armor: 100,
+            mastery: 20
+        },
+        growth: {
+            hp: 2,
+            armor: 2,
+            mastery: 2
+        }
+    },
+    EQ_071: {
+        id: 'EQ_071',
+        name: '巨龙之眼',
+        icon: "icons/wow/vanilla/items/INV_Misc_Eye_01.png",
+        type: 'equipment',
+        slot: 'trinket2',
+        rarity: 'purple',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            spellPower: 400,
+            haste: 10
+        },
+        growth: {
+            spellPower: 2,
+            haste: 2
+        },
+        specialEffect: {
+            type: 'skill_slot_buff',
+            slots: [0, 1],
+            spellPowerBonus: 500
+        }
+    },
+    EQ_072: {
+        id: 'EQ_072',
+        name: '伊兰尼库斯的精华',
+        icon: "icons/wow/vanilla/items/INV_Misc_Gem_Pearl_02.png",
+        type: 'equipment',
+        slot: 'trinket1',
+        rarity: 'purple',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            hp: 1500,
+            mastery: 10,
+            versatility: 30,
+        },
+        growth: {
+            hp: 2,
+            mastery: 2,
+            versatility: 2,
+        }
+    },
+    EQ_073: {
+        id: 'EQ_073',
+        name: '哈卡的毒牙',
+        icon: "icons/wow/vanilla/weapons/INV_Weapon_ShortBlade_25.png",
+        type: 'equipment',
+        slot: 'offHand',
+        rarity: 'purple',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            spell: 600,
+            haste: 25,
+            mastery : 25,
+        },
+        growth: {
+            spellPower: 2,
+            haste: 2,
+            mastery : 2,
+
+        }
+    },
 };
 
 //赤脊山5件图鉴100级点亮效果
@@ -2850,6 +3116,8 @@ const SCARLET_MONASTERY_LV100_SET = [
     'EQ_049', 'EQ_050', 'EQ_051', 'EQ_052', 'EQ_053', 'EQ_054',
     'EQ_055', 'EQ_056', 'EQ_057', 'EQ_058', 'EQ_059', 'EQ_060', 'EQ_061'
 ];
+// 沉没的神庙10件 10全能
+const SUNKEN_TEMPLE_LV100_SET = ['EQ_064', 'EQ_065', 'EQ_066', 'EQ_067', 'EQ_068', 'EQ_069', 'EQ_070', 'EQ_071', 'EQ_072', 'EQ_073'];
 
 // ==================== 图鉴集齐效果配置 ====================
 const CODEX_SET_EFFECTS = [
@@ -2894,7 +3162,14 @@ const CODEX_SET_EFFECTS = [
         equipIds: ['EQ_044'],
         effect: '全队全能 +5，急速 +10，精通 +10',
         color: '#ff8000'
-    }
+    },
+    {
+        id: 'sunken_temple',
+        name: '沉没的神庙',
+        equipIds: ['EQ_064', 'EQ_065', 'EQ_066', 'EQ_067', 'EQ_068', 'EQ_069', 'EQ_070', 'EQ_071', 'EQ_072', 'EQ_073'],
+        effect: '全队全能 +10',
+        color: '#00bcd4'
+    },
 ];
 
 // ==================== RARITY COLORS ====================
@@ -3504,6 +3779,15 @@ function calculateTotalStats(character, partyAuras = { hpMul: 1, spellPowerMul: 
         totalStats.versatility = (totalStats.versatility || 0) + 5;
         totalStats.haste = (totalStats.haste || 0) + 10;
         totalStats.mastery = (totalStats.mastery || 0) + 10;
+    }
+
+    // 沉默的神庙 10 件装备全部达到过 Lv.100 → 全队精通 +10，急速 +10
+    if (
+        gameState &&
+        Array.isArray(gameState.codexEquipLv100) &&
+        SUNKEN_TEMPLE_LV100_SET.every(id => gameState.codexEquipLv100.includes(id))
+    ) {
+        totalStats.versatility = (totalStats.versatility || 0) + 10;
     }
 
     // 简约而不简单羁绊：单一职业队伍普通攻击伤害提高150%

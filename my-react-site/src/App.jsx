@@ -3061,7 +3061,7 @@ const FIXED_EQUIPMENTS = {
     EQ_072: {
         id: 'EQ_072',
         name: '伊兰尼库斯的精华',
-        icon: "icons/wow/vanilla/items/INV_Misc_Gem_Pearl_02.png",
+        icon: "icons/wow/vanilla/spells/Spell_Nature_AbolishMagic.png",
         type: 'equipment',
         slot: 'trinket1',
         rarity: 'purple',

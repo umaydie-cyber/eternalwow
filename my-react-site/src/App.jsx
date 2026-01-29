@@ -151,10 +151,10 @@ const FUNCTIONAL_BUILDINGS = {
         id: 'plaza_fountain',
         name: '广场喷泉',
         icon: '⛲',
-        description: '所有脱战英雄每秒额外回复1点生命',
+        description: '所有脱战英雄每秒额外回复2点生命',
         cost: { gold: 10000, wood: 10000, ironOre: 8000 },
         maxCount: 500,
-        effect: { type: 'regen', value: 1 }
+        effect: { type: 'regen', value: 2 }
     },
     warehouse: {
         id: 'warehouse',
@@ -6503,7 +6503,7 @@ function gameReducer(state, action) {
                     ...char,
                     stats: {
                         ...char.stats,
-                        currentHp: Math.min(maxHp, curHp + REGEN_PER_SECOND+fountainCount*1)
+                        currentHp: Math.min(maxHp, curHp + REGEN_PER_SECOND+fountainCount*2)
                     }
                 };
             });

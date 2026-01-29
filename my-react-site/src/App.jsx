@@ -9838,7 +9838,7 @@ const InventoryPage = ({ state, dispatch }) => {
                                     boxShadow: '0 0 8px rgba(76,175,80,0.6)',
                                     fontWeight: 600
                                 }}>
-                                    🦾 自动合成
+                                    🦾
                                 </div>
                             )}
                             {/* ===== 结束 ===== */}

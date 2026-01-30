@@ -1032,7 +1032,13 @@ const SKILLS = {
         }
     },
     comet_storm: {
-        // ... 其他配置保持不变 ...
+        id: 'comet_storm',
+        name: '彗星风暴',
+        icon: '☄️',
+        iconUrl : 'icons/wow/vanilla/spells/huixingfengbao.png',
+        type: 'aoe_damage',
+        limit: 1,
+        description: '对所有敌人造成3倍法术强度的伤害',
         calculate: (char, combatContext) => {
             let damage = char.stats.spellPower * 3;
 

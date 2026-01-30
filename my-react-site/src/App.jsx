@@ -15265,7 +15265,7 @@ export default function WoWIdleGame() {
                 assignments: savedState.assignments && typeof savedState.assignments === 'object' ? savedState.assignments : {},
                 research: savedState.research && typeof savedState.research === 'object' ? savedState.research : {},
                 dropFilters: savedState.dropFilters && typeof savedState.dropFilters === 'object' ? savedState.dropFilters : {},
-
+                maxCharacterSlots: initialState.maxCharacterSlots,
                 zones: JSON.parse(JSON.stringify(ZONES)),
                 combatLogs: savedState.combatLogs || [],
                 offlineRewards: null

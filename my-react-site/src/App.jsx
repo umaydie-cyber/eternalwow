@@ -5141,7 +5141,7 @@ function stepBossCombat(state) {
                     damage = Math.max(1, Math.floor(damage * takenMult * buffTakenMult));
 
                     // 谍报也要经过护盾
-                    const shieldResult = applyShieldAbsorb(target, damage, logs, currentRound);
+                    const shieldResult = applyShieldAbsorb(ps, damage, logs, currentRound);
                     ps.currentHp -= shieldResult.finalDamage;
 
                     const shieldText = shieldResult.absorbed > 0 ? `，护盾吸收 ${shieldResult.absorbed}` : '';

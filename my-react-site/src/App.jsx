@@ -9920,6 +9920,16 @@ const MapPage = ({ state, dispatch }) => {
         <div>
             {/* 未分配的角色列表 */}
             {unassignedChars.length > 0 && (
+                <div
+                    style={{
+                        position: 'sticky',
+                        top: 12,
+                        zIndex: 50,
+                        // 可选：如果角色很多，固定栏自己滚动
+                        maxHeight: '40vh',
+                        overflowY: 'auto',
+                    }}
+                >
                 <Panel title="可派遣角色" style={{ marginBottom: 16 }}>
                     <div style={{
                         display: 'flex',
@@ -9967,6 +9977,7 @@ const MapPage = ({ state, dispatch }) => {
                         💡 拖拽角色到区域进行分配
                     </div>
                 </Panel>
+                </div>
             )}
 
             {/* 区域列表 */}

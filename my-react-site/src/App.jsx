@@ -65,7 +65,7 @@ const CLASSES = {
             { level: 30, skillId: 'icy_veins' },
             { level: 40, skillId: 'comet_storm' },
             { level: 50, skillId: 'ice_barrier' },
-            { level: 50, skillId: 'conditional_frost_strike' },
+            { level: 52, skillId: 'conditional_frost_strike' },
         ]
     }
 };

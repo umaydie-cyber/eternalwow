@@ -2363,7 +2363,7 @@ const FIXED_EQUIPMENTS = {
         name: '黑石戒指',
         icon: "icons/wow/vanilla/armor/INV_Jewelry_Ring_17.png",
         type: 'equipment',
-        slot: 'EQ_032',
+        slot: 'ring2',
         rarity: 'blue',
         level: 0,
         maxLevel: 100,

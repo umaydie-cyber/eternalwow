@@ -1581,7 +1581,7 @@ const DROP_TABLES = {
         items: [
             {
                 id: 'IT_BLACK_DRAGON_PROOF',
-                chance: 0.01   // 0.1%，作为剧情钥匙，合理但不泛滥
+                chance: 0.001   // 0.1%，作为剧情钥匙，合理但不泛滥
             }
         ]
     },

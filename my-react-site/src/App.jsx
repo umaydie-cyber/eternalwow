@@ -3538,9 +3538,9 @@ const BOSS_DATA = {
             exp: 5500,
             items: [
                 { id: 'REBIRTH_INVITATION' },
-                { id: 'EQ_HOGGER_001' },  // 新增：霍格的毛皮披风
-                { id: 'EQ_HOGGER_002' },  // 新增：霍格的獠牙头盔
-                { id: 'EQ_HOGGER_003' }   // 新增：霍格的兽皮胸甲
+                { id: 'EQ_HOGGER_001' , chance: 0.15 },  // 新增：霍格的毛皮披风
+                { id: 'EQ_HOGGER_002' , chance: 0.15 },  // 新增：霍格的獠牙头盔
+                { id: 'EQ_HOGGER_003' , chance: 0.15 }   // 新增：霍格的兽皮胸甲
             ]
         }
     },
@@ -5108,6 +5108,10 @@ function stepBossCombat(state) {
             boss.rewards.items.forEach(itemTpl => {
                 const dropId = (typeof itemTpl === 'string') ? itemTpl : itemTpl?.id;
                 if (!dropId) return;
+
+                // ===== 新增：概率判定 =====
+                const dropChance = itemTpl?.chance ?? 1;  // 默认100%
+                if (Math.random() > dropChance) return;   // 未命中则跳过
 
                 if (FIXED_EQUIPMENTS?.[dropId]) {
                     const inst = createEquipmentInstance(dropId);

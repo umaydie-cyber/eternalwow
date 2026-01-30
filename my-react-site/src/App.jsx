@@ -15460,7 +15460,6 @@ const QuestTracker = ({ state, dispatch, onOpenQuestPage }) => {
                 )}
 
                 <div style={{ display: 'flex', gap: 4 }}>
-                    // 修改为：
                     {!isCollapsed && (
                         <button
                             onClick={() => setIsMinimized(true)}

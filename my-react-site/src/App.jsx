@@ -3122,7 +3122,7 @@ const FIXED_EQUIPMENTS = {
         baseStats: {
             hp: 100,
             armor: 20,
-            proficiency: 5  // 采集熟练
+            proficiency: 10  // 采集熟练
         },
         growth: {
             hp: 2,
@@ -3144,7 +3144,7 @@ const FIXED_EQUIPMENTS = {
         baseStats: {
             hp: 150,
             armor: 30,
-            precision: 5  // 采集精细
+            precision: 10  // 采集精细
         },
         growth: {
             hp: 2,
@@ -3166,7 +3166,7 @@ const FIXED_EQUIPMENTS = {
         baseStats: {
             hp: 200,
             armor: 40,
-            perception: 5  // 采集感知
+            perception: 10  // 采集感知
         },
         growth: {
             hp: 2,

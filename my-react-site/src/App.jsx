@@ -6109,7 +6109,7 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1) {
         tickEnemyDebuffs();
     }
 
-    const finished = (charHp <= 0) || (enemyHp <= 0) || (round >= 20);
+    const finished = (charHp <= 0) || (enemyHp <= 0) || (round >= 50);
 
     return {
         finished,

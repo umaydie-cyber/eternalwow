@@ -969,7 +969,13 @@ const SKILLS = {
         }
     },
     frozen_orb: {
-        // ... 其他配置保持不变 ...
+        id: 'frozen_orb',
+        name: '寒冰宝珠',
+        icon: '🔮',
+        iconUrl : 'icons/wow/vanilla/spells/hanbingbaozhu.png',
+        type: 'aoe_dot',
+        limit: 2,
+        description: '对所有敌方单位施加DOT，持续3回合，每回合造成0.5倍法术强度的伤害',
         calculate: (char, combatContext) => {
             let damagePerTurn = char.stats.spellPower * 0.5;
             let duration = 3;

@@ -64,6 +64,7 @@ const CLASSES = {
             { level: 20, skillId: 'frozen_orb' },
             { level: 30, skillId: 'icy_veins' },
             { level: 40, skillId: 'comet_storm' },
+            { level: 50, skillId: 'ice_barrier' },
         ]
     }
 };
@@ -977,7 +978,43 @@ const SKILLS = {
                 generateFingerOnHit: char.talents?.[40] === 'glacial_spike' // 40级天赋：冰川突进
             };
         }
-    }
+    },ice_barrier: {
+        id: 'ice_barrier',
+        name: '寒冰护体',
+        icon: '🧊',
+        iconUrl: 'icons/wow/vanilla/spells/Spell_Ice_Lament.png',
+        type: 'shield',
+        limit: 2,
+        description: '为自己施加一个护盾，吸收3倍法术强度的伤害，持续6回合。护盾存在时受击有25%概率获得1层寒冰指。',
+        calculate: (char, combatContext) => {
+            let shieldAmount = char.stats.spellPower * 3;
+
+            // 冰冷血脉增强护盾
+            if (combatContext?.icyVeinsBuff) {
+                shieldAmount *= 1.5;
+            }
+
+            // 10级天赋：寒冰增幅 - 护盾量也提高10%
+            if (char.talents?.[10] === 'frost_amp') {
+                shieldAmount *= 1.1;
+            }
+
+            return {
+                shield: {
+                    type: 'ice_barrier',
+                    name: '寒冰护体',
+                    amount: Math.floor(shieldAmount),
+                    maxAmount: Math.floor(shieldAmount),
+                    duration: 6,
+                    // 受击时触发效果
+                    onHitEffect: {
+                        type: 'generate_finger',
+                        chance: 0.25
+                    }
+                }
+            };
+        }
+    },
 
 };
 
@@ -4092,6 +4129,45 @@ function stepBossCombat(state) {
     const addLog = (text, type = 'normal') => {
         logs.push({ round: currentRound, text, type });
     };
+    // ===== 护盾吸收伤害辅助函数 =====
+    const applyShieldAbsorb = (playerState, damage, logs, currentRound) => {
+        if (!playerState.buffs || damage <= 0) {
+            return { finalDamage: damage, absorbed: 0 };
+        }
+
+        // 找到有效的护盾buff
+        const shieldBuff = playerState.buffs.find(b =>
+            b.type && b.amount > 0 && ['ice_barrier'].includes(b.type)
+        );
+
+        if (!shieldBuff) {
+            return { finalDamage: damage, absorbed: 0 };
+        }
+
+        // 计算吸收量
+        const absorbed = Math.min(shieldBuff.amount, damage);
+        shieldBuff.amount -= absorbed;
+        const finalDamage = damage - absorbed;
+
+        // 护盾受击触发效果（寒冰护体：25%概率获得寒冰指）
+        if (shieldBuff.onHitEffect?.type === 'generate_finger') {
+            if (playerState.char.classId === 'frost_mage' && Math.random() < shieldBuff.onHitEffect.chance) {
+                playerState.fingersOfFrost = (playerState.fingersOfFrost || 0) + 1;
+                addLog(`【${shieldBuff.name}】触发：${playerState.char.name} 获得1层寒冰指，当前${playerState.fingersOfFrost}层`);
+            }
+        }
+
+        // 护盾破碎
+        if (shieldBuff.amount <= 0) {
+            addLog(`${playerState.char.name} 的【${shieldBuff.name}】护盾破碎！`);
+            const idx = playerState.buffs.findIndex(b => b.type === shieldBuff.type);
+            if (idx !== -1) {
+                playerState.buffs.splice(idx, 1);
+            }
+        }
+
+        return { finalDamage, absorbed };
+    };
 
     // ==================== 玩家阶段 ====================
     for (let i = 0; i < combat.playerStates.length; i++) {
@@ -4497,6 +4573,25 @@ function stepBossCombat(state) {
             }
         }
 
+        // ===== 护盾技能处理 =====
+        if (result.shield) {
+            p.buffs = p.buffs || [];
+
+            // 检查是否已有同类型护盾
+            const existingIdx = p.buffs.findIndex(b => b.type === result.shield.type);
+            if (existingIdx !== -1) {
+                const oldShield = p.buffs[existingIdx];
+                p.buffs[existingIdx] = {
+                    ...result.shield,
+                    amount: Math.max(oldShield.amount, result.shield.amount)
+                };
+                addLog(`位置${i + 1} ${p.char.name} 刷新【${result.shield.name}】护盾，吸收量：${p.buffs[existingIdx].amount}`);
+            } else {
+                p.buffs.push({ ...result.shield });
+                addLog(`位置${i + 1} ${p.char.name} 获得【${result.shield.name}】护盾，可吸收 ${result.shield.amount} 点伤害`);
+            }
+        }
+
         // 天赋触发
         if (skillId === 'basic_attack' && p.char.talents?.[10] === 'plain') {
             p.talentBuffs.attackFlat = (p.talentBuffs.attackFlat || 0) + 5;
@@ -4554,7 +4649,17 @@ function stepBossCombat(state) {
                     }
                     return b;
                 })
-                .filter(b => (b.duration ?? 999) > 0);
+                .filter(b => {
+                    // 护盾：持续时间到期或吸收量耗尽都移除
+                    if (b.type && ['ice_barrier'].includes(b.type)) {
+                        if ((b.duration ?? 999) <= 0 || (b.amount ?? 0) <= 0) {
+                            addLog(`位置${i + 1} ${p.char.name} 的【${b.name}】护盾消失`);
+                            return false;
+                        }
+                        return true;
+                    }
+                    return (b.duration ?? 999) > 0;
+                });
         }
 
         // debuff duration 减少（致死打击减疗等）
@@ -4747,7 +4852,10 @@ function stepBossCombat(state) {
                 const raw = Math.floor((boss.attack || 0) * (boss.mortalStrikeMultiplier || 3));
                 const { damage, dr, blockedAmount } = calcMitigatedAndBlockedDamage(target, raw, true);
 
-                target.currentHp -= damage;
+                // 在致死打击扣血前添加护盾处理
+                const shieldResult = applyShieldAbsorb(target, damage, logs, currentRound);
+                target.currentHp -= shieldResult.finalDamage;
+                const shieldText = shieldResult.absorbed > 0 ? `，护盾吸收 ${shieldResult.absorbed}` : '';
 
                 // 施加减疗debuff
                 target.debuffs = target.debuffs || {};
@@ -4758,7 +4866,7 @@ function stepBossCombat(state) {
 
                 const drPct = Math.round(dr * 100);
                 const blockText = blockedAmount > 0 ? `，格挡 ${blockedAmount}` : '';
-                addLog(`【${boss.name}】使用【致死打击】对 位置${tIdx + 1} 造成 ${damage} 伤害（护甲减伤${drPct}%${blockText}）`);
+                addLog(`【${boss.name}】使用【致死打击】对 位置${tIdx + 1} 造成 ${shieldResult.finalDamage} 伤害（护甲减伤${drPct}%${blockText}${shieldText}）`);
                 addLog(`→ 位置${tIdx + 1} 受到【致死打击】：受到治疗效果降低50%，持续2回合`);
             }
         }
@@ -4831,8 +4939,12 @@ function stepBossCombat(state) {
                     }
                     damage = Math.max(1, Math.floor(damage * takenMult * buffTakenMult));
 
-                    target.currentHp -= damage;
-                    addLog(`【${boss.name}】施放【谍报】（分散站位）对 位置${tIdx + 1} 造成 ${damage} 点暗影伤害`);
+                    // 谍报也要经过护盾
+                    const shieldResult = applyShieldAbsorb(target, damage, logs, currentRound);
+                    target.currentHp -= shieldResult.finalDamage;
+
+                    const shieldText = shieldResult.absorbed > 0 ? `，护盾吸收 ${shieldResult.absorbed}` : '';
+                    addLog(`【${boss.name}】施放【谍报】（分散站位）对 位置${tIdx + 1} 造成 ${shieldResult.finalDamage} 点暗影伤害${shieldText}`);
                 }
             } else {
                 // 集中站位：伤害分摊给所有存活角色
@@ -4856,8 +4968,12 @@ function stepBossCombat(state) {
                     }
                     damage = Math.max(1, Math.floor(damage * takenMult * buffTakenMult));
 
-                    ps.currentHp -= damage;
-                    addLog(`→ 位置${pIdx + 1} ${ps.char.name} 受到 ${damage} 点暗影伤害`);
+                    // 谍报也要经过护盾
+                    const shieldResult = applyShieldAbsorb(target, damage, logs, currentRound);
+                    ps.currentHp -= shieldResult.finalDamage;
+
+                    const shieldText = shieldResult.absorbed > 0 ? `，护盾吸收 ${shieldResult.absorbed}` : '';
+                    addLog(`【${boss.name}】施放【谍报】（集中站位）对 位置${pIdx + 1} ${ps.char.name} 造成 ${shieldResult.finalDamage} 点暗影伤害${shieldText}`);
                 });
             }
         }
@@ -5011,11 +5127,12 @@ function stepBossCombat(state) {
                 const demoralizingShoutMult = combat.bossDebuffs?.demoralizingShout?.damageMult ?? 1;
                 dmg = Math.max(1, Math.floor(dmg * takenMult * buffTakenMult * demoralizingShoutMult));
 
-                ps.currentHp -= dmg;
+                // 护盾吸收
+                const shieldResult = applyShieldAbsorb(ps, dmg, logs, currentRound);
+                ps.currentHp -= shieldResult.finalDamage;
 
-                // 为每个角色单独打印日志，显示实际受到的伤害
-                const drPct = Math.round(dr * 100);
-                addLog(`【${boss.minion.name}${i + 1}】炮击 位置${pIdx + 1} ${ps.char.name}，造成 ${dmg} 点伤害（护甲减伤${drPct}%）`);
+                const shieldText = shieldResult.absorbed > 0 ? `，护盾吸收 ${shieldResult.absorbed}` : '';
+                addLog(`【${boss.minion.name}${i + 1}】炮击 位置${pIdx + 1} ${ps.char.name}，造成 ${shieldResult.finalDamage} 点伤害（护甲减伤${drPct}%${shieldText}）`);
             });
         }
         // 霍格的小弟：普通攻击
@@ -5440,7 +5557,14 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1) {
     const tickBuffs = () => {
         buffs = buffs
             .map(b => ({ ...b, duration: (b.duration ?? 0) - 1 }))
-            .filter(b => (b.duration ?? 0) > 0);
+            .filter(b => {
+                // 护盾：持续时间到期或吸收量耗尽都移除
+                if (b.type && ['ice_barrier'].includes(b.type)) {
+                    return (b.duration ?? 0) > 0 && (b.amount ?? 0) > 0;
+                }
+                // 其他buff只看持续时间
+                return (b.duration ?? 0) > 0;
+            });
     };
     const tickEnemyDebuffs = () => {
         enemyDebuffs = enemyDebuffs
@@ -5777,6 +5901,39 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1) {
                 type: 'buff',
                 text: buffText
             });
+        }// ===== 护盾技能处理 =====
+        else if (result.shield) {
+            // 检查是否已有同类型护盾，如果有则刷新
+            const existingShieldIdx = buffs.findIndex(b => b.type === result.shield.type);
+            if (existingShieldIdx !== -1) {
+                // 刷新护盾：取新旧护盾的较大值
+                const oldShield = buffs[existingShieldIdx];
+                buffs[existingShieldIdx] = {
+                    ...result.shield,
+                    amount: Math.max(oldShield.amount, result.shield.amount)
+                };
+                logs.push({
+                    round,
+                    actor: character.name,
+                    action: skill.name,
+                    target: character.name,
+                    type: 'shield',
+                    value: result.shield.amount,
+                    text: `刷新【${result.shield.name}】护盾，当前吸收量：${buffs[existingShieldIdx].amount}`
+                });
+            } else {
+                // 添加新护盾
+                buffs.push({ ...result.shield });
+                logs.push({
+                    round,
+                    actor: character.name,
+                    action: skill.name,
+                    target: character.name,
+                    type: 'shield',
+                    value: result.shield.amount,
+                    text: `获得【${result.shield.name}】护盾，可吸收 ${result.shield.amount} 点伤害，持续 ${result.shield.duration} 回合`
+                });
+            }
         }
         else if (result.dot) {
             enemyDebuffs.push({
@@ -6092,6 +6249,49 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1) {
         const enemyDamageMult = demoralizingShout ? demoralizingShout.damageMult : 1;
 
         finalDamage = Math.max(1, Math.floor(finalDamage * (character.stats.damageTakenMult || 1) * buffDamageTakenMult * enemyDamageMult));
+
+        // ===== 新增：护盾吸收伤害 =====
+        let shieldAbsorbed = 0;
+        const shieldBuff = buffs.find(b => b.type && b.amount > 0 && ['ice_barrier'].includes(b.type));
+
+        if (shieldBuff && finalDamage > 0) {
+            // 计算护盾吸收量
+            shieldAbsorbed = Math.min(shieldBuff.amount, finalDamage);
+            shieldBuff.amount -= shieldAbsorbed;
+            finalDamage -= shieldAbsorbed;
+
+            // 护盾受击触发效果
+            if (shieldBuff.onHitEffect) {
+                if (shieldBuff.onHitEffect.type === 'generate_finger' && character.classId === 'frost_mage') {
+                    if (Math.random() < shieldBuff.onHitEffect.chance) {
+                        fingersOfFrost = (fingersOfFrost || 0) + 1;
+                        logs.push({
+                            round,
+                            kind: 'proc',
+                            actor: character.name,
+                            proc: '寒冰护体',
+                            text: `【寒冰护体】触发：获得1层寒冰指（当前${fingersOfFrost}层）`
+                        });
+                    }
+                }
+            }
+
+            // 护盾破碎
+            if (shieldBuff.amount <= 0) {
+                logs.push({
+                    round,
+                    kind: 'proc',
+                    actor: character.name,
+                    proc: shieldBuff.name,
+                    text: `【${shieldBuff.name}】护盾破碎！`
+                });
+                // 从buffs中移除（或标记为0，在tickBuffs时清理）
+                const shieldIdx = buffs.findIndex(b => b.type === shieldBuff.type);
+                if (shieldIdx !== -1) {
+                    buffs.splice(shieldIdx, 1);
+                }
+            }
+        }
 
         charHp -= finalDamage;
         const blockText = blockedAmount > 0 ? `，格挡 ${blockedAmount}` : '';

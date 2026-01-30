@@ -3313,7 +3313,7 @@ function calculateBuildingProduction(building, workers, gameState) {
             gatherStats.precision * weights.precision +
             gatherStats.perception * weights.perception;
 
-        let efficiency = 1 + weightedStat / 50;
+        let efficiency = 1 + weightedStat / 10;
 
         // ===== 新增：套装效果 gatherEfficiency =====
         const setBonuses = getSetBonusesForCharacter(char);

@@ -6313,11 +6313,22 @@ function gameReducer(state, action) {
 
                 const now = Date.now();
 
-                // 只有“到点”才会拉怪开始一场新战斗（避免每秒都重开）
+                // ✅ 修复：只有"到点"且脱战回血完成（或血量已满）才会拉怪开始新战斗
                 if (!char.combatState && newState.frame % COMBAT_START_INTERVAL_FRAMES === 0) {
-                    const enemy = zone.enemies[Math.floor(Math.random() * zone.enemies.length)];
-                    char.combatState = createCombatState(char, enemy, char.skillSlots || []);
-                    char.lastCombatTime = now; // 进入战斗
+                    const lastCombatTime = char.lastCombatTime || 0;
+                    const maxHp = char.stats?.maxHp ?? char.stats?.hp ?? 0;
+                    const curHp = char.stats?.currentHp ?? maxHp;
+
+                    // ✅ 新增：检查是否完成脱战回血期（或血量已满）
+                    const isRegenPeriodOver = (now - lastCombatTime >= REGEN_DELAY_MS);
+                    const isFullHp = curHp >= maxHp;
+
+                    // 只有回血期结束或血量已满，才开始新战斗
+                    if (isRegenPeriodOver || isFullHp) {
+                        const enemy = zone.enemies[Math.floor(Math.random() * zone.enemies.length)];
+                        char.combatState = createCombatState(char, enemy, char.skillSlots || []);
+                        char.lastCombatTime = now; // 进入战斗
+                    }
                 }
 
                 // 推进当前战斗：每tick更新一次 currentHp => UI 实时变化

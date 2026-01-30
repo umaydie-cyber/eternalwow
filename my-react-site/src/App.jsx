@@ -15202,6 +15202,669 @@ const RebirthBonusModal = ({ state, onClose }) => {
     );
 };
 
+// ==================== 任务追踪悬浮UI ====================
+
+const QuestTracker = ({ state, dispatch, onOpenQuestPage }) => {
+    const [isCollapsed, setIsCollapsed] = useState(false);
+    const [expandedQuests, setExpandedQuests] = useState(new Set());
+    const [isMinimized, setIsMinimized] = useState(false);
+
+    // 获取所有进行中的任务
+    const activeQuests = Object.entries(state.questProgress || {})
+        .filter(([_, progress]) => progress.status === 'in_progress')
+        .map(([questId, progress]) => ({
+            questId,
+            progress,
+            questData: QUEST_CHAINS[questId]
+        }))
+        .filter(q => q.questData);
+
+    // 检查步骤条件进度
+    const getRequirementProgress = (requirement) => {
+        if (!requirement) return { met: true, current: 0, target: 0, text: '' };
+
+        switch (requirement.type) {
+            case 'zone_battles': {
+                // 实际实现需要追踪战斗次数，这里用简化版
+                const zone = ZONES[requirement.zoneId];
+                const zoneName = zone?.name || requirement.zoneId;
+                const current = state.questBattleProgress?.[requirement.zoneId] || 0;
+                const target = requirement.count;
+                return {
+                    met: current >= target,
+                    current,
+                    target,
+                    text: `在${zoneName}战斗`,
+                    icon: '⚔️'
+                };
+            }
+            case 'character_level': {
+                const maxLevel = Math.max(...state.characters.map(c => c.level), 0);
+                return {
+                    met: maxLevel >= requirement.level,
+                    current: maxLevel,
+                    target: requirement.level,
+                    text: `角色等级达到`,
+                    icon: '⭐'
+                };
+            }
+            case 'boss_defeated': {
+                const bossName = BOSS_DATA[requirement.bossId]?.name || requirement.bossId;
+                const defeated = state.defeatedBosses?.includes(requirement.bossId);
+                return {
+                    met: defeated,
+                    current: defeated ? 1 : 0,
+                    target: 1,
+                    text: `击败${bossName}`,
+                    icon: '🐲'
+                };
+            }
+            case 'have_gold': {
+                return {
+                    met: state.resources.gold >= requirement.amount,
+                    current: Math.floor(state.resources.gold),
+                    target: requirement.amount,
+                    text: `准备金币`,
+                    icon: '🪙'
+                };
+            }
+            case 'have_item': {
+                const hasItem = state.inventory.some(i => i.id === requirement.itemId) ||
+                    state.questItems?.some(i => i.id === requirement.itemId);
+                const itemName = QUEST_ITEMS[requirement.itemId]?.name ||
+                    ITEMS[requirement.itemId]?.name ||
+                    requirement.itemId;
+                return {
+                    met: hasItem,
+                    current: hasItem ? 1 : 0,
+                    target: 1,
+                    text: `获得${itemName}`,
+                    icon: '📦'
+                };
+            }
+            default:
+                return { met: true, current: 0, target: 0, text: '' };
+        }
+    };
+
+    // 切换任务展开状态
+    const toggleQuestExpand = (questId) => {
+        setExpandedQuests(prev => {
+            const next = new Set(prev);
+            if (next.has(questId)) {
+                next.delete(questId);
+            } else {
+                next.add(questId);
+            }
+            return next;
+        });
+    };
+
+    // 如果没有进行中的任务，显示简化版
+    if (activeQuests.length === 0) {
+        return (
+            <div style={{
+                position: 'fixed',
+                top: 100,
+                right: 16,
+                width: 280,
+                background: 'linear-gradient(135deg, rgba(30,25,20,0.95) 0%, rgba(20,15,12,0.98) 100%)',
+                border: '2px solid #4a3c2a',
+                borderRadius: 10,
+                padding: 12,
+                boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
+                zIndex: 100,
+                transition: 'all 0.3s'
+            }}>
+                <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between'
+                }}>
+                    <div style={{
+                        fontSize: 13,
+                        color: '#c9a227',
+                        fontWeight: 600,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 8
+                    }}>
+                        <span>📜</span>
+                        任务追踪
+                    </div>
+                    <button
+                        onClick={() => onOpenQuestPage?.()}
+                        style={{
+                            background: 'rgba(201,162,39,0.2)',
+                            border: '1px solid #c9a227',
+                            borderRadius: 4,
+                            color: '#c9a227',
+                            fontSize: 10,
+                            padding: '4px 8px',
+                            cursor: 'pointer'
+                        }}
+                    >
+                        查看任务
+                    </button>
+                </div>
+                <div style={{
+                    marginTop: 12,
+                    textAlign: 'center',
+                    color: '#666',
+                    fontSize: 12,
+                    padding: '16px 0'
+                }}>
+                    <div style={{ fontSize: 24, marginBottom: 8 }}>📭</div>
+                    暂无进行中的任务
+                </div>
+            </div>
+        );
+    }
+
+    // 最小化模式
+    if (isMinimized) {
+        return (
+            <div
+                onClick={() => setIsMinimized(false)}
+                style={{
+                    position: 'fixed',
+                    top: 100,
+                    right: 16,
+                    width: 50,
+                    height: 50,
+                    background: 'linear-gradient(135deg, rgba(201,162,39,0.3), rgba(139,115,25,0.2))',
+                    border: '2px solid #c9a227',
+                    borderRadius: '50%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    boxShadow: '0 4px 20px rgba(201,162,39,0.3)',
+                    zIndex: 100,
+                    transition: 'all 0.3s'
+                }}
+                title="展开任务追踪"
+            >
+                <div style={{ position: 'relative' }}>
+                    <span style={{ fontSize: 24 }}>📜</span>
+                    {/* 任务数量徽章 */}
+                    <div style={{
+                        position: 'absolute',
+                        top: -8,
+                        right: -8,
+                        background: '#f44336',
+                        color: '#fff',
+                        fontSize: 10,
+                        fontWeight: 700,
+                        width: 18,
+                        height: 18,
+                        borderRadius: '50%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        border: '2px solid #1a1510'
+                    }}>
+                        {activeQuests.length}
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div style={{
+            position: 'fixed',
+            top: 100,
+            right: 16,
+            width: isCollapsed ? 50 : 300,
+            maxHeight: 'calc(100vh - 140px)',
+            background: 'linear-gradient(135deg, rgba(30,25,20,0.97) 0%, rgba(20,15,12,0.99) 100%)',
+            border: '2px solid #c9a227',
+            borderRadius: 10,
+            overflow: 'hidden',
+            boxShadow: '0 4px 24px rgba(0,0,0,0.6), 0 0 20px rgba(201,162,39,0.15)',
+            zIndex: 100,
+            transition: 'width 0.3s ease',
+            display: 'flex',
+            flexDirection: 'column'
+        }}>
+            {/* 标题栏 */}
+            <div style={{
+                padding: '10px 12px',
+                background: 'linear-gradient(180deg, rgba(201,162,39,0.15) 0%, transparent 100%)',
+                borderBottom: '1px solid rgba(201,162,39,0.3)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexShrink: 0
+            }}>
+                {!isCollapsed && (
+                    <div style={{
+                        fontSize: 14,
+                        color: '#ffd700',
+                        fontWeight: 600,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 8
+                    }}>
+                        <span>📜</span>
+                        任务追踪
+                        <span style={{
+                            fontSize: 11,
+                            color: '#888',
+                            fontWeight: 400
+                        }}>
+                            ({activeQuests.length})
+                        </span>
+                    </div>
+                )}
+
+                <div style={{ display: 'flex', gap: 4 }}>
+                    {!isCollapsed && (
+                        <button
+                            onClick={() => setIsMinimized(true)}
+                            style={{
+                                background: 'transparent',
+                                border: 'none',
+                                color: '#888',
+                                fontSize: 14,
+                                cursor: 'pointer',
+                                padding: '2px 6px',
+                                borderRadius: 4
+                            }}
+                            title="最小化"
+                        >
+                            ─
+                        </button>
+                    )}
+                    <button
+                        onClick={() => setIsCollapsed(!isCollapsed)}
+                        style={{
+                            background: 'transparent',
+                            border: 'none',
+                            color: '#c9a227',
+                            fontSize: 16,
+                            cursor: 'pointer',
+                            padding: '2px 6px',
+                            borderRadius: 4,
+                            transition: 'transform 0.3s'
+                        }}
+                        title={isCollapsed ? '展开' : '折叠'}
+                    >
+                        {isCollapsed ? '◀' : '▶'}
+                    </button>
+                </div>
+            </div>
+
+            {/* 任务列表 */}
+            {!isCollapsed && (
+                <div style={{
+                    flex: 1,
+                    overflowY: 'auto',
+                    padding: 8
+                }}>
+                    {activeQuests.map(({ questId, progress, questData }) => {
+                        const currentStep = questData.steps[progress.currentStep];
+                        const isExpanded = expandedQuests.has(questId);
+                        const requirement = currentStep?.requirement;
+                        const reqProgress = getRequirementProgress(requirement);
+
+                        return (
+                            <div
+                                key={questId}
+                                style={{
+                                    background: 'rgba(0,0,0,0.3)',
+                                    borderRadius: 8,
+                                    marginBottom: 8,
+                                    border: '1px solid rgba(201,162,39,0.2)',
+                                    overflow: 'hidden',
+                                    transition: 'all 0.2s'
+                                }}
+                            >
+                                {/* 任务标题 */}
+                                <div
+                                    onClick={() => toggleQuestExpand(questId)}
+                                    style={{
+                                        padding: '10px 12px',
+                                        cursor: 'pointer',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: 10,
+                                        background: isExpanded
+                                            ? 'rgba(201,162,39,0.1)'
+                                            : 'transparent',
+                                        transition: 'background 0.2s'
+                                    }}
+                                >
+                                    <span style={{
+                                        fontSize: 20,
+                                        transition: 'transform 0.2s',
+                                        transform: isExpanded ? 'scale(1.1)' : 'scale(1)'
+                                    }}>
+                                        {questData.icon}
+                                    </span>
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                        <div style={{
+                                            fontSize: 12,
+                                            color: '#ffd700',
+                                            fontWeight: 600,
+                                            whiteSpace: 'nowrap',
+                                            overflow: 'hidden',
+                                            textOverflow: 'ellipsis'
+                                        }}>
+                                            {questData.name}
+                                        </div>
+                                        <div style={{
+                                            fontSize: 10,
+                                            color: '#888',
+                                            marginTop: 2,
+                                            whiteSpace: 'nowrap',
+                                            overflow: 'hidden',
+                                            textOverflow: 'ellipsis'
+                                        }}>
+                                            {currentStep?.title}
+                                        </div>
+                                    </div>
+                                    <span style={{
+                                        color: '#666',
+                                        fontSize: 12,
+                                        transition: 'transform 0.2s',
+                                        transform: isExpanded ? 'rotate(90deg)' : 'rotate(0)'
+                                    }}>
+                                        ▶
+                                    </span>
+                                </div>
+
+                                {/* 展开内容 */}
+                                {isExpanded && (
+                                    <div style={{
+                                        padding: '0 12px 12px',
+                                        borderTop: '1px solid rgba(201,162,39,0.1)'
+                                    }}>
+                                        {/* 当前目标 */}
+                                        {requirement && (
+                                            <div style={{
+                                                marginTop: 10,
+                                                padding: 10,
+                                                background: reqProgress.met
+                                                    ? 'rgba(76,175,80,0.15)'
+                                                    : 'rgba(255,152,0,0.1)',
+                                                borderRadius: 6,
+                                                border: `1px solid ${reqProgress.met
+                                                    ? 'rgba(76,175,80,0.3)'
+                                                    : 'rgba(255,152,0,0.3)'}`
+                                            }}>
+                                                <div style={{
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: 8,
+                                                    marginBottom: 6
+                                                }}>
+                                                    <span style={{ fontSize: 14 }}>{reqProgress.icon}</span>
+                                                    <span style={{
+                                                        fontSize: 11,
+                                                        color: reqProgress.met ? '#4CAF50' : '#ff9800',
+                                                        fontWeight: 600
+                                                    }}>
+                                                        {reqProgress.text}
+                                                    </span>
+                                                </div>
+
+                                                {/* 进度条 */}
+                                                <div style={{
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: 8
+                                                }}>
+                                                    <div style={{
+                                                        flex: 1,
+                                                        height: 6,
+                                                        background: 'rgba(0,0,0,0.4)',
+                                                        borderRadius: 3,
+                                                        overflow: 'hidden'
+                                                    }}>
+                                                        <div style={{
+                                                            height: '100%',
+                                                            width: `${Math.min(100, (reqProgress.current / reqProgress.target) * 100)}%`,
+                                                            background: reqProgress.met
+                                                                ? 'linear-gradient(90deg, #4CAF50, #81c784)'
+                                                                : 'linear-gradient(90deg, #ff9800, #ffb74d)',
+                                                            borderRadius: 3,
+                                                            transition: 'width 0.3s'
+                                                        }} />
+                                                    </div>
+                                                    <span style={{
+                                                        fontSize: 10,
+                                                        color: reqProgress.met ? '#4CAF50' : '#ff9800',
+                                                        fontWeight: 600,
+                                                        minWidth: 45,
+                                                        textAlign: 'right'
+                                                    }}>
+                                                        {reqProgress.current >= 1000
+                                                            ? `${(reqProgress.current/1000).toFixed(1)}k`
+                                                            : reqProgress.current
+                                                        } / {reqProgress.target >= 1000
+                                                        ? `${(reqProgress.target/1000).toFixed(1)}k`
+                                                        : reqProgress.target
+                                                    }
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* 步骤描述 */}
+                                        <div style={{
+                                            marginTop: 10,
+                                            fontSize: 11,
+                                            color: '#aaa',
+                                            lineHeight: 1.5,
+                                            padding: '8px 0'
+                                        }}>
+                                            {currentStep?.description?.substring(0, 100)}
+                                            {currentStep?.description?.length > 100 && '...'}
+                                        </div>
+
+                                        {/* 已获得的标记 */}
+                                        {progress.flags && progress.flags.length > 0 && (
+                                            <div style={{
+                                                marginTop: 8,
+                                                display: 'flex',
+                                                flexWrap: 'wrap',
+                                                gap: 4
+                                            }}>
+                                                {progress.flags.slice(0, 3).map(flag => (
+                                                    <span key={flag} style={{
+                                                        fontSize: 9,
+                                                        padding: '2px 6px',
+                                                        background: 'rgba(156,39,176,0.2)',
+                                                        borderRadius: 3,
+                                                        color: '#ce93d8',
+                                                        border: '1px solid rgba(156,39,176,0.3)'
+                                                    }}>
+                                                        ✓ {flag.replace(/_/g, ' ')}
+                                                    </span>
+                                                ))}
+                                                {progress.flags.length > 3 && (
+                                                    <span style={{
+                                                        fontSize: 9,
+                                                        padding: '2px 6px',
+                                                        color: '#888'
+                                                    }}>
+                                                        +{progress.flags.length - 3}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        )}
+
+                                        {/* 操作按钮 */}
+                                        <div style={{
+                                            marginTop: 10,
+                                            display: 'flex',
+                                            gap: 8
+                                        }}>
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    onOpenQuestPage?.(questId);
+                                                }}
+                                                style={{
+                                                    flex: 1,
+                                                    padding: '6px 10px',
+                                                    background: 'linear-gradient(180deg, rgba(201,162,39,0.3), rgba(139,115,25,0.2))',
+                                                    border: '1px solid #c9a227',
+                                                    borderRadius: 4,
+                                                    color: '#ffd700',
+                                                    fontSize: 11,
+                                                    cursor: 'pointer',
+                                                    fontFamily: 'inherit'
+                                                }}
+                                            >
+                                                查看详情
+                                            </button>
+
+                                            {currentStep?.dialogues && (
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        // 可以触发对话显示
+                                                        dispatch({
+                                                            type: 'SHOW_QUEST_DIALOGUE',
+                                                            payload: { questId }
+                                                        });
+                                                    }}
+                                                    style={{
+                                                        padding: '6px 10px',
+                                                        background: 'rgba(0,0,0,0.3)',
+                                                        border: '1px solid #4a3c2a',
+                                                        borderRadius: 4,
+                                                        color: '#888',
+                                                        fontSize: 11,
+                                                        cursor: 'pointer',
+                                                        fontFamily: 'inherit'
+                                                    }}
+                                                    title="查看对话"
+                                                >
+                                                    💬
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })}
+                </div>
+            )}
+
+            {/* 底部快捷按钮 */}
+            {!isCollapsed && (
+                <div style={{
+                    padding: 8,
+                    borderTop: '1px solid rgba(201,162,39,0.2)',
+                    flexShrink: 0
+                }}>
+                    <button
+                        onClick={() => onOpenQuestPage?.()}
+                        style={{
+                            width: '100%',
+                            padding: '8px 12px',
+                            background: 'rgba(0,0,0,0.3)',
+                            border: '1px solid #4a3c2a',
+                            borderRadius: 6,
+                            color: '#c9a227',
+                            fontSize: 12,
+                            cursor: 'pointer',
+                            fontFamily: 'inherit',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: 6
+                        }}
+                    >
+                        <span>📋</span>
+                        打开任务列表
+                    </button>
+                </div>
+            )}
+        </div>
+    );
+};
+
+// ==================== 任务提示Toast组件 ====================
+const QuestToast = ({ message, type, onClose }) => {
+    useEffect(() => {
+        const timer = setTimeout(onClose, 3000);
+        return () => clearTimeout(timer);
+    }, [onClose]);
+
+    const colors = {
+        progress: { bg: 'rgba(255,152,0,0.9)', border: '#ff9800', icon: '📝' },
+        complete: { bg: 'rgba(76,175,80,0.9)', border: '#4CAF50', icon: '✅' },
+        reward: { bg: 'rgba(156,39,176,0.9)', border: '#9C27B0', icon: '🎁' },
+        unlock: { bg: 'rgba(33,150,243,0.9)', border: '#2196F3', icon: '🔓' }
+    };
+
+    const style = colors[type] || colors.progress;
+
+    return (
+        <div style={{
+            position: 'fixed',
+            top: 80,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            padding: '12px 24px',
+            background: style.bg,
+            border: `2px solid ${style.border}`,
+            borderRadius: 8,
+            color: '#fff',
+            fontSize: 14,
+            fontWeight: 600,
+            boxShadow: '0 4px 20px rgba(0,0,0,0.4)',
+            zIndex: 2000,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+            animation: 'slideDown 0.3s ease'
+        }}>
+            <span style={{ fontSize: 20 }}>{style.icon}</span>
+            {message}
+        </div>
+    );
+};
+
+// ==================== 任务目标悬浮指示器 ====================
+const QuestObjectiveIndicator = ({ zone, requirement, progress }) => {
+    if (!requirement || requirement.zoneId !== zone.id) return null;
+
+    const current = progress || 0;
+    const target = requirement.count;
+    const percent = Math.min(100, (current / target) * 100);
+
+    return (
+        <div style={{
+            position: 'absolute',
+            top: -8,
+            right: -8,
+            background: current >= target
+                ? 'linear-gradient(135deg, #4CAF50, #81c784)'
+                : 'linear-gradient(135deg, #ff9800, #ffc107)',
+            borderRadius: '50%',
+            width: 28,
+            height: 28,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            border: '2px solid #1a1510',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
+            animation: current >= target ? 'none' : 'pulse 2s infinite'
+        }}>
+            <span style={{ fontSize: 14 }}>
+                {current >= target ? '✓' : '📜'}
+            </span>
+        </div>
+    );
+};
+
 // ==================== MAIN APP ====================
 export default function WoWIdleGame() {
     const [state, dispatch] = useReducer(gameReducer, initialState);
@@ -15217,6 +15880,29 @@ export default function WoWIdleGame() {
 
     const lastTickRef = useRef(Date.now());
     const hiddenAtRef = useRef(null);
+    // 状态
+    const [questToasts, setQuestToasts] = useState([]);
+
+    // 添加toast的函数
+    const addQuestToast = useCallback((message, type = 'progress') => {
+        const id = Date.now();
+        setQuestToasts(prev => [...prev, { id, message, type }]);
+    }, []);
+
+    // 移除toast
+    const removeQuestToast = useCallback((id) => {
+        setQuestToasts(prev => prev.filter(t => t.id !== id));
+    }, []);
+
+    // 打开任务页面的函数
+    const handleOpenQuestPage = useCallback((questId) => {
+        dispatch({ type: 'SET_MENU', payload: 'quest' });
+        if (questId) {
+            // 可以设置选中的任务
+            dispatch({ type: 'SELECT_QUEST', payload: questId });
+        }
+    }, [dispatch]);
+
 
     // 按 ` 键开关控制台
     useEffect(() => {
@@ -15316,6 +16002,9 @@ export default function WoWIdleGame() {
         }
         return () => clearInterval(intervalRef.current);
     }, [isPaused]);
+
+
+
 
     const executeCommand = (cmd) => {
         const trimmed = cmd.trim();
@@ -15636,6 +16325,23 @@ export default function WoWIdleGame() {
                 {renderPage()}
             </div>
 
+            {/* 任务追踪悬浮UI */}
+            <QuestTracker
+                state={state}
+                dispatch={dispatch}
+                onOpenQuestPage={handleOpenQuestPage}
+            />
+
+            {/* 任务提示Toasts */}
+            {questToasts.map(toast => (
+                <QuestToast
+                    key={toast.id}
+                    message={toast.message}
+                    type={toast.type}
+                    onClose={() => removeQuestToast(toast.id)}
+                />
+            ))}
+
             {/* 开发者控制台 */}
             {consoleOpen && (
                 <div style={{
@@ -15688,3 +16394,629 @@ export default function WoWIdleGame() {
         </div>
     );
 }
+
+// ==================== CSS动画（添加到style标签中） ====================
+const questAnimationStyles = `
+    @keyframes slideDown {
+        from {
+            opacity: 0;
+            transform: translateX(-50%) translateY(-20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+    }
+    
+    @keyframes pulse {
+        0%, 100% {
+            transform: scale(1);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+        }
+        50% {
+            transform: scale(1.1);
+            box-shadow: 0 2px 16px rgba(255,152,0,0.6);
+        }
+    }
+    
+    @keyframes glow {
+        0%, 100% {
+            box-shadow: 0 0 5px rgba(201,162,39,0.3);
+        }
+        50% {
+            box-shadow: 0 0 20px rgba(201,162,39,0.6);
+        }
+    }
+`;
+
+// ==================== 增强版任务追踪（带地图标记） ====================
+const EnhancedQuestTracker = ({ state, dispatch, onOpenQuestPage }) => {
+    const [isCollapsed, setIsCollapsed] = useState(false);
+    const [expandedQuests, setExpandedQuests] = useState(new Set());
+    const [isMinimized, setIsMinimized] = useState(false);
+    const [showHints, setShowHints] = useState(true);
+
+    // 获取所有进行中的任务
+    const activeQuests = Object.entries(state.questProgress || {})
+        .filter(([_, progress]) => progress.status === 'in_progress')
+        .map(([questId, progress]) => ({
+            questId,
+            progress,
+            questData: QUEST_CHAINS[questId]
+        }))
+        .filter(q => q.questData);
+
+    // 获取当前步骤需要去的地点
+    const getQuestLocations = () => {
+        const locations = [];
+
+        activeQuests.forEach(({ questId, progress, questData }) => {
+            const currentStep = questData.steps[progress.currentStep];
+            if (!currentStep?.requirement) return;
+
+            const req = currentStep.requirement;
+
+            if (req.type === 'zone_battles' && req.zoneId) {
+                locations.push({
+                    questId,
+                    questName: questData.name,
+                    stepTitle: currentStep.title,
+                    zoneId: req.zoneId,
+                    zoneName: ZONES[req.zoneId]?.name,
+                    type: 'battle',
+                    current: state.questBattleProgress?.[req.zoneId] || 0,
+                    target: req.count
+                });
+            }
+
+            if (req.type === 'boss_defeated' && req.bossId) {
+                locations.push({
+                    questId,
+                    questName: questData.name,
+                    stepTitle: currentStep.title,
+                    bossId: req.bossId,
+                    bossName: BOSS_DATA[req.bossId]?.name,
+                    type: 'boss',
+                    completed: state.defeatedBosses?.includes(req.bossId)
+                });
+            }
+        });
+
+        return locations;
+    };
+
+    const questLocations = getQuestLocations();
+
+    // 检查步骤条件进度
+    const getRequirementProgress = (requirement) => {
+        if (!requirement) return { met: true, current: 0, target: 0, text: '' };
+
+        switch (requirement.type) {
+            case 'zone_battles': {
+                const zone = ZONES[requirement.zoneId];
+                const zoneName = zone?.name || requirement.zoneId;
+                const current = state.questBattleProgress?.[requirement.zoneId] || 0;
+                const target = requirement.count;
+                return {
+                    met: current >= target,
+                    current,
+                    target,
+                    text: `在${zoneName}战斗`,
+                    icon: '⚔️',
+                    hint: `前往地图 > ${zoneName}派遣角色战斗`
+                };
+            }
+            case 'character_level': {
+                const maxLevel = Math.max(...state.characters.map(c => c.level), 0);
+                return {
+                    met: maxLevel >= requirement.level,
+                    current: maxLevel,
+                    target: requirement.level,
+                    text: `角色等级达到`,
+                    icon: '⭐',
+                    hint: '通过战斗获得经验升级'
+                };
+            }
+            case 'boss_defeated': {
+                const bossName = BOSS_DATA[requirement.bossId]?.name || requirement.bossId;
+                const defeated = state.defeatedBosses?.includes(requirement.bossId);
+                return {
+                    met: defeated,
+                    current: defeated ? 1 : 0,
+                    target: 1,
+                    text: `击败${bossName}`,
+                    icon: '🐲',
+                    hint: `前往世界首领挑战${bossName}`
+                };
+            }
+            case 'have_gold': {
+                return {
+                    met: state.resources.gold >= requirement.amount,
+                    current: Math.floor(state.resources.gold),
+                    target: requirement.amount,
+                    text: `准备金币`,
+                    icon: '🪙',
+                    hint: '通过战斗和出售物品获得金币'
+                };
+            }
+            case 'have_item': {
+                const hasItem = state.inventory.some(i => i.id === requirement.itemId) ||
+                    state.questItems?.some(i => i.id === requirement.itemId);
+                const itemName = QUEST_ITEMS[requirement.itemId]?.name ||
+                    ITEMS[requirement.itemId]?.name ||
+                    requirement.itemId;
+                return {
+                    met: hasItem,
+                    current: hasItem ? 1 : 0,
+                    target: 1,
+                    text: `获得${itemName}`,
+                    icon: '📦',
+                    hint: '通过探索或战斗获得物品'
+                };
+            }
+            default:
+                return { met: true, current: 0, target: 0, text: '', hint: '' };
+        }
+    };
+
+    // 切换任务展开状态
+    const toggleQuestExpand = (questId) => {
+        setExpandedQuests(prev => {
+            const next = new Set(prev);
+            if (next.has(questId)) {
+                next.delete(questId);
+            } else {
+                next.add(questId);
+            }
+            return next;
+        });
+    };
+
+    // 快速导航到目标位置
+    const navigateToLocation = (location) => {
+        if (location.type === 'battle' && location.zoneId) {
+            dispatch({ type: 'SET_MENU', payload: 'map' });
+        } else if (location.type === 'boss') {
+            dispatch({ type: 'SET_MENU', payload: 'worldboss' });
+        }
+    };
+
+    // 如果没有进行中的任务
+    if (activeQuests.length === 0) {
+        return (
+            <div style={{
+                position: 'fixed',
+                top: 100,
+                right: 16,
+                width: 280,
+                background: 'linear-gradient(135deg, rgba(30,25,20,0.95) 0%, rgba(20,15,12,0.98) 100%)',
+                border: '2px solid #4a3c2a',
+                borderRadius: 10,
+                padding: 12,
+                boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
+                zIndex: 100
+            }}>
+                <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between'
+                }}>
+                    <div style={{
+                        fontSize: 13,
+                        color: '#c9a227',
+                        fontWeight: 600,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 8
+                    }}>
+                        <span>📜</span>
+                        任务追踪
+                    </div>
+                </div>
+                <div style={{
+                    marginTop: 12,
+                    textAlign: 'center',
+                    color: '#666',
+                    fontSize: 12,
+                    padding: '16px 0'
+                }}>
+                    <div style={{ fontSize: 24, marginBottom: 8 }}>📭</div>
+                    暂无进行中的任务
+                    <button
+                        onClick={() => onOpenQuestPage?.()}
+                        style={{
+                            display: 'block',
+                            width: '100%',
+                            marginTop: 12,
+                            padding: '8px 12px',
+                            background: 'rgba(201,162,39,0.2)',
+                            border: '1px solid #c9a227',
+                            borderRadius: 6,
+                            color: '#c9a227',
+                            fontSize: 11,
+                            cursor: 'pointer',
+                            fontFamily: 'inherit'
+                        }}
+                    >
+                        查看可用任务
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
+    // 最小化模式
+    if (isMinimized) {
+        return (
+            <div
+                onClick={() => setIsMinimized(false)}
+                style={{
+                    position: 'fixed',
+                    top: 100,
+                    right: 16,
+                    width: 50,
+                    height: 50,
+                    background: 'linear-gradient(135deg, rgba(201,162,39,0.3), rgba(139,115,25,0.2))',
+                    border: '2px solid #c9a227',
+                    borderRadius: '50%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    boxShadow: '0 4px 20px rgba(201,162,39,0.3)',
+                    zIndex: 100,
+                    animation: 'glow 2s infinite'
+                }}
+                title="展开任务追踪"
+            >
+                <div style={{ position: 'relative' }}>
+                    <span style={{ fontSize: 24 }}>📜</span>
+                    <div style={{
+                        position: 'absolute',
+                        top: -8,
+                        right: -8,
+                        background: '#f44336',
+                        color: '#fff',
+                        fontSize: 10,
+                        fontWeight: 700,
+                        width: 18,
+                        height: 18,
+                        borderRadius: '50%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        border: '2px solid #1a1510'
+                    }}>
+                        {activeQuests.length}
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div style={{
+            position: 'fixed',
+            top: 100,
+            right: 16,
+            width: isCollapsed ? 50 : 320,
+            maxHeight: 'calc(100vh - 140px)',
+            background: 'linear-gradient(135deg, rgba(30,25,20,0.97) 0%, rgba(20,15,12,0.99) 100%)',
+            border: '2px solid #c9a227',
+            borderRadius: 10,
+            overflow: 'hidden',
+            boxShadow: '0 4px 24px rgba(0,0,0,0.6), 0 0 20px rgba(201,162,39,0.15)',
+            zIndex: 100,
+            transition: 'width 0.3s ease',
+            display: 'flex',
+            flexDirection: 'column'
+        }}>
+            {/* 标题栏 */}
+            <div style={{
+                padding: '10px 12px',
+                background: 'linear-gradient(180deg, rgba(201,162,39,0.15) 0%, transparent 100%)',
+                borderBottom: '1px solid rgba(201,162,39,0.3)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexShrink: 0
+            }}>
+                {!isCollapsed && (
+                    <div style={{
+                        fontSize: 14,
+                        color: '#ffd700',
+                        fontWeight: 600,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 8
+                    }}>
+                        <span>📜</span>
+                        任务追踪
+                        <span style={{
+                            fontSize: 11,
+                            color: '#888',
+                            fontWeight: 400
+                        }}>
+                            ({activeQuests.length})
+                        </span>
+                    </div>
+                )}
+
+                <div style={{ display: 'flex', gap: 4 }}>
+                    {!isCollapsed && (
+                        <>
+                            <button
+                                onClick={() => setShowHints(!showHints)}
+                                style={{
+                                    background: showHints ? 'rgba(201,162,39,0.2)' : 'transparent',
+                                    border: showHints ? '1px solid #c9a227' : 'none',
+                                    color: showHints ? '#c9a227' : '#666',
+                                    fontSize: 12,
+                                    cursor: 'pointer',
+                                    padding: '2px 6px',
+                                    borderRadius: 4
+                                }}
+                                title={showHints ? '隐藏提示' : '显示提示'}
+                            >
+                                💡
+                            </button>
+                            <button
+                                onClick={() => setIsMinimized(true)}
+                                style={{
+                                    background: 'transparent',
+                                    border: 'none',
+                                    color: '#888',
+                                    fontSize: 14,
+                                    cursor: 'pointer',
+                                    padding: '2px 6px',
+                                    borderRadius: 4
+                                }}
+                                title="最小化"
+                            >
+                                ─
+                            </button>
+                        </>
+                    )}
+                    <button
+                        onClick={() => setIsCollapsed(!isCollapsed)}
+                        style={{
+                            background: 'transparent',
+                            border: 'none',
+                            color: '#c9a227',
+                            fontSize: 16,
+                            cursor: 'pointer',
+                            padding: '2px 6px',
+                            borderRadius: 4
+                        }}
+                        title={isCollapsed ? '展开' : '折叠'}
+                    >
+                        {isCollapsed ? '◀' : '▶'}
+                    </button>
+                </div>
+            </div>
+
+            {/* 任务列表 */}
+            {!isCollapsed && (
+                <div style={{
+                    flex: 1,
+                    overflowY: 'auto',
+                    padding: 8
+                }}>
+                    {activeQuests.map(({ questId, progress, questData }) => {
+                        const currentStep = questData.steps[progress.currentStep];
+                        const isExpanded = expandedQuests.has(questId);
+                        const requirement = currentStep?.requirement;
+                        const reqProgress = getRequirementProgress(requirement);
+
+                        return (
+                            <div
+                                key={questId}
+                                style={{
+                                    background: 'rgba(0,0,0,0.3)',
+                                    borderRadius: 8,
+                                    marginBottom: 8,
+                                    border: '1px solid rgba(201,162,39,0.2)',
+                                    overflow: 'hidden'
+                                }}
+                            >
+                                {/* 任务标题 */}
+                                <div
+                                    onClick={() => toggleQuestExpand(questId)}
+                                    style={{
+                                        padding: '10px 12px',
+                                        cursor: 'pointer',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: 10,
+                                        background: isExpanded ? 'rgba(201,162,39,0.1)' : 'transparent'
+                                    }}
+                                >
+                                    <span style={{ fontSize: 20 }}>{questData.icon}</span>
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                        <div style={{
+                                            fontSize: 12,
+                                            color: '#ffd700',
+                                            fontWeight: 600,
+                                            whiteSpace: 'nowrap',
+                                            overflow: 'hidden',
+                                            textOverflow: 'ellipsis'
+                                        }}>
+                                            {questData.name}
+                                        </div>
+                                        <div style={{
+                                            fontSize: 10,
+                                            color: '#888',
+                                            marginTop: 2
+                                        }}>
+                                            {currentStep?.title}
+                                        </div>
+                                    </div>
+
+                                    {/* 快速状态指示 */}
+                                    {requirement && (
+                                        <div style={{
+                                            width: 24,
+                                            height: 24,
+                                            borderRadius: '50%',
+                                            background: reqProgress.met
+                                                ? 'rgba(76,175,80,0.3)'
+                                                : 'rgba(255,152,0,0.3)',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            fontSize: 12
+                                        }}>
+                                            {reqProgress.met ? '✓' : reqProgress.icon}
+                                        </div>
+                                    )}
+
+                                    <span style={{
+                                        color: '#666',
+                                        fontSize: 12,
+                                        transform: isExpanded ? 'rotate(90deg)' : 'rotate(0)',
+                                        transition: 'transform 0.2s'
+                                    }}>
+                                        ▶
+                                    </span>
+                                </div>
+
+                                {/* 展开内容 */}
+                                {isExpanded && (
+                                    <div style={{
+                                        padding: '0 12px 12px',
+                                        borderTop: '1px solid rgba(201,162,39,0.1)'
+                                    }}>
+                                        {/* 当前目标 */}
+                                        {requirement && (
+                                            <div style={{
+                                                marginTop: 10,
+                                                padding: 10,
+                                                background: reqProgress.met
+                                                    ? 'rgba(76,175,80,0.15)'
+                                                    : 'rgba(255,152,0,0.1)',
+                                                borderRadius: 6,
+                                                border: `1px solid ${reqProgress.met
+                                                    ? 'rgba(76,175,80,0.3)'
+                                                    : 'rgba(255,152,0,0.3)'}`
+                                            }}>
+                                                <div style={{
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: 8,
+                                                    marginBottom: 6
+                                                }}>
+                                                    <span style={{ fontSize: 14 }}>{reqProgress.icon}</span>
+                                                    <span style={{
+                                                        fontSize: 11,
+                                                        color: reqProgress.met ? '#4CAF50' : '#ff9800',
+                                                        fontWeight: 600,
+                                                        flex: 1
+                                                    }}>
+                                                        {reqProgress.text}
+                                                    </span>
+                                                    <span style={{
+                                                        fontSize: 10,
+                                                        color: reqProgress.met ? '#4CAF50' : '#ff9800'
+                                                    }}>
+                                                        {reqProgress.current}/{reqProgress.target}
+                                                    </span>
+                                                </div>
+
+                                                {/* 进度条 */}
+                                                <div style={{
+                                                    height: 4,
+                                                    background: 'rgba(0,0,0,0.4)',
+                                                    borderRadius: 2,
+                                                    overflow: 'hidden'
+                                                }}>
+                                                    <div style={{
+                                                        height: '100%',
+                                                        width: `${Math.min(100, (reqProgress.current / reqProgress.target) * 100)}%`,
+                                                        background: reqProgress.met
+                                                            ? '#4CAF50'
+                                                            : 'linear-gradient(90deg, #ff9800, #ffc107)',
+                                                        borderRadius: 2,
+                                                        transition: 'width 0.3s'
+                                                    }} />
+                                                </div>
+
+                                                {/* 提示 */}
+                                                {showHints && !reqProgress.met && reqProgress.hint && (
+                                                    <div style={{
+                                                        marginTop: 8,
+                                                        fontSize: 10,
+                                                        color: '#888',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        gap: 4
+                                                    }}>
+                                                        <span>💡</span>
+                                                        {reqProgress.hint}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+
+                                        {/* 快速导航按钮 */}
+                                        {questLocations.filter(l => l.questId === questId).map((location, idx) => (
+                                            <button
+                                                key={idx}
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    navigateToLocation(location);
+                                                }}
+                                                style={{
+                                                    width: '100%',
+                                                    marginTop: 8,
+                                                    padding: '8px 10px',
+                                                    background: 'linear-gradient(135deg, rgba(33,150,243,0.2), rgba(21,101,192,0.15))',
+                                                    border: '1px solid rgba(33,150,243,0.4)',
+                                                    borderRadius: 6,
+                                                    color: '#64b5f6',
+                                                    fontSize: 11,
+                                                    cursor: 'pointer',
+                                                    fontFamily: 'inherit',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    gap: 6
+                                                }}
+                                            >
+                                                <span>🧭</span>
+                                                前往 {location.zoneName || location.bossName}
+                                            </button>
+                                        ))}
+
+                                        {/* 查看详情按钮 */}
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                onOpenQuestPage?.(questId);
+                                            }}
+                                            style={{
+                                                width: '100%',
+                                                marginTop: 8,
+                                                padding: '8px 10px',
+                                                background: 'rgba(0,0,0,0.3)',
+                                                border: '1px solid #4a3c2a',
+                                                borderRadius: 6,
+                                                color: '#c9a227',
+                                                fontSize: 11,
+                                                cursor: 'pointer',
+                                                fontFamily: 'inherit'
+                                            }}
+                                        >
+                                            📖 查看任务详情
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })}
+                </div>
+            )}
+        </div>
+    );
+};
+
+export { QuestTracker, EnhancedQuestTracker, QuestToast, QuestObjectiveIndicator, questAnimationStyles };

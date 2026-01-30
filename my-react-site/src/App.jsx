@@ -3537,7 +3537,7 @@ const BOSS_DATA = {
             gold: 5000,
             exp: 5500,
             items: [
-                { id: 'REBIRTH_INVITATION' }
+                { id: 'REBIRTH_INVITATION' },
                 { id: 'EQ_HOGGER_001' },  // 新增：霍格的毛皮披风
                 { id: 'EQ_HOGGER_002' },  // 新增：霍格的獠牙头盔
                 { id: 'EQ_HOGGER_003' }   // 新增：霍格的兽皮胸甲

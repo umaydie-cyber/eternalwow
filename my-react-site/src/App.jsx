@@ -9669,12 +9669,11 @@ const CharacterPage = ({ state, dispatch }) => {
 const InventoryPage = ({ state, dispatch }) => {
     const [selectedItem, setSelectedItem] = useState(null);
     const [draggedItemId, setDraggedItemId] = useState(null);
-    const [draggedIndex, setDraggedIndex] = useState(null);  // ✅ 新增：记录拖动的索引
+    const [draggedIndex, setDraggedIndex] = useState(null);
 
     const mechanicalArmCount = state.functionalBuildings?.mechanical_arm ?? 0;
     const autoMergeSlots = Math.min(10, mechanicalArmCount);
 
-    // ✅ 新增：处理拖放到空栏位
     const handleDropToEmpty = (e, targetIndex) => {
         e.preventDefault();
 
@@ -9691,7 +9690,19 @@ const InventoryPage = ({ state, dispatch }) => {
 
     return (
         <div>
-            {/* ... selectedItem 模态框代码不变 ... */}
+            {/* ✅ 装备详情模态框 - 确保这部分存在 */}
+            {selectedItem && selectedItem.type === 'equipment' && (
+                <ItemDetailsModal
+                    item={selectedItem}
+                    onClose={() => setSelectedItem(null)}
+                    onEquip={(charId, itemInstanceId) => {
+                        dispatch({ type: 'EQUIP_ITEM', payload: { characterId: charId, itemInstanceId } });
+                    }}
+                    characters={state.characters}
+                    state={state}
+                    dispatch={dispatch}
+                />
+            )}
 
             <Panel
                 title={`道具栏 (${state.inventory.length}/${state.inventorySize})`}
@@ -9729,7 +9740,6 @@ const InventoryPage = ({ state, dispatch }) => {
                     gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))',
                     gap: 8
                 }}>
-                    {/* ✅ 修改：物品格子 */}
                     {state.inventory.map((item, index) => (
                         <div
                             key={item.instanceId || item.id}
@@ -9738,7 +9748,7 @@ const InventoryPage = ({ state, dispatch }) => {
                                 if (item.type !== 'equipment') return;
                                 if (!item.instanceId) return;
                                 setDraggedItemId(item.instanceId);
-                                setDraggedIndex(index);  // ✅ 记录索引
+                                setDraggedIndex(index);
                                 e.dataTransfer.effectAllowed = 'move';
                             }}
                             onDragOver={(e) => {
@@ -9751,7 +9761,6 @@ const InventoryPage = ({ state, dispatch }) => {
                                 const fromInstanceId = draggedItemId;
                                 const toInstanceId = item.instanceId;
 
-                                // ✅ 如果拖到自己身上，不处理
                                 if (!fromInstanceId || fromInstanceId === toInstanceId) {
                                     setDraggedItemId(null);
                                     setDraggedIndex(null);
@@ -9761,7 +9770,6 @@ const InventoryPage = ({ state, dispatch }) => {
                                 const fromItem = state.inventory.find(i => i.instanceId === fromInstanceId);
                                 const toItem = item;
 
-                                // ✅ 如果目标不是装备，执行移动操作
                                 if (!toItem || toItem.type !== 'equipment') {
                                     if (draggedIndex !== null) {
                                         dispatch({
@@ -9774,14 +9782,12 @@ const InventoryPage = ({ state, dispatch }) => {
                                     return;
                                 }
 
-                                // ✅ 如果是同款装备，合成
                                 if (fromItem && fromItem.type === 'equipment' && fromItem.id === toItem.id) {
                                     dispatch({
                                         type: 'MERGE_EQUIPMENT',
                                         payload: { instanceIdA: fromInstanceId, instanceIdB: toInstanceId }
                                     });
                                 } else if (draggedIndex !== null) {
-                                    // ✅ 不同装备，交换位置
                                     dispatch({
                                         type: 'MOVE_INVENTORY_ITEM',
                                         payload: { fromIndex: draggedIndex, toIndex: index }
@@ -9796,18 +9802,23 @@ const InventoryPage = ({ state, dispatch }) => {
                                 setDraggedIndex(null);
                             }}
                             onClick={(e) => {
+                                // ✅ 消耗品使用
                                 if (item.type === 'consumable' && item.canUse) {
                                     dispatch({ type: 'USE_ITEM', payload: { itemInstanceId: item.instanceId || item.id } });
                                     return;
                                 }
 
+                                // ✅ 非装备不处理
                                 if (item.type !== 'equipment') return;
 
+                                // ✅ Shift+点击：链式合成
                                 if (e.shiftKey && item.instanceId) {
                                     e.preventDefault();
                                     dispatch({ type: 'MERGE_EQUIPMENT_CHAIN', payload: { targetInstanceId: item.instanceId } });
                                     return;
                                 }
+
+                                // ✅ 普通点击：打开详情模态框
                                 setSelectedItem(item);
                             }}
                             onContextMenu={(e) => {
@@ -9851,7 +9862,6 @@ const InventoryPage = ({ state, dispatch }) => {
                                 }
                             }}
                         >
-                            {/* 物品内容渲染... 保持不变 */}
                             <div style={{ fontSize: 28, marginBottom: 8 }}>
                                 <ItemIcon item={item} size={32} />
                             </div>
@@ -9912,7 +9922,7 @@ const InventoryPage = ({ state, dispatch }) => {
                         </div>
                     ))}
 
-                    {/* ✅ 修改：空栏位可以接收拖放 */}
+                    {/* 空栏位 - 支持拖放 */}
                     {Array.from({ length: Math.max(0, state.inventorySize - state.inventory.length) }).map((_, i) => {
                         const targetIndex = state.inventory.length + i;
                         return (

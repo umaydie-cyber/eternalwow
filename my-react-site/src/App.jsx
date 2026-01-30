@@ -3108,6 +3108,72 @@ const FIXED_EQUIPMENTS = {
 
         }
     },
+    EQ_HOGGER_001: {
+        id: 'EQ_HOGGER_001',
+        name: '霍格的毛皮披风',
+        icon: 'icons/wow/vanilla/armor/INV_Misc_Cape_10.png',
+        type: 'equipment',
+        slot: 'cloak',
+        rarity: 'blue',
+        setId: 'hogger_gather_set',
+        setName: '霍格的战利品',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            hp: 100,
+            armor: 20,
+            proficiency: 5  // 采集熟练
+        },
+        growth: {
+            hp: 2,
+            armor: 2,
+            proficiency: 2
+        }
+    },
+    EQ_HOGGER_002: {
+        id: 'EQ_HOGGER_002',
+        name: '霍格的獠牙头盔',
+        icon: 'icons/wow/vanilla/armor/INV_Helmet_03.png',
+        type: 'equipment',
+        slot: 'head',
+        rarity: 'blue',
+        setId: 'hogger_gather_set',
+        setName: '霍格的战利品',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            hp: 150,
+            armor: 30,
+            precision: 5  // 采集精细
+        },
+        growth: {
+            hp: 2,
+            armor: 2,
+            precision: 2
+        }
+    },
+    EQ_HOGGER_003: {
+        id: 'EQ_HOGGER_003',
+        name: '霍格的兽皮胸甲',
+        icon: 'icons/wow/vanilla/armor/INV_Chest_Leather_01.png',
+        type: 'equipment',
+        slot: 'chest',
+        rarity: 'blue',
+        setId: 'hogger_gather_set',
+        setName: '霍格的战利品',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            hp: 200,
+            armor: 40,
+            perception: 5  // 采集感知
+        },
+        growth: {
+            hp: 2,
+            armor: 2,
+            perception: 2
+        }
+    },
 };
 
 //赤脊山5件图鉴100级点亮效果
@@ -3197,6 +3263,7 @@ const getRarityColor = (rarity) => {
 };
 
 // ==================== 计算角色采集属性 ====================
+// ==================== 计算角色采集属性（含装备加成） ====================
 function calculateGatherStats(character) {
     const classData = CLASSES[character.classId];
     const baseGather = classData.baseGatherStats || { proficiency: 5, precision: 5, perception: 5 };
@@ -3204,10 +3271,23 @@ function calculateGatherStats(character) {
     // 基础值 + 等级加成
     const levelBonus = Math.floor(character.level / 5);
 
+    // 装备加成
+    let equipProficiency = 0;
+    let equipPrecision = 0;
+    let equipPerception = 0;
+
+    Object.values(character.equipment || {}).forEach(item => {
+        if (item && item.stats) {
+            equipProficiency += item.stats.proficiency || 0;
+            equipPrecision += item.stats.precision || 0;
+            equipPerception += item.stats.perception || 0;
+        }
+    });
+
     return {
-        proficiency: baseGather.proficiency + levelBonus,
-        precision: baseGather.precision + levelBonus,
-        perception: baseGather.perception + levelBonus,
+        proficiency: baseGather.proficiency + levelBonus + equipProficiency,
+        precision: baseGather.precision + levelBonus + equipPrecision,
+        perception: baseGather.perception + levelBonus + equipPerception,
     };
 }
 
@@ -3233,7 +3313,18 @@ function calculateBuildingProduction(building, workers, gameState) {
             gatherStats.precision * weights.precision +
             gatherStats.perception * weights.perception;
 
-        const efficiency = 1 + weightedStat / 50;
+        let efficiency = 1 + weightedStat / 50;
+
+        // ===== 新增：套装效果 gatherEfficiency =====
+        const setBonuses = getSetBonusesForCharacter(char);
+        for (const set of setBonuses) {
+            for (const tier of set.activated) {
+                if (tier.bonus?.gatherEfficiency) {
+                    efficiency *= (1 + tier.bonus.gatherEfficiency);
+                }
+            }
+        }
+
         const production = buildingData.baseProduction * efficiency;
 
         // 精细属性：有概率获得双倍产出
@@ -3330,7 +3421,6 @@ function SlotIcon({ slot, size = 28 }) {
 
 
 const RESEARCH = {
-    fertility: { id: 'fertility', name: '生育', description: '民居提供的居民人数提升', baseCost: 100, effect: 'population', bonus: 0.1 },
     lumber_mastery: { id: 'lumber_mastery', name: '伐木精通', description: '提升伐木效率', baseCost: 150, effect: 'wood', bonus: 0.15 },
     mining_mastery: { id: 'mining_mastery', name: '采矿精通', description: '提升采矿效率', baseCost: 150, effect: 'ironOre', bonus: 0.15 },
 };
@@ -3418,6 +3508,11 @@ const SET_BONUSES = {
             { count: 3, bonus: { armor: 100, blockValue: 50 } },
             { count: 6, bonus: { hp: 1000, blockRate: 5 } }
         ]
+    },hogger_gather_set: {
+        name: '霍格的战利品',
+        tiers: [
+            { count: 3, bonus: { gatherEfficiency: 0.15 } }  // 3件套额外+15%采集效率
+        ]
     }
 };
 
@@ -3443,6 +3538,9 @@ const BOSS_DATA = {
             exp: 5500,
             items: [
                 { id: 'REBIRTH_INVITATION' }
+                { id: 'EQ_HOGGER_001' },  // 新增：霍格的毛皮披风
+                { id: 'EQ_HOGGER_002' },  // 新增：霍格的獠牙头盔
+                { id: 'EQ_HOGGER_003' }   // 新增：霍格的兽皮胸甲
             ]
         }
     },
@@ -8417,6 +8515,10 @@ const CharacterDetailsModal = ({ characterId, state, onClose, onUnequip, onEditS
         versatility: '全能',
         blockRate: '格挡率',
         blockValue: '格挡值',
+        // 新增采集属性
+        proficiency: '熟练',
+        precision: '精细',
+        perception: '感知',
     };
 
     const setBonuses = getSetBonusesForCharacter(character);
@@ -8642,6 +8744,9 @@ const ItemDetailsModal = ({ item, onClose, onEquip, characters, state , dispatch
         blockRate: '格挡率',
         blockValue: '格挡值',
         expBonus: '经验值增幅',
+        proficiency: '熟练',
+        precision: '精细',
+        perception: '感知',
     };
 
     return (

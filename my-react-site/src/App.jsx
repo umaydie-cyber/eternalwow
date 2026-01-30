@@ -5410,7 +5410,7 @@ const initialState = {
     lifeFrame: 0,  // 本世帧
     characters: [],
     characterSlots: 1,
-    maxCharacterSlots: 10,
+    maxCharacterSlots: 15,
     resources: {
         gold: 500,
         wood: 200,

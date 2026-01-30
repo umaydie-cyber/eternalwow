@@ -6323,11 +6323,26 @@ function gameReducer(state, action) {
                     const isRegenPeriodOver = (now - lastCombatTime >= REGEN_DELAY_MS);
                     const isFullHp = curHp >= maxHp;
 
+                    // ✅ 添加调试日志
+                    console.log('【战斗检查】', {
+                        charName: char.name,
+                        now,
+                        lastCombatTime,
+                        timeSinceCombat: now - lastCombatTime,
+                        REGEN_DELAY_MS,
+                        isRegenPeriodOver,
+                        curHp,
+                        maxHp,
+                        isFullHp,
+                        willStartCombat: isRegenPeriodOver || isFullHp
+                    });
+
                     // 只有回血期结束或血量已满，才开始新战斗
                     if (isRegenPeriodOver || isFullHp) {
                         const enemy = zone.enemies[Math.floor(Math.random() * zone.enemies.length)];
                         char.combatState = createCombatState(char, enemy, char.skillSlots || []);
                         char.lastCombatTime = now; // 进入战斗
+                        console.log('【开始新战斗】', char.name);
                     }
                 }
 

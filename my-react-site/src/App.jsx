@@ -6821,11 +6821,23 @@ function gameReducer(state, action) {
             // 后台战斗（拆分成多 tick 推进，实时更新血量）
             const COMBAT_START_INTERVAL_FRAMES = 10; // 与旧逻辑保持节奏：每10帧“开一场”
             const COMBAT_ROUNDS_PER_TICK = 2; // 每秒推进2回合：最多20回合 => 最长约10秒
+            const PULL_INTERVAL_MS = 1000; // 每 1 秒尝试拉怪
 
             Object.entries(newState.assignments).forEach(([charId, zoneId]) => {
                 const zone = newState.zones[zoneId];
                 const charIndex = newState.characters.findIndex(c => c.id === charId);
+
+                console.log("【派遣循环】", {
+                    charId, zoneId,
+                    hasZone: !!zone,
+                    enemiesLen: zone?.enemies?.length,
+                    charIndex,
+                    frame: newState.frame,
+                    frameType: typeof newState.frame,
+                });
+
                 if (charIndex === -1) return;
+
 
                 let char = { ...newState.characters[charIndex] };
 
@@ -6833,8 +6845,11 @@ function gameReducer(state, action) {
 
                 const now = Date.now();
 
+                // 关键：每个角色一个“上次拉怪检查时间”
+                const lastPullTry = char.lastPullTry || 0;
                 // ✅ 修复：只有"到点"且脱战回血完成（或血量已满）才会拉怪开始新战斗
-                if (!char.combatState && newState.frame % COMBAT_START_INTERVAL_FRAMES === 0) {
+                if (!char.combatState && now - lastPullTry >= PULL_INTERVAL_MS) {
+                    char.lastPullTry = now;
                     const lastCombatTime = char.lastCombatTime || 0;
                     const maxHp = char.stats?.maxHp ?? char.stats?.hp ?? 0;
                     const curHp = char.stats?.currentHp ?? maxHp;
@@ -6858,7 +6873,7 @@ function gameReducer(state, action) {
                     });
 
                     // 只有回血期结束或血量已满，才开始新战斗
-                    if (isRegenPeriodOver && isFullHp) {
+                    if (isRegenPeriodOver || isFullHp) {
                         const enemy = zone.enemies[Math.floor(Math.random() * zone.enemies.length)];
                         char.combatState = createCombatState(char, enemy, char.skillSlots || []);
                         char.lastCombatTime = now; // 进入战斗

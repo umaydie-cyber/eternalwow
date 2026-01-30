@@ -5131,6 +5131,8 @@ function stepBossCombat(state) {
                 const shieldResult = applyShieldAbsorb(ps, dmg, logs, currentRound);
                 ps.currentHp -= shieldResult.finalDamage;
 
+                // ✅ 修复：计算 drPct
+                const drPct = Math.round(dr * 100);
                 const shieldText = shieldResult.absorbed > 0 ? `，护盾吸收 ${shieldResult.absorbed}` : '';
                 addLog(`【${boss.minion.name}${i + 1}】炮击 位置${pIdx + 1} ${ps.char.name}，造成 ${shieldResult.finalDamage} 点伤害（护甲减伤${drPct}%${shieldText}）`);
             });

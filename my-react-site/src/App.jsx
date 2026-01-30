@@ -1581,7 +1581,7 @@ const DROP_TABLES = {
         items: [
             {
                 id: 'IT_BLACK_DRAGON_PROOF',
-                chance: 0.001   // 0.1%，作为剧情钥匙，合理但不泛滥
+                chance: 0.01   // 0.1%，作为剧情钥匙，合理但不泛滥
             }
         ]
     },
@@ -3551,6 +3551,17 @@ const ITEMS = {
         type: 'junk',
         rarity: 'white',
         sellPrice: 5000
+    },
+    // ✅ 新增：黑龙化身的证明
+    IT_BLACK_DRAGON_PROOF: {
+        id: 'IT_BLACK_DRAGON_PROOF',
+        name: '黑龙化身的证明',
+        type: 'consumable',
+        rarity: 'purple',
+        canUse: true,
+        sellPrice: 0,  // 不可出售
+        icon: 'icons/wow/vanilla/items/INV_Misc_Head_Dragon_01.png',
+        description: '使用后，揭露真相，解锁隐藏Boss【普瑞斯托女士】'
     }
 
 };

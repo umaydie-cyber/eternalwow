@@ -1142,7 +1142,7 @@ const ZONES = {
             {
                 name: '萨特潜行者',
                 hp: 26000,
-                attack: 3800,
+                attack: 380,
                 defense: 240,
                 exp: 1800,
                 gold: 1600

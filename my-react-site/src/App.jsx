@@ -6334,11 +6334,11 @@ function gameReducer(state, action) {
                         curHp,
                         maxHp,
                         isFullHp,
-                        willStartCombat: isRegenPeriodOver || isFullHp
+                        willStartCombat: isRegenPeriodOver && isFullHp
                     });
 
                     // 只有回血期结束或血量已满，才开始新战斗
-                    if (isRegenPeriodOver || isFullHp) {
+                    if (isRegenPeriodOver && isFullHp) {
                         const enemy = zone.enemies[Math.floor(Math.random() * zone.enemies.length)];
                         char.combatState = createCombatState(char, enemy, char.skillSlots || []);
                         char.lastCombatTime = now; // 进入战斗

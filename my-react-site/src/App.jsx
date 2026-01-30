@@ -15203,7 +15203,6 @@ const RebirthBonusModal = ({ state, onClose }) => {
 };
 
 // ==================== 任务追踪悬浮UI ====================
-
 const QuestTracker = ({ state, dispatch, onOpenQuestPage }) => {
     const [isCollapsed, setIsCollapsed] = useState(false);
     const [expandedQuests, setExpandedQuests] = useState(new Set());
@@ -15225,7 +15224,6 @@ const QuestTracker = ({ state, dispatch, onOpenQuestPage }) => {
 
         switch (requirement.type) {
             case 'zone_battles': {
-                // 实际实现需要追踪战斗次数，这里用简化版
                 const zone = ZONES[requirement.zoneId];
                 const zoneName = zone?.name || requirement.zoneId;
                 const current = state.questBattleProgress?.[requirement.zoneId] || 0;
@@ -15300,7 +15298,59 @@ const QuestTracker = ({ state, dispatch, onOpenQuestPage }) => {
         });
     };
 
-    // 如果没有进行中的任务，显示简化版
+    // ==================== 最小化模式（无论有没有任务都适用） ====================
+    if (isMinimized) {
+        return (
+            <div
+                onClick={() => setIsMinimized(false)}
+                style={{
+                    position: 'fixed',
+                    top: 100,
+                    right: 16,
+                    width: 50,
+                    height: 50,
+                    background: 'linear-gradient(135deg, rgba(201,162,39,0.3), rgba(139,115,25,0.2))',
+                    border: '2px solid #c9a227',
+                    borderRadius: '50%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    boxShadow: '0 4px 20px rgba(201,162,39,0.3)',
+                    zIndex: 100,
+                    transition: 'all 0.3s'
+                }}
+                title="展开任务追踪"
+            >
+                <div style={{ position: 'relative' }}>
+                    <span style={{ fontSize: 24 }}>📜</span>
+                    {/* 任务数量徽章（只有有任务时才显示） */}
+                    {activeQuests.length > 0 && (
+                        <div style={{
+                            position: 'absolute',
+                            top: -8,
+                            right: -8,
+                            background: '#f44336',
+                            color: '#fff',
+                            fontSize: 10,
+                            fontWeight: 700,
+                            width: 18,
+                            height: 18,
+                            borderRadius: '50%',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            border: '2px solid #1a1510'
+                        }}>
+                            {activeQuests.length}
+                        </div>
+                    )}
+                </div>
+            </div>
+        );
+    }
+
+    // ==================== 没有进行中的任务时的显示 ====================
     if (activeQuests.length === 0) {
         return (
             <div style={{
@@ -15332,20 +15382,43 @@ const QuestTracker = ({ state, dispatch, onOpenQuestPage }) => {
                         <span>📜</span>
                         任务追踪
                     </div>
-                    <button
-                        onClick={() => onOpenQuestPage?.()}
-                        style={{
-                            background: 'rgba(201,162,39,0.2)',
-                            border: '1px solid #c9a227',
-                            borderRadius: 4,
-                            color: '#c9a227',
-                            fontSize: 10,
-                            padding: '4px 8px',
-                            cursor: 'pointer'
-                        }}
-                    >
-                        查看任务
-                    </button>
+                    {/* ✅ 修复：添加最小化和查看任务按钮 */}
+                    <div style={{ display: 'flex', gap: 4 }}>
+                        <button
+                            onClick={() => setIsMinimized(true)}
+                            style={{
+                                background: 'rgba(100,100,100,0.3)',
+                                border: '1px solid #666',
+                                color: '#ccc',
+                                fontSize: 12,
+                                cursor: 'pointer',
+                                padding: '4px 8px',
+                                borderRadius: 4,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                minWidth: 24,
+                                minHeight: 24
+                            }}
+                            title="最小化"
+                        >
+                            ➖
+                        </button>
+                        <button
+                            onClick={() => onOpenQuestPage?.()}
+                            style={{
+                                background: 'rgba(201,162,39,0.2)',
+                                border: '1px solid #c9a227',
+                                borderRadius: 4,
+                                color: '#c9a227',
+                                fontSize: 10,
+                                padding: '4px 8px',
+                                cursor: 'pointer'
+                            }}
+                        >
+                            查看任务
+                        </button>
+                    </div>
                 </div>
                 <div style={{
                     marginTop: 12,
@@ -15361,56 +15434,7 @@ const QuestTracker = ({ state, dispatch, onOpenQuestPage }) => {
         );
     }
 
-    // 最小化模式
-    if (isMinimized) {
-        return (
-            <div
-                onClick={() => setIsMinimized(false)}
-                style={{
-                    position: 'fixed',
-                    top: 100,
-                    right: 16,
-                    width: 50,
-                    height: 50,
-                    background: 'linear-gradient(135deg, rgba(201,162,39,0.3), rgba(139,115,25,0.2))',
-                    border: '2px solid #c9a227',
-                    borderRadius: '50%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    cursor: 'pointer',
-                    boxShadow: '0 4px 20px rgba(201,162,39,0.3)',
-                    zIndex: 100,
-                    transition: 'all 0.3s'
-                }}
-                title="展开任务追踪"
-            >
-                <div style={{ position: 'relative' }}>
-                    <span style={{ fontSize: 24 }}>📜</span>
-                    {/* 任务数量徽章 */}
-                    <div style={{
-                        position: 'absolute',
-                        top: -8,
-                        right: -8,
-                        background: '#f44336',
-                        color: '#fff',
-                        fontSize: 10,
-                        fontWeight: 700,
-                        width: 18,
-                        height: 18,
-                        borderRadius: '50%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        border: '2px solid #1a1510'
-                    }}>
-                        {activeQuests.length}
-                    </div>
-                </div>
-            </div>
-        );
-    }
-
+    // ==================== 有任务时的正常显示 ====================
     return (
         <div style={{
             position: 'fixed',
@@ -15731,7 +15755,6 @@ const QuestTracker = ({ state, dispatch, onOpenQuestPage }) => {
                                                 <button
                                                     onClick={(e) => {
                                                         e.stopPropagation();
-                                                        // 可以触发对话显示
                                                         dispatch({
                                                             type: 'SHOW_QUEST_DIALOGUE',
                                                             payload: { questId }

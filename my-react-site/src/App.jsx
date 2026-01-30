@@ -65,6 +65,7 @@ const CLASSES = {
             { level: 30, skillId: 'icy_veins' },
             { level: 40, skillId: 'comet_storm' },
             { level: 50, skillId: 'ice_barrier' },
+            { level: 50, skillId: 'conditional_frost_strike' },
         ]
     }
 };
@@ -1118,7 +1119,32 @@ const SKILLS = {
             };
         }
     },
+    // 在 SKILLS 对象中添加
+    conditional_frost_strike: {
+        id: 'conditional_frost_strike',
+        name: '冰霜打击（智能）',
+        icon: '🧊',
+        iconUrl: 'icons/wow/vanilla/spells/Spell_Frost_IceStorm.png',
+        type: 'conditional',  // 新类型：条件技能
+        limit: 8,
+        description: '有寒冰指时释放冰枪术，否则释放寒冰箭',
 
+        // 条件配置
+        condition: {
+            type: 'has_buff',
+            buffName: 'fingersOfFrost',  // 检查寒冰指层数
+            minStacks: 1
+        },
+        skillIfTrue: 'ice_lance',    // 满足条件用冰枪
+        skillIfFalse: 'frostbolt',   // 不满足用冰箭
+
+        // calculate 会在战斗系统中被替换为实际技能的 calculate
+        calculate: (char, combatContext) => {
+            // 这个函数实际上不会被直接调用
+            // 战斗系统会根据条件选择真正的技能
+            return {};
+        }
+    },
 };
 
 const ZONES = {
@@ -4278,9 +4304,29 @@ function stepBossCombat(state) {
         if (p.currentHp <= 0) continue;
 
         const slotIndex = p.skillIndex % p.validSkills.length;
-        const skillId = p.validSkills[p.skillIndex % p.validSkills.length];
+        let skillId = p.validSkills[p.skillIndex % p.validSkills.length];
         p.skillIndex += 1;
-        const skill = SKILLS[skillId];
+        let skill = SKILLS[skillId];
+
+        // ===== 新增：处理条件技能 =====
+        if (skill && skill.type === 'conditional') {
+            const condition = skill.condition;
+            let conditionMet = false;
+
+            if (condition.type === 'has_buff') {
+                if (condition.buffName === 'fingersOfFrost') {
+                    conditionMet = (p.fingersOfFrost || 0) >= (condition.minStacks || 1);
+                }
+            }
+
+            const actualSkillId = conditionMet ? skill.skillIfTrue : skill.skillIfFalse;
+            skillId = actualSkillId;
+            skill = SKILLS[actualSkillId];
+
+            addLog(`【智能技能】${p.char.name}：${conditionMet ? '有寒冰指→冰枪术' : '无寒冰指→寒冰箭'}`);
+        }
+        // ===== 条件技能处理结束 =====
+
         if (!skill) continue;
 
         // 饰品/装备特效
@@ -5685,9 +5731,38 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1) {
         round++;
 
         // ===== 角色回合 =====
-        const slotIndex = skillIndex % validSkills.length;
-        const currentSkillId = validSkills[skillIndex % validSkills.length];
-        const skill = SKILLS[currentSkillId];
+        let currentSkillId = validSkills[skillIndex % validSkills.length];
+        let skill = SKILLS[currentSkillId];
+
+        // ===== 新增：处理条件技能 =====
+        if (skill && skill.type === 'conditional') {
+            const condition = skill.condition;
+            let conditionMet = false;
+
+            // 检查条件类型
+            if (condition.type === 'has_buff') {
+                // 检查是否有指定buff/层数
+                if (condition.buffName === 'fingersOfFrost') {
+                    conditionMet = (fingersOfFrost || 0) >= (condition.minStacks || 1);
+                }
+                // 可以扩展其他buff检查...
+            }
+
+            // 根据条件选择实际技能
+            const actualSkillId = conditionMet ? skill.skillIfTrue : skill.skillIfFalse;
+            currentSkillId = actualSkillId;
+            skill = SKILLS[actualSkillId];
+
+            // 记录日志
+            logs.push({
+                round,
+                kind: 'proc',
+                actor: character.name,
+                proc: '智能技能',
+                text: `【冰霜打击】判断：${conditionMet ? '有寒冰指→冰枪术' : '无寒冰指→寒冰箭'}`
+            });
+        }
+
         // 饰品/装备特效：技能栏强化（例如：第1格与第4格）
         const slotBuff = getSkillSlotBuffBonus(character, slotIndex);
         const charForCalc = {

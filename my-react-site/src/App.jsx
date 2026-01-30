@@ -15460,21 +15460,27 @@ const QuestTracker = ({ state, dispatch, onOpenQuestPage }) => {
                 )}
 
                 <div style={{ display: 'flex', gap: 4 }}>
+                    // 修改为：
                     {!isCollapsed && (
                         <button
                             onClick={() => setIsMinimized(true)}
                             style={{
-                                background: 'transparent',
-                                border: 'none',
-                                color: '#888',
-                                fontSize: 14,
+                                background: 'rgba(100,100,100,0.3)',
+                                border: '1px solid #666',
+                                color: '#ccc',
+                                fontSize: 12,
                                 cursor: 'pointer',
-                                padding: '2px 6px',
-                                borderRadius: 4
+                                padding: '4px 8px',
+                                borderRadius: 4,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                minWidth: 24,
+                                minHeight: 24
                             }}
                             title="最小化"
                         >
-                            ─
+                            ➖
                         </button>
                     )}
                     <button

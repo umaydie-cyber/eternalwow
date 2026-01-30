@@ -5788,6 +5788,8 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1) {
             });
         }
 
+        const slotIndex = skillIndex % validSkills.length;
+
         // 饰品/装备特效：技能栏强化（例如：第1格与第4格）
         const slotBuff = getSkillSlotBuffBonus(character, slotIndex);
         const charForCalc = {

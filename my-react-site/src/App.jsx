@@ -5327,7 +5327,8 @@ function stepBossCombat(state) {
 
         const finalTakenMult = takenMult * buffTakenMult;
         const demoralizingShoutMult = combat.bossDebuffs?.demoralizingShout?.damageMult ?? 1;
-        dmg = Math.max(1, Math.floor(dmg * finalTakenMult * demoralizingShoutMult));
+        const versTakenMult = getVersatilityDamageTakenMult(playerState?.char?.stats?.versatility);
+        dmg = Math.max(1, Math.floor(dmg * finalTakenMult * demoralizingShoutMult * versTakenMult));
 
         return { damage: dmg, dr, blockedAmount, isHeavy };
     };
@@ -5430,7 +5431,9 @@ function stepBossCombat(state) {
                             if (b.damageTakenMult) buffTakenMult *= b.damageTakenMult;
                         });
                     }
-                    damage = Math.max(1, Math.floor(damage * takenMult * buffTakenMult));
+                    const versTakenMult = getVersatilityDamageTakenMult(target.char?.stats?.versatility);
+
+                    damage = Math.max(1, Math.floor(damage * takenMult * buffTakenMult * versTakenMult));
 
                     // 谍报也要经过护盾
                     const shieldResult = applyShieldAbsorb(target, damage, logs, currentRound);
@@ -5459,7 +5462,9 @@ function stepBossCombat(state) {
                             if (b.damageTakenMult) buffTakenMult *= b.damageTakenMult;
                         });
                     }
-                    damage = Math.max(1, Math.floor(damage * takenMult * buffTakenMult));
+                    const versTakenMult = getVersatilityDamageTakenMult(ps.char?.stats?.versatility);
+
+                    damage = Math.max(1, Math.floor(damage * takenMult * buffTakenMult * versTakenMult));
 
                     // 谍报也要经过护盾
                     const shieldResult = applyShieldAbsorb(ps, damage, logs, currentRound);
@@ -5740,7 +5745,9 @@ function stepBossCombat(state) {
                         if (b.damageTakenMult) buffTakenMult *= b.damageTakenMult;
                     });
                 }
-                damage = Math.max(1, Math.floor(damage * takenMult * buffTakenMult));
+                const versTakenMult = getVersatilityDamageTakenMult(ps.char?.stats?.versatility);
+
+                damage = Math.max(1, Math.floor(damage * takenMult * buffTakenMult * versTakenMult));
 
                 // 护盾吸收
                 const shieldResult = applyShieldAbsorb(ps, damage, logs, currentRound);
@@ -5780,7 +5787,8 @@ function stepBossCombat(state) {
                     });
                 }
                 const demoralizingShoutMult = combat.bossDebuffs?.demoralizingShout?.damageMult ?? 1;
-                dmg = Math.max(1, Math.floor(dmg * takenMult * buffTakenMult * demoralizingShoutMult));
+                const versTakenMult = getVersatilityDamageTakenMult(ps.char?.stats?.versatility);
+                dmg = Math.max(1, Math.floor(dmg * takenMult * buffTakenMult * demoralizingShoutMult * versTakenMult));
 
                 // 护盾吸收
                 const shieldResult = applyShieldAbsorb(ps, dmg, logs, currentRound);
@@ -5837,7 +5845,8 @@ function stepBossCombat(state) {
         if (!ps.dots || ps.dots.length === 0) return;
 
         ps.dots = ps.dots.filter(dot => {
-            const dmg = Math.max(1, Math.floor(dot.damagePerTurn));
+            const versTakenMult = getVersatilityDamageTakenMult(ps.char?.stats?.versatility);
+            const dmg = Math.max(1, Math.floor(dot.damagePerTurn * versTakenMult));
             ps.currentHp -= dmg;
 
             const stackText = dot.stacks ? `（${dot.stacks}层）` : '';
@@ -6195,6 +6204,25 @@ function applyPhysicalMitigation(rawDamage, armor) {
     const reduced = rawDamage * (1 - dr);
     return Math.max(1, Math.floor(reduced)); // 至少1点伤害
 }
+
+
+// ==================== 全能减伤（受到伤害） ====================
+// 规则：全能属性还能提供减伤，数值为（全能/20）% ，上限50%
+// 例如：全能=20 => 1%减伤；全能=1000 => 50%减伤（封顶）
+const VERSATILITY_DR_CAP = 0.5;
+
+// 返回 0~0.5 的减伤比例（如 0.12 表示12%减伤）
+function getVersatilityDamageReduction(versatility) {
+    const v = Math.max(0, Number(versatility) || 0);
+    // （全能/20）% => (v/20)/100 => v/2000
+    return Math.min(VERSATILITY_DR_CAP, v / 2000);
+}
+
+// 返回 0.5~1 的乘区（如 0.88 表示承受88%伤害）
+function getVersatilityDamageTakenMult(versatility) {
+    return 1 - getVersatilityDamageReduction(versatility);
+}
+
 
 // ==================== COMBAT SYSTEM ====================
 // 将战斗拆成“多 tick 多回合”推进：这样 UI 能实时看到血量变化
@@ -7023,7 +7051,7 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1) {
         const demoralizingShout = enemyDebuffs.find(d => d.type === 'demoralizing_shout');
         const enemyDamageMult = demoralizingShout ? demoralizingShout.damageMult : 1;
 
-        finalDamage = Math.max(1, Math.floor(finalDamage * (character.stats.damageTakenMult || 1) * buffDamageTakenMult * enemyDamageMult));
+        finalDamage = Math.max(1, Math.floor(finalDamage * (character.stats.damageTakenMult || 1) * buffDamageTakenMult * enemyDamageMult * getVersatilityDamageTakenMult(character.stats.versatility)));
 
         // ===== 新增：护盾吸收伤害 =====
         let shieldAbsorbed = 0;

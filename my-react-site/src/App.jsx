@@ -1610,6 +1610,22 @@ const ZONES = {
         unlocked: false,
         unlockLevel: 55
     },
+    upper_blackrock_spire: {
+        id: 'upper_blackrock_spire',
+        name: '黑石塔上',
+        level: 60,
+        type: 'explore',
+        enemies: [
+            { name: '烈焰卫士纵火者', hp: 420000, attack: 7200, defense: 3400, exp: 14000, gold: 11000 },
+            { name: '磷喉中卫', hp: 500000, attack: 7600, defense: 4200, exp: 15000, gold: 12000 },
+            { name: '黑手刺客', hp: 380000, attack: 8500, defense: 3200, exp: 15500, gold: 12500 },
+            { name: '黑色雏龙', hp: 560000, attack: 8200, defense: 4000, exp: 17000, gold: 13500 },
+        ],
+        resources: ['铁矿', '魔法精华'],
+        unlocked: false,
+        unlockLevel: 60
+    },
+
 
 
 };
@@ -1805,6 +1821,21 @@ const DROP_TABLES = {
             { id: 'EQ_095', chance: 0.0005 }  // 瑞文戴尔之剑
         ]
     },
+    upper_blackrock_spire: {
+        equipment: [
+            { id: 'EQ_109', chance: 0.003 },  // 勇气胸甲
+            { id: 'EQ_110', chance: 0.003 },  // 迅影外套
+            { id: 'EQ_111', chance: 0.003 },  // 虔诚长袍
+            { id: 'EQ_112', chance: 0.003 },  // 博学者长袍
+            { id: 'EQ_105', chance: 0.0015 }, // 石楠之环
+            { id: 'EQ_106', chance: 0.0015 }, // 痛苦指环
+            { id: 'EQ_107', chance: 0.0015 }, // 龙人之盾
+            { id: 'EQ_108', chance: 0.001 },  // 雷德之眼
+            { id: 'EQ_103', chance: 0.0008 }, // 恶魔之击
+            { id: 'EQ_104', chance: 0.0005 }  // 雷德双刃
+        ]
+    },
+
 
 
 };
@@ -4264,6 +4295,261 @@ const FIXED_EQUIPMENTS = {
             haste: 2
         }
     },
+
+    // ==================== 黑石塔上（60级）装备 ====================
+    EQ_103: {
+        id: 'EQ_103',
+        name: '恶魔之击',
+        icon: "icons/wow/vanilla/weapons/INV_Sword_45.png",
+        type: 'equipment',
+        slot: 'mainHand',
+        rarity: 'purple',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            attack: 1250,
+            critRate: 28,
+            critDamage: 0.55,
+            mastery: 25,
+            versatility: 20
+        },
+        growth: {
+            attack: 2,
+            critRate: 2,
+            critDamage: 2,
+            mastery: 2,
+            versatility: 2
+        },
+        specialEffect: {
+            type: 'basic_attack_repeat',
+            chance: 0.15
+        }
+    },
+    EQ_104: {
+        id: 'EQ_104',
+        name: '雷德双刃',
+        icon: "icons/wow/vanilla/weapons/INV_Sword_48.png",
+        type: 'equipment',
+        slot: 'mainHand',
+        rarity: 'purple',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            attack: 1300,
+            critRate: 30,
+            critDamage: 0.6,
+            haste: 25,
+            versatility: 25
+        },
+        growth: {
+            attack: 2,
+            critRate: 2,
+            critDamage: 2,
+            haste: 2,
+            versatility: 2
+        },
+        specialEffect: {
+            type: 'basic_attack_repeat',
+            chance: 0.20
+        }
+    },
+    EQ_105: {
+        id: 'EQ_105',
+        name: '石楠之环',
+        icon: "icons/wow/vanilla/armor/INV_Jewelry_Ring_05.png",
+        type: 'equipment',
+        slot: 'ring1',
+        rarity: 'blue',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            hp: 1300,
+            versatility: 25,
+            mastery: 25
+        },
+        growth: {
+            hp: 2,
+            versatility: 2,
+            mastery: 2
+        }
+    },
+    EQ_106: {
+        id: 'EQ_106',
+        name: '痛苦指环',
+        icon: "icons/wow/vanilla/armor/INV_Jewelry_Ring_16.png",
+        type: 'equipment',
+        slot: 'ring2',
+        rarity: 'blue',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            hp: 900,
+            attack: 250,
+            spellPower: 250,
+            critRate: 10,
+            haste: 15
+        },
+        growth: {
+            hp: 2,
+            attack: 2,
+            spellPower: 2,
+            critRate: 2,
+            haste: 2
+        }
+    },
+    EQ_107: {
+        id: 'EQ_107',
+        name: '龙人之盾',
+        icon: "icons/wow/vanilla/armor/INV_Shield_15.png",
+        type: 'equipment',
+        slot: 'offHand',
+        rarity: 'blue',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            hp: 1600,
+            armor: 200,
+            mastery: 30,
+            blockRate: 25,
+            blockValue: 400
+        },
+        growth: {
+            hp: 2,
+            armor: 2,
+            mastery: 2,
+            blockRate: 2,
+            blockValue: 2
+        }
+    },
+    EQ_108: {
+        id: 'EQ_108',
+        name: '雷德之眼',
+        icon: "icons/wow/vanilla/items/INV_Misc_Eye_01.png",
+        type: 'equipment',
+        slot: 'trinket2',
+        rarity: 'purple',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            attack: 300,
+            spellPower: 300,
+            critRate: 10,
+            mastery: 10
+        },
+        growth: {
+            attack: 2,
+            spellPower: 2,
+            critRate: 2,
+            mastery: 2
+        },
+        specialEffect: {
+            type: 'skill_slot_buff',
+            slots: [0, 1],
+            attackBonus: 700,
+            spellPowerBonus: 700
+        }
+    },
+    EQ_109: {
+        id: 'EQ_109',
+        name: '勇气胸甲',
+        icon: "icons/wow/vanilla/armor/INV_Chest_Chain_16.png",
+        type: 'equipment',
+        slot: 'chest',
+        rarity: 'blue',
+        setId: 'valor_set',
+        setName: '勇气',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            hp: 1500,
+            armor: 200,
+            mastery: 30,
+            blockRate: 5,
+            blockValue: 350
+        },
+        growth: {
+            hp: 2,
+            armor: 2,
+            mastery: 2,
+            blockRate: 2,
+            blockValue: 2
+        }
+    },
+    EQ_110: {
+        id: 'EQ_110',
+        name: '迅影外套',
+        icon: "icons/wow/vanilla/armor/INV_Chest_Leather_09.png",
+        type: 'equipment',
+        slot: 'chest',
+        rarity: 'blue',
+        setId: 'swiftshadow_set',
+        setName: '迅影',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            attack: 550,
+            hp: 900,
+            armor: 120,
+            critRate: 18,
+            haste: 25
+        },
+        growth: {
+            attack: 2,
+            hp: 2,
+            armor: 2,
+            critRate: 2,
+            haste: 2
+        }
+    },
+    EQ_111: {
+        id: 'EQ_111',
+        name: '虔诚长袍',
+        icon: "icons/wow/vanilla/armor/INV_Chest_Cloth_43.png",
+        type: 'equipment',
+        slot: 'chest',
+        rarity: 'blue',
+        setId: 'devout_set',
+        setName: '虔诚',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            spellPower: 850,
+            hp: 1200,
+            mastery: 30,
+            haste: 20
+        },
+        growth: {
+            spellPower: 2,
+            hp: 2,
+            mastery: 2,
+            haste: 2
+        }
+    },
+    EQ_112: {
+        id: 'EQ_112',
+        name: '博学者长袍',
+        icon: "icons/wow/vanilla/armor/INV_Chest_Cloth_43.png",
+        type: 'equipment',
+        slot: 'chest',
+        rarity: 'blue',
+        setId: 'scholar_set',
+        setName: '博学者',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            spellPower: 900,
+            hp: 1100,
+            critRate: 18,
+            haste: 30
+        },
+        growth: {
+            spellPower: 2,
+            hp: 2,
+            critRate: 2,
+            haste: 2
+        }
+    },
+
     EQ_HOGGER_001: {
         id: 'EQ_HOGGER_001',
         name: '霍格的毛皮披风',

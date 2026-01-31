@@ -182,7 +182,7 @@ const FUNCTIONAL_BUILDINGS = {
         name: '机械臂',
         icon: '🦾',
         description: '强化一个背包栏位，使其自动合成',
-        cost: { gold: 500000, ironIngot: 300, magicEssence: 20000, alchemyOil: 1500 },
+        cost: { gold: 500000, ironIngot: 20000, magicEssence: 20000, alchemyOil: 15000 },
         maxCount: 10,
         effect: { type: 'autoMerge', value: 1 }
     },

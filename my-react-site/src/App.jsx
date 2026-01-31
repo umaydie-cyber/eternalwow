@@ -1752,6 +1752,26 @@ function isVancleefBadgeEquipment(eq) {
     return VANCLEEF_BADGE_EQUIP_IDS.has(eq.id);
 }
 
+// ==================== 荆棘谷/塔纳利斯装备池（用于黑龙化身徽章判定） ====================
+// 说明：当前两张地图在本游戏中的掉落装备模板为：
+// - 荆棘谷：EQ_027 ~ EQ_032
+// - 塔纳利斯：EQ_041, EQ_042, EQ_043, EQ_045, EQ_046, EQ_047, EQ_048
+// 如未来扩展两张地图的掉落装备，只需要把新模板ID加入该集合即可。
+const PRESTOR_BADGE_EQUIP_IDS = new Set([
+    // 荆棘谷
+    'EQ_027', 'EQ_028', 'EQ_029', 'EQ_030', 'EQ_031', 'EQ_032',
+    // 塔纳利斯
+    'EQ_041', 'EQ_042', 'EQ_043', 'EQ_045', 'EQ_046', 'EQ_047', 'EQ_048'
+]);
+
+function isPrestorBadgeEquipment(eq) {
+    if (!eq || eq.type !== 'equipment') return false;
+    const tpl = FIXED_EQUIPMENTS?.[eq.id];
+    // 未来如果你给两图装备加了 setId=stranglethorn_tanaris，也会自动识别
+    if (tpl?.setId === 'stranglethorn_tanaris') return true;
+    return PRESTOR_BADGE_EQUIP_IDS.has(eq.id);
+}
+
 
 // ==================== 徽章升级规则（复用“血色十字军徽章”的通用模式） ====================
 // 以后新增 Boss 徽章：只需要在这里加一条规则 + 在 USE_ITEM 里让该徽章走同一套入口即可。
@@ -1782,7 +1802,16 @@ const BADGE_UPGRADE_RULES = {
         cap: 100,
         isEligible: isVancleefBadgeEquipment,
         theme: { border: '#263238', title: '#90caf9', shadow: 'rgba(38,50,56,0.25)' }
-    }
+    },
+    IT_PRESTOR_BADGE: {
+        badgeId: 'IT_PRESTOR_BADGE',
+        title: '黑龙化身徽章',
+        zoneLabel: '荆棘谷 / 塔纳利斯',
+        inc: 2,
+        cap: 100,
+        isEligible: isPrestorBadgeEquipment,
+        theme: { border: '#2b2d42', title: '#b388ff', shadow: 'rgba(179,136,255,0.22)' }
+    },
 };
 
 const FIXED_EQUIPMENTS = {
@@ -3734,6 +3763,18 @@ const ITEMS = {
         sellPrice: 0,  // 不可出售
         icon: 'icons/wow/vanilla/armor/INV_Jewelry_Talisman_05.png',
         description: '使用后选择一件【贫瘠之地】装备，使其等级提升 +2（最高100级）'
+    },
+
+    // 黑龙化身徽章（普瑞斯托掉落）
+    IT_PRESTOR_BADGE: {
+        id: 'IT_PRESTOR_BADGE',
+        name: '黑龙化身徽章',
+        type: 'consumable',
+        rarity: 'purple',
+        canUse: true,
+        sellPrice: 0,  // 不可出售
+        icon: 'icons/wow/vanilla/armor/INV_Jewelry_Talisman_12.png',
+        description: '使用后选择一件【荆棘谷，塔纳利斯】装备，使其等级提升 +2（最高100级）'
     }
 
 };
@@ -3969,6 +4010,7 @@ const BOSS_DATA = {
             exp: 80000,
             items: [
                 // 可以添加黑龙主题紫装掉落
+                { id: 'IT_PRESTOR_BADGE', chance: 0.8 }
             ]
         }
     },

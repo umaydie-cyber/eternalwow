@@ -8303,10 +8303,20 @@ function gameReducer(state, action) {
                 rebirthCount: newState.rebirthCount
             };
 
+            // ==================== 重生保留：功能建筑-仓库 ====================
+            // 需求：重生后保留“仓库”数量（用于背包格子加成），其它功能建筑按重置处理。
+            const keptWarehouseCount = newState.functionalBuildings?.warehouse || 0;
+            const keptInventorySizeExtra = newState.inventorySizeExtra || 0;
+
             // 重置游戏进度
             newState.characters = [];
             newState.resources = { ...initialState.resources, gold: 500 };
             newState.buildings = {};
+            // 只保留仓库，其它功能建筑清空
+            newState.functionalBuildings = keptWarehouseCount > 0 ? { warehouse: keptWarehouseCount } : {};
+            // 立刻同步背包上限（避免UI/掉落逻辑使用旧值）
+            newState.inventorySizeExtra = keptInventorySizeExtra;
+            newState.inventorySize = 80 + keptWarehouseCount * 1 + keptInventorySizeExtra;
             newState.research = {};
             newState.currentResearch = null;
             newState.researchProgress = 0;

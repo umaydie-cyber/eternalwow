@@ -3627,14 +3627,12 @@ const FIXED_EQUIPMENTS = {
         baseStats: {
             spellPower: 450,
             hp: 650,
-            mp: 600,
             mastery: 15,
             versatility: 10
         },
         growth: {
             spellPower: 2,
             hp: 2,
-            mp: 2,
             mastery: 2,
             versatility: 2
         }
@@ -3653,14 +3651,12 @@ const FIXED_EQUIPMENTS = {
         baseStats: {
             spellPower: 550,
             hp: 500,
-            mp: 700,
             haste: 20,
             critRate: 10
         },
         growth: {
             spellPower: 2,
             hp: 2,
-            mp: 2,
             haste: 2,
             critRate: 2
         }
@@ -3731,14 +3727,12 @@ const FIXED_EQUIPMENTS = {
         baseStats: {
             spellPower: 500,
             hp: 650,
-            mp: 600,
             mastery: 20,
             haste: 10
         },
         growth: {
             spellPower: 2,
             hp: 2,
-            mp: 2,
             mastery: 2,
             haste: 2
         }
@@ -3757,14 +3751,12 @@ const FIXED_EQUIPMENTS = {
         baseStats: {
             spellPower: 600,
             hp: 500,
-            mp: 700,
             haste: 20,
             mastery: 15
         },
         growth: {
             spellPower: 2,
             hp: 2,
-            mp: 2,
             haste: 2,
             mastery: 2
         }
@@ -3780,19 +3772,14 @@ const FIXED_EQUIPMENTS = {
         maxLevel: 100,
         baseStats: {
             attack: 950,
-            haste: 25,
-            mastery: 20,
-            critRate: 10
+            haste: 30,
+            mastery: 25,
         },
         growth: {
             attack: 2,
             haste: 2,
             mastery: 2,
             critRate: 2
-        },
-        specialEffect: {
-            type: 'basic_attack_repeat',
-            chance: 0.15
         }
     },
     EQ_083: {
@@ -3805,14 +3792,12 @@ const FIXED_EQUIPMENTS = {
         level: 0,
         maxLevel: 100,
         baseStats: {
-            hp: 800,
-            mp: 500,
+            hp: 1200,
             versatility: 20,
-            mastery: 15
+            mastery: 20
         },
         growth: {
             hp: 2,
-            mp: 2,
             versatility: 2,
             mastery: 2
         }
@@ -3827,7 +3812,7 @@ const FIXED_EQUIPMENTS = {
         level: 0,
         maxLevel: 100,
         baseStats: {
-            hp: 1000,
+            hp: 1500,
             attack: 200,
             spellPower: 200,
             haste: 10,
@@ -3844,9 +3829,9 @@ const FIXED_EQUIPMENTS = {
     EQ_085: {
         id: 'EQ_085',
         name: '燃棘宝钻',
-        icon: "icons/wow/vanilla/items/INV_Misc_Gem_Ruby_03.png",
+        icon: "icons/wow/vanilla/items/ranjibaozuan.png",
         type: 'equipment',
-        slot: 'trinket1',
+        slot: 'trinket2',
         rarity: 'purple',
         level: 0,
         maxLevel: 100,
@@ -3863,7 +3848,7 @@ const FIXED_EQUIPMENTS = {
         specialEffect: {
             type: 'skill_slot_buff',
             slots: [0, 1],
-            spellPowerBonus: 700
+            spellPowerBonus: 800
         }
     },
     EQ_086: {
@@ -3886,10 +3871,6 @@ const FIXED_EQUIPMENTS = {
             critRate: 2,
             critDamage: 2,
             versatility: 2
-        },
-        specialEffect: {
-            type: 'basic_attack_repeat',
-            chance: 0.25
         }
     },
 
@@ -3914,10 +3895,6 @@ const FIXED_EQUIPMENTS = {
             critRate: 2,
             haste: 2,
             mastery: 2
-        },
-        specialEffect: {
-            type: 'basic_attack_repeat',
-            chance: 0.12
         }
     },
     EQ_088: {
@@ -4009,14 +3986,12 @@ const FIXED_EQUIPMENTS = {
         baseStats: {
             spellPower: 700,
             hp: 850,
-            mp: 700,
             mastery: 25,
             versatility: 15
         },
         growth: {
             spellPower: 2,
             hp: 2,
-            mp: 2,
             mastery: 2,
             versatility: 2
         }
@@ -4061,14 +4036,12 @@ const FIXED_EQUIPMENTS = {
         baseStats: {
             spellPower: 800,
             hp: 650,
-            mp: 900,
             critRate: 15,
             haste: 25
         },
         growth: {
             spellPower: 2,
             hp: 2,
-            mp: 2,
             critRate: 2,
             haste: 2
         }
@@ -4085,14 +4058,12 @@ const FIXED_EQUIPMENTS = {
         baseStats: {
             spellPower: 550,
             hp: 700,
-            mp: 700,
             mastery: 30,
             versatility: 20
         },
         growth: {
             spellPower: 2,
             hp: 2,
-            mp: 2,
             mastery: 2,
             versatility: 2
         }
@@ -4150,7 +4121,7 @@ const FIXED_EQUIPMENTS = {
     EQ_097: {
         id: 'EQ_097',
         name: '秘术之星',
-        icon: "icons/wow/vanilla/armor/INV_Jewelry_Necklace_12.png",
+        icon: "icons/wow/vanilla/armor/INV_Jewelry_Talisman_08.png",
         type: 'equipment',
         slot: 'neck',
         rarity: 'blue',
@@ -4158,15 +4129,13 @@ const FIXED_EQUIPMENTS = {
         maxLevel: 100,
         baseStats: {
             spellPower: 550,
-            hp: 950,
-            mp: 800,
+            hp: 1500,
             haste: 20,
             critRate: 10
         },
         growth: {
             spellPower: 2,
             hp: 2,
-            mp: 2,
             haste: 2,
             critRate: 2
         }
@@ -4261,14 +4230,12 @@ const FIXED_EQUIPMENTS = {
         baseStats: {
             spellPower: 700,
             hp: 950,
-            mp: 800,
             mastery: 25,
             haste: 15
         },
         growth: {
             spellPower: 2,
             hp: 2,
-            mp: 2,
             mastery: 2,
             haste: 2
         }
@@ -4287,14 +4254,12 @@ const FIXED_EQUIPMENTS = {
         baseStats: {
             spellPower: 800,
             hp: 850,
-            mp: 900,
             critRate: 15,
             haste: 25
         },
         growth: {
             spellPower: 2,
             hp: 2,
-            mp: 2,
             critRate: 2,
             haste: 2
         }

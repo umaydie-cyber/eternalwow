@@ -3650,9 +3650,9 @@ const WORLD_BOSSES = {
         name: '裂魂者萨尔诺斯',
         icon: 'icons/wow/vanilla/boss/thalnos.png', // 需要添加对应图标
         hp: 1000000,
-        attack: 2200,
-        defense: 950,
-        rewards: { gold: 130000, exp: 105000 },
+        attack: 1800,
+        defense: 750,
+        rewards: { gold: 120000, exp: 95000 },
         unlockLevel: 45
     },
 
@@ -3803,8 +3803,8 @@ const BOSS_DATA = {
         id: 'thalnos',
         name: '裂魂者萨尔诺斯',
         maxHp: 1000000,
-        attack: 2200,
-        defense: 950,
+        attack: 1800,
+        defense: 750,
         // 技能循环：灵魂强风 → 堕落的十字军 → 放逐灵魂 → 灵魂收割者
         cycle: ['soul_storm', 'fallen_crusaders', 'banish_soul', 'soul_reaper'],
 
@@ -3821,8 +3821,8 @@ const BOSS_DATA = {
         minion: {
             name: '堕落十字军',
             maxHp: 30000,
-            attack: 2200, // 等于boss攻击
-            defense: 950
+            attack: 1800, // 等于boss攻击
+            defense: 750
         },
         summonCount: 5,
         // 灵魂收割者：(十字军数量+3) × boss攻击 的暗影伤害

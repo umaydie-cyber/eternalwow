@@ -5768,7 +5768,7 @@ function stepBossCombat(state) {
                 const dropId = (typeof itemTpl === 'string') ? itemTpl : itemTpl?.id;
                 if (!dropId) return;
 
-                if (!allowDrop(dropId)) return;
+                if (newState.dropFilters?.[dropId] === false) return;
 
                 // ===== 新增：概率判定 =====
                 const dropChance = itemTpl?.chance ?? 1;  // 默认100%

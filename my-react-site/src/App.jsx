@@ -5784,6 +5784,12 @@ function stepBossCombat(state) {
         if (bossDead) {
             addLog('★★★ 胜利！获得奖励 ★★★');
 
+            // ===== 世界Boss重生冷却：30分钟 =====
+            newState.bossCooldowns = {
+                ...(newState.bossCooldowns || {}),
+                [combat.bossId]: 30 * 60
+            };
+
             if (!newState.defeatedBosses) newState.defeatedBosses = [];
             if (!newState.defeatedBosses.includes(combat.bossId)) {
                 newState.defeatedBosses = [...newState.defeatedBosses, combat.bossId];
@@ -5942,6 +5948,8 @@ const initialState = {
     bossTeam: [null, null, null], // 3个位置的charId
     bossStrategy: { priorityBoss: true, stance: 'dispersed' }, // 策略
     bossCombat: null, // 正在进行的boss战状态
+
+    bossCooldowns: {}, // { [bossId]: remainingSeconds } 世界Boss重生冷却（秒）
 
     showHoggerPlot: false,
     showRebirthConfirm: false,
@@ -7173,6 +7181,17 @@ function gameReducer(state, action) {
                 frame: state.frame + deltaSeconds ,
                 lifeFrame: (state.lifeFrame || 0) + deltaSeconds,};
 
+
+            // ===== 世界Boss重生冷却（秒） =====
+            if (newState.bossCooldowns && typeof newState.bossCooldowns === 'object') {
+                const nextCooldowns = {};
+                Object.entries(newState.bossCooldowns).forEach(([bid, sec]) => {
+                    const left = Math.max(0, Math.floor((sec || 0) - deltaSeconds));
+                    if (left > 0) nextCooldowns[bid] = left;
+                });
+                newState.bossCooldowns = nextCooldowns;
+            }
+
             newState.lastOnlineTime = Date.now();
 
             let newResources = { ...newState.resources };
@@ -8254,6 +8273,7 @@ function gameReducer(state, action) {
                 decoded.rebirthBonuses.gold ??= 0;
                 decoded.rebirthBonds ??= [];
                 decoded.codexEquipLv100 ??= [];
+                decoded.bossCooldowns ??= {};
 
                 // ===== 2️⃣ 关键：重算全队属性 =====
                 const fixedCharacters = recalcPartyStats(
@@ -8297,6 +8317,13 @@ function gameReducer(state, action) {
 
         case 'OPEN_BOSS_PREPARE': {
             const bossId = action.payload;
+            const cd = state.bossCooldowns?.[bossId] || 0;
+            if (cd > 0) {
+                const mm = String(Math.floor(cd / 60)).padStart(2, '0');
+                const ss = String(cd % 60).padStart(2, '0');
+                alert(`【${BOSS_DATA[bossId]?.name || bossId}】正在重生中，剩余 ${mm}:${ss}`);
+                return state;
+            }
             return {
                 ...state,
                 prepareBoss: bossId,
@@ -8477,6 +8504,7 @@ function gameReducer(state, action) {
             newState.currentMenu = 'map';
             newState.lifeFrame = 0; // 新一世从0开始计
             newState.defeatedBosses = []; // 清空本世击杀的Boss
+            newState.bossCooldowns = {}; // 重生后世界Boss冷却重置
             newState.questProgress = {};  // 重置所有任务进度
             newState.questItems = [];     // 清空任务物品
             return newState;
@@ -11941,6 +11969,8 @@ const WorldBossPage = ({ state, dispatch }) => {
                 {Object.values(WORLD_BOSSES).map(boss => {
                     const bossData = BOSS_DATA[boss.id] || boss;
                     const unlocked = !boss.unlockLevel || state.characters.some(c => c.level >= (boss.unlockLevel || 0));
+                    const cdSeconds = state.bossCooldowns?.[boss.id] || 0;
+                    const cdText = cdSeconds > 0 ? `${String(Math.floor(cdSeconds / 60)).padStart(2, '0')}:${String(cdSeconds % 60).padStart(2, '0')}` : '';
 
                     // 普瑞斯托女士特殊解锁条件
                     if (boss.id === 'prestor_lady' && !state.worldBossProgress?.prestor_lady) {
@@ -12070,18 +12100,36 @@ const WorldBossPage = ({ state, dispatch }) => {
 
                             {/* 挑战按钮 / 解锁条件 */}
                             {unlocked ? (
-                                <Button
-                                    variant="danger"
-                                    style={{
-                                        width: '100%',
-                                        padding: '10px 16px',
-                                        fontSize: 14,
-                                        fontWeight: 600
-                                    }}
-                                    onClick={() => dispatch({ type: 'OPEN_BOSS_PREPARE', payload: boss.id })}
-                                >
-                                    ⚔️ 挑战
-                                </Button>
+                                <div>
+                                    {cdSeconds > 0 && (
+                                        <div style={{
+                                            textAlign: 'center',
+                                            marginBottom: 10,
+                                            padding: '8px 10px',
+                                            background: 'rgba(0,0,0,0.25)',
+                                            border: '1px solid rgba(255,255,255,0.08)',
+                                            borderRadius: 6,
+                                            color: '#ffd700',
+                                            fontSize: 12
+                                        }}>
+                                            ⏳ 重生冷却中：<b>{cdText}</b>
+                                        </div>
+                                    )}
+                                    <Button
+                                        variant="danger"
+                                        style={{
+                                            width: '100%',
+                                            padding: '10px 16px',
+                                            fontSize: 14,
+                                            fontWeight: 600,
+                                            opacity: cdSeconds > 0 ? 0.6 : 1
+                                        }}
+                                        disabled={cdSeconds > 0}
+                                        onClick={() => dispatch({ type: 'OPEN_BOSS_PREPARE', payload: boss.id })}
+                                    >
+                                        {cdSeconds > 0 ? `⏳ 重生中 (${cdText})` : '⚔️ 挑战'}
+                                    </Button>
+                                </div>
                             ) : (
                                 <div style={{
                                     textAlign: 'center',

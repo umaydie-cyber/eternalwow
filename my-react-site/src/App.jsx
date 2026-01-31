@@ -3902,7 +3902,7 @@ const BOSS_DATA = {
         // 堕落的十字军配置
         minion: {
             name: '堕落十字军',
-            maxHp: 30000,
+            maxHp: 20000,
             attack: 1800, // 等于boss攻击
             defense: 750
         },

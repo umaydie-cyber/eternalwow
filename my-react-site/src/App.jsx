@@ -3291,7 +3291,7 @@ const FIXED_EQUIPMENTS = {
         level: 0,
         maxLevel: 100,
         baseStats: {
-            spell: 600,
+            spellPower: 600,
             haste: 25,
             mastery : 25,
         },
@@ -3681,7 +3681,7 @@ const WORLD_BOSSES = {
         attack: 1800,
         defense: 750,
         rewards: { gold: 120000, exp: 95000 },
-        unlockLevel: 45
+        unlockLevel: 50
     },
 
 };

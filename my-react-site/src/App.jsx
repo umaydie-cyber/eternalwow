@@ -1564,6 +1564,54 @@ const ZONES = {
         unlockLevel: 50
     },
 
+
+    lower_blackrock_spire: {
+        id: 'lower_blackrock_spire',
+        name: '黑石塔下',
+        level: 55,
+        type: 'explore',
+        enemies: [
+            { name: '黑铁座狼', hp: 230000, attack: 4800, defense: 2300, exp: 8000, gold: 7000 },
+            { name: '烟网小蜘蛛', hp: 200000, attack: 4500, defense: 2100, exp: 7600, gold: 6800 },
+            { name: '食人魔法师', hp: 260000, attack: 5200, defense: 2400, exp: 9000, gold: 7500 },
+            { name: '兽人军官', hp: 280000, attack: 5600, defense: 2600, exp: 9500, gold: 8000 },
+        ],
+        resources: ['铁矿', '魔法精华'],
+        unlocked: false,
+        unlockLevel: 55
+    },
+    scholomance: {
+        id: 'scholomance',
+        name: '通灵学院',
+        level: 55,
+        type: 'explore',
+        enemies: [
+            { name: '通灵学院学徒', hp: 220000, attack: 4800, defense: 2200, exp: 8400, gold: 7200 },
+            { name: '黑暗召唤师', hp: 260000, attack: 5400, defense: 2500, exp: 9200, gold: 7800 },
+            { name: '地穴蜘蛛', hp: 240000, attack: 5200, defense: 2300, exp: 8800, gold: 7600 },
+            { name: '构造体', hp: 320000, attack: 5000, defense: 3000, exp: 9800, gold: 8200 },
+        ],
+        resources: ['魔法精华'],
+        unlocked: false,
+        unlockLevel: 55
+    },
+    stratholme: {
+        id: 'stratholme',
+        name: '斯坦索姆',
+        level: 55,
+        type: 'explore',
+        enemies: [
+            { name: '血色指挥官', hp: 300000, attack: 5800, defense: 2700, exp: 10000, gold: 8500 },
+            { name: '苍白尖啸者', hp: 260000, attack: 6000, defense: 2400, exp: 9800, gold: 8300 },
+            { name: '骷髅法师', hp: 240000, attack: 5600, defense: 2300, exp: 9200, gold: 8000 },
+            { name: '腐烂憎恶', hp: 350000, attack: 6200, defense: 3200, exp: 11000, gold: 9000 },
+        ],
+        resources: ['魔法精华'],
+        unlocked: false,
+        unlockLevel: 55
+    },
+
+
 };
 
 const DROP_TABLES = {
@@ -1714,6 +1762,50 @@ const DROP_TABLES = {
             { id: 'EQ_073', chance: 0.001 }   // 0.1% 稀有
         ]
     },
+
+
+    lower_blackrock_spire: {
+        equipment: [
+            { id: 'EQ_074', chance: 0.003 },  // 勇气腰带
+            { id: 'EQ_075', chance: 0.003 },  // 迅影腰带
+            { id: 'EQ_076', chance: 0.003 },  // 虔诚腰带
+            { id: 'EQ_077', chance: 0.003 },  // 博学者腰带
+            { id: 'EQ_078', chance: 0.003 },  // 勇气手套
+            { id: 'EQ_079', chance: 0.003 },  // 迅影手套
+            { id: 'EQ_080', chance: 0.003 },  // 虔诚手套
+            { id: 'EQ_081', chance: 0.003 },  // 博学者手套
+            { id: 'EQ_082', chance: 0.0015 }, // 喷毒者
+            { id: 'EQ_083', chance: 0.001 },  // 红木之环
+            { id: 'EQ_084', chance: 0.0015 }, // 哈雷肯的项圈
+            { id: 'EQ_085', chance: 0.001 },  // 燃棘宝钻
+            { id: 'EQ_086', chance: 0.0005 }  // 黑鸭
+        ]
+    },
+    scholomance: {
+        equipment: [
+            { id: 'EQ_090', chance: 0.003 },  // 勇气头盔
+            { id: 'EQ_091', chance: 0.003 },  // 虔诚头冠
+            { id: 'EQ_092', chance: 0.003 },  // 迅影罩帽
+            { id: 'EQ_093', chance: 0.003 },  // 博学者头冠
+            { id: 'EQ_087', chance: 0.001 },  // 上古骨弓
+            { id: 'EQ_088', chance: 0.0008 }, // 院长之杖
+            { id: 'EQ_089', chance: 0.0015 }, // 噬骨铁针
+            { id: 'EQ_094', chance: 0.0008 }  // 莫里西奥的统御指环
+        ]
+    },
+    stratholme: {
+        equipment: [
+            { id: 'EQ_099', chance: 0.003 },  // 勇气护腿
+            { id: 'EQ_100', chance: 0.003 },  // 迅影护腿
+            { id: 'EQ_101', chance: 0.003 },  // 虔诚护腿
+            { id: 'EQ_102', chance: 0.003 },  // 博学者护腿
+            { id: 'EQ_096', chance: 0.0015 }, // 知识宝典
+            { id: 'EQ_097', chance: 0.0015 }, // 秘术之星
+            { id: 'EQ_098', chance: 0.001 },  // 黑爵士斗篷
+            { id: 'EQ_095', chance: 0.0005 }  // 瑞文戴尔之剑
+        ]
+    },
+
 
 };
 
@@ -3467,6 +3559,746 @@ const FIXED_EQUIPMENTS = {
 
         }
     },
+
+    // ==================== 黑石塔下（55级）装备 ====================
+    EQ_074: {
+        id: 'EQ_074',
+        name: '勇气腰带',
+        icon: "icons/wow/vanilla/armor/INV_Belt_09.png",
+        type: 'equipment',
+        slot: 'belt',
+        rarity: 'blue',
+        setId: 'valor_set',
+        setName: '勇气',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            hp: 900,
+            armor: 120,
+            mastery: 15,
+            blockRate: 3,
+            blockValue: 150
+        },
+        growth: {
+            hp: 2,
+            armor: 2,
+            mastery: 2,
+            blockRate: 2,
+            blockValue: 2
+        }
+    },
+    EQ_075: {
+        id: 'EQ_075',
+        name: '迅影腰带',
+        icon: "icons/wow/vanilla/armor/INV_Belt_03.png",
+        type: 'equipment',
+        slot: 'belt',
+        rarity: 'blue',
+        setId: 'swiftshadow_set',
+        setName: '迅影',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            attack: 300,
+            hp: 450,
+            armor: 70,
+            critRate: 10,
+            haste: 15
+        },
+        growth: {
+            attack: 2,
+            hp: 2,
+            armor: 2,
+            critRate: 2,
+            haste: 2
+        }
+    },
+    EQ_076: {
+        id: 'EQ_076',
+        name: '虔诚腰带',
+        icon: "icons/wow/vanilla/armor/INV_Belt_11.png",
+        type: 'equipment',
+        slot: 'belt',
+        rarity: 'blue',
+        setId: 'devout_set',
+        setName: '虔诚',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            spellPower: 450,
+            hp: 650,
+            mp: 600,
+            mastery: 15,
+            versatility: 10
+        },
+        growth: {
+            spellPower: 2,
+            hp: 2,
+            mp: 2,
+            mastery: 2,
+            versatility: 2
+        }
+    },
+    EQ_077: {
+        id: 'EQ_077',
+        name: '博学者腰带',
+        icon: "icons/wow/vanilla/armor/INV_Belt_24.png",
+        type: 'equipment',
+        slot: 'belt',
+        rarity: 'blue',
+        setId: 'scholar_set',
+        setName: '博学者',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            spellPower: 550,
+            hp: 500,
+            mp: 700,
+            haste: 20,
+            critRate: 10
+        },
+        growth: {
+            spellPower: 2,
+            hp: 2,
+            mp: 2,
+            haste: 2,
+            critRate: 2
+        }
+    },
+    EQ_078: {
+        id: 'EQ_078',
+        name: '勇气手套',
+        icon: "icons/wow/vanilla/armor/INV_Gauntlets_26.png",
+        type: 'equipment',
+        slot: 'hands',
+        rarity: 'blue',
+        setId: 'valor_set',
+        setName: '勇气',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            hp: 850,
+            armor: 110,
+            mastery: 20,
+            blockRate: 3,
+            blockValue: 150
+        },
+        growth: {
+            hp: 2,
+            armor: 2,
+            mastery: 2,
+            blockRate: 2,
+            blockValue: 2
+        }
+    },
+    EQ_079: {
+        id: 'EQ_079',
+        name: '迅影手套',
+        icon: "icons/wow/vanilla/armor/INV_Gauntlets_17.png",
+        type: 'equipment',
+        slot: 'hands',
+        rarity: 'blue',
+        setId: 'swiftshadow_set',
+        setName: '迅影',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            attack: 350,
+            hp: 450,
+            armor: 70,
+            critRate: 10,
+            mastery: 15
+        },
+        growth: {
+            attack: 2,
+            hp: 2,
+            armor: 2,
+            critRate: 2,
+            mastery: 2
+        }
+    },
+    EQ_080: {
+        id: 'EQ_080',
+        name: '虔诚手套',
+        icon: "icons/wow/vanilla/armor/INV_Gauntlets_21.png",
+        type: 'equipment',
+        slot: 'hands',
+        rarity: 'blue',
+        setId: 'devout_set',
+        setName: '虔诚',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            spellPower: 500,
+            hp: 650,
+            mp: 600,
+            mastery: 20,
+            haste: 10
+        },
+        growth: {
+            spellPower: 2,
+            hp: 2,
+            mp: 2,
+            mastery: 2,
+            haste: 2
+        }
+    },
+    EQ_081: {
+        id: 'EQ_081',
+        name: '博学者手套',
+        icon: "icons/wow/vanilla/armor/INV_Gauntlets_27.png",
+        type: 'equipment',
+        slot: 'hands',
+        rarity: 'blue',
+        setId: 'scholar_set',
+        setName: '博学者',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            spellPower: 600,
+            hp: 500,
+            mp: 700,
+            haste: 20,
+            mastery: 15
+        },
+        growth: {
+            spellPower: 2,
+            hp: 2,
+            mp: 2,
+            haste: 2,
+            mastery: 2
+        }
+    },
+    EQ_082: {
+        id: 'EQ_082',
+        name: '喷毒者',
+        icon: "icons/wow/vanilla/weapons/INV_Weapon_ShortBlade_16.png",
+        type: 'equipment',
+        slot: 'mainHand',
+        rarity: 'blue',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            attack: 950,
+            haste: 25,
+            mastery: 20,
+            critRate: 10
+        },
+        growth: {
+            attack: 2,
+            haste: 2,
+            mastery: 2,
+            critRate: 2
+        },
+        specialEffect: {
+            type: 'basic_attack_repeat',
+            chance: 0.15
+        }
+    },
+    EQ_083: {
+        id: 'EQ_083',
+        name: '红木之环',
+        icon: "icons/wow/vanilla/armor/INV_Jewelry_Ring_05.png",
+        type: 'equipment',
+        slot: 'ring2',
+        rarity: 'blue',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            hp: 800,
+            mp: 500,
+            versatility: 20,
+            mastery: 15
+        },
+        growth: {
+            hp: 2,
+            mp: 2,
+            versatility: 2,
+            mastery: 2
+        }
+    },
+    EQ_084: {
+        id: 'EQ_084',
+        name: '哈雷肯的项圈',
+        icon: "icons/wow/vanilla/armor/INV_Jewelry_Necklace_10.png",
+        type: 'equipment',
+        slot: 'neck',
+        rarity: 'blue',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            hp: 1000,
+            attack: 200,
+            spellPower: 200,
+            haste: 10,
+            versatility: 10
+        },
+        growth: {
+            hp: 2,
+            attack: 2,
+            spellPower: 2,
+            haste: 2,
+            versatility: 2
+        }
+    },
+    EQ_085: {
+        id: 'EQ_085',
+        name: '燃棘宝钻',
+        icon: "icons/wow/vanilla/items/INV_Misc_Gem_Ruby_03.png",
+        type: 'equipment',
+        slot: 'trinket1',
+        rarity: 'purple',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            spellPower: 300,
+            critRate: 10,
+            mastery: 10
+        },
+        growth: {
+            spellPower: 2,
+            critRate: 2,
+            mastery: 2
+        },
+        specialEffect: {
+            type: 'skill_slot_buff',
+            slots: [0, 1],
+            spellPowerBonus: 700
+        }
+    },
+    EQ_086: {
+        id: 'EQ_086',
+        name: '黑鸭',
+        icon: "icons/wow/vanilla/weapons/INV_Sword_13.png",
+        type: 'equipment',
+        slot: 'mainHand',
+        rarity: 'purple',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            attack: 1050,
+            critRate: 25,
+            critDamage: 0.5,
+            versatility: 20
+        },
+        growth: {
+            attack: 2,
+            critRate: 2,
+            critDamage: 2,
+            versatility: 2
+        },
+        specialEffect: {
+            type: 'basic_attack_repeat',
+            chance: 0.25
+        }
+    },
+
+    // ==================== 通灵学院（55级）装备 ====================
+    EQ_087: {
+        id: 'EQ_087',
+        name: '上古骨弓',
+        icon: "icons/wow/vanilla/weapons/INV_Weapon_Bow_12.png",
+        type: 'equipment',
+        slot: 'mainHand',
+        rarity: 'blue',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            attack: 1000,
+            critRate: 20,
+            haste: 20,
+            mastery: 20
+        },
+        growth: {
+            attack: 2,
+            critRate: 2,
+            haste: 2,
+            mastery: 2
+        },
+        specialEffect: {
+            type: 'basic_attack_repeat',
+            chance: 0.12
+        }
+    },
+    EQ_088: {
+        id: 'EQ_088',
+        name: '院长之杖',
+        icon: "icons/wow/vanilla/weapons/INV_Staff_13.png",
+        type: 'equipment',
+        slot: 'mainHand',
+        rarity: 'purple',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            spellPower: 950,
+            critRate: 25,
+            mastery: 25,
+            versatility: 20
+        },
+        growth: {
+            spellPower: 2,
+            critRate: 2,
+            mastery: 2,
+            versatility: 2
+        },
+        specialEffect: {
+            type: 'skill_slot_buff',
+            slots: [2, 3],
+            spellPowerBonus: 800
+        }
+    },
+    EQ_089: {
+        id: 'EQ_089',
+        name: '噬骨铁针',
+        icon: "icons/wow/vanilla/weapons/INV_Wand_07.png",
+        type: 'equipment',
+        slot: 'offHand',
+        rarity: 'blue',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            spellPower: 550,
+            haste: 20,
+            mastery: 20,
+            critRate: 10
+        },
+        growth: {
+            spellPower: 2,
+            haste: 2,
+            mastery: 2,
+            critRate: 2
+        }
+    },
+    EQ_090: {
+        id: 'EQ_090',
+        name: '勇气头盔',
+        icon: "icons/wow/vanilla/armor/INV_Helmet_20.png",
+        type: 'equipment',
+        slot: 'head',
+        rarity: 'blue',
+        setId: 'valor_set',
+        setName: '勇气',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            hp: 1300,
+            armor: 160,
+            mastery: 25,
+            blockRate: 5,
+            blockValue: 250
+        },
+        growth: {
+            hp: 2,
+            armor: 2,
+            mastery: 2,
+            blockRate: 2,
+            blockValue: 2
+        }
+    },
+    EQ_091: {
+        id: 'EQ_091',
+        name: '虔诚头冠',
+        icon: "icons/wow/vanilla/armor/INV_Helmet_34.png",
+        type: 'equipment',
+        slot: 'head',
+        rarity: 'blue',
+        setId: 'devout_set',
+        setName: '虔诚',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            spellPower: 700,
+            hp: 850,
+            mp: 700,
+            mastery: 25,
+            versatility: 15
+        },
+        growth: {
+            spellPower: 2,
+            hp: 2,
+            mp: 2,
+            mastery: 2,
+            versatility: 2
+        }
+    },
+    EQ_092: {
+        id: 'EQ_092',
+        name: '迅影罩帽',
+        icon: "icons/wow/vanilla/armor/INV_Helmet_09.png",
+        type: 'equipment',
+        slot: 'head',
+        rarity: 'blue',
+        setId: 'swiftshadow_set',
+        setName: '迅影',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            attack: 500,
+            hp: 650,
+            armor: 90,
+            critRate: 15,
+            haste: 20
+        },
+        growth: {
+            attack: 2,
+            hp: 2,
+            armor: 2,
+            critRate: 2,
+            haste: 2
+        }
+    },
+    EQ_093: {
+        id: 'EQ_093',
+        name: '博学者头冠',
+        icon: "icons/wow/vanilla/armor/INV_Helmet_33.png",
+        type: 'equipment',
+        slot: 'head',
+        rarity: 'blue',
+        setId: 'scholar_set',
+        setName: '博学者',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            spellPower: 800,
+            hp: 650,
+            mp: 900,
+            critRate: 15,
+            haste: 25
+        },
+        growth: {
+            spellPower: 2,
+            hp: 2,
+            mp: 2,
+            critRate: 2,
+            haste: 2
+        }
+    },
+    EQ_094: {
+        id: 'EQ_094',
+        name: '莫里西奥的统御指环',
+        icon: "icons/wow/vanilla/armor/INV_Jewelry_Ring_16.png",
+        type: 'equipment',
+        slot: 'ring1',
+        rarity: 'purple',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            spellPower: 550,
+            hp: 700,
+            mp: 700,
+            mastery: 30,
+            versatility: 20
+        },
+        growth: {
+            spellPower: 2,
+            hp: 2,
+            mp: 2,
+            mastery: 2,
+            versatility: 2
+        }
+    },
+
+    // ==================== 斯坦索姆（55级）装备 ====================
+    EQ_095: {
+        id: 'EQ_095',
+        name: '瑞文戴尔之剑',
+        icon: "icons/wow/vanilla/weapons/INV_Sword_48.png",
+        type: 'equipment',
+        slot: 'mainHand',
+        rarity: 'purple',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            attack: 1100,
+            critRate: 30,
+            critDamage: 0.6,
+            versatility: 20
+        },
+        growth: {
+            attack: 2,
+            critRate: 2,
+            critDamage: 2,
+            versatility: 2
+        },
+        specialEffect: {
+            type: 'basic_attack_repeat',
+            chance: 0.20
+        }
+    },
+    EQ_096: {
+        id: 'EQ_096',
+        name: '知识宝典',
+        icon: "icons/wow/vanilla/items/INV_Misc_Book_09.png",
+        type: 'equipment',
+        slot: 'offHand',
+        rarity: 'blue',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            spellPower: 650,
+            mastery: 25,
+            haste: 20,
+            versatility: 15
+        },
+        growth: {
+            spellPower: 2,
+            mastery: 2,
+            haste: 2,
+            versatility: 2
+        }
+    },
+    EQ_097: {
+        id: 'EQ_097',
+        name: '秘术之星',
+        icon: "icons/wow/vanilla/armor/INV_Jewelry_Necklace_12.png",
+        type: 'equipment',
+        slot: 'neck',
+        rarity: 'blue',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            spellPower: 550,
+            hp: 950,
+            mp: 800,
+            haste: 20,
+            critRate: 10
+        },
+        growth: {
+            spellPower: 2,
+            hp: 2,
+            mp: 2,
+            haste: 2,
+            critRate: 2
+        }
+    },
+    EQ_098: {
+        id: 'EQ_098',
+        name: '黑爵士斗篷',
+        icon: "icons/wow/vanilla/armor/INV_Misc_Cape_20.png",
+        type: 'equipment',
+        slot: 'cloak',
+        rarity: 'purple',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            hp: 900,
+            armor: 120,
+            versatility: 25,
+            haste: 15,
+            critRate: 10
+        },
+        growth: {
+            hp: 2,
+            armor: 2,
+            versatility: 2,
+            haste: 2,
+            critRate: 2
+        }
+    },
+    EQ_099: {
+        id: 'EQ_099',
+        name: '勇气护腿',
+        icon: "icons/wow/vanilla/armor/INV_Pants_06.png",
+        type: 'equipment',
+        slot: 'legs',
+        rarity: 'blue',
+        setId: 'valor_set',
+        setName: '勇气',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            hp: 1200,
+            armor: 150,
+            mastery: 25,
+            blockRate: 4,
+            blockValue: 250
+        },
+        growth: {
+            hp: 2,
+            armor: 2,
+            mastery: 2,
+            blockRate: 2,
+            blockValue: 2
+        }
+    },
+    EQ_100: {
+        id: 'EQ_100',
+        name: '迅影护腿',
+        icon: "icons/wow/vanilla/armor/INV_Pants_02.png",
+        type: 'equipment',
+        slot: 'legs',
+        rarity: 'blue',
+        setId: 'swiftshadow_set',
+        setName: '迅影',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            attack: 450,
+            hp: 700,
+            armor: 90,
+            critRate: 15,
+            haste: 20
+        },
+        growth: {
+            attack: 2,
+            hp: 2,
+            armor: 2,
+            critRate: 2,
+            haste: 2
+        }
+    },
+    EQ_101: {
+        id: 'EQ_101',
+        name: '虔诚护腿',
+        icon: "icons/wow/vanilla/armor/INV_Pants_08.png",
+        type: 'equipment',
+        slot: 'legs',
+        rarity: 'blue',
+        setId: 'devout_set',
+        setName: '虔诚',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            spellPower: 700,
+            hp: 950,
+            mp: 800,
+            mastery: 25,
+            haste: 15
+        },
+        growth: {
+            spellPower: 2,
+            hp: 2,
+            mp: 2,
+            mastery: 2,
+            haste: 2
+        }
+    },
+    EQ_102: {
+        id: 'EQ_102',
+        name: '博学者护腿',
+        icon: "icons/wow/vanilla/armor/INV_Pants_11.png",
+        type: 'equipment',
+        slot: 'legs',
+        rarity: 'blue',
+        setId: 'scholar_set',
+        setName: '博学者',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            spellPower: 800,
+            hp: 850,
+            mp: 900,
+            critRate: 15,
+            haste: 25
+        },
+        growth: {
+            spellPower: 2,
+            hp: 2,
+            mp: 2,
+            critRate: 2,
+            haste: 2
+        }
+    },
     EQ_HOGGER_001: {
         id: 'EQ_HOGGER_001',
         name: '霍格的毛皮披风',
@@ -3959,6 +4791,35 @@ const SET_BONUSES = {
         name: '霍格的战利品',
         tiers: [
             { count: 3, bonus: { gatherEfficiency: 0.15 } }  // 3件套额外+15%采集效率
+        ]
+
+    },
+    valor_set: {
+        name: '勇气',
+        tiers: [
+            { count: 2, bonus: { hp: 500, armor: 80, mastery: 10 } },
+            { count: 4, bonus: { blockRate: 5, blockValue: 300 } }
+        ]
+    },
+    swiftshadow_set: {
+        name: '迅影',
+        tiers: [
+            { count: 2, bonus: { attack: 200, haste: 10 } },
+            { count: 4, bonus: { critRate: 10, critDamage: 0.30 } }
+        ]
+    },
+    devout_set: {
+        name: '虔诚',
+        tiers: [
+            { count: 2, bonus: { spellPower: 250, mastery: 10 } },
+            { count: 4, bonus: { hp: 800, versatility: 15 } }
+        ]
+    },
+    scholar_set: {
+        name: '博学者',
+        tiers: [
+            { count: 2, bonus: { spellPower: 250, haste: 15 } },
+            { count: 4, bonus: { critRate: 10, mastery: 15 } }
         ]
     }
 };

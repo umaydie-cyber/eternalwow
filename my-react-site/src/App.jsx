@@ -5513,7 +5513,7 @@ function stepBossCombat(state) {
         // 灵魂收割者：对所有目标造成(十字军数量*2+3)×攻击的暗影伤害
         else if (bossAction === 'soul_reaper') {
             const aliveCrusaders = (combat.minions || []).filter(m => m.hp > 0 && m.isCrusader).length;
-            const multiplier = aliveCrusaders*2 + (boss.soulReaperBaseMultiplier || 3);
+            const multiplier = aliveCrusaders + (boss.soulReaperBaseMultiplier || 3);
             const totalDamage = Math.floor((boss.attack || 0) * multiplier);
 
             addLog(`【${boss.name}】施放【灵魂收割者】！当前十字军数量：${aliveCrusaders}，伤害倍率：${multiplier}倍`);
@@ -14266,7 +14266,7 @@ const BossPrepareModal = ({ state, dispatch }) => {
                                                 💀 灵魂收割者
                                             </div>
                                             <div style={{ fontSize: 11, color: '#aaa', lineHeight: 1.5 }}>
-                                                对所有目标造成 <span style={{ color: '#ffd700' }}>(2倍当前存活十字军数量 + {boss.soulReaperBaseMultiplier}) × Boss攻击</span> 的暗影伤害
+                                                对所有目标造成 <span style={{ color: '#ffd700' }}>(当前存活十字军数量 + {boss.soulReaperBaseMultiplier}) × Boss攻击</span> 的暗影伤害
                                                 <br/>
                                                 <span style={{ color: '#ff9800' }}>十字军越多，伤害越高！</span>
                                             </div>

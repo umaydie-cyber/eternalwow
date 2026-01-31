@@ -5870,6 +5870,12 @@ function stepBossCombat(state) {
                 [combat.bossId]: 30 * 60
             };
 
+            // ===== 跨世累计击杀次数（用于解锁自动击杀） =====
+            newState.worldBossKillCounts = {
+                ...(newState.worldBossKillCounts || {}),
+                [combat.bossId]: (newState.worldBossKillCounts?.[combat.bossId] || 0) + 1
+            };
+
             if (!newState.defeatedBosses) newState.defeatedBosses = [];
             if (!newState.defeatedBosses.includes(combat.bossId)) {
                 newState.defeatedBosses = [...newState.defeatedBosses, combat.bossId];
@@ -6030,6 +6036,12 @@ const initialState = {
     bossCombat: null, // 正在进行的boss战状态
 
     bossCooldowns: {}, // { [bossId]: remainingSeconds } 世界Boss重生冷却（秒）
+
+    // ===== 世界首领自动击杀（跨世累计） =====
+    // worldBossKillCounts: { [bossId]: number }   所有世(重生)累计击杀次数
+    // worldBossAutoKill:  { [bossId]: boolean }  是否开启“CD结束后自动击杀”
+    worldBossKillCounts: {},
+    worldBossAutoKill: {},
 
     showHoggerPlot: false,
     showRebirthConfirm: false,
@@ -7116,6 +7128,19 @@ function getFunctionalBuildingCost(buildingId, state) {
 // ==================== GAME REDUCER ====================
 function gameReducer(state, action) {
     switch (action.type) {
+        case 'TOGGLE_WORLD_BOSS_AUTOKILL': {
+            const { bossId } = action.payload || {};
+            if (!bossId) return state;
+            const cur = !!state.worldBossAutoKill?.[bossId];
+            return {
+                ...state,
+                worldBossAutoKill: {
+                    ...(state.worldBossAutoKill || {}),
+                    [bossId]: !cur,
+                }
+            };
+        }
+
         case 'TOGGLE_DROP_FILTER': {
             const { itemId } = action.payload;
             const current = state.dropFilters?.[itemId];
@@ -7265,12 +7290,148 @@ function gameReducer(state, action) {
             // ===== 世界Boss重生冷却（秒） =====
             if (newState.bossCooldowns && typeof newState.bossCooldowns === 'object') {
                 const nextCooldowns = {};
+                const readyNow = []; // 本 tick 内冷却归零的 boss
                 Object.entries(newState.bossCooldowns).forEach(([bid, sec]) => {
                     const left = Math.max(0, Math.floor((sec || 0) - deltaSeconds));
-                    if (left > 0) nextCooldowns[bid] = left;
+                    if (left > 0) {
+                        nextCooldowns[bid] = left;
+                    } else {
+                        readyNow.push(bid);
+                    }
                 });
                 newState.bossCooldowns = nextCooldowns;
+                newState.__readyWorldBosses = readyNow; // 临时字段（仅本次 reducer 内使用）
             }
+
+            // ===== 自动击杀世界首领 =====
+            // 规则：每个 boss 累计击杀>=10后，可开启；当 CD 好了（或本来就没CD）就自动击杀并掉落
+            // 注意：不在 bossCombat 中执行，避免打断手动挑战
+            if (!newState.bossCombat) {
+                const killCounts = newState.worldBossKillCounts || {};
+                const autoCfg = newState.worldBossAutoKill || {};
+
+                const canAutoKillBoss = (bossId) => {
+                    const boss = WORLD_BOSSES?.[bossId];
+                    if (!boss) return false;
+
+                    // 解锁条件：等级/道具
+                    const unlockedByLevel = !boss.unlockLevel || (newState.characters || []).some(c => (c.level || 0) >= (boss.unlockLevel || 0));
+                    if (!unlockedByLevel) return false;
+                    if (bossId === 'prestor_lady' && !newState.worldBossProgress?.prestor_lady) return false;
+
+                    // 自动击杀解锁：累计10次
+                    if ((killCounts[bossId] || 0) < 10) return false;
+
+                    // 必须开启开关
+                    if (!autoCfg[bossId]) return false;
+
+                    // CD 必须为 0（缺失也视为 0）
+                    const cd = newState.bossCooldowns?.[bossId] || 0;
+                    if (cd > 0) return false;
+
+                    return true;
+                };
+
+                const grantBossRewardsAuto = (bossId) => {
+                    const bossData = BOSS_DATA[bossId] || WORLD_BOSSES[bossId];
+                    if (!bossData?.rewards) return;
+
+                    // 1) 设置下一次CD
+                    newState.bossCooldowns = {
+                        ...(newState.bossCooldowns || {}),
+                        [bossId]: 30 * 60,
+                    };
+
+                    // 2) 本世击杀标记（重生加成需要）
+                    if (!newState.defeatedBosses) newState.defeatedBosses = [];
+                    if (!newState.defeatedBosses.includes(bossId)) {
+                        newState.defeatedBosses = [...newState.defeatedBosses, bossId];
+                    }
+
+                    // 3) 跨世累计击杀次数
+                    newState.worldBossKillCounts = {
+                        ...(newState.worldBossKillCounts || {}),
+                        [bossId]: (newState.worldBossKillCounts?.[bossId] || 0) + 1
+                    };
+
+                    // 4) 金币
+                    newState.resources = {
+                        ...newState.resources,
+                        gold: (newState.resources.gold || 0) + (bossData.rewards.gold || 0)
+                    };
+
+                    // 5) 经验：自动击杀不发经验（只发金币/装备），避免挂机刷等级
+
+                    // 6) 掉落
+                    (bossData.rewards.items || []).forEach(itemTpl => {
+                        const dropId = (typeof itemTpl === 'string') ? itemTpl : itemTpl?.id;
+                        if (!dropId) return;
+
+                        if (newState.dropFilters?.[dropId] === false) return;
+
+                        const dropChance = itemTpl?.chance ?? 1;
+                        if (Math.random() > dropChance) return;
+
+                        if (FIXED_EQUIPMENTS?.[dropId]) {
+                            const inst = createEquipmentInstance(dropId);
+                            newState.inventory.push(inst);
+                            newState = addEquipmentIdToCodex(newState, dropId);
+                            return;
+                        }
+
+                        const tpl = ITEMS?.[dropId];
+                        if (tpl) {
+                            newState.inventory.push({
+                                ...tpl,
+                                instanceId: `autoBoss_${Date.now()}_${Math.random()}`,
+                                id: tpl.id,
+                            });
+                            newState = addJunkIdToCodex(newState, dropId);
+                            return;
+                        }
+
+                        newState.inventory.push({
+                            instanceId: `autoBoss_${Date.now()}_${Math.random()}`,
+                            id: dropId,
+                            name: dropId,
+                            type: 'junk',
+                        });
+                    });
+
+                    // 7) 记录战斗日志（用于可追溯）
+                    const bossLogEntry = {
+                        id: `bosslog_${Date.now()}_${Math.random()}`,
+                        timestamp: Date.now(),
+                        characterName: '队伍',
+                        zoneName: '世界首领',
+                        enemyName: bossData.name || bossId,
+                        result: 'victory',
+                        logs: [`【自动击杀】${bossData.name || bossId} 已被自动击杀，获得金币与掉落。`],
+                        rewards: { gold: bossData.rewards.gold || 0, exp: 0 },
+                    };
+                    newState.combatLogs = [bossLogEntry, ...(newState.combatLogs || [])].slice(0, 50);
+                };
+
+                // 先处理“刚刚转好”的 boss，再处理“本来就没CD”的 boss（避免同 tick 内重复）
+                const readyFromCd = Array.isArray(newState.__readyWorldBosses) ? newState.__readyWorldBosses : [];
+                const processed = new Set();
+                readyFromCd.forEach(bid => {
+                    if (processed.has(bid)) return;
+                    if (!canAutoKillBoss(bid)) return;
+                    processed.add(bid);
+                    grantBossRewardsAuto(bid);
+                });
+
+                Object.keys(WORLD_BOSSES || {}).forEach(bid => {
+                    if (processed.has(bid)) return;
+                    if (!canAutoKillBoss(bid)) return;
+                    processed.add(bid);
+                    grantBossRewardsAuto(bid);
+                });
+            }
+
+            // 清理临时字段
+            if (newState.__readyWorldBosses) delete newState.__readyWorldBosses;
 
             newState.lastOnlineTime = Date.now();
 
@@ -8354,6 +8515,8 @@ function gameReducer(state, action) {
                 decoded.rebirthBonds ??= [];
                 decoded.codexEquipLv100 ??= [];
                 decoded.bossCooldowns ??= {};
+                decoded.worldBossKillCounts ??= {};
+                decoded.worldBossAutoKill ??= {};
 
                 // ===== 2️⃣ 关键：重算全队属性 =====
                 const fixedCharacters = recalcPartyStats(
@@ -12052,6 +12215,11 @@ const WorldBossPage = ({ state, dispatch }) => {
                     const cdSeconds = state.bossCooldowns?.[boss.id] || 0;
                     const cdText = cdSeconds > 0 ? `${String(Math.floor(cdSeconds / 60)).padStart(2, '0')}:${String(cdSeconds % 60).padStart(2, '0')}` : '';
 
+                    // ===== 自动击杀（跨世累计10次解锁） =====
+                    const totalKills = state.worldBossKillCounts?.[boss.id] || 0;
+                    const autoEnabled = !!state.worldBossAutoKill?.[boss.id];
+                    const autoUnlocked = totalKills >= 10;
+
                     // 普瑞斯托女士特殊解锁条件
                     if (boss.id === 'prestor_lady' && !state.worldBossProgress?.prestor_lady) {
                         return null;
@@ -12181,6 +12349,47 @@ const WorldBossPage = ({ state, dispatch }) => {
                             {/* 挑战按钮 / 解锁条件 */}
                             {unlocked ? (
                                 <div>
+                                    {/* 自动击杀开关 */}
+                                    <div style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'space-between',
+                                        gap: 10,
+                                        padding: '8px 10px',
+                                        marginBottom: 10,
+                                        background: 'rgba(0,0,0,0.22)',
+                                        border: '1px solid rgba(255,255,255,0.08)',
+                                        borderRadius: 6
+                                    }}>
+                                        <div style={{ lineHeight: 1.2 }}>
+                                            <div style={{ fontSize: 12, color: '#ffd700', fontWeight: 700 }}>
+                                                🤖 自动击杀
+                                            </div>
+                                            <div style={{ fontSize: 10, color: '#aaa' }}>
+                                                {autoUnlocked
+                                                    ? 'CD结束后自动击杀并掉落'
+                                                    : `解锁：累计击杀 ${totalKills}/10`}
+                                            </div>
+                                        </div>
+                                        <button
+                                            onClick={() => dispatch({ type: 'TOGGLE_WORLD_BOSS_AUTOKILL', payload: { bossId: boss.id } })}
+                                            disabled={!autoUnlocked}
+                                            style={{
+                                                border: '1px solid rgba(255,255,255,0.12)',
+                                                background: autoEnabled ? 'rgba(76,175,80,0.18)' : 'rgba(255,255,255,0.06)',
+                                                color: autoUnlocked ? (autoEnabled ? '#7CFF7C' : '#ddd') : '#666',
+                                                padding: '6px 10px',
+                                                borderRadius: 999,
+                                                fontSize: 11,
+                                                fontWeight: 800,
+                                                cursor: autoUnlocked ? 'pointer' : 'not-allowed',
+                                                opacity: autoUnlocked ? 1 : 0.7
+                                            }}
+                                        >
+                                            {autoEnabled ? '开启' : '关闭'}
+                                        </button>
+                                    </div>
+
                                     {cdSeconds > 0 && (
                                         <div style={{
                                             textAlign: 'center',

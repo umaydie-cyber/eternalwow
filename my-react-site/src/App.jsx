@@ -1648,6 +1648,22 @@ const DROP_TABLES = {
 
 };
 
+// ==================== 血色修道院装备池（用于道具判定） ====================
+// 说明：目前血色修道院在本游戏中的掉落装备模板为 EQ_049 ~ EQ_061。
+// 如未来扩展血色修道院装备，只需要把新模板ID加入该集合即可。
+const SCARLET_MONASTERY_EQUIP_IDS = new Set([
+    'EQ_049', 'EQ_050', 'EQ_051', 'EQ_052', 'EQ_053', 'EQ_054',
+    'EQ_055', 'EQ_056', 'EQ_057', 'EQ_058', 'EQ_059', 'EQ_060', 'EQ_061'
+]);
+
+function isScarletMonasteryEquipment(eq) {
+    if (!eq || eq.type !== 'equipment') return false;
+    const tpl = FIXED_EQUIPMENTS?.[eq.id];
+    // 未来如果你给血色装备加了 setId=scarlet_crusader，也会自动识别
+    if (tpl?.setId === 'scarlet_crusader') return true;
+    return SCARLET_MONASTERY_EQUIP_IDS.has(eq.id);
+}
+
 const FIXED_EQUIPMENTS = {
     EQ_001: {
         id: 'EQ_001',
@@ -3562,6 +3578,18 @@ const ITEMS = {
         sellPrice: 0,  // 不可出售
         icon: 'icons/wow/vanilla/items/INV_Misc_Head_Dragon_01.png',
         description: '使用后，揭露真相，解锁隐藏Boss【普瑞斯托女士】'
+    },
+
+    // ✅ 新增：血色十字军的徽章（裂魂者萨尔诺斯掉落）
+    IT_SCARLET_CRUSADER_BADGE: {
+        id: 'IT_SCARLET_CRUSADER_BADGE',
+        name: '血色十字军的徽章',
+        type: 'consumable',
+        rarity: 'purple',
+        canUse: true,
+        sellPrice: 0,  // 不可出售
+        icon: 'icons/wow/vanilla/items/INV_Jewelry_Talisman_07.png',
+        description: '使用后选择一件【血色修道院】装备，使其等级提升 +2（最高100级）'
     }
 
 };
@@ -3832,7 +3860,8 @@ const BOSS_DATA = {
             gold: 130000,
             exp: 105000,
             items: [
-                // 可以添加萨尔诺斯专属掉落
+                // ✅ 萨尔诺斯专属掉落
+                { id: 'IT_SCARLET_CRUSADER_BADGE', chance: 0.8 }
             ]
         }
     },
@@ -5788,6 +5817,9 @@ const initialState = {
     showHoggerPlot: false,
     showRebirthConfirm: false,
     showRebirthPlot: null,
+    // 血色十字军的徽章：选择目标装备的临时状态
+    showScarletBadgeModal: false,
+    pendingScarletBadgeInstanceId: null,
     rebirthCount: 0,
     rebirthUnlocked: false,
     rebirthBonuses: {
@@ -7854,12 +7886,121 @@ function gameReducer(state, action) {
                 };
             }
 
+            // ✅ 新增：血色十字军的徽章 —— 打开“选择目标装备”模态框，不立刻消耗
+            if (item.id === 'IT_SCARLET_CRUSADER_BADGE') {
+                return {
+                    ...state,
+                    showScarletBadgeModal: true,
+                    pendingScarletBadgeInstanceId: item.instanceId || item.id
+                };
+            }
+
 
 
             const newInventory = [...state.inventory];
             newInventory.splice(idx, 1);
 
             return { ...state, inventory: newInventory };
+        }
+
+        case 'CLOSE_SCARLET_BADGE_MODAL': {
+            return {
+                ...state,
+                showScarletBadgeModal: false,
+                pendingScarletBadgeInstanceId: null
+            };
+        }
+
+        case 'APPLY_SCARLET_BADGE': {
+            const { targetInstanceId } = action.payload || {};
+            const badgeInstanceId = state.pendingScarletBadgeInstanceId;
+            if (!targetInstanceId || !badgeInstanceId) return state;
+
+            // 1) 校验徽章仍在背包
+            const badgeIdx = state.inventory.findIndex(i =>
+                (i.instanceId && i.instanceId === badgeInstanceId) ||
+                (!i.instanceId && i.id === badgeInstanceId)
+            );
+            if (badgeIdx === -1) {
+                return {
+                    ...state,
+                    showScarletBadgeModal: false,
+                    pendingScarletBadgeInstanceId: null
+                };
+            }
+
+            // 2) 找到目标装备（可能在背包，也可能已装备）
+            const invTargetIdx = state.inventory.findIndex(i => i?.type === 'equipment' && i.instanceId === targetInstanceId);
+            let targetEq = invTargetIdx >= 0 ? state.inventory[invTargetIdx] : null;
+
+            // 如果不在背包，尝试在角色已装备中查找
+            if (!targetEq) {
+                for (const c of (state.characters || [])) {
+                    for (const eq of Object.values(c.equipment || {})) {
+                        if (eq?.type === 'equipment' && eq.instanceId === targetInstanceId) {
+                            targetEq = eq;
+                            break;
+                        }
+                    }
+                    if (targetEq) break;
+                }
+            }
+
+            if (!targetEq || !isScarletMonasteryEquipment(targetEq)) {
+                return state; // 非法目标直接忽略（UI里一般不会出现）
+            }
+
+            // 3) 升级目标装备 +2级（封顶100）
+            const tpl = FIXED_EQUIPMENTS?.[targetEq.id];
+            const maxLv = targetEq.maxLevel ?? tpl?.maxLevel ?? 100;
+            const curLv = (targetEq.currentLevel ?? targetEq.level ?? 0);
+            const nextLv = Math.min(maxLv, curLv + 2);
+
+            const baseStats = targetEq.baseStats || tpl?.baseStats || {};
+            const growth = targetEq.growth || tpl?.growth || {};
+
+            const upgradedEq = {
+                ...targetEq,
+                currentLevel: nextLv,
+                stats: scaleStats(baseStats, growth, nextLv)
+            };
+
+            // 4) 更新背包/角色中的那件装备
+            let newInventory = [...state.inventory];
+            if (invTargetIdx >= 0) {
+                newInventory[invTargetIdx] = upgradedEq;
+            }
+
+            const newChars = (state.characters || []).map(c => {
+                let changed = false;
+                const nextEquip = { ...(c.equipment || {}) };
+                for (const [slot, eq] of Object.entries(nextEquip)) {
+                    if (eq?.type === 'equipment' && eq.instanceId === targetInstanceId) {
+                        nextEquip[slot] = upgradedEq;
+                        changed = true;
+                    }
+                }
+                if (!changed) return c;
+                const nextChar = { ...c, equipment: nextEquip };
+                nextChar.stats = calculateTotalStats(nextChar, undefined, state);
+                return nextChar;
+            });
+
+            // 5) 消耗徽章
+            newInventory.splice(badgeIdx, 1);
+
+            // 6) 亮框 Lv100 图鉴（如果到达100）
+            let nextState = {
+                ...state,
+                inventory: newInventory,
+                characters: recalcPartyStats(state, newChars),
+                showScarletBadgeModal: false,
+                pendingScarletBadgeInstanceId: null
+            };
+            if ((upgradedEq.currentLevel ?? 0) >= 100) {
+                nextState = addEquipmentIdToLv100Codex(nextState, upgradedEq.id);
+            }
+            return nextState;
         }
 
         case 'SELL_ITEM': {
@@ -15277,6 +15418,127 @@ const HoggerPlotModal = ({ state, dispatch }) => {
     );
 };
 
+// ==================== 血色十字军的徽章模态框（选择目标装备） ====================
+const ScarletBadgeModal = ({ state, dispatch }) => {
+    if (!state.showScarletBadgeModal) return null;
+
+    const [selectedId, setSelectedId] = React.useState('');
+
+    // 背包里可升级的血色修道院装备
+    const invCandidates = (state.inventory || [])
+        .filter(i => i?.type === 'equipment' && i.instanceId && isScarletMonasteryEquipment(i))
+        .map(eq => ({
+            instanceId: eq.instanceId,
+            label: `🎒 背包 · ${eq.name}（Lv.${eq.currentLevel ?? eq.level ?? 0} → Lv.${Math.min(eq.maxLevel ?? 100, (eq.currentLevel ?? eq.level ?? 0) + 2)}）`,
+            eq
+        }));
+
+    // 已穿戴的可升级装备
+    const equippedCandidates = [];
+    (state.characters || []).forEach(c => {
+        Object.values(c.equipment || {}).forEach(eq => {
+            if (!eq?.instanceId) return;
+            if (!isScarletMonasteryEquipment(eq)) return;
+            equippedCandidates.push({
+                instanceId: eq.instanceId,
+                label: `🧍 ${c.name} · ${eq.name}（Lv.${eq.currentLevel ?? eq.level ?? 0} → Lv.${Math.min(eq.maxLevel ?? 100, (eq.currentLevel ?? eq.level ?? 0) + 2)}）`,
+                eq
+            });
+        });
+    });
+
+    // 去重（同一件装备不应重复出现）
+    const seen = new Set();
+    const candidates = [...invCandidates, ...equippedCandidates].filter(c => {
+        if (seen.has(c.instanceId)) return false;
+        seen.add(c.instanceId);
+        return true;
+    });
+
+    return (
+        <div
+            style={{
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                background: 'rgba(0,0,0,0.9)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 2200,
+                padding: 20
+            }}
+            onClick={() => dispatch({ type: 'CLOSE_SCARLET_BADGE_MODAL' })}
+        >
+            <div
+                style={{
+                    width: 620,
+                    maxWidth: '95vw',
+                    padding: 28,
+                    background: 'linear-gradient(135deg, rgba(30,25,20,0.98) 0%, rgba(20,15,12,0.98) 100%)',
+                    border: '3px solid #c62828',
+                    borderRadius: 14,
+                    boxShadow: '0 10px 36px rgba(198,40,40,0.25)'
+                }}
+                onClick={(e) => e.stopPropagation()}
+            >
+                <h2 style={{ margin: 0, color: '#ff6b6b', textAlign: 'center' }}>血色十字军的徽章</h2>
+                <div style={{ marginTop: 12, fontSize: 13, color: '#e8dcc4', lineHeight: 1.7, textAlign: 'center' }}>
+                    选择一件【血色修道院】装备，使其等级提升 <b style={{ color: '#ffd700' }}>+2</b>（最高100级）。
+                </div>
+
+                <div style={{ marginTop: 18, padding: 14, background: 'rgba(0,0,0,0.35)', borderRadius: 10, border: '1px solid rgba(255,255,255,0.08)' }}>
+                    {candidates.length === 0 ? (
+                        <div style={{ color: '#ff6b6b', fontSize: 13, textAlign: 'center' }}>
+                            当前没有可升级的【血色修道院】装备（背包或已穿戴）。
+                        </div>
+                    ) : (
+                        <>
+                            <div style={{ fontSize: 12, color: '#c9a227', marginBottom: 10 }}>可选择目标</div>
+                            <select
+                                value={selectedId}
+                                onChange={(e) => setSelectedId(e.target.value)}
+                                style={{
+                                    width: '100%',
+                                    padding: '10px 12px',
+                                    background: 'rgba(0,0,0,0.45)',
+                                    border: '1px solid rgba(255,255,255,0.15)',
+                                    borderRadius: 8,
+                                    color: '#fff',
+                                    fontSize: 13,
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                <option value="">请选择装备...</option>
+                                {candidates.map(c => (
+                                    <option key={c.instanceId} value={c.instanceId}>{c.label}</option>
+                                ))}
+                            </select>
+                        </>
+                    )}
+                </div>
+
+                <div style={{ display: 'flex', gap: 14, justifyContent: 'center', marginTop: 22 }}>
+                    <Button
+                        variant="danger"
+                        disabled={candidates.length === 0 || !selectedId}
+                        onClick={() => {
+                            dispatch({ type: 'APPLY_SCARLET_BADGE', payload: { targetInstanceId: selectedId } });
+                        }}
+                    >
+                        ✅ 确认升级
+                    </Button>
+                    <Button variant="secondary" onClick={() => dispatch({ type: 'CLOSE_SCARLET_BADGE_MODAL' })}>
+                        取消
+                    </Button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 // ==================== 重生确认模态框 ====================
 const RebirthConfirmModal = ({ state, dispatch }) => {
     if (!state.showRebirthConfirm) return null;
@@ -16691,6 +16953,7 @@ export default function WoWIdleGame() {
             {state.bossCombat && <BossCombatModal combat={state.bossCombat} state={state} />}
 
             <HoggerPlotModal state={state} dispatch={dispatch} />
+            <ScarletBadgeModal state={state} dispatch={dispatch} />
             <RebirthConfirmModal state={state} dispatch={dispatch} />
             {state.showRebirthPlot && <RebirthPlotModal state={state} dispatch={dispatch} />}
             {showRebirthBonus && <RebirthBonusModal state={state} onClose={() => setShowRebirthBonus(false)} />}

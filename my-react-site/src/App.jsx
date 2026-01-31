@@ -1736,6 +1736,23 @@ function isHoggerBadgeEquipment(eq) {
     return HOGGER_BADGE_EQUIP_IDS.has(eq.id);
 }
 
+
+// ==================== 贫瘠之地装备池（用于迪菲亚徽章判定） ====================
+// 说明：当前贫瘠之地在本游戏中的掉落装备模板为 EQ_019 ~ EQ_026。
+// 如未来扩展贫瘠之地掉落装备，只需要把新模板ID加入该集合即可。
+const VANCLEEF_BADGE_EQUIP_IDS = new Set([
+    'EQ_019','EQ_020','EQ_021','EQ_022','EQ_023','EQ_024','EQ_025','EQ_026'
+]);
+
+function isVancleefBadgeEquipment(eq) {
+    if (!eq || eq.type !== 'equipment') return false;
+    const tpl = FIXED_EQUIPMENTS?.[eq.id];
+    // 未来如果你给贫瘠之地装备加了 setId=barrens，也会自动识别
+    if (tpl?.setId === 'barrens') return true;
+    return VANCLEEF_BADGE_EQUIP_IDS.has(eq.id);
+}
+
+
 // ==================== 徽章升级规则（复用“血色十字军徽章”的通用模式） ====================
 // 以后新增 Boss 徽章：只需要在这里加一条规则 + 在 USE_ITEM 里让该徽章走同一套入口即可。
 const BADGE_UPGRADE_RULES = {
@@ -1756,6 +1773,15 @@ const BADGE_UPGRADE_RULES = {
         cap: 100,
         isEligible: isHoggerBadgeEquipment,
         theme: { border: '#8d6e63', title: '#ffd700', shadow: 'rgba(141,110,99,0.25)' }
+    },
+    IT_VANCLEEF_BADGE: {
+        badgeId: 'IT_VANCLEEF_BADGE',
+        title: '迪菲亚徽章',
+        zoneLabel: '贫瘠之地',
+        inc: 2,
+        cap: 100,
+        isEligible: isVancleefBadgeEquipment,
+        theme: { border: '#263238', title: '#90caf9', shadow: 'rgba(38,50,56,0.25)' }
     }
 };
 
@@ -3696,6 +3722,18 @@ const ITEMS = {
         sellPrice: 0,  // 不可出售
         icon: 'icons/wow/vanilla/items/INV_Misc_ArmorKit_10.png',
         description: '使用后选择一件【血色修道院】装备，使其等级提升 +2（最高100级）'
+    },
+
+    // 迪菲亚徽章（范克里夫掉落）
+    IT_VANCLEEF_BADGE: {
+        id: 'IT_VANCLEEF_BADGE',
+        name: '迪菲亚徽章',
+        type: 'consumable',
+        rarity: 'purple',
+        canUse: true,
+        sellPrice: 0,  // 不可出售
+        icon: 'icons/wow/vanilla/armor/INV_Jewelry_Talisman_05.png',
+        description: '使用后选择一件【贫瘠之地】装备，使其等级提升 +2（最高100级）'
     }
 
 };
@@ -3906,7 +3944,7 @@ const BOSS_DATA = {
             gold: 25000,
             exp: 19800,
             items: [
-                // 可以添加范克里夫专属掉落
+                { id: 'IT_VANCLEEF_BADGE', chance: 0.8 }
             ]
         }
     },

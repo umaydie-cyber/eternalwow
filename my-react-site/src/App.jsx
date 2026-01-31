@@ -3642,7 +3642,7 @@ const ITEMS = {
         rarity: 'purple',
         canUse: true,
         sellPrice: 0,  // 不可出售
-        icon: 'icons/wow/vanilla/items/INV_Jewelry_Talisman_07.png',
+        icon: 'icons/wow/vanilla/items/INV_Misc_ArmorKit_10.png',
         description: '使用后选择一件【血色修道院】装备，使其等级提升 +2（最高100级）'
     }
 

@@ -3533,6 +3533,26 @@ const FIXED_EQUIPMENTS = {
             perception: 2
         }
     },
+    EQ_VANCLEEF_001: {
+        id: 'EQ_VANCLEEF_001',
+        name: '暴风城工头的铲子',
+        icon: 'icons/wow/vanilla/items/INV_Misc_Shovel_01.png',
+        type: 'equipment',
+        slot: 'mainHand',
+        rarity: 'blue',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            proficiency: 20,
+            precision: 20,
+            perception: 20  // 采集感知
+        },
+        growth: {
+            hp: 2,
+            armor: 2,
+            perception: 2
+        }
+    },
 };
 
 //赤脊山5件图鉴100级点亮效果
@@ -4000,7 +4020,8 @@ const BOSS_DATA = {
             gold: 25000,
             exp: 19800,
             items: [
-                { id: 'IT_VANCLEEF_BADGE', chance: 0.8 }
+                { id: 'IT_VANCLEEF_BADGE', chance: 0.8 },
+                { id: 'EQ_VANCLEEF_001' , chance: 0.25 },
             ]
         }
     },

@@ -4369,9 +4369,77 @@ function stepBossCombat(state) {
     };
 
     // ==================== 玩家阶段 ====================
+
+    // 玩家回合结束时的 buff/debuff 结算（用于“恐惧”等跳过行动的情况）
+    const tickPlayerDurations = (p, i) => {
+        // buff duration 减少
+        if (p.buffs && p.buffs.length > 0) {
+            p.buffs = p.buffs
+                .map(b => {
+                    if (b.duration !== undefined) {
+                        b.duration -= 1;
+                    }
+                    return b;
+                })
+                .filter(b => {
+                    // 护盾：持续时间到期或吸收量耗尽都移除
+                    if (b.type && ['ice_barrier'].includes(b.type)) {
+                        if ((b.duration ?? 999) <= 0 || (b.amount ?? 0) <= 0) {
+                            addLog(`位置${i + 1} ${p.char.name} 的【${b.name}】护盾消失`);
+                            return false;
+                        }
+                        return true;
+                    }
+                    return (b.duration ?? 999) > 0;
+                });
+        }
+
+        // debuff duration 减少（致死打击减疗/恐惧等）
+        if (p.debuffs) {
+            Object.keys(p.debuffs).forEach(key => {
+                if (p.debuffs[key]?.duration !== undefined) {
+                    p.debuffs[key].duration -= 1;
+                    if (p.debuffs[key].duration <= 0) {
+                        delete p.debuffs[key];
+
+                        // ✅ 不同debuff显示不同消失文案
+                        if (key === 'mortalStrike') {
+                            addLog(`位置${i + 1} ${p.char.name} 的【致死打击】减疗效果消失`);
+                        } else if (key === 'fear') {
+                            addLog(`位置${i + 1} ${p.char.name} 的【恐惧】效果消失`);
+                        } else {
+                            addLog(`位置${i + 1} ${p.char.name} 的【${key}】效果消失`);
+                        }
+                    }
+                }
+            });
+        }
+    };
+
     for (let i = 0; i < combat.playerStates.length; i++) {
         const p = combat.playerStates[i];
         if (p.currentHp <= 0) continue;
+
+        // ==================== 恐惧：跳过本回合行动 ====================
+        // 说明：每次 stepBossCombat 视为“1回合”，恐惧期间该角色不释放技能；
+        // 但仍然会消耗本回合（技能轮转继续前进），并正常结算 buff/debuff 持续时间。
+        if (p.debuffs?.fear?.duration > 0) {
+            // 仍然推进技能轮转（表示这一回合被浪费）
+            if (Array.isArray(p.validSkills) && p.validSkills.length > 0) {
+                p.skillIndex = (p.skillIndex || 0) + 1;
+            }
+
+            addLog(`位置${i + 1} ${p.char.name} 因【恐惧】无法行动（剩余${p.debuffs.fear.duration}回合）`, 'debuff');
+            tickPlayerDurations(p, i);
+            continue;
+        }
+
+        // 防御：极端情况下没有技能表
+        if (!Array.isArray(p.validSkills) || p.validSkills.length === 0) {
+            addLog(`位置${i + 1} ${p.char.name} 没有可用技能，跳过行动`, 'warning');
+            tickPlayerDurations(p, i);
+            continue;
+        }
 
         const slotIndex = p.skillIndex % p.validSkills.length;
         let skillId = p.validSkills[p.skillIndex % p.validSkills.length];
@@ -4397,7 +4465,10 @@ function stepBossCombat(state) {
         }
         // ===== 条件技能处理结束 =====
 
-        if (!skill) continue;
+        if (!skill) {
+            tickPlayerDurations(p, i);
+            continue;
+        }
 
         // 饰品/装备特效
         const slotBuff = getSkillSlotBuffBonus(p.char, slotIndex);
@@ -4859,40 +4930,8 @@ function stepBossCombat(state) {
             addLog(`【寒冰指】消耗1层，${p.char.name} 剩余${p.fingersOfFrost}层`);
         }
 
-        // buff duration 减少
-        if (p.buffs && p.buffs.length > 0) {
-            p.buffs = p.buffs
-                .map(b => {
-                    if (b.duration !== undefined) {
-                        b.duration -= 1;
-                    }
-                    return b;
-                })
-                .filter(b => {
-                    // 护盾：持续时间到期或吸收量耗尽都移除
-                    if (b.type && ['ice_barrier'].includes(b.type)) {
-                        if ((b.duration ?? 999) <= 0 || (b.amount ?? 0) <= 0) {
-                            addLog(`位置${i + 1} ${p.char.name} 的【${b.name}】护盾消失`);
-                            return false;
-                        }
-                        return true;
-                    }
-                    return (b.duration ?? 999) > 0;
-                });
-        }
-
-        // debuff duration 减少（致死打击减疗等）
-        if (p.debuffs) {
-            Object.keys(p.debuffs).forEach(key => {
-                if (p.debuffs[key].duration !== undefined) {
-                    p.debuffs[key].duration -= 1;
-                    if (p.debuffs[key].duration <= 0) {
-                        delete p.debuffs[key];
-                        addLog(`位置${i + 1} ${p.char.name} 的【致死打击】减疗效果消失`);
-                    }
-                }
-            });
-        }
+        // 本角色行动结束：结算持续时间
+        tickPlayerDurations(p, i);
     }
 
     // 羁绊效果
@@ -8877,13 +8916,13 @@ const SkillEditorModal = ({ character, onClose, onSave, state }) => {
                                                 src={SKILLS[skillId].iconUrl}
                                                 alt={SKILLS[skillId].name}
                                                 style={{
-                                                        width: 24,
-                                                        height: 24,
-                                                        objectFit: "contain",
-                                                        imageRendering: "pixelated",
-                                                        background: "#000",
-                                                        border: "1px solid #444",
-                                                        borderRadius: 4,
+                                                    width: 24,
+                                                    height: 24,
+                                                    objectFit: "contain",
+                                                    imageRendering: "pixelated",
+                                                    background: "#000",
+                                                    border: "1px solid #444",
+                                                    borderRadius: 4,
                                                 }}
                                             />
                                         ) : (
@@ -9775,8 +9814,8 @@ const ItemDetailsModal = ({ item, onClose, onEquip, characters, state , dispatch
                             isMatA
                                 ? state.inventory.some(i => i?.type === 'equipment' && i.id === 'EQ_042' && getLevel(i) >= 100)
                                 : isMatB
-                                ? state.inventory.some(i => i?.type === 'equipment' && i.id === 'EQ_041' && getLevel(i) >= 100)
-                                : false;
+                                    ? state.inventory.some(i => i?.type === 'equipment' && i.id === 'EQ_041' && getLevel(i) >= 100)
+                                    : false;
 
                         if (!(hasOther && (isMatA || isMatB))) return null;
 
@@ -10157,53 +10196,53 @@ const MapPage = ({ state, dispatch }) => {
                         overflowY: 'auto',
                     }}
                 >
-                <Panel title="可派遣角色" style={{ marginBottom: 16 }}>
-                    <div style={{
-                        display: 'flex',
-                        gap: 12,
-                        flexWrap: 'wrap'
-                    }}>
-                        {unassignedChars.map(char => (
-                            <div
-                                key={char.id}
-                                draggable
-                                onDragStart={(e) => handleDragStart(e, char.id)}
-                                style={{
-                                    padding: '12px 16px',
-                                    background: 'linear-gradient(135deg, rgba(201,162,39,0.2), rgba(139,115,25,0.1))',
-                                    border: '2px solid #c9a227',
-                                    borderRadius: 6,
-                                    cursor: 'grab',
-                                    transition: 'all 0.2s',
-                                    userSelect: 'none'
-                                }}
-                                onMouseEnter={(e) => {
-                                    e.currentTarget.style.transform = 'translateY(-4px)';
-                                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(201,162,39,0.4)';
-                                }}
-                                onMouseLeave={(e) => {
-                                    e.currentTarget.style.transform = 'translateY(0)';
-                                    e.currentTarget.style.boxShadow = 'none';
-                                }}
-                            >
-                                <div style={{ fontSize: 14, color: '#ffd700', fontWeight: 600 }}>
-                                    {char.name}
+                    <Panel title="可派遣角色" style={{ marginBottom: 16 }}>
+                        <div style={{
+                            display: 'flex',
+                            gap: 12,
+                            flexWrap: 'wrap'
+                        }}>
+                            {unassignedChars.map(char => (
+                                <div
+                                    key={char.id}
+                                    draggable
+                                    onDragStart={(e) => handleDragStart(e, char.id)}
+                                    style={{
+                                        padding: '12px 16px',
+                                        background: 'linear-gradient(135deg, rgba(201,162,39,0.2), rgba(139,115,25,0.1))',
+                                        border: '2px solid #c9a227',
+                                        borderRadius: 6,
+                                        cursor: 'grab',
+                                        transition: 'all 0.2s',
+                                        userSelect: 'none'
+                                    }}
+                                    onMouseEnter={(e) => {
+                                        e.currentTarget.style.transform = 'translateY(-4px)';
+                                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(201,162,39,0.4)';
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        e.currentTarget.style.transform = 'translateY(0)';
+                                        e.currentTarget.style.boxShadow = 'none';
+                                    }}
+                                >
+                                    <div style={{ fontSize: 14, color: '#ffd700', fontWeight: 600 }}>
+                                        {char.name}
+                                    </div>
+                                    <div style={{ fontSize: 11, color: '#888', marginTop: 4 }}>
+                                        Lv.{char.level} {CLASSES[char.classId].name}
+                                    </div>
                                 </div>
-                                <div style={{ fontSize: 11, color: '#888', marginTop: 4 }}>
-                                    Lv.{char.level} {CLASSES[char.classId].name}
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                    <div style={{
-                        marginTop: 12,
-                        fontSize: 12,
-                        color: '#888',
-                        fontStyle: 'italic'
-                    }}>
-                        💡 拖拽角色到区域进行分配
-                    </div>
-                </Panel>
+                            ))}
+                        </div>
+                        <div style={{
+                            marginTop: 12,
+                            fontSize: 12,
+                            color: '#888',
+                            fontStyle: 'italic'
+                        }}>
+                            💡 拖拽角色到区域进行分配
+                        </div>
+                    </Panel>
                 </div>
             )}
 
@@ -13240,13 +13279,13 @@ const QuestPage = ({ state, dispatch }) => {
                             }}>
                                 {requirementMet ? '✓' : '✗'}
                                 {currentStep.requirement.type === 'character_level' &&
-                                `需要角色等级 ${currentStep.requirement.level}`}
+                                    `需要角色等级 ${currentStep.requirement.level}`}
                                 {currentStep.requirement.type === 'zone_battles' &&
-                                `需要在${ZONES[currentStep.requirement.zoneId]?.name}战斗${currentStep.requirement.count}次`}
+                                    `需要在${ZONES[currentStep.requirement.zoneId]?.name}战斗${currentStep.requirement.count}次`}
                                 {currentStep.requirement.type === 'boss_defeated' &&
-                                `需要击败${BOSS_DATA[currentStep.requirement.bossId]?.name}`}
+                                    `需要击败${BOSS_DATA[currentStep.requirement.bossId]?.name}`}
                                 {currentStep.requirement.type === 'have_gold' &&
-                                `需要${currentStep.requirement.amount}金币`}
+                                    `需要${currentStep.requirement.amount}金币`}
                             </div>
                         </div>
                     )}
@@ -14758,6 +14797,20 @@ const BossCombatModal = ({ combat, state }) => {
                                                         border: '1px solid rgba(255,100,100,0.3)'
                                                     }}>
                                                         🩸 减疗 {(p.debuffs.mortalStrike.healingReduction * 100)}% ({p.debuffs.mortalStrike.duration}回合)
+                                                    </span>
+                                                )}
+
+                                                {/* 恐惧debuff */}
+                                                {p.debuffs?.fear && (
+                                                    <span style={{
+                                                        padding: '3px 8px',
+                                                        background: 'rgba(180,120,255,0.18)',
+                                                        borderRadius: 4,
+                                                        fontSize: 10,
+                                                        color: '#c6a0ff',
+                                                        border: '1px solid rgba(180,120,255,0.28)'
+                                                    }}>
+                                                        😱 恐惧 ({p.debuffs.fear.duration}回合)
                                                     </span>
                                                 )}
 

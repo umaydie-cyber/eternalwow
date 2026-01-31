@@ -1718,6 +1718,47 @@ function isScarletMonasteryEquipment(eq) {
     return SCARLET_MONASTERY_EQUIP_IDS.has(eq.id);
 }
 
+
+// ==================== 艾尔文/西部荒野/赤脊山装备池（用于霍格徽章判定） ====================
+// 说明：当前三张地图在本游戏中的掉落装备模板为 EQ_001 ~ EQ_018。
+// 如未来扩展这三张地图的掉落装备，只需要把新模板ID加入该集合即可。
+const HOGGER_BADGE_EQUIP_IDS = new Set([
+    'EQ_001','EQ_002','EQ_003','EQ_004','EQ_005',                 // 艾尔文森林
+    'EQ_006','EQ_007','EQ_008','EQ_009','EQ_010','EQ_011','EQ_012','EQ_013', // 西部荒野
+    'EQ_014','EQ_015','EQ_016','EQ_017','EQ_018'                  // 赤脊山
+]);
+
+function isHoggerBadgeEquipment(eq) {
+    if (!eq || eq.type !== 'equipment') return false;
+    const tpl = FIXED_EQUIPMENTS?.[eq.id];
+    // 未来如果你给三图装备加了 setId=elwynn_westfall_redridge，也会自动识别
+    if (tpl?.setId === 'elwynn_westfall_redridge') return true;
+    return HOGGER_BADGE_EQUIP_IDS.has(eq.id);
+}
+
+// ==================== 徽章升级规则（复用“血色十字军徽章”的通用模式） ====================
+// 以后新增 Boss 徽章：只需要在这里加一条规则 + 在 USE_ITEM 里让该徽章走同一套入口即可。
+const BADGE_UPGRADE_RULES = {
+    IT_SCARLET_CRUSADER_BADGE: {
+        badgeId: 'IT_SCARLET_CRUSADER_BADGE',
+        title: '血色十字军的徽章',
+        zoneLabel: '血色修道院',
+        inc: 2,
+        cap: 100,
+        isEligible: isScarletMonasteryEquipment,
+        theme: { border: '#c62828', title: '#ff6b6b', shadow: 'rgba(198,40,40,0.25)' }
+    },
+    IT_HOGGER_BADGE: {
+        badgeId: 'IT_HOGGER_BADGE',
+        title: '霍格的沾血徽章',
+        zoneLabel: '艾尔文森林 / 西部荒野 / 赤脊山',
+        inc: 2,
+        cap: 100,
+        isEligible: isHoggerBadgeEquipment,
+        theme: { border: '#8d6e63', title: '#ffd700', shadow: 'rgba(141,110,99,0.25)' }
+    }
+};
+
 const FIXED_EQUIPMENTS = {
     EQ_001: {
         id: 'EQ_001',
@@ -3622,7 +3663,7 @@ const ITEMS = {
         rarity: 'white',
         sellPrice: 5000
     },
-    // ✅ 新增：黑龙化身的证明
+    // 黑龙化身的证明
     IT_BLACK_DRAGON_PROOF: {
         id: 'IT_BLACK_DRAGON_PROOF',
         name: '黑龙化身的证明',
@@ -3633,8 +3674,19 @@ const ITEMS = {
         icon: 'icons/wow/vanilla/items/INV_Misc_Head_Dragon_01.png',
         description: '使用后，揭露真相，解锁隐藏Boss【普瑞斯托女士】'
     },
+    // 霍格的沾血徽章（霍格掉落）
+    IT_HOGGER_BADGE: {
+        id: 'IT_HOGGER_BADGE',
+        name: '霍格的沾血徽章',
+        type: 'consumable',
+        rarity: 'purple',
+        canUse: true,
+        sellPrice: 0,  // 不可出售
+        icon: 'icons/wow/vanilla/items/INV_Misc_ArmorKit_01.png',
+        description: '使用后选择一件【艾尔文森林，西部荒野，赤脊山】装备，使其等级提升 +2（最高100级）'
+    },
 
-    // ✅ 新增：血色十字军的徽章（裂魂者萨尔诺斯掉落）
+    // 血色十字军的徽章（裂魂者萨尔诺斯掉落）
     IT_SCARLET_CRUSADER_BADGE: {
         id: 'IT_SCARLET_CRUSADER_BADGE',
         name: '血色十字军的徽章',
@@ -5896,6 +5948,7 @@ const initialState = {
     // 血色十字军的徽章：选择目标装备的临时状态
     showScarletBadgeModal: false,
     pendingScarletBadgeInstanceId: null,
+    pendingBadgeItemId: null,
     rebirthCount: 0,
     rebirthUnlocked: false,
     rebirthBonuses: {
@@ -7992,16 +8045,16 @@ function gameReducer(state, action) {
                 };
             }
 
-            // ✅ 新增：血色十字军的徽章 —— 打开“选择目标装备”模态框，不立刻消耗
-            if (item.id === 'IT_SCARLET_CRUSADER_BADGE') {
+
+// ✅ 徽章类道具（复用“血色十字军徽章”模式）：打开“选择目标装备”模态框，不立刻消耗
+            if (BADGE_UPGRADE_RULES?.[item.id]) {
                 return {
                     ...state,
                     showScarletBadgeModal: true,
-                    pendingScarletBadgeInstanceId: item.instanceId || item.id
+                    pendingScarletBadgeInstanceId: item.instanceId || item.id,
+                    pendingBadgeItemId: item.id
                 };
             }
-
-
 
             const newInventory = [...state.inventory];
             newInventory.splice(idx, 1);
@@ -8013,13 +8066,16 @@ function gameReducer(state, action) {
             return {
                 ...state,
                 showScarletBadgeModal: false,
-                pendingScarletBadgeInstanceId: null
+                pendingScarletBadgeInstanceId: null,
+                pendingBadgeItemId: null
             };
         }
 
         case 'APPLY_SCARLET_BADGE': {
             const { targetInstanceId } = action.payload || {};
             const badgeInstanceId = state.pendingScarletBadgeInstanceId;
+            const badgeItemId = state.pendingBadgeItemId || 'IT_SCARLET_CRUSADER_BADGE';
+            const rule = BADGE_UPGRADE_RULES?.[badgeItemId] || BADGE_UPGRADE_RULES.IT_SCARLET_CRUSADER_BADGE;
             if (!targetInstanceId || !badgeInstanceId) return state;
 
             // 1) 校验徽章仍在背包
@@ -8031,7 +8087,8 @@ function gameReducer(state, action) {
                 return {
                     ...state,
                     showScarletBadgeModal: false,
-                    pendingScarletBadgeInstanceId: null
+                    pendingScarletBadgeInstanceId: null,
+                    pendingBadgeItemId: null
                 };
             }
 
@@ -8052,15 +8109,17 @@ function gameReducer(state, action) {
                 }
             }
 
-            if (!targetEq || !isScarletMonasteryEquipment(targetEq)) {
+            if (!targetEq || !rule.isEligible(targetEq)) {
                 return state; // 非法目标直接忽略（UI里一般不会出现）
             }
 
-            // 3) 升级目标装备 +2级（封顶100）
+
+// 3) 升级目标装备（rule.inc级，封顶rule.cap）
             const tpl = FIXED_EQUIPMENTS?.[targetEq.id];
-            const maxLv = targetEq.maxLevel ?? tpl?.maxLevel ?? 100;
+            const hardCap = rule.cap ?? 100;
+            const maxLv = Math.min(hardCap, (targetEq.maxLevel ?? tpl?.maxLevel ?? hardCap));
             const curLv = (targetEq.currentLevel ?? targetEq.level ?? 0);
-            const nextLv = Math.min(maxLv, curLv + 2);
+            const nextLv = Math.min(maxLv, curLv + (rule.inc ?? 2));
 
             const baseStats = targetEq.baseStats || tpl?.baseStats || {};
             const growth = targetEq.growth || tpl?.growth || {};
@@ -15555,14 +15614,17 @@ const HoggerPlotModal = ({ state, dispatch }) => {
 const ScarletBadgeModal = ({ state, dispatch }) => {
     if (!state.showScarletBadgeModal) return null;
 
+    const badgeItemId = state.pendingBadgeItemId || 'IT_SCARLET_CRUSADER_BADGE';
+    const rule = BADGE_UPGRADE_RULES?.[badgeItemId] || BADGE_UPGRADE_RULES.IT_SCARLET_CRUSADER_BADGE;
+
     const [selectedId, setSelectedId] = React.useState('');
 
     // 背包里可升级的血色修道院装备
     const invCandidates = (state.inventory || [])
-        .filter(i => i?.type === 'equipment' && i.instanceId && isScarletMonasteryEquipment(i))
+        .filter(i => i?.type === 'equipment' && i.instanceId && rule.isEligible(i))
         .map(eq => ({
             instanceId: eq.instanceId,
-            label: `🎒 背包 · ${eq.name}（Lv.${eq.currentLevel ?? eq.level ?? 0} → Lv.${Math.min(eq.maxLevel ?? 100, (eq.currentLevel ?? eq.level ?? 0) + 2)}）`,
+            label: `🎒 背包 · ${eq.name}（Lv.${eq.currentLevel ?? eq.level ?? 0} → Lv.${Math.min(rule.cap ?? 100, (eq.maxLevel ?? 100), (eq.currentLevel ?? eq.level ?? 0) + (rule.inc ?? 2))}）`,
             eq
         }));
 
@@ -15571,10 +15633,10 @@ const ScarletBadgeModal = ({ state, dispatch }) => {
     (state.characters || []).forEach(c => {
         Object.values(c.equipment || {}).forEach(eq => {
             if (!eq?.instanceId) return;
-            if (!isScarletMonasteryEquipment(eq)) return;
+            if (!rule.isEligible(eq)) return;
             equippedCandidates.push({
                 instanceId: eq.instanceId,
-                label: `🧍 ${c.name} · ${eq.name}（Lv.${eq.currentLevel ?? eq.level ?? 0} → Lv.${Math.min(eq.maxLevel ?? 100, (eq.currentLevel ?? eq.level ?? 0) + 2)}）`,
+                label: `🧍 ${c.name} · ${eq.name}（Lv.${eq.currentLevel ?? eq.level ?? 0} → Lv.${Math.min(rule.cap ?? 100, (eq.maxLevel ?? 100), (eq.currentLevel ?? eq.level ?? 0) + (rule.inc ?? 2))}）`,
                 eq
             });
         });
@@ -15611,21 +15673,23 @@ const ScarletBadgeModal = ({ state, dispatch }) => {
                     maxWidth: '95vw',
                     padding: 28,
                     background: 'linear-gradient(135deg, rgba(30,25,20,0.98) 0%, rgba(20,15,12,0.98) 100%)',
-                    border: '3px solid #c62828',
+                    border: `3px solid ${rule.theme?.border || '#c62828'}`,
                     borderRadius: 14,
-                    boxShadow: '0 10px 36px rgba(198,40,40,0.25)'
+                    boxShadow: `0 10px 36px ${rule.theme?.shadow || 'rgba(198,40,40,0.25)'}`
                 }}
                 onClick={(e) => e.stopPropagation()}
             >
-                <h2 style={{ margin: 0, color: '#ff6b6b', textAlign: 'center' }}>血色十字军的徽章</h2>
+                <h2 style={{ margin: 0, color: rule.theme?.title || '#ff6b6b', textAlign: 'center' }}>{rule.title}</h2>
                 <div style={{ marginTop: 12, fontSize: 13, color: '#e8dcc4', lineHeight: 1.7, textAlign: 'center' }}>
-                    选择一件【血色修道院】装备，使其等级提升 <b style={{ color: '#ffd700' }}>+2</b>（最高100级）。
+
+                    选择一件【{rule.zoneLabel}】装备，使其等级提升 <b style={{ color: '#ffd700' }}>+{rule.inc ?? 2}</b>（最高{rule.cap ?? 100}级）。
+
                 </div>
 
                 <div style={{ marginTop: 18, padding: 14, background: 'rgba(0,0,0,0.35)', borderRadius: 10, border: '1px solid rgba(255,255,255,0.08)' }}>
                     {candidates.length === 0 ? (
                         <div style={{ color: '#ff6b6b', fontSize: 13, textAlign: 'center' }}>
-                            当前没有可升级的【血色修道院】装备（背包或已穿戴）。
+                            当前没有可升级的【{rule.zoneLabel}】装备（背包或已穿戴）。
                         </div>
                     ) : (
                         <>

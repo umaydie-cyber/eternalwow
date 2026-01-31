@@ -369,13 +369,13 @@ const TALENTS = {
                 {
                     id: 'holy_barrier',
                     name: '神圣障壁',
-                    description: '（样例）【神圣新星】为全队施加2回合救赎效果，并施加2倍法术强度的护盾',
+                    description: '【神圣新星】为全队施加2回合救赎效果，并施加2倍法术强度的护盾',
                     type: 'on_cast'
                 },
                 {
                     id: 'holy_avatar',
                     name: '神圣化身',
-                    description: '（样例）你的法术强度提高20%',
+                    description: '你的法术强度提高20%',
                     type: 'aura'
                 }
             ]
@@ -802,7 +802,7 @@ const SKILLS = {
 
             const amount = Math.floor(base * fantasiaMult);
 
-            return {
+            const result = {
                 aoeDamage: amount,
                 healAll: amount,
                 school: 'holy',
@@ -810,6 +810,21 @@ const SKILLS = {
                 fantasiaStacksUsed: (fantasiaMult > 1) ? fantasiaStacks : 0,
                 clearFantasiaStacks: (fantasiaMult > 1)
             };
+
+            // 50级天赋：神圣障壁 - 神圣新星为全队施加2回合救赎，并施加2倍法术强度护盾（在Boss战会扩展到全队）
+            if (char.talents?.[50] === 'holy_barrier') {
+                result.applyAtonement = { duration: 2 };
+                const sp = Number(char.stats.spellPower) || 0;
+                result.shield = {
+                    type: 'holy_barrier',
+                    name: '神圣障壁',
+                    amount: Math.floor(sp * 2),
+                    maxAmount: Math.floor(sp * 2),
+                    duration: 2
+                };
+            }
+
+            return result;
         }
     },
 
@@ -4557,7 +4572,7 @@ function stepBossCombat(state) {
 
         // 找到有效的护盾buff
         const shieldBuff = playerState.buffs.find(b =>
-            b.type && b.amount > 0 && ['ice_barrier'].includes(b.type)
+            b.type && b.amount > 0 && ['ice_barrier', 'holy_barrier'].includes(b.type)
         );
 
         if (!shieldBuff) {
@@ -4604,7 +4619,7 @@ function stepBossCombat(state) {
                 })
                 .filter(b => {
                     // 护盾：持续时间到期或吸收量耗尽都移除
-                    if (b.type && ['ice_barrier'].includes(b.type)) {
+                    if (b.type && ['ice_barrier', 'holy_barrier'].includes(b.type)) {
                         if ((b.duration ?? 999) <= 0 || (b.amount ?? 0) <= 0) {
                             addLog(`位置${i + 1} ${p.char.name} 的【${b.name}】护盾消失`);
                             return false;
@@ -4635,6 +4650,15 @@ function stepBossCombat(state) {
                 }
             });
         }
+        // 救赎 duration 减少（仅当带 duration 时才递减；精通被动/常驻救赎不受影响）
+        if (p.char?.stats?.atonement && p.char.stats.atonement.duration !== undefined) {
+            p.char.stats.atonement.duration -= 1;
+            if (p.char.stats.atonement.duration <= 0) {
+                delete p.char.stats.atonement;
+                addLog(`位置${i + 1} ${p.char.name} 的【救赎】效果结束`);
+            }
+        }
+
     };
 
     for (let i = 0; i < combat.playerStates.length; i++) {
@@ -4970,6 +4994,25 @@ function stepBossCombat(state) {
             addLog(`位置${i + 1} ${p.char.name} 全队治疗 ${heal}`);
         }
 
+        // 救赎处理（applyAtonement）
+        if (result.applyAtonement) {
+            const dur = Number(result.applyAtonement.duration) || 2;
+
+            combat.playerStates.forEach(ps => {
+                if (ps.currentHp > 0) {
+                    const existingRate = ps.char?.stats?.atonement?.healingRate;
+                    const healingRate = (typeof existingRate === 'number') ? existingRate : 0.20;
+
+                    ps.char.stats.atonement = {
+                        healingRate,
+                        duration: dur
+                    };
+                }
+            });
+
+            addLog(`位置${i + 1} ${p.char.name} 为全队施加【救赎】，持续 ${dur} 回合`);
+        }
+
         // 苦修技能处理 - 需要考虑减疗debuff
         if (result.penanceHeal) {
             const frontPlayer = combat.playerStates.find(ps => ps.currentHp > 0);
@@ -5093,21 +5136,27 @@ function stepBossCombat(state) {
 
         // ===== 护盾技能处理 =====
         if (result.shield) {
-            p.buffs = p.buffs || [];
+            // 神圣障壁：对全队施加护盾；其他护盾默认只给自己
+            combat.playerStates.forEach((ps, j) => {
+                if (result.shield.type !== 'holy_barrier' && j !== i) return;
+                if (ps.currentHp <= 0) return;
 
-            // 检查是否已有同类型护盾
-            const existingIdx = p.buffs.findIndex(b => b.type === result.shield.type);
-            if (existingIdx !== -1) {
-                const oldShield = p.buffs[existingIdx];
-                p.buffs[existingIdx] = {
-                    ...result.shield,
-                    amount: Math.max(oldShield.amount, result.shield.amount)
-                };
-                addLog(`位置${i + 1} ${p.char.name} 刷新【${result.shield.name}】护盾，吸收量：${p.buffs[existingIdx].amount}`);
-            } else {
-                p.buffs.push({ ...result.shield });
-                addLog(`位置${i + 1} ${p.char.name} 获得【${result.shield.name}】护盾，可吸收 ${result.shield.amount} 点伤害`);
-            }
+                ps.buffs = ps.buffs || [];
+
+                // 检查是否已有同类型护盾
+                const existingIdx = ps.buffs.findIndex(b => b.type === result.shield.type);
+                if (existingIdx !== -1) {
+                    const oldShield = ps.buffs[existingIdx];
+                    ps.buffs[existingIdx] = {
+                        ...result.shield,
+                        amount: Math.max(oldShield.amount, result.shield.amount)
+                    };
+                    addLog(`位置${j + 1} ${ps.char.name} 刷新【${result.shield.name}】护盾，吸收量：${ps.buffs[existingIdx].amount}`);
+                } else {
+                    ps.buffs.push({ ...result.shield });
+                    addLog(`位置${j + 1} ${ps.char.name} 获得【${result.shield.name}】护盾，可吸收 ${result.shield.amount} 点伤害`);
+                }
+            });
         }
 
         // 天赋触发
@@ -6305,7 +6354,7 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1) {
             .map(b => ({ ...b, duration: (b.duration ?? 0) - 1 }))
             .filter(b => {
                 // 护盾：持续时间到期或吸收量耗尽都移除
-                if (b.type && ['ice_barrier'].includes(b.type)) {
+                if (b.type && ['ice_barrier', 'holy_barrier'].includes(b.type)) {
                     return (b.duration ?? 0) > 0 && (b.amount ?? 0) > 0;
                 }
                 // 其他buff只看持续时间
@@ -7055,7 +7104,7 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1) {
 
         // ===== 新增：护盾吸收伤害 =====
         let shieldAbsorbed = 0;
-        const shieldBuff = buffs.find(b => b.type && b.amount > 0 && ['ice_barrier'].includes(b.type));
+        const shieldBuff = buffs.find(b => b.type && b.amount > 0 && ['ice_barrier', 'holy_barrier'].includes(b.type));
 
         if (shieldBuff && finalDamage > 0) {
             // 计算护盾吸收量

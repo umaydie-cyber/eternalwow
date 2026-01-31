@@ -4431,8 +4431,7 @@ const FIXED_EQUIPMENTS = {
         level: 0,
         maxLevel: 100,
         baseStats: {
-            attack: 300,
-            spellPower: 300,
+            attack: 450,
             critRate: 10,
             mastery: 10
         },
@@ -4445,8 +4444,7 @@ const FIXED_EQUIPMENTS = {
         specialEffect: {
             type: 'skill_slot_buff',
             slots: [0, 1],
-            attackBonus: 700,
-            spellPowerBonus: 700
+            attackBonus: 1200,
         }
     },
     EQ_109: {
@@ -4490,7 +4488,7 @@ const FIXED_EQUIPMENTS = {
             attack: 550,
             hp: 900,
             armor: 120,
-            critRate: 18,
+            critRate: 25,
             haste: 25
         },
         growth: {
@@ -4539,14 +4537,14 @@ const FIXED_EQUIPMENTS = {
         baseStats: {
             spellPower: 900,
             hp: 1100,
-            critRate: 18,
-            haste: 30
+            critRate: 20,
+            mastery: 30
         },
         growth: {
             spellPower: 2,
             hp: 2,
             critRate: 2,
-            haste: 2
+            mastery: 2
         }
     },
 

@@ -767,7 +767,7 @@ const SKILLS = {
         iconUrl : 'icons/wow/vanilla/spells/Spell_Holy_HolyNova.png',
         type: 'aoe_hybrid',
         limit: 1,
-        description: '对所有敌人造成 2×法术强度 的神圣伤害，并对所有队友恢复 2×法术强度 的生命值',
+        description: '对所有敌人造成 2倍法术强度 的神圣伤害，并对所有队友恢复 2倍法术强度 的生命值',
         calculate: (char) => {
             const amount = Math.floor(char.stats.spellPower * 2);
             return {
@@ -5816,6 +5816,7 @@ const initialState = {
     researchProgress: 0,
     inventory: [],
     inventorySize: 80,
+    inventorySizeExtra: 0,
     achievements: {},
     codex: [],
     codexJunk: [],
@@ -7072,7 +7073,7 @@ function gameReducer(state, action) {
 
             // 仓库增加背包大小
             const bonusInventorySize = warehouseCount * 1;
-            newState.inventorySize = 80 + bonusInventorySize;
+            newState.inventorySize = 80 + bonusInventorySize + (newState.inventorySizeExtra || 0);
 
             newState.resources = newResources;
 
@@ -8367,9 +8368,12 @@ function gameReducer(state, action) {
         }
         case 'CHEAT_ADD_BAGSLOT': {
             const amount = Math.max(0, parseInt(action.payload) || 0);
+            const warehouseCount = state.functionalBuildings?.warehouse || 0;
+            const nextExtra = (state.inventorySizeExtra || 0) + amount;
             return {
                 ...state,
-                inventorySize: state.inventorySize + amount
+                inventorySizeExtra: nextExtra,
+                inventorySize: 80 + warehouseCount * 1 + nextExtra,
             };
         }
         case 'CHEAT_ADD_EXP': {

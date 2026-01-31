@@ -40,6 +40,7 @@ const CLASSES = {
             { level: 10, skillId: 'mind_blast' },
             { level: 20, skillId: 'power_word_radiance' },
             { level: 30, skillId: 'penance' },
+            { level: 50, skillId: 'holy_nova' },
         ]
     },
     frost_mage: {
@@ -759,6 +760,24 @@ const SKILLS = {
             return result;
         }
     },
+    holy_nova: {
+        id: 'holy_nova',
+        name: '神圣新星',
+        icon: '💥',
+        iconUrl : 'icons/wow/vanilla/spells/Spell_Holy_HolyNova.png',
+        type: 'aoe_hybrid',
+        limit: 1,
+        description: '对所有敌人造成 2×法术强度 的神圣伤害，并对所有队友恢复 2×法术强度 的生命值',
+        calculate: (char) => {
+            const amount = Math.floor(char.stats.spellPower * 2);
+            return {
+                aoeDamage: amount,
+                healAll: amount,
+                school: 'holy'
+            };
+        }
+    },
+
 
     // ==================== 冰霜法师技能 ====================
     mastery_deep_winter: {

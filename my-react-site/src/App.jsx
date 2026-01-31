@@ -4423,6 +4423,7 @@ function stepBossCombat(state) {
         // ==================== 恐惧：跳过本回合行动 ====================
         // 说明：每次 stepBossCombat 视为“1回合”，恐惧期间该角色不释放技能；
         // 但仍然会消耗本回合（技能轮转继续前进），并正常结算 buff/debuff 持续时间。
+        console.log('恐惧回合：${p.debuffs.fear.duration}');
         if (p.debuffs?.fear?.duration > 0) {
             // 仍然推进技能轮转（表示这一回合被浪费）
             if (Array.isArray(p.validSkills) && p.validSkills.length > 0) {

@@ -13575,6 +13575,10 @@ const BossPrepareModal = ({ state, dispatch }) => {
         board_the_deck: '登上甲板',
         summon: '召唤',
         strike: '重击',
+        soul_storm:'灵魂强风',
+        fallen_crusaders :'堕落的十字军',
+        banish_soul:'放逐灵魂',
+        soul_reaper:'灵魂收割者',
     };
 
     const formatBossCycle = (boss) =>

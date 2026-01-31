@@ -356,6 +356,29 @@ const TALENTS = {
                     type: 'on_cast'
                 }
             ]
+        },
+        {
+            tier: 50,
+            options: [
+                {
+                    id: 'fantasia',
+                    name: '幻想曲',
+                    description: '每回合获得一层幻想曲；每层使你的下一个【神圣新星】伤害与治疗量提高20%，施放后清空层数',
+                    type: 'on_turn'
+                },
+                {
+                    id: 'holy_barrier',
+                    name: '神圣障壁',
+                    description: '（样例）【神圣新星】为全队施加2回合救赎效果，并施加2倍法术强度的护盾',
+                    type: 'on_cast'
+                },
+                {
+                    id: 'holy_avatar',
+                    name: '神圣化身',
+                    description: '（样例）你的法术强度提高20%',
+                    type: 'aura'
+                }
+            ]
         }
     ],
     frost_mage: [
@@ -768,12 +791,24 @@ const SKILLS = {
         type: 'aoe_hybrid',
         limit: 1,
         description: '对所有敌人造成 2倍法术强度 的神圣伤害，并对所有队友恢复 2倍法术强度 的生命值',
-        calculate: (char) => {
-            const amount = Math.floor(char.stats.spellPower * 2);
+        calculate: (char, combatContext) => {
+            const base = Math.floor(char.stats.spellPower * 2);
+
+            // 50级天赋：幻想曲 - 每层使下一个神圣新星伤害/治疗 +20%，施放后清空
+            const fantasiaStacks = Number(combatContext?.fantasiaStacks) || 0;
+            const fantasiaMult = (char.talents?.[50] === 'fantasia' && fantasiaStacks > 0)
+                ? (1 + fantasiaStacks * 0.20)
+                : 1;
+
+            const amount = Math.floor(base * fantasiaMult);
+
             return {
                 aoeDamage: amount,
                 healAll: amount,
-                school: 'holy'
+                school: 'holy',
+
+                fantasiaStacksUsed: (fantasiaMult > 1) ? fantasiaStacks : 0,
+                clearFantasiaStacks: (fantasiaMult > 1)
             };
         }
     },
@@ -4256,6 +4291,11 @@ function calculateTotalStats(character, partyAuras = { hpMul: 1, spellPowerMul: 
         totalStats.atonement = {
             healingRate: atonementRate
         };
+
+        // （样例）50级天赋：神圣化身 - 法术强度提高20%
+        if (t[50] === 'holy_avatar') {
+            totalStats.spellPower = (totalStats.spellPower || 0) * 1.2;
+        }
     }
 
     // ==================== 冰霜法师精通：深冬之寒（1级被动） ====================
@@ -4468,6 +4508,12 @@ function stepBossCombat(state) {
         const p = combat.playerStates[i];
         if (p.currentHp <= 0) continue;
 
+        // ===== 50级天赋：幻想曲（每回合获得1层，影响下一个神圣新星） =====
+        if (p.char?.classId === 'discipline_priest' && p.char?.talents?.[50] === 'fantasia') {
+            p.fantasiaStacks = (p.fantasiaStacks || 0) + 1;
+            addLog(`【幻想曲】位置${i + 1} ${p.char.name} 获得1层（当前${p.fantasiaStacks}层）`);
+        }
+
         // ==================== 恐惧：跳过本回合行动 ====================
         // 说明：每次 stepBossCombat 视为“1回合”，恐惧期间该角色不释放技能；
         // 但仍然会消耗本回合（技能轮转继续前进），并正常结算 buff/debuff 持续时间。
@@ -4538,6 +4584,7 @@ function stepBossCombat(state) {
 
         const combatContext = {
             fortuneMisfortuneStacks: p.fortuneMisfortuneStacks || 0,
+            fantasiaStacks: p.fantasiaStacks || 0,
             icyVeinsBuff,
             blizzardActive,
             fingersOfFrost: p.fingersOfFrost || 0
@@ -4976,6 +5023,13 @@ function stepBossCombat(state) {
         if (skillId === 'ice_lance' && result.consumeFingersOfFrost) {
             p.fingersOfFrost = Math.max(0, (p.fingersOfFrost || 0) - 1);
             addLog(`【寒冰指】消耗1层，${p.char.name} 剩余${p.fingersOfFrost}层`);
+        }
+
+        // ===== 50级天赋：幻想曲 - 神圣新星施放后清空层数 =====
+        if (result.clearFantasiaStacks) {
+            const used = Number(result.fantasiaStacksUsed) || (p.fantasiaStacks || 0);
+            p.fantasiaStacks = 0;
+            addLog(`【幻想曲】${p.char.name} 消耗${used}层，强化本次神圣新星后清空层数`);
         }
 
         // 本角色行动结束：结算持续时间
@@ -6012,6 +6066,7 @@ function createCombatState(character, enemy, skillSlots) {
         validSkills,
         talentBuffs: { attackFlat: 0, blockValueFlat: 0, spellPowerFlat: 0 },
         fortuneMisfortuneStacks: 0, // 祸福相依层数
+        fantasiaStacks: 0,          // 幻想曲层数（戒律牧师50级天赋，仅本场战斗）
         fingersOfFrost: 0,          // 寒冰指层数
         logs: [],
         startedAt: Date.now(),
@@ -6041,6 +6096,8 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1) {
 
     // 祸福相依层数
     let fortuneMisfortuneStacks = combatState.fortuneMisfortuneStacks || 0;
+    // 幻想曲层数（仅本场战斗）
+    let fantasiaStacks = combatState.fantasiaStacks || 0;
     // 寒冰指层数
     let fingersOfFrost = combatState.fingersOfFrost || 0;
 
@@ -6083,6 +6140,18 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1) {
         if (charHp <= 0 || enemyHp <= 0 || round >= maxRounds) break;
 
         round++;
+
+        // ===== 50级天赋：幻想曲（每回合+1层，影响下一个神圣新星） =====
+        if (character?.classId === 'discipline_priest' && character?.talents?.[50] === 'fantasia') {
+            fantasiaStacks = (fantasiaStacks || 0) + 1;
+            logs.push({
+                round,
+                kind: 'proc',
+                actor: character.name,
+                proc: '幻想曲',
+                text: `【幻想曲】获得1层（当前${fantasiaStacks}层）`
+            });
+        }
 
         // ===== 角色回合 =====
         let currentSkillId = validSkills[skillIndex % validSkills.length];
@@ -6144,6 +6213,7 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1) {
         // 传入combatContext给技能计算（用于祸福相依等）
         const combatContext = {
             fortuneMisfortuneStacks,
+            fantasiaStacks,
             fingersOfFrost,
             icyVeinsBuff,
             blizzardActive
@@ -6578,6 +6648,19 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1) {
             });
         }
 
+        // ===== 幻想曲：神圣新星施放后清空层数 =====
+        if (result.clearFantasiaStacks) {
+            const used = Number(result.fantasiaStacksUsed) || fantasiaStacks;
+            fantasiaStacks = 0;
+            logs.push({
+                round,
+                kind: 'proc',
+                actor: character.name,
+                proc: '幻想曲',
+                text: `【幻想曲】消耗${used}层，强化本次神圣新星后清空层数`
+            });
+        }
+
         // ===== 天赋触发（保持不变）=====
         if (currentSkillId === 'basic_attack' && character.talents?.[10] === 'plain') {
             talentBuffs.attackFlat = (talentBuffs.attackFlat || 0) + 5;
@@ -6862,6 +6945,7 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1) {
             logs,
             talentBuffs,
             fortuneMisfortuneStacks,
+            fantasiaStacks,
             fingersOfFrost, // 把最新层数存回去
         }
     };
@@ -8202,6 +8286,7 @@ function gameReducer(state, action) {
                 buffs: [],
                 talentBuffs: { attackFlat: 0, blockValueFlat: 0, spellPowerFlat: 0 },
                 fortuneMisfortuneStacks: 0, // 祸福相依层数
+                fantasiaStacks: 0,          // 幻想曲层数（戒律牧师50级天赋，仅本场战斗）
                 fingersOfFrost: 0, // 寒冰指层数（冰霜法师）
                 validSkills: Array.from({ length: 8 }, (_, i) => {
                     const sid = char.skillSlots?.[i] || '';
@@ -15127,8 +15212,8 @@ const BossCombatModal = ({ combat, state }) => {
                                     </div>
                                 </div>
 
-                                {/* 寒冰指/祸福相依层数显示 */}
-                                {!isDead && (p.fingersOfFrost > 0 || p.fortuneMisfortuneStacks > 0) && (
+                                {/* 寒冰指/祸福相依/幻想曲层数显示 */}
+                                {!isDead && (p.fingersOfFrost > 0 || p.fortuneMisfortuneStacks > 0 || (p.fantasiaStacks || 0) > 0) && (
                                     <div style={{
                                         marginTop: 8,
                                         display: 'flex',
@@ -15158,6 +15243,18 @@ const BossCombatModal = ({ combat, state }) => {
                                                 border: '1px solid rgba(255,215,0,0.3)'
                                             }}>
                                                 ☯️ 祸福 ×{p.fortuneMisfortuneStacks}
+                                            </span>
+                                        )}
+                                        {(p.fantasiaStacks || 0) > 0 && (
+                                            <span style={{
+                                                padding: '2px 8px',
+                                                background: 'rgba(156,39,176,0.2)',
+                                                borderRadius: 4,
+                                                fontSize: 10,
+                                                color: '#ce93d8',
+                                                border: '1px solid rgba(156,39,176,0.3)'
+                                            }}>
+                                                🎼 幻想曲 ×{p.fantasiaStacks}
                                             </span>
                                         )}
                                     </div>

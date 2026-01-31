@@ -4006,7 +4006,7 @@ function addJunkIdToCodex(state, junkId) {
 
 function learnNewSkills(character) {
     const classData = CLASSES[character.classId];
-    const learned = new Set(character.skills);
+    const learned = new Set(character.skills || []);
 
     classData.skills.forEach(({ level, skillId }) => {
         if (character.level >= level && !learned.has(skillId)) {
@@ -4423,7 +4423,6 @@ function stepBossCombat(state) {
         // ==================== 恐惧：跳过本回合行动 ====================
         // 说明：每次 stepBossCombat 视为“1回合”，恐惧期间该角色不释放技能；
         // 但仍然会消耗本回合（技能轮转继续前进），并正常结算 buff/debuff 持续时间。
-        console.log('恐惧回合：${p.debuffs.fear.duration}');
         if (p.debuffs?.fear?.duration > 0) {
             // 仍然推进技能轮转（表示这一回合被浪费）
             if (Array.isArray(p.validSkills) && p.validSkills.length > 0) {
@@ -7492,6 +7491,35 @@ function gameReducer(state, action) {
             };
         }
 
+        case 'SYNC_CHARACTER_SKILLS': {
+            const { characterId } = action.payload;
+            const charIndex = state.characters.findIndex(c => c.id === characterId);
+            if (charIndex === -1) return state;
+
+            const target = state.characters[charIndex];
+            const curSkills = target.skills || [];
+            const nextSkills = learnNewSkills(target);
+
+            // 没有新技能则不更新
+            const isSame =
+                nextSkills.length === curSkills.length &&
+                nextSkills.every(s => curSkills.includes(s));
+
+            if (isSame) return state;
+
+            const newChars = [...state.characters];
+            newChars[charIndex] = { ...target, skills: nextSkills };
+
+            // 保险：重算全队属性（光环等）
+            const updatedParty = recalcPartyStats(state, newChars);
+
+            return {
+                ...state,
+                characters: updatedParty
+            };
+        }
+
+
         case 'EQUIP_ITEM': {
             const { characterId, itemInstanceId } = action.payload;
 
@@ -9381,11 +9409,31 @@ const CombatLogsModal = ({ logs, onClose, onClear }) => {
 };
 
 // 角色详情模态框
-const CharacterDetailsModal = ({ characterId, state, onClose, onUnequip, onEditSkills, onViewSkills }) => {
+const CharacterDetailsModal = ({ characterId, state, onClose, onUnequip, onEditSkills, onViewSkills, onSyncSkills }) => {
     const character = state.characters.find(c => c.id === characterId);
 
     // 角色被删除/不存在时，直接不渲染（或你也可以 onClose()）
     if (!character) return null;
+
+    const [syncTip, setSyncTip] = useState(null);
+    const syncTipTimerRef = useRef(null);
+
+    const showSyncTip = (msg) => {
+        setSyncTip(msg);
+        if (syncTipTimerRef.current) clearTimeout(syncTipTimerRef.current);
+        syncTipTimerRef.current = setTimeout(() => setSyncTip(null), 1500);
+    };
+
+    useEffect(() => {
+        return () => {
+            if (syncTipTimerRef.current) clearTimeout(syncTipTimerRef.current);
+        };
+    }, []);
+
+    const currentSkills = character.skills || [];
+    const levelSkills = learnNewSkills(character);
+    const missingSkills = levelSkills.filter(s => !currentSkills.includes(s));
+    const canSyncSkills = missingSkills.length > 0;
 
     const statNames = {
         hp: '生命值',
@@ -9444,12 +9492,39 @@ const CharacterDetailsModal = ({ characterId, state, onClose, onUnequip, onEditS
                             Lv.{character.level} {character.race} {CLASSES[character.classId].name}
                         </div>
                     </div>
-                    <div style={{ display: 'flex', gap: 8 }}>
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                         <Button onClick={onViewSkills} variant="secondary">👁 查看技能</Button>
                         <Button onClick={onEditSkills} variant="secondary">✏️ 编辑技能</Button>
+                        <Button
+                            onClick={() => {
+                                if (!onSyncSkills) return;
+                                onSyncSkills();
+                                // 简单提示：学会本等级应学会的技能（用于旧角色补齐新技能）
+                                showSyncTip(`同步成功：学会 ${missingSkills.length} 个技能`);
+                            }}
+                            variant="secondary"
+                            disabled={!canSyncSkills}
+                            title={canSyncSkills ? '学会当前等级应学会的技能（补齐新技能）' : '当前已学会本等级应学会的技能'}
+                        >
+                            📚 学会本级技能
+                        </Button>
                         <Button onClick={onClose} variant="secondary">✕ 关闭</Button>
                     </div>
                 </div>
+
+                {syncTip && (
+                    <div style={{
+                        marginTop: 10,
+                        background: 'rgba(0,0,0,0.35)',
+                        border: '1px solid rgba(201,162,39,0.35)',
+                        color: '#f3e6b3',
+                        padding: '8px 12px',
+                        borderRadius: 8,
+                        fontSize: 13,
+                    }}>
+                        ✅ {syncTip}
+                    </div>
+                )}
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 20 }}>
                     {/* 左侧：属性 */}
@@ -10408,6 +10483,7 @@ const CharacterPage = ({ state, dispatch }) => {
                         if (latest) setShowSkillViewer(latest);
                         setSelectedCharId(null);
                     }}
+                    onSyncSkills={() => dispatch({ type: 'SYNC_CHARACTER_SKILLS', payload: { characterId: selectedCharId } })}
                 />
             )}
 

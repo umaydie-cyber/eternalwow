@@ -3595,7 +3595,7 @@ const FIXED_EQUIPMENTS = {
     EQ_074: {
         id: 'EQ_074',
         name: '勇气腰带',
-        icon: "icons/wow/vanilla/armor/INV_Belt_09.png",
+        icon: "icons/wow/vanilla/armor/INV_Belt_34.png",
         type: 'equipment',
         slot: 'belt',
         rarity: 'blue',
@@ -3647,7 +3647,7 @@ const FIXED_EQUIPMENTS = {
     EQ_076: {
         id: 'EQ_076',
         name: '虔诚腰带',
-        icon: "icons/wow/vanilla/armor/INV_Belt_11.png",
+        icon: "icons/wow/vanilla/armor/INV_Belt_10.png",
         type: 'equipment',
         slot: 'belt',
         rarity: 'blue',
@@ -3671,7 +3671,7 @@ const FIXED_EQUIPMENTS = {
     EQ_077: {
         id: 'EQ_077',
         name: '博学者腰带',
-        icon: "icons/wow/vanilla/armor/INV_Belt_24.png",
+        icon: "icons/wow/vanilla/armor/INV_Belt_08.png",
         type: 'equipment',
         slot: 'belt',
         rarity: 'blue',
@@ -3694,7 +3694,7 @@ const FIXED_EQUIPMENTS = {
     },
     EQ_078: {
         id: 'EQ_078',
-        name: '勇气手套',
+        name: '勇气护手',
         icon: "icons/wow/vanilla/armor/INV_Gauntlets_26.png",
         type: 'equipment',
         slot: 'hands',
@@ -3721,7 +3721,7 @@ const FIXED_EQUIPMENTS = {
     EQ_079: {
         id: 'EQ_079',
         name: '迅影手套',
-        icon: "icons/wow/vanilla/armor/INV_Gauntlets_17.png",
+        icon: "icons/wow/vanilla/armor/INV_Gauntlets_24.png",
         type: 'equipment',
         slot: 'hands',
         rarity: 'blue',
@@ -3747,7 +3747,7 @@ const FIXED_EQUIPMENTS = {
     EQ_080: {
         id: 'EQ_080',
         name: '虔诚手套',
-        icon: "icons/wow/vanilla/armor/INV_Gauntlets_21.png",
+        icon: "icons/wow/vanilla/armor/INV_Gauntlets_14.png",
         type: 'equipment',
         slot: 'hands',
         rarity: 'blue',
@@ -3771,7 +3771,7 @@ const FIXED_EQUIPMENTS = {
     EQ_081: {
         id: 'EQ_081',
         name: '博学者手套',
-        icon: "icons/wow/vanilla/armor/INV_Gauntlets_27.png",
+        icon: "icons/wow/vanilla/armor/INV_Gauntlets_17.png",
         type: 'equipment',
         slot: 'hands',
         rarity: 'blue',
@@ -3795,7 +3795,7 @@ const FIXED_EQUIPMENTS = {
     EQ_082: {
         id: 'EQ_082',
         name: '喷毒者',
-        icon: "icons/wow/vanilla/weapons/INV_Weapon_ShortBlade_16.png",
+        icon: "icons/wow/vanilla/weapons/INV_Wand_10.png",
         type: 'equipment',
         slot: 'mainHand',
         rarity: 'blue',
@@ -3836,7 +3836,7 @@ const FIXED_EQUIPMENTS = {
     EQ_084: {
         id: 'EQ_084',
         name: '哈雷肯的项圈',
-        icon: "icons/wow/vanilla/armor/INV_Jewelry_Necklace_10.png",
+        icon: "icons/wow/vanilla/armor/INV_Belt_14.png",
         type: 'equipment',
         slot: 'neck',
         rarity: 'blue',
@@ -3980,7 +3980,7 @@ const FIXED_EQUIPMENTS = {
     EQ_090: {
         id: 'EQ_090',
         name: '勇气头盔',
-        icon: "icons/wow/vanilla/armor/INV_Helmet_20.png",
+        icon: "icons/wow/vanilla/armor/INV_Helmet_02.png",
         type: 'equipment',
         slot: 'head',
         rarity: 'blue',
@@ -4006,7 +4006,7 @@ const FIXED_EQUIPMENTS = {
     EQ_091: {
         id: 'EQ_091',
         name: '虔诚头冠',
-        icon: "icons/wow/vanilla/armor/INV_Helmet_34.png",
+        icon: "icons/wow/vanilla/armor/INV_Crown_01.png",
         type: 'equipment',
         slot: 'head',
         rarity: 'blue',
@@ -4030,7 +4030,7 @@ const FIXED_EQUIPMENTS = {
     EQ_092: {
         id: 'EQ_092',
         name: '迅影罩帽',
-        icon: "icons/wow/vanilla/armor/INV_Helmet_09.png",
+        icon: "icons/wow/vanilla/armor/INV_Helmet_41.png",
         type: 'equipment',
         slot: 'head',
         rarity: 'blue',
@@ -4056,7 +4056,7 @@ const FIXED_EQUIPMENTS = {
     EQ_093: {
         id: 'EQ_093',
         name: '博学者头冠',
-        icon: "icons/wow/vanilla/armor/INV_Helmet_33.png",
+        icon: "icons/wow/vanilla/armor/INV_Crown_02.png",
         type: 'equipment',
         slot: 'head',
         rarity: 'blue',
@@ -4104,7 +4104,7 @@ const FIXED_EQUIPMENTS = {
     EQ_095: {
         id: 'EQ_095',
         name: '瑞文戴尔之剑',
-        icon: "icons/wow/vanilla/weapons/INV_Sword_48.png",
+        icon: "icons/wow/vanilla/weapons/INV_Sword_17.png",
         type: 'equipment',
         slot: 'mainHand',
         rarity: 'purple',
@@ -4130,7 +4130,7 @@ const FIXED_EQUIPMENTS = {
     EQ_096: {
         id: 'EQ_096',
         name: '知识宝典',
-        icon: "icons/wow/vanilla/items/INV_Misc_Book_09.png",
+        icon: "icons/wow/vanilla/items/INV_Misc_Book_05.png",
         type: 'equipment',
         slot: 'offHand',
         rarity: 'blue',
@@ -4198,7 +4198,7 @@ const FIXED_EQUIPMENTS = {
     EQ_099: {
         id: 'EQ_099',
         name: '勇气护腿',
-        icon: "icons/wow/vanilla/armor/INV_Pants_06.png",
+        icon: "icons/wow/vanilla/armor/INV_Pants_04.png",
         type: 'equipment',
         slot: 'legs',
         rarity: 'blue',
@@ -4274,7 +4274,7 @@ const FIXED_EQUIPMENTS = {
     EQ_102: {
         id: 'EQ_102',
         name: '博学者护腿',
-        icon: "icons/wow/vanilla/armor/INV_Pants_11.png",
+        icon: "icons/wow/vanilla/armor/INV_Pants_06.png",
         type: 'equipment',
         slot: 'legs',
         rarity: 'blue',
@@ -4300,7 +4300,7 @@ const FIXED_EQUIPMENTS = {
     EQ_103: {
         id: 'EQ_103',
         name: '恶魔之击',
-        icon: "icons/wow/vanilla/weapons/INV_Sword_45.png",
+        icon: "icons/wow/vanilla/weapons/INV_Weapon_ShortBlade_25.png",
         type: 'equipment',
         slot: 'mainHand',
         rarity: 'purple',
@@ -4328,7 +4328,7 @@ const FIXED_EQUIPMENTS = {
     EQ_104: {
         id: 'EQ_104',
         name: '雷德双刃',
-        icon: "icons/wow/vanilla/weapons/INV_Sword_48.png",
+        icon: "icons/wow/vanilla/weapons/INV_Sword_40.png",
         type: 'equipment',
         slot: 'mainHand',
         rarity: 'purple',
@@ -4356,7 +4356,7 @@ const FIXED_EQUIPMENTS = {
     EQ_105: {
         id: 'EQ_105',
         name: '石楠之环',
-        icon: "icons/wow/vanilla/armor/INV_Jewelry_Ring_05.png",
+        icon: "icons/wow/vanilla/items/INV_Misc_Root_02.png",
         type: 'equipment',
         slot: 'ring1',
         rarity: 'blue',
@@ -4400,7 +4400,7 @@ const FIXED_EQUIPMENTS = {
     EQ_107: {
         id: 'EQ_107',
         name: '龙人之盾',
-        icon: "icons/wow/vanilla/armor/INV_Shield_15.png",
+        icon: "icons/wow/vanilla/armor/INV_Shield_20.png",
         type: 'equipment',
         slot: 'offHand',
         rarity: 'blue',
@@ -4424,7 +4424,7 @@ const FIXED_EQUIPMENTS = {
     EQ_108: {
         id: 'EQ_108',
         name: '雷德之眼',
-        icon: "icons/wow/vanilla/items/INV_Misc_Eye_01.png",
+        icon: "icons/wow/vanilla/armor/INV_Helmet_46.png",
         type: 'equipment',
         slot: 'trinket2',
         rarity: 'purple',
@@ -4452,7 +4452,7 @@ const FIXED_EQUIPMENTS = {
     EQ_109: {
         id: 'EQ_109',
         name: '勇气胸甲',
-        icon: "icons/wow/vanilla/armor/INV_Chest_Chain_16.png",
+        icon: "icons/wow/vanilla/armor/INV_Chest_Plate03.png",
         type: 'equipment',
         slot: 'chest',
         rarity: 'blue',
@@ -4478,7 +4478,7 @@ const FIXED_EQUIPMENTS = {
     EQ_110: {
         id: 'EQ_110',
         name: '迅影外套',
-        icon: "icons/wow/vanilla/armor/INV_Chest_Leather_09.png",
+        icon: "icons/wow/vanilla/armor/INV_Chest_Leather_07.png",
         type: 'equipment',
         slot: 'chest',
         rarity: 'blue',
@@ -4504,7 +4504,7 @@ const FIXED_EQUIPMENTS = {
     EQ_111: {
         id: 'EQ_111',
         name: '虔诚长袍',
-        icon: "icons/wow/vanilla/armor/INV_Chest_Cloth_43.png",
+        icon: "icons/wow/vanilla/armor/INV_Chest_Cloth_11.png",
         type: 'equipment',
         slot: 'chest',
         rarity: 'blue',
@@ -4528,7 +4528,7 @@ const FIXED_EQUIPMENTS = {
     EQ_112: {
         id: 'EQ_112',
         name: '博学者长袍',
-        icon: "icons/wow/vanilla/armor/INV_Chest_Cloth_43.png",
+        icon: "icons/wow/vanilla/armor/INV_Chest_Cloth_25.png",
         type: 'equipment',
         slot: 'chest',
         rarity: 'blue',

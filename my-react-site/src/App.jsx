@@ -8345,9 +8345,10 @@ function gameReducer(state, action) {
 
             // Boss加成：根据击杀的Boss给予加成
             const bossBonus = {
-                hogger: 0.05,      // 霍格 +5%
-                vancleef: 0.10,   // 范克里夫 +10%（预留）
-                prestor_lady: 0.25
+                hogger: 0.05,      // 霍格+5%
+                vancleef: 0.10,   // 范克里夫+10%（预留）
+                prestor_lady: 0.15,//普瑞斯托女士+15%
+                thalnos: 0.2, //萨尔诺斯+20%
             };
             const defeatedBosses = state.defeatedBosses || [];
             const totalBossBonus = defeatedBosses.reduce((sum, bossId) => sum + (bossBonus[bossId] || 0), 0);
@@ -15707,7 +15708,7 @@ const RebirthPlotModal = ({ state, dispatch }) => {
     if (!state.showRebirthPlot) return null;
     const p = state.showRebirthPlot;
     const bossNames = (p.defeatedBosses || []).map(id => {
-        const names = { hogger: '霍格', vancleef: '范克里夫' ,prestor_lady:'普瑞斯托女士'};
+        const names = { hogger: '霍格', vancleef: '范克里夫' ,prestor_lady:'普瑞斯托女士',thalnos:'萨尔诺斯'};
         return names[id] || id;
     });
     return (

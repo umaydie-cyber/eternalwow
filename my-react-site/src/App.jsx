@@ -3873,7 +3873,8 @@ const BOSS_DATA = {
                 { id: 'REBIRTH_INVITATION' },
                 { id: 'EQ_HOGGER_001' , chance: 0.15 },  // 新增：霍格的毛皮披风
                 { id: 'EQ_HOGGER_002' , chance: 0.15 },  // 新增：霍格的獠牙头盔
-                { id: 'EQ_HOGGER_003' , chance: 0.15 }   // 新增：霍格的兽皮胸甲
+                { id: 'EQ_HOGGER_003' , chance: 0.15 },   // 新增：霍格的兽皮胸甲
+                { id: 'IT_HOGGER_BADGE', chance: 0.8 }
             ]
         }
     },

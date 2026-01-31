@@ -3908,7 +3908,7 @@ const BOSS_DATA = {
         },
         summonCount: 5,
         // 灵魂收割者：(十字军数量+3) × boss攻击 的暗影伤害
-        soulReaperBaseMultiplier: 3, // 基础倍率（无十字军时）
+        soulReaperBaseMultiplier: 1.5, // 基础倍率（无十字军时）
 
         rewards: {
             gold: 130000,

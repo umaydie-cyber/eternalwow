@@ -1761,7 +1761,7 @@ const PRESTOR_BADGE_EQUIP_IDS = new Set([
     // 荆棘谷
     'EQ_027', 'EQ_028', 'EQ_029', 'EQ_030', 'EQ_031', 'EQ_032',
     // 塔纳利斯
-    'EQ_041', 'EQ_042', 'EQ_043', 'EQ_045', 'EQ_046', 'EQ_047', 'EQ_048'
+    'EQ_041', 'EQ_042', 'EQ_043','EQ_044', 'EQ_045', 'EQ_046', 'EQ_047', 'EQ_048'
 ]);
 
 function isPrestorBadgeEquipment(eq) {

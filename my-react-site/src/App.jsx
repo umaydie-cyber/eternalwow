@@ -17682,7 +17682,7 @@ export default function WoWIdleGame() {
     );
 }
 
-// ==================== CSS动画（添加到style标签中） ====================
+// ==================== CSS动画（添加到style标签中）   ====================
 const questAnimationStyles = `
     @keyframes slideDown {
         from {

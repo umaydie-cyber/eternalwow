@@ -3639,12 +3639,22 @@ const WORLD_BOSSES = {
         hp: 800000,
         attack: 2000,
         defense: 800,
-        rewards: { gold: 100000, exp: 50000 },
+        rewards: { gold: 100000, exp: 80000 },
         // 特殊解锁条件：需要使用【黑龙化身的证明】物品
         unlockCondition: {
             requireItem: 'IT_BLACK_DRAGON_PROOF'
         }
-    }
+    },
+    thalnos: {
+        id: 'thalnos',
+        name: '裂魂者萨尔诺斯',
+        icon: 'icons/wow/vanilla/boss/thalnos.png', // 需要添加对应图标
+        hp: 1000000,
+        attack: 2200,
+        defense: 950,
+        rewards: { gold: 130000, exp: 105000 },
+        unlockLevel: 45
+    },
 
 };
 
@@ -3783,12 +3793,49 @@ const BOSS_DATA = {
         bleedDuration: 3,
         rewards: {
             gold: 100000,
-            exp: 50000,
+            exp: 80000,
             items: [
                 // 可以添加黑龙主题紫装掉落
             ]
         }
-    }
+    },
+    thalnos: {
+        id: 'thalnos',
+        name: '裂魂者萨尔诺斯',
+        maxHp: 1000000,
+        attack: 2200,
+        defense: 950,
+        // 技能循环：灵魂强风 → 堕落的十字军 → 放逐灵魂 → 灵魂收割者
+        cycle: ['soul_storm', 'fallen_crusaders', 'banish_soul', 'soul_reaper'],
+
+        // 灵魂强风：攻击×1.5伤害 + DOT（每回合攻击×1.5，持续3回合）
+        soulStormMultiplier: 1.5,
+        soulStormDoTMultiplier: 1.5,
+        soulStormDoTDuration: 3,
+
+        // 放逐灵魂：攻击×4伤害 + 恐惧3回合
+        banishSoulMultiplier: 4,
+        fearDuration: 2,
+
+        // 堕落的十字军配置
+        minion: {
+            name: '堕落十字军',
+            maxHp: 30000,
+            attack: 2200, // 等于boss攻击
+            defense: 950
+        },
+        summonCount: 5,
+        // 灵魂收割者：(十字军数量+3) × boss攻击 的暗影伤害
+        soulReaperBaseMultiplier: 3, // 基础倍率（无十字军时）
+
+        rewards: {
+            gold: 130000,
+            exp: 105000,
+            items: [
+                // 可以添加萨尔诺斯专属掉落
+            ]
+        }
+    },
 };
 
 // ==================== 羁绊名称映射 ====================
@@ -5268,6 +5315,168 @@ function stepBossCombat(state) {
                 addLog(`【${boss.name}】使用【重击】对 位置${tIdx + 1} 造成 ${damage} 伤害（护甲减伤${drPct}%${blockText}）`);
             }
         }
+    }// ==================== 裂魂者萨尔诺斯技能处理 ====================
+    else if (combat.bossId === 'thalnos') {
+        // 灵魂强风：对随机目标（分散）或所有目标（集中）造成伤害+DOT
+        if (bossAction === 'soul_storm') {
+            const baseDamage = Math.floor((boss.attack || 0) * (boss.soulStormMultiplier || 1.5));
+            const dotDamage = Math.floor((boss.attack || 0) * (boss.soulStormDoTMultiplier || 1.5));
+            const dotDuration = boss.soulStormDoTDuration || 3;
+
+            if (combat.strategy.stance === 'dispersed') {
+                // 分散站位：只打随机一个目标
+                const alivePlayers = combat.playerStates.filter(p => p.currentHp > 0);
+                if (alivePlayers.length > 0) {
+                    const randomTarget = alivePlayers[Math.floor(Math.random() * alivePlayers.length)];
+                    const tIdx = combat.playerStates.findIndex(p => p.char.id === randomTarget.char.id);
+
+                    if (tIdx >= 0) {
+                        const target = combat.playerStates[tIdx];
+                        const { damage, dr, blockedAmount } = calcMitigatedAndBlockedDamage(target, baseDamage, false);
+
+                        // 护盾吸收
+                        const shieldResult = applyShieldAbsorb(target, damage, logs, currentRound);
+                        target.currentHp -= shieldResult.finalDamage;
+
+                        const drPct = Math.round(dr * 100);
+                        const blockText = blockedAmount > 0 ? `，格挡 ${blockedAmount}` : '';
+                        const shieldText = shieldResult.absorbed > 0 ? `，护盾吸收 ${shieldResult.absorbed}` : '';
+                        addLog(`【${boss.name}】施放【灵魂强风】（分散站位）对 位置${tIdx + 1} ${target.char.name} 造成 ${shieldResult.finalDamage} 点暗影伤害（护甲减伤${drPct}%${blockText}${shieldText}）`);
+
+                        // 施加DOT
+                        target.dots = target.dots || [];
+                        target.dots.push({
+                            name: '灵魂强风',
+                            type: 'dot',
+                            school: 'shadow',
+                            damagePerTurn: dotDamage,
+                            duration: dotDuration
+                        });
+                        addLog(`→ 位置${tIdx + 1} ${target.char.name} 获得【灵魂强风】：每回合 ${dotDamage} 点暗影伤害，持续 ${dotDuration} 回合`);
+                    }
+                }
+            } else {
+                // 集中站位：对所有存活角色造成伤害+DOT
+                addLog(`【${boss.name}】施放【灵魂强风】（集中站位），所有角色受到伤害！`);
+
+                combat.playerStates.forEach((ps, pIdx) => {
+                    if (ps.currentHp <= 0) return;
+
+                    const { damage, dr, blockedAmount } = calcMitigatedAndBlockedDamage(ps, baseDamage, false);
+
+                    // 护盾吸收
+                    const shieldResult = applyShieldAbsorb(ps, damage, logs, currentRound);
+                    ps.currentHp -= shieldResult.finalDamage;
+
+                    const drPct = Math.round(dr * 100);
+                    const blockText = blockedAmount > 0 ? `，格挡 ${blockedAmount}` : '';
+                    const shieldText = shieldResult.absorbed > 0 ? `，护盾吸收 ${shieldResult.absorbed}` : '';
+                    addLog(`→ 位置${pIdx + 1} ${ps.char.name} 受到 ${shieldResult.finalDamage} 点暗影伤害（护甲减伤${drPct}%${blockText}${shieldText}）`);
+
+                    // 施加DOT
+                    ps.dots = ps.dots || [];
+                    ps.dots.push({
+                        name: '灵魂强风',
+                        type: 'dot',
+                        school: 'shadow',
+                        damagePerTurn: dotDamage,
+                        duration: dotDuration
+                    });
+                    addLog(`→ 位置${pIdx + 1} ${ps.char.name} 获得【灵魂强风】DOT`);
+                });
+            }
+        }
+        // 堕落的十字军：召唤5个十字军
+        else if (bossAction === 'fallen_crusaders') {
+            const aliveMinions = (combat.minions || []).filter(m => (m.hp ?? 0) > 0);
+            const need = Math.max(0, (boss.summonCount || 5) - aliveMinions.length);
+
+            for (let i = 0; i < need; i++) {
+                combat.minions.push({
+                    hp: boss.minion.maxHp,
+                    maxHp: boss.minion.maxHp,
+                    attack: boss.attack, // 攻击等于boss攻击
+                    defense: boss.minion.defense,
+                    isCrusader: true,
+                    dots: []
+                });
+            }
+
+            if (need > 0) {
+                addLog(`【${boss.name}】召唤了 ${need} 个${boss.minion.name}！`);
+                addLog(`→ 十字军属性：HP ${boss.minion.maxHp}，攻击 ${boss.attack}`);
+            } else {
+                addLog(`【${boss.name}】尝试召唤十字军，但场上十字军已满`);
+            }
+        }
+        // 放逐灵魂：对随机目标造成高额伤害+恐惧
+        else if (bossAction === 'banish_soul') {
+            const alivePlayers = combat.playerStates.filter(p => p.currentHp > 0);
+            if (alivePlayers.length > 0) {
+                // 随机选择一个目标
+                const randomTarget = alivePlayers[Math.floor(Math.random() * alivePlayers.length)];
+                const tIdx = combat.playerStates.findIndex(p => p.char.id === randomTarget.char.id);
+
+                if (tIdx >= 0) {
+                    const target = combat.playerStates[tIdx];
+                    const raw = Math.floor((boss.attack || 0) * (boss.banishSoulMultiplier || 4));
+                    const { damage, dr, blockedAmount } = calcMitigatedAndBlockedDamage(target, raw, true);
+
+                    // 护盾吸收
+                    const shieldResult = applyShieldAbsorb(target, damage, logs, currentRound);
+                    target.currentHp -= shieldResult.finalDamage;
+
+                    const drPct = Math.round(dr * 100);
+                    const blockText = blockedAmount > 0 ? `，格挡 ${blockedAmount}` : '';
+                    const shieldText = shieldResult.absorbed > 0 ? `，护盾吸收 ${shieldResult.absorbed}` : '';
+                    addLog(`【${boss.name}】施放【放逐灵魂】对 位置${tIdx + 1} ${target.char.name} 造成 ${shieldResult.finalDamage} 点暗影伤害（护甲减伤${drPct}%${blockText}${shieldText}）`);
+
+                    // 施加恐惧debuff
+                    target.debuffs = target.debuffs || {};
+                    target.debuffs.fear = {
+                        duration: boss.fearDuration || 3
+                    };
+                    addLog(`→ 位置${tIdx + 1} ${target.char.name} 陷入【恐惧】！无法行动 ${boss.fearDuration || 3} 回合`);
+                }
+            } else {
+                addLog(`【${boss.name}】施放【放逐灵魂】，但没有存活目标`);
+            }
+        }
+        // 灵魂收割者：对所有目标造成(十字军数量*2+3)×攻击的暗影伤害
+        else if (bossAction === 'soul_reaper') {
+            const aliveCrusaders = (combat.minions || []).filter(m => m.hp > 0 && m.isCrusader).length;
+            const multiplier = aliveCrusaders*2 + (boss.soulReaperBaseMultiplier || 3);
+            const totalDamage = Math.floor((boss.attack || 0) * multiplier);
+
+            addLog(`【${boss.name}】施放【灵魂收割者】！当前十字军数量：${aliveCrusaders}，伤害倍率：${multiplier}倍`);
+
+            combat.playerStates.forEach((ps, pIdx) => {
+                if (ps.currentHp <= 0) return;
+
+                // 暗影伤害，使用魔法抗性减免
+                const magicResist = ps.char?.stats?.magicResist || 0;
+                const resistReduction = magicResist / (magicResist + 500);
+                let damage = Math.floor(totalDamage * (1 - resistReduction));
+
+                // 应用受伤减免
+                const takenMult = ps.char?.stats?.damageTakenMult ?? 1;
+                let buffTakenMult = 1;
+                if (ps.buffs) {
+                    ps.buffs.forEach(b => {
+                        if (b.damageTakenMult) buffTakenMult *= b.damageTakenMult;
+                    });
+                }
+                damage = Math.max(1, Math.floor(damage * takenMult * buffTakenMult));
+
+                // 护盾吸收
+                const shieldResult = applyShieldAbsorb(ps, damage, logs, currentRound);
+                ps.currentHp -= shieldResult.finalDamage;
+
+                const resistPct = Math.round(resistReduction * 100);
+                const shieldText = shieldResult.absorbed > 0 ? `，护盾吸收 ${shieldResult.absorbed}` : '';
+                addLog(`→ 位置${pIdx + 1} ${ps.char.name} 受到 ${shieldResult.finalDamage} 点暗影伤害（魔抗减伤${resistPct}%${shieldText}）`);
+            });
+        }
     }
 
     // ==================== 小弟行动 ====================
@@ -5324,6 +5533,24 @@ function stepBossCombat(state) {
             const blockText = blockedAmount > 0 ? `，格挡 ${blockedAmount}` : '';
             const minionName = boss.minion?.name || '小弟';
             addLog(`【${minionName}】攻击 位置${tIdx + 1} 造成 ${damage} 伤害（护甲减伤${drPct}%${blockText}）`);
+        }
+        // 萨尔诺斯的十字军：对坦克（1号位）造成普通攻击
+        if (combat.bossId === 'thalnos' && m.isCrusader) {
+            const tIdx = pickAlivePlayerIndex(); // 总是打1号位（坦克）
+            if (tIdx < 0) break;
+
+            const target = combat.playerStates[tIdx];
+            const raw = Math.floor(m.attack || boss.attack || 0);
+            const { damage, dr, blockedAmount } = calcMitigatedAndBlockedDamage(target, raw, false);
+
+            // 护盾吸收
+            const shieldResult = applyShieldAbsorb(target, damage, logs, currentRound);
+            target.currentHp -= shieldResult.finalDamage;
+
+            const drPct = Math.round(dr * 100);
+            const blockText = blockedAmount > 0 ? `，格挡 ${blockedAmount}` : '';
+            const shieldText = shieldResult.absorbed > 0 ? `，护盾吸收 ${shieldResult.absorbed}` : '';
+            addLog(`【${boss.minion.name}${i + 1}】攻击 位置${tIdx + 1} ${target.char.name}，造成 ${shieldResult.finalDamage} 点伤害（护甲减伤${drPct}%${blockText}${shieldText}）`);
         }
     }
 
@@ -13710,6 +13937,80 @@ const BossPrepareModal = ({ state, dispatch }) => {
 
                                         </div>
                                     </div>
+                                )}
+
+                                {bossId === 'thalnos' && (
+                                    <>
+                                        <div style={{
+                                            padding: 10,
+                                            background: 'rgba(156,39,176,0.1)',
+                                            borderRadius: 6,
+                                            borderLeft: '3px solid #9C27B0'
+                                        }}>
+                                            <div style={{ fontSize: 12, color: '#ce93d8', fontWeight: 600, marginBottom: 4 }}>
+                                                🌀 灵魂强风
+                                            </div>
+                                            <div style={{ fontSize: 11, color: '#aaa', lineHeight: 1.5 }}>
+                                                对目标造成 <span style={{ color: '#ffd700' }}>{boss.soulStormMultiplier}倍</span> 攻击的暗影伤害
+                                                <br/>
+                                                并施加DOT：每回合 <span style={{ color: '#ffd700' }}>{boss.soulStormDoTMultiplier}倍</span> 攻击伤害，持续 {boss.soulStormDoTDuration} 回合
+                                                <br/>
+                                                <span style={{ color: '#ff9800' }}>集中站位：对所有目标生效</span>
+                                            </div>
+                                        </div>
+
+                                        <div style={{
+                                            padding: 10,
+                                            background: 'rgba(244,67,54,0.1)',
+                                            borderRadius: 6,
+                                            borderLeft: '3px solid #f44336'
+                                        }}>
+                                            <div style={{ fontSize: 12, color: '#ff6b6b', fontWeight: 600, marginBottom: 4 }}>
+                                                👻 放逐灵魂
+                                            </div>
+                                            <div style={{ fontSize: 11, color: '#aaa', lineHeight: 1.5 }}>
+                                                对随机目标造成 <span style={{ color: '#ffd700' }}>{boss.banishSoulMultiplier}倍</span> 攻击的暗影伤害
+                                                <br/>
+                                                <span style={{ color: '#f44336' }}>并使目标【恐惧】，无法行动 {boss.fearDuration} 回合</span>
+                                            </div>
+                                        </div>
+
+                                        <div style={{
+                                            padding: 10,
+                                            background: 'rgba(33,150,243,0.1)',
+                                            borderRadius: 6,
+                                            borderLeft: '3px solid #2196F3'
+                                        }}>
+                                            <div style={{ fontSize: 12, color: '#64b5f6', fontWeight: 600, marginBottom: 4 }}>
+                                                ⚔️ 堕落的十字军
+                                            </div>
+                                            <div style={{ fontSize: 11, color: '#aaa', lineHeight: 1.5 }}>
+                                                召唤 <span style={{ color: '#ffd700' }}>{boss.summonCount}</span> 个{boss.minion?.name}
+                                                <br/>
+                                                <span style={{ color: '#888' }}>
+                                                    (HP:{boss.minion?.maxHp} / 攻击:等于Boss攻击)
+                                                </span>
+                                                <br/>
+                                                十字军只攻击1号位（坦克）
+                                            </div>
+                                        </div>
+
+                                        <div style={{
+                                            padding: 10,
+                                            background: 'rgba(255,152,0,0.1)',
+                                            borderRadius: 6,
+                                            borderLeft: '3px solid #ff9800'
+                                        }}>
+                                            <div style={{ fontSize: 12, color: '#ffb74d', fontWeight: 600, marginBottom: 4 }}>
+                                                💀 灵魂收割者
+                                            </div>
+                                            <div style={{ fontSize: 11, color: '#aaa', lineHeight: 1.5 }}>
+                                                对所有目标造成 <span style={{ color: '#ffd700' }}>(2倍当前存活十字军数量 + {boss.soulReaperBaseMultiplier}) × Boss攻击</span> 的暗影伤害
+                                                <br/>
+                                                <span style={{ color: '#ff9800' }}>十字军越多，伤害越高！</span>
+                                            </div>
+                                        </div>
+                                    </>
                                 )}
 
                             </div>

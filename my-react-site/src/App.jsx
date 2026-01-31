@@ -1794,7 +1794,7 @@ const DROP_TABLES = {
             { id: 'EQ_083', chance: 0.001 },  // 红木之环
             { id: 'EQ_084', chance: 0.0015 }, // 哈雷肯的项圈
             { id: 'EQ_085', chance: 0.001 },  // 燃棘宝钻
-            { id: 'EQ_086', chance: 0.0005 }  // 黑鸭
+            { id: 'EQ_086', chance: 0.001 }  // 黑鸭
         ]
     },
     scholomance: {
@@ -1831,7 +1831,7 @@ const DROP_TABLES = {
             { id: 'EQ_106', chance: 0.0015 }, // 痛苦指环
             { id: 'EQ_107', chance: 0.0015 }, // 龙人之盾
             { id: 'EQ_108', chance: 0.001 },  // 雷德之眼
-            { id: 'EQ_103', chance: 0.0008 }, // 恶魔之击
+            { id: 'EQ_103', chance: 0.0005 }, // 恶魔之击
             { id: 'EQ_104', chance: 0.0005 }  // 雷德双刃
         ]
     },
@@ -4114,7 +4114,7 @@ const FIXED_EQUIPMENTS = {
             attack: 1100,
             critRate: 30,
             critDamage: 0.6,
-            versatility: 20
+            versatility: 30
         },
         growth: {
             attack: 2,
@@ -4302,14 +4302,14 @@ const FIXED_EQUIPMENTS = {
         name: '恶魔之击',
         icon: "icons/wow/vanilla/weapons/INV_Weapon_ShortBlade_25.png",
         type: 'equipment',
-        slot: 'mainHand',
+        slot: 'offHand',
         rarity: 'purple',
         level: 0,
         maxLevel: 100,
         baseStats: {
-            attack: 1250,
-            critRate: 28,
-            critDamage: 0.55,
+            attack: 1000,
+            critRate: 20,
+            critDamage: 0.5,
             mastery: 25,
             versatility: 20
         },
@@ -4322,7 +4322,7 @@ const FIXED_EQUIPMENTS = {
         },
         specialEffect: {
             type: 'basic_attack_repeat',
-            chance: 0.15
+            chance: 0.50
         }
     },
     EQ_104: {
@@ -4350,7 +4350,7 @@ const FIXED_EQUIPMENTS = {
         },
         specialEffect: {
             type: 'basic_attack_repeat',
-            chance: 0.20
+            chance: 0.40
         }
     },
     EQ_105: {

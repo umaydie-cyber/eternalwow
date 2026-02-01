@@ -15376,8 +15376,8 @@ const QUEST_REWARD_EQUIPMENTS = {
         },
         growth: { hp: 2, armor: 2, magicResist: 2, versatility: 2 },
         specialEffect: {
-            type: 'dragon_slayer',
-            bonusDamageVsDragons: 0.25  // 对龙类+25%伤害
+            type: 'map_slayer',
+            bonusDamageVsMap: 0.25  // 地图战斗+25%伤害
         },
         description: '用奥妮克希亚的鳞片制成，散发着龙焰的余温'
     },

@@ -5042,7 +5042,7 @@ const RESEARCH = {
     // ✅ 击败范克里夫后解锁
     gathering_efficiency: {
         id: 'gathering_efficiency',
-        name: '采集所效率',
+        name: '采集效率',
         description: '提升采集所采集草药的效率（击败范克里夫后解锁）',
         baseCost: 1500,
         effect: 'herb',
@@ -5051,7 +5051,7 @@ const RESEARCH = {
     },
     skinning_efficiency: {
         id: 'skinning_efficiency',
-        name: '挖毛皮效率',
+        name: '捕猎效率',
         description: '提升猎人小屋获取毛皮的效率（击败范克里夫后解锁）',
         baseCost: 1500,
         effect: 'leather',

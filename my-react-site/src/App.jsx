@@ -18867,7 +18867,7 @@ export default function WoWIdleGame() {
                 const level = parseInt(levelStr?.trim()) || 1;
                 const clampedLevel = Math.max(1, Math.min(100, level));
 
-                const tpl = FIXED_EQUIPMENTS[id];
+                const tpl = getEquipmentTemplate(id) ;
                 if (!tpl) {
                     setConsoleLogs(prev => [...prev, `✗ 错误：找不到装备 ID "${id}"`]);
                     return;

@@ -15340,7 +15340,7 @@ const QUEST_REWARD_EQUIPMENTS = {
     EQ_QUEST_DRAGON_SLAYER_RING: {
         id: 'EQ_QUEST_DRAGON_SLAYER_RING',
         name: '屠龙者之戒',
-        icon: 'icons/wow/vanilla/armor/INV_Jewelry_Ring_36.png',
+        icon: 'icons/wow/vanilla/armor/INV_Jewelry_Ring_15.png',
         type: 'equipment',
         slot: 'ring1',
         rarity: 'orange',
@@ -15388,12 +15388,11 @@ const QUEST_REWARD_EQUIPMENTS = {
         level: 0,
         maxLevel: 100,
         baseStats: {
-            attack: 400,
-            spellPower: 200,
-            versatility: 10,
-            hp: 500
+            attack: 1000,
+            versatility: 20,
+            hp: 2000
         },
-        growth: { attack: 2, spellPower: 2, versatility: 2, hp: 2 },
+        growth: { attack: 2, versatility: 2, hp: 2 },
         description: '为逝者伸张正义，为生者带来救赎'
     }
 };

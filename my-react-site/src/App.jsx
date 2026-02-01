@@ -4123,8 +4123,13 @@ const FIXED_EQUIPMENTS = {
             versatility: 2
         },
         specialEffect: {
-            type: 'basic_attack_repeat',
-            chance: 0.20
+            // 每回合20%概率：本回合攻击强度+1500
+            //（通用结构：type=proc_stat, trigger=turn_start）
+            type: 'proc_stat',
+            trigger: 'turn_start',
+            chance: 0.20,
+            stats: { attack: 800 },
+            scaleWithLevel: true
         }
     },
     EQ_096: {
@@ -5646,18 +5651,22 @@ function getSkillSlotBuffBonus(character, slotIndex) {
     let spellPowerBonus = 0;
 
     for (const eq of eqList) {
-        const se = eq?.specialEffect;
-        if (!se || se.type !== 'skill_slot_buff') continue;
+        const effects = getEquipmentSpecialEffectList(eq);
+        if (effects.length === 0) continue;
 
-        const slots = Array.isArray(se.slots) ? se.slots : [];
-        if (!slots.includes(idx)) continue;
+        for (const se of effects) {
+            if (!se || se.type !== 'skill_slot_buff') continue;
 
-        // 线性缩放：lv0=1x, lv100=2x
-        const lv = clamp(Number(eq.currentLevel ?? eq.level) || 0, 0, 100);
-        const mul = 1 + (lv / 100);
+            const slots = Array.isArray(se.slots) ? se.slots : [];
+            if (!slots.includes(idx)) continue;
 
-        attackBonus += (Number(se.attackBonus) || 0) * mul;
-        spellPowerBonus += (Number(se.spellPowerBonus) || 0) * mul;
+            // 线性缩放：lv0=1x, lv100=2x
+            const lv = clamp(Number(eq.currentLevel ?? eq.level) || 0, 0, 100);
+            const mul = 1 + (lv / 100);
+
+            attackBonus += (Number(se.attackBonus) || 0) * mul;
+            spellPowerBonus += (Number(se.spellPowerBonus) || 0) * mul;
+        }
     }
 
     return {
@@ -5670,12 +5679,134 @@ function getSkillSlotBuffBonus(character, slotIndex) {
 function getBasicAttackRepeatChance(character) {
     const eqList = Object.values(character?.equipment || {}).filter(Boolean);
     for (const eq of eqList) {
-        const se = eq?.specialEffect;
-        if (se && se.type === 'basic_attack_repeat') {
-            return se.chance || 0;
+        const effects = getEquipmentSpecialEffectList(eq);
+        if (effects.length === 0) continue;
+
+        for (const se of effects) {
+            if (se && se.type === 'basic_attack_repeat') {
+                return se.chance || 0;
+            }
         }
     }
     return 0;
+}
+
+// ==================== 装备特效：通用「概率触发属性增益」框架 ====================
+// 目标：支持类似“每回合XX%概率获得XXXX属性（仅本回合生效）”的特效，并便于后续扩展更多触发时机。
+//
+// 数据约定（示例）：
+// specialEffect: {
+//   type: 'proc_stat',
+//   trigger: 'turn_start',         // 触发时机（目前实现：turn_start）
+//   chance: 0.20,                  // 0~1
+//   stats: { attack: 1500 },       // 任意属性键（attack / spellPower / critRate ...）
+//   scaleWithLevel: false          // 可选：是否按装备等级缩放（lv0=1x, lv100=2x）
+// }
+//
+// 也支持未来在装备上新增：specialEffects: []（多条特效）
+
+const STAT_LABELS = {
+    hp: '生命值',
+    mp: '法力值',
+    attack: '攻击强度',
+    spellPower: '法术强度',
+    armor: '护甲',
+    magicResist: '魔法抗性',
+    haste: '急速',
+    critRate: '暴击率',
+    critDamage: '暴击伤害',
+    mastery: '精通',
+    versatility: '全能',
+    blockRate: '格挡率',
+    blockValue: '格挡值',
+    proficiency: '熟练',
+    precision: '精细',
+    perception: '感知',
+};
+
+function getEquipmentSpecialEffectList(eq) {
+    const list = [];
+    if (Array.isArray(eq?.specialEffects)) list.push(...eq.specialEffects);
+    if (eq?.specialEffect) list.push(eq.specialEffect);
+    return list.filter(Boolean);
+}
+
+function formatProcStatBonusText(bonus = {}) {
+    const entries = Object.entries(bonus).filter(([, v]) => Number(v) !== 0);
+    if (entries.length === 0) return '';
+
+    return entries.map(([stat, valueRaw]) => {
+        const name = STAT_LABELS[stat] || stat;
+        const v = Number(valueRaw) || 0;
+
+        // 与装备面板一致的展示习惯
+        if (stat === 'critRate' || stat === 'blockRate') {
+            return `${name} +${v.toFixed(1)}%`;
+        }
+        if (stat === 'critDamage') {
+            return v <= 1 ? `${name} +${Math.floor(v * 100)}%` : `${name} +${Math.floor(v)}`;
+        }
+        return `${name} +${Math.floor(v)}`;
+    }).join('，');
+}
+
+/**
+ * 通用：掷骰触发「proc_stat」类型的装备特效（返回本回合应临时加到面板的属性）
+ * @param character 角色对象（需含 equipment）
+ * @param trigger   触发点（例如：'turn_start'）
+ * @returns {{ bonus: Object, triggered: Array<{label: string, bonus: Object, chance: number}> }}
+ */
+function rollProcStatEffects(character, trigger) {
+    const eqList = Object.values(character?.equipment || {}).filter(Boolean);
+    const totalBonus = {};
+    const triggered = [];
+
+    for (const eq of eqList) {
+        const effects = getEquipmentSpecialEffectList(eq);
+        if (effects.length === 0) continue;
+
+        for (const se of effects) {
+            if (!se || se.type !== 'proc_stat') continue;
+            if (se.trigger !== trigger) continue;
+
+            const chance = Math.max(0, Math.min(1, Number(se.chance) || 0));
+            if (chance <= 0) continue;
+
+            if (Math.random() >= chance) continue;
+
+            const stats = se.stats && typeof se.stats === 'object' ? se.stats : {};
+
+            // 可选：按装备等级缩放（与装备属性一致：lv0=1x, lv100=2x）
+            const lv = clamp(Number(eq.currentLevel ?? eq.level) || 0, 0, 100);
+            const mul = se.scaleWithLevel ? (1 + (lv / 100)) : 1;
+
+            const applied = {};
+            for (const [stat, valRaw] of Object.entries(stats)) {
+                const baseVal = Number(valRaw) || 0;
+                if (!Number.isFinite(baseVal) || baseVal === 0) continue;
+
+                const add = baseVal * mul;
+                applied[stat] = (applied[stat] || 0) + add;
+                totalBonus[stat] = (totalBonus[stat] || 0) + add;
+            }
+
+            // 输出给日志用：优先用特效自定义名，其次装备名
+            const label = se.name || eq.name || '装备特效';
+            triggered.push({ label, bonus: applied, chance });
+        }
+    }
+
+    // 统一向下取整，避免小数污染
+    for (const k of Object.keys(totalBonus)) {
+        totalBonus[k] = Math.floor(Number(totalBonus[k]) || 0);
+    }
+    triggered.forEach(t => {
+        for (const k of Object.keys(t.bonus || {})) {
+            t.bonus[k] = Math.floor(Number(t.bonus[k]) || 0);
+        }
+    });
+
+    return { bonus: totalBonus, triggered };
 }
 
 // ==================== BOSS战斗一步推进函数 ====================
@@ -5852,17 +5983,34 @@ function stepBossCombat(state) {
             continue;
         }
 
-        // 饰品/装备特效
+        // ==================== 装备特效：回合开始概率属性增益（仅本回合） ====================
+        const { bonus: turnProcBonus, triggered: turnProcTriggered } = rollProcStatEffects(p.char, 'turn_start');
+        if (turnProcTriggered.length > 0) {
+            turnProcTriggered.forEach(tp => {
+                const t = formatProcStatBonusText(tp.bonus);
+                if (t) addLog(`【${tp.label}】触发：${t}（本回合）`);
+            });
+        }
+
+        // 饰品/装备特效：技能栏强化
         const slotBuff = getSkillSlotBuffBonus(p.char, slotIndex);
+
+        // 计算本回合用于技能结算的面板（不会写回角色本体）
+        const calcStats = {
+            ...p.char.stats,
+            attack: (p.char.stats.attack || 0) + (p.talentBuffs?.attackFlat || 0) + (slotBuff.attackBonus || 0),
+            blockValue: (p.char.stats.blockValue || 0) + (p.talentBuffs?.blockValueFlat || 0),
+            spellPower: (p.char.stats.spellPower || 0) + (p.talentBuffs?.spellPowerFlat || 0) + (slotBuff.spellPowerBonus || 0)
+        };
+
+        // 叠加本回合触发的临时属性
+        Object.entries(turnProcBonus || {}).forEach(([stat, add]) => {
+            calcStats[stat] = (calcStats[stat] || 0) + (Number(add) || 0);
+        });
 
         const charForCalc = {
             ...p.char,
-            stats: {
-                ...p.char.stats,
-                attack: (p.char.stats.attack || 0) + (p.talentBuffs?.attackFlat || 0) + (slotBuff.attackBonus || 0),
-                blockValue: (p.char.stats.blockValue || 0) + (p.talentBuffs?.blockValueFlat || 0),
-                spellPower: (p.char.stats.spellPower || 0) + (p.talentBuffs?.spellPowerFlat || 0) + (slotBuff.spellPowerBonus || 0)
-            }
+            stats: calcStats
         };
 
         // combatContext
@@ -7552,16 +7700,42 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1) {
 
         const slotIndex = skillIndex % validSkills.length;
 
+        // ==================== 装备特效：回合开始概率属性增益（仅本回合） ====================
+        const { bonus: turnProcBonus, triggered: turnProcTriggered } = rollProcStatEffects(character, 'turn_start');
+        if (turnProcTriggered.length > 0) {
+            turnProcTriggered.forEach(tp => {
+                const t = formatProcStatBonusText(tp.bonus);
+                if (t) {
+                    logs.push({
+                        round,
+                        kind: 'proc',
+                        actor: character.name,
+                        proc: tp.label,
+                        text: `【${tp.label}】触发：${t}（本回合）`
+                    });
+                }
+            });
+        }
+
         // 饰品/装备特效：技能栏强化（例如：第1格与第4格）
         const slotBuff = getSkillSlotBuffBonus(character, slotIndex);
+
+        // 计算本回合用于技能结算的面板（不会写回角色本体）
+        const calcStats = {
+            ...character.stats,
+            attack: (character.stats.attack || 0) + (talentBuffs.attackFlat || 0) + (slotBuff.attackBonus || 0),
+            blockValue: (character.stats.blockValue || 0) + (talentBuffs.blockValueFlat || 0),
+            spellPower: (character.stats.spellPower || 0) + (talentBuffs.spellPowerFlat || 0) + (slotBuff.spellPowerBonus || 0),
+        };
+
+        // 叠加本回合触发的临时属性
+        Object.entries(turnProcBonus || {}).forEach(([stat, add]) => {
+            calcStats[stat] = (calcStats[stat] || 0) + (Number(add) || 0);
+        });
+
         const charForCalc = {
             ...character,
-            stats: {
-                ...character.stats,
-                attack: (character.stats.attack || 0) + (talentBuffs.attackFlat || 0) + (slotBuff.attackBonus || 0),
-                blockValue: (character.stats.blockValue || 0) + (talentBuffs.blockValueFlat || 0),
-                spellPower: (character.stats.spellPower || 0) + (talentBuffs.spellPowerFlat || 0) + (slotBuff.spellPowerBonus || 0),
-            }
+            stats: calcStats
         };
 
 
@@ -11633,6 +11807,40 @@ const ItemDetailsModal = ({ item, onClose, onEquip, characters, state , dispatch
                                 </div>
                             </div>
                         )}
+
+                        {/* proc_stat · turn_start 类型（每回合概率触发属性增益） */}
+                        {item.specialEffect.type === 'proc_stat' && item.specialEffect.trigger === 'turn_start' && (
+                            <div style={{ fontSize: 12, color: '#ffb74d', lineHeight: 1.6 }}>
+                                <div style={{ marginBottom: 8, color: '#fff' }}>
+                                    每回合有 <span style={{ color: '#ffd700', fontWeight: 600 }}>
+                                        {(item.specialEffect.chance * 100).toFixed(0)}%
+                                    </span> 概率获得以下增益（仅本回合）：
+                                </div>
+
+                                {(Object.entries(item.specialEffect.stats || {})).map(([stat, value]) => (
+                                    <div key={stat} style={{ marginTop: 8, color: '#fff' }}>
+                                        • {statNames[stat] || stat}{' '}
+                                        <span style={{ color: '#4CAF50', fontWeight: 600 }}>
+                                            +{formatItemStatValue(stat, value)}
+                                        </span>
+                                    </div>
+                                ))}
+
+                                {item.specialEffect.scaleWithLevel && (
+                                    <div style={{
+                                        marginTop: 12,
+                                        padding: '8px 12px',
+                                        background: 'rgba(255,215,0,0.1)',
+                                        borderRadius: 6,
+                                        border: '1px dashed rgba(255,215,0,0.3)',
+                                        fontSize: 11,
+                                        color: '#c9a227'
+                                    }}>
+                                        💡 提示：该特效会随装备等级提升而增强（lv0=1x, lv100=2x）
+                                    </div>
+                                )}
+                            </div>
+                        )}
                     </div>
                 )}
 
@@ -12781,6 +12989,19 @@ const InventoryPage = ({ state, dispatch }) => {
                                     {item.specialEffect.type === 'basic_attack_repeat' && (
                                         <>
                                             ⚔️ 普攻 {(item.specialEffect.chance * 100).toFixed(0)}% 连击
+                                        </>
+                                    )}
+
+                                    {item.specialEffect.type === 'proc_stat' && item.specialEffect.trigger === 'turn_start' && (
+                                        <>
+                                            🎲 每回合 {(item.specialEffect.chance * 100).toFixed(0)}%{' '}
+                                            {(() => {
+                                                const entries = Object.entries(item.specialEffect.stats || {});
+                                                const brief = entries.slice(0, 2).map(([stat, val]) =>
+                                                    `${(STAT_LABELS[stat] || stat).replace('强度', '')}+${formatItemStatValue(stat, val)}`
+                                                );
+                                                return `${brief.join(' ')}${entries.length > 2 ? '…' : ''}`;
+                                            })()}
                                         </>
                                     )}
                                 </div>

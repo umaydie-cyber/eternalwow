@@ -5332,8 +5332,8 @@ const WORLD_BOSSES = {
         name: '达格兰·索瑞森大帝',
         icon: 'icons/wow/vanilla/boss/dagran_thaurissan.png',
         hp: 1200000,
-        attack: 2800,
-        defense: 900,
+        attack: 3000,
+        defense: 1000,
         rewards: { gold: 300000, exp: 165000 },
         unlockLevel: 50
     },
@@ -5557,15 +5557,15 @@ const BOSS_DATA = {
         id: 'dagran_thaurissan',
         name: '达格兰·索瑞森大帝',
         maxHp: 1200000,
-        attack: 2800,
-        defense: 900,
+        attack: 3000,
+        defense: 1000,
 
         // 技能循环：烈焰打击 → 熔岩爆裂 → 烈焰打击 → 战斗怒吼
         cycle: ['flame_strike', 'lava_burst', 'flame_strike', 'battle_shout'],
 
         // 烈焰打击：对坦克造成 3×火焰伤害（魔抗）+ 3×物理伤害（护甲/格挡）
         flameStrikeFireMultiplier: 3,
-        flameStrikePhysicalMultiplier: 3,
+        flameStrikePhysicalMultiplier: 6,
 
         // 熔岩爆裂：随机目标 3×火焰伤害，并留下灼烧DOT（1.5×攻击，持续3回合）
         lavaBurstMultiplier: 3,

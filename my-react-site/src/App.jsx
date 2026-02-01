@@ -5058,6 +5058,26 @@ const RESEARCH = {
         bonus: 0.03,
         unlockBoss: 'vancleef',
     },
+
+    // ✅ 击败普瑞斯托女士后解锁
+    siphon_mastery: {
+        id: 'siphon_mastery',
+        name: '汲魔精通',
+        description: '提升魔力之源汲取魔法精华的效率（击败普瑞斯托女士后解锁）',
+        baseCost: 5000,
+        effect: 'magicEssence',
+        bonus: 0.03,
+        unlockBoss: 'prestor_lady',
+    },
+    cast_iron_mastery: {
+        id: 'cast_iron_mastery',
+        name: '铸铁精通',
+        description: '提升铸造厂炼制铁锭的效率（击败普瑞斯托女士后解锁）',
+        baseCost: 5000,
+        effect: 'ironIngot',
+        bonus: 0.03,
+        unlockBoss: 'prestor_lady',
+    },
 };
 
 const ACHIEVEMENTS = {

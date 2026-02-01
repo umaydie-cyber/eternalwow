@@ -5015,21 +5015,6 @@ const ITEMS = {
 
 const BUILDINGS = {
     house: { id: 'house', name: '民居', cost: { gold: 100, wood: 50 }, production: { population: 2 }, consumption: {} },
-    lumber_mill: { id: 'lumber_mill', name: '伐木场', cost: { gold: 200 }, production: { wood: 5 }, consumption: { population: 1 } },
-    iron_mine: { id: 'iron_mine', name: '铁矿场', cost: { gold: 300, wood: 150 }, production: { ironOre: 3 }, consumption: { population: 2 } },
-    foundry: { id: 'foundry', name: '铸造厂', cost: { gold: 500, wood: 200, ironOre: 100 }, production: { ironIngot: 2 }, consumption: { population: 2, ironOre: 3 } },
-    gathering_hut: { id: 'gathering_hut', name: '采集所', cost: { gold: 150, wood: 75 }, production: { herb: 4 }, consumption: { population: 1 } },
-    hunter_lodge: { id: 'hunter_lodge', name: '猎人小屋', cost: { gold: 250, wood: 120 }, production: { leather: 3 }, consumption: { population: 1 } },
-    mana_well: { id: 'mana_well', name: '魔力之源', cost: { gold: 800, ironIngot: 50 }, production: { magicEssence: 1 }, consumption: { population: 3 } },
-    alchemy_lab: { id: 'alchemy_lab', name: '炼金实验室', cost: { gold: 600, wood: 100, herb: 50 }, production: { alchemyOil: 2 }, consumption: { population: 2, herb: 2 } },
-    plaza_fountain: {
-        id: 'plaza_fountain',
-        name: '广场喷泉',
-        cost: { gold: 10000, wood: 10000, ironOre: 8000 },
-        production: {},
-        consumption: {}
-        // 效果在 gameReducer 的 TICK 中实现（见下文）
-    },
 };
 
 function ItemIcon({ item, size = 28 }) {

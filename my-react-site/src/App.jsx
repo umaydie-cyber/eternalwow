@@ -3520,7 +3520,11 @@ const FIXED_EQUIPMENTS = {
         growth: {
             attack: 2,
             versatility: 2
-        }
+        },
+        specialEffect: {
+            type: 'map_slayer',
+            bonusDamageVsMap: 0.1  // 地图战斗+10%伤害
+        },
     },
     EQ_070: {
         id: 'EQ_070',

@@ -5207,6 +5207,89 @@ const ACHIEVEMENTS = {
         icon: '🔥'
     },
 
+    // ✅ 新增：首领杀手系列（累计击杀任意BOSS，跨世累计）
+    boss_killer_1: {
+        id: 'boss_killer_1',
+        name: '首领杀手Ⅰ',
+        description: '累计击杀任意BOSS 10次（跨世累计，任何操作/重生均不会重置计数）',
+        condition: (state) => getTotalWorldBossKills(state) >= 10,
+        reward: { versatility: 2 },
+        icon: '👑'
+    },
+    boss_killer_2: {
+        id: 'boss_killer_2',
+        name: '首领杀手Ⅱ',
+        description: '累计击杀任意BOSS 50次（跨世累计，任何操作/重生均不会重置计数）',
+        condition: (state) => getTotalWorldBossKills(state) >= 50,
+        reward: { versatility: 2 },
+        icon: '👑'
+    },
+    boss_killer_3: {
+        id: 'boss_killer_3',
+        name: '首领杀手Ⅲ',
+        description: '累计击杀任意BOSS 100次（跨世累计，任何操作/重生均不会重置计数）',
+        condition: (state) => getTotalWorldBossKills(state) >= 100,
+        reward: { versatility: 2 },
+        icon: '👑'
+    },
+    boss_killer_4: {
+        id: 'boss_killer_4',
+        name: '首领杀手Ⅳ',
+        description: '累计击杀任意BOSS 500次（跨世累计，任何操作/重生均不会重置计数）',
+        condition: (state) => getTotalWorldBossKills(state) >= 500,
+        reward: { versatility: 2 },
+        icon: '👑'
+    },
+    boss_killer_5: {
+        id: 'boss_killer_5',
+        name: '首领杀手Ⅴ',
+        description: '累计击杀任意BOSS 1000次（跨世累计，任何操作/重生均不会重置计数）',
+        condition: (state) => getTotalWorldBossKills(state) >= 1000,
+        reward: { versatility: 2 },
+        icon: '👑'
+    },
+    boss_killer_6: {
+        id: 'boss_killer_6',
+        name: '首领杀手Ⅵ',
+        description: '累计击杀任意BOSS 5000次（跨世累计，任何操作/重生均不会重置计数）',
+        condition: (state) => getTotalWorldBossKills(state) >= 5000,
+        reward: { versatility: 2 },
+        icon: '👑'
+    },
+    boss_killer_7: {
+        id: 'boss_killer_7',
+        name: '首领杀手Ⅶ',
+        description: '累计击杀任意BOSS 10000次（跨世累计，任何操作/重生均不会重置计数）',
+        condition: (state) => getTotalWorldBossKills(state) >= 10000,
+        reward: { versatility: 2 },
+        icon: '👑'
+    },
+    boss_killer_8: {
+        id: 'boss_killer_8',
+        name: '首领杀手Ⅷ',
+        description: '累计击杀任意BOSS 50000次（跨世累计，任何操作/重生均不会重置计数）',
+        condition: (state) => getTotalWorldBossKills(state) >= 50000,
+        reward: { versatility: 2 },
+        icon: '👑'
+    },
+    boss_killer_9: {
+        id: 'boss_killer_9',
+        name: '首领杀手Ⅸ',
+        description: '累计击杀任意BOSS 100000次（跨世累计，任何操作/重生均不会重置计数）',
+        condition: (state) => getTotalWorldBossKills(state) >= 100000,
+        reward: { versatility: 2 },
+        icon: '👑'
+    },
+    boss_killer_10: {
+        id: 'boss_killer_10',
+        name: '首领杀手Ⅹ',
+        description: '累计击杀任意BOSS 500000次（跨世累计，任何操作/重生均不会重置计数）',
+        condition: (state) => getTotalWorldBossKills(state) >= 500000,
+        reward: { versatility: 2 },
+        icon: '👑'
+    },
+
+
     collector: { id: 'collector', name: '收藏家', description: '收集10种不同物品', condition: (state) => state.codex.length >= 10, reward: { dropBonus: 0.1 }, icon: '📦' },
 
     // ✅ 建设者系列：累计建造建筑数量（含旧建筑 & 功能建筑）
@@ -5730,6 +5813,7 @@ function formatBonusText(bonusObj) {
         dropBonus: '掉落增幅',
         resourceBonus: '所有建筑产量',
         mapDamageBonus: '地图战斗伤害',
+        versatility: '全能',
     };
 
     return entries.map(([k, v]) => {
@@ -5775,6 +5859,16 @@ function getTotalBuildingsBuilt(state) {
     const sumObj = (obj) => Object.values(obj).reduce((sum, v) => sum + Math.max(0, Math.floor(Number(v) || 0)), 0);
     return sumObj(buildings) + sumObj(functional);
 }
+
+// 世界首领累计击杀数（跨世累计）：用于成就【首领杀手Ⅰ~Ⅹ】等
+function getTotalWorldBossKills(state) {
+    const counts = (state?.worldBossKillCounts && typeof state.worldBossKillCounts === 'object' && !Array.isArray(state.worldBossKillCounts))
+        ? state.worldBossKillCounts
+        : {};
+
+    return Object.values(counts).reduce((sum, v) => sum + Math.max(0, Math.floor(Number(v) || 0)), 0);
+}
+
 
 // ✅ 成就：全队生命百分比加成（跨成就加法叠加）
 function getAchievementHpPctBonus(state) {
@@ -5837,6 +5931,19 @@ function getAchievementMapDamageBonus(state) {
     });
     return bonus; // 例如 0.05 = +5%
 }
+
+// ✅ 成就：全队全能加成（跨成就加法叠加）
+function getAchievementVersatilityBonus(state) {
+    const unlocked = state?.achievements || {};
+    let bonus = 0;
+    Object.values(ACHIEVEMENTS).forEach(a => {
+        if (unlocked[a.id] && a.reward?.versatility) {
+            bonus += Number(a.reward.versatility) || 0;
+        }
+    });
+    return bonus; // 例如 2 表示 +2 全能
+}
+
 
 function getAchievementMapDamageDealtMult(state) {
     const bonus = getAchievementMapDamageBonus(state);
@@ -6062,7 +6169,14 @@ function calculateTotalStats(character, partyAuras = { hpMul: 1, spellPowerMul: 
         totalStats.iceLanceBaseMultiplier = iceLanceBaseMultiplier;
     }
 
-    // ==================== 成就：全队生命百分比加成（如【持续战斗Ⅰ~Ⅹ】） ====================
+
+    // ==================== 成就：全队全能加成（如【首领杀手Ⅰ~Ⅹ】） ====================
+    const achVersatilityBonus = getAchievementVersatilityBonus(gameState);
+    if (Number.isFinite(achVersatilityBonus) && achVersatilityBonus !== 0) {
+        totalStats.versatility = (Number(totalStats.versatility) || 0) + achVersatilityBonus;
+    }
+
+// ==================== 成就：全队生命百分比加成（如【持续战斗Ⅰ~Ⅹ】） ====================
     // 规则：hpPct 为加法叠加，然后作为乘区作用在最终 hp 上
     const achHpPctBonus = getAchievementHpPctBonus(gameState);
     if (Number.isFinite(achHpPctBonus) && achHpPctBonus > 0) {

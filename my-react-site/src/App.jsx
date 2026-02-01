@@ -5580,94 +5580,36 @@ function calculateTotalStats(character, partyAuras = { hpMul: 1, spellPowerMul: 
     // 重生全局加成
     totalStats.expBonus = (totalStats.expBonus || 0) + (gameState?.rebirthBonuses?.exp || 0);
 
-    // ===== 赤脊山五件装备全部达到过Lv.100 → 全队全能+5 =====
-    if (gameState && Array.isArray(gameState.codexEquipLv100) &&
-        REDRIDGE_LV100_SET.every(id => gameState.codexEquipLv100.includes(id))) {
-        totalStats.versatility = (totalStats.versatility || 0) + 5;
-    }
+    // ==================== 图鉴 Lv.100 集齐加成（全队永久） ====================
+    const codexLv100 = Array.isArray(gameState?.codexEquipLv100) ? gameState.codexEquipLv100 : [];
+    const codexLv100Set = new Set(codexLv100);
 
-    // 贫瘠之地毒蛇的拥抱6件全部达到过Lv.100 → 全队爆击率+5
-    if (gameState && Array.isArray(gameState.codexEquipLv100) &&
-        BARRENS_LV100_SET.every(id => gameState.codexEquipLv100.includes(id))) {
-        totalStats.critRate = (totalStats.critRate || 0) + 5;
-    }
+    if (codexLv100Set.size) {
+        const addBonus = (bonus = {}) => {
+            for (const [k, v] of Object.entries(bonus)) {
+                totalStats[k] = (totalStats[k] || 0) + v;
+            }
+        };
 
-    // 荆棘谷 6 件装备全部达到过 Lv.100 → 全队急速 +5
-    if (
-        gameState &&
-        Array.isArray(gameState.codexEquipLv100) &&
-        STRANGLETHORN_LV100_SET.every(id =>
-            gameState.codexEquipLv100.includes(id)
-        )
-    ) {
-        totalStats.haste = (totalStats.haste || 0) + 5;
-    }
-    // 凄凉之地 6 件装备全部达到过 Lv.100 → 全队精通 +5
-    if (
-        gameState &&
-        Array.isArray(gameState.codexEquipLv100) &&
-        DESOLACE_LV100_SET.every(id => gameState.codexEquipLv100.includes(id))
-    ) {
-        totalStats.mastery = (totalStats.mastery || 0) + 5;
-    }
+        const codexBonusRules = [
+            { ids: REDRIDGE_LV100_SET, bonus: { versatility: 5 } }, // 赤脊山：全队全能 +5
+            { ids: BARRENS_LV100_SET, bonus: { critRate: 5 } }, // 贫瘠之地：全队暴击率 +5
+            { ids: STRANGLETHORN_LV100_SET, bonus: { haste: 5 } }, // 荆棘谷：全队急速 +5
+            { ids: DESOLACE_LV100_SET, bonus: { mastery: 5 } }, // 凄凉之地：全队精通 +5
+            { ids: SCARLET_MONASTERY_LV100_SET, bonus: { attack: 200, spellPower: 200 } }, // 血色修道院：全队攻击 +200，法强 +200
+            { ids: ['EQ_044'], bonus: { versatility: 5, haste: 10, mastery: 10 } }, // 鞭笞者苏萨斯：全能 +5，急速 +10，精通 +10
+            { ids: SUNKEN_TEMPLE_LV100_SET, bonus: { versatility: 10 } }, // 沉没的神庙：全队全能 +10
+            { ids: LOWER_BLACKROCK_SPIRE_LV100_SET, bonus: { critRate: 10 } }, // 黑石塔下：全队暴击 +10
+            { ids: SCHOLOMANCE_LV100_SET, bonus: { mastery: 10 } }, // 通灵学院：全队精通 +10
+            { ids: STRATHOLME_lv100_SET, bonus: { haste: 10 } }, // 斯坦索姆：全队急速 +10
+            { ids: UPPER_BLACKROCK_SPIRE_LV100_SET, bonus: { attack: 500, spellPower: 500 } }, // 黑石塔上：全队攻击 +500，法强 +500
+        ];
 
-    // 血色修道院 13 件装备全部达到过 Lv.100 → 全队攻击强度+200 法术强度+200
-    if (
-        gameState &&
-        Array.isArray(gameState.codexEquipLv100) &&
-        SCARLET_MONASTERY_LV100_SET.every(id => gameState.codexEquipLv100.includes(id))
-    ) {
-        totalStats.attack = (totalStats.attack || 0) + 200;
-        totalStats.spellPower = (totalStats.spellPower || 0) + 200;
-    }
-
-    // 鞭笞者苏萨斯（EQ_044）点亮 100级图鉴：全队 全能+5 急速+10 精通+10
-    if (gameState && Array.isArray(gameState.codexEquipLv100) &&
-        gameState.codexEquipLv100.includes('EQ_044')) {
-        totalStats.versatility = (totalStats.versatility || 0) + 5;
-        totalStats.haste = (totalStats.haste || 0) + 10;
-        totalStats.mastery = (totalStats.mastery || 0) + 10;
-    }
-
-    // 沉没的神庙 10 件装备全部达到过 Lv.100 → 全队全能 +10
-    if (
-        gameState &&
-        SUNKEN_TEMPLE_LV100_SET.every(id => gameState.codexEquipLv100.includes(id))
-    ) {
-        totalStats.versatility = (totalStats.versatility || 0) + 10;
-    }
-
-    // 黑石塔下14件全部达到过 Lv.100 10暴击
-    if (
-        gameState &&
-        LOWER_BLACKROCK_SPIRE_LV100_SET.every(id => gameState.codexEquipLv100.includes(id))
-    ) {
-        totalStats.critRate = (totalStats.critRate || 0) + 10;
-    }
-
-    // 通灵学院8件全部达到过 Lv.100 10精通
-    if (
-        gameState &&
-        SCHOLOMANCE_LV100_SET.every(id => gameState.codexEquipLv100.includes(id))
-    ) {
-        totalStats.mastery = (totalStats.mastery || 0) + 10;
-    }
-
-    // 斯坦索姆8件全部达到过 Lv.100 10急速
-    if (
-        gameState &&
-        STRATHOLME_lv100_SET.every(id => gameState.codexEquipLv100.includes(id))
-    ) {
-        totalStats.haste = (totalStats.haste || 0) + 10;
-    }
-
-    // 黑石塔上10件 全部达到过 Lv.100 500攻击强度/法术强度
-    if (
-        gameState &&
-        UPPER_BLACKROCK_SPIRE_LV100_SET.every(id => gameState.codexEquipLv100.includes(id))
-    ) {
-        totalStats.attack = (totalStats.attack || 0) + 500;
-        totalStats.spellPower = (totalStats.spellPower || 0) + 500;
+        for (const rule of codexBonusRules) {
+            if (rule.ids.every(id => codexLv100Set.has(id))) {
+                addBonus(rule.bonus);
+            }
+        }
     }
 
     // 简约而不简单羁绊：单一职业队伍普通攻击伤害提高150%

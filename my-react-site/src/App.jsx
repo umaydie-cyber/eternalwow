@@ -7381,7 +7381,7 @@ function stepBossCombat(state) {
                     const target = combat.playerStates[tIdx];
                     // 暗影伤害，使用魔法抗性减免
                     const magicResist = target.char?.stats?.magicResist || 0;
-                    const resistReduction = magicResist / (magicResist + 500); // 简化的魔抗公式
+                    const resistReduction = getMagicResistDamageReduction(magicResist); // 统一的魔抗公式（见 magicresist_k）
                     let damage = Math.floor(totalDamage * (1 - resistReduction));
 
                     // 应用受伤减免
@@ -7413,7 +7413,7 @@ function stepBossCombat(state) {
                     if (ps.currentHp <= 0) return;
 
                     const magicResist = ps.char?.stats?.magicResist || 0;
-                    const resistReduction = magicResist / (magicResist + 500);
+                    const resistReduction = getMagicResistDamageReduction(magicResist);
                     let damage = Math.floor(damagePerPlayer * (1 - resistReduction));
 
                     const takenMult = ps.char?.stats?.damageTakenMult ?? 1;
@@ -7695,7 +7695,7 @@ function stepBossCombat(state) {
 
                 // 暗影伤害，使用魔法抗性减免
                 const magicResist = ps.char?.stats?.magicResist || 0;
-                const resistReduction = magicResist / (magicResist + 500);
+                const resistReduction = getMagicResistDamageReduction(magicResist);
                 let damage = Math.floor(totalDamage * (1 - resistReduction));
 
                 // 应用受伤减免
@@ -7736,7 +7736,7 @@ function stepBossCombat(state) {
         // 火焰伤害：计算魔抗（并套用伤害减免/全能）
         const calcFireDamage = (playerState, rawDamage) => {
             const magicResist = playerState?.char?.stats?.magicResist || 0;
-            const resistReduction = magicResist / (magicResist + 500);
+            const resistReduction = getMagicResistDamageReduction(magicResist);
             let damage = Math.floor((rawDamage || 0) * (1 - resistReduction));
 
             // 应用受伤减免
@@ -7941,7 +7941,7 @@ function stepBossCombat(state) {
 
             if (dot.school && dot.school !== 'physical') {
                 const magicResist = ps.char?.stats?.magicResist || 0;
-                const resistReduction = magicResist / (magicResist + 500);
+                const resistReduction = getMagicResistDamageReduction(magicResist);
                 base = Math.floor(base * (1 - resistReduction));
                 extraText = `（魔抗减伤${Math.round(resistReduction * 100)}%）`;
             }
@@ -8307,6 +8307,23 @@ function calculateOfflineRewards(state, offlineSeconds) {
 
 const ARMOR_DR_CAP = 0.99;
 const ARMOR_K = 3000; // 你可以调参：1000/5000/10000...
+
+// ==================== 魔抗减伤（统一公式） ====================
+// 统一魔抗系数（调参只改这里）
+const magicresist_k = 800;
+
+// 返回 0~1 的减伤比例（允许为负，代表易伤；例如 -0.2 表示多吃20%伤害）
+function getMagicResistDamageReduction(magicResist) {
+    const mr = Number(magicResist) || 0;
+    const denom = mr + magicresist_k;
+
+    // 避免 mr 恰好等于 -K 时除 0 导致数值爆炸
+    if (Math.abs(denom) < 1e-9) {
+        return mr >= 0 ? 0.999 : -0.999;
+    }
+
+    return mr / denom;
+}
 
 function getArmorDamageReduction(armor) {
     const a = Math.max(0, armor || 0);

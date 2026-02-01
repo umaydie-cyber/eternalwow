@@ -5433,7 +5433,7 @@ const WORLD_BOSSES = {
         id: 'dagran_thaurissan',
         name: '达格兰·索瑞森大帝',
         icon: 'icons/wow/vanilla/boss/dagran_thaurissan.png',
-        hp: 1200000,
+        hp: 1500000,
         attack: 3000,
         defense: 1000,
         rewards: { gold: 300000, exp: 165000 },
@@ -5658,7 +5658,7 @@ const BOSS_DATA = {
     dagran_thaurissan: {
         id: 'dagran_thaurissan',
         name: '达格兰·索瑞森大帝',
-        maxHp: 1200000,
+        maxHp: 1500000,
         attack: 3000,
         defense: 1000,
 

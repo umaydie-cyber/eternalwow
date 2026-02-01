@@ -4738,9 +4738,37 @@ const CODEX_SET_EFFECTS = [
     {
         id: 'sunken_temple',
         name: '沉没的神庙',
-        equipIds: ['EQ_064', 'EQ_065', 'EQ_066', 'EQ_067', 'EQ_068', 'EQ_069', 'EQ_070', 'EQ_071', 'EQ_072', 'EQ_073'],
+        equipIds: SUNKEN_TEMPLE_LV100_SET,
         effect: '全队全能 +10',
         color: '#00bcd4'
+    },
+    {
+        id: 'lower_blackrock_spire',
+        name: '黑石塔下',
+        equipIds: LOWER_BLACKROCK_SPIRE_LV100_SET,
+        effect: '全队暴击 +10',
+        color: '#ff9800'
+    },
+    {
+        id: 'scholomance',
+        name: '通灵学院',
+        equipIds: SCHOLOMANCE_LV100_SET,
+        effect: '全队精通 +10',
+        color: '#9C27B0'
+    },
+    {
+        id: 'stratholme',
+        name: '斯坦索姆',
+        equipIds: STRATHOLME_lv100_SET,
+        effect: '全队急速 +10',
+        color: '#2196F3'
+    },
+    {
+        id: 'upper_blackrock_spire',
+        name: '黑石塔上',
+        equipIds: UPPER_BLACKROCK_SPIRE_LV100_SET,
+        effect: '全队攻击 +500，法强 +500',
+        color: '#f44336'
     },
 ];
 

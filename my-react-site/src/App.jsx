@@ -4679,6 +4679,18 @@ const SCARLET_MONASTERY_LV100_SET = [
 // 沉没的神庙10件 10全能
 const SUNKEN_TEMPLE_LV100_SET = ['EQ_064', 'EQ_065', 'EQ_066', 'EQ_067', 'EQ_068', 'EQ_069', 'EQ_070', 'EQ_071', 'EQ_072', 'EQ_073'];
 
+// 黑石塔下14件 10暴击
+const LOWER_BLACKROCK_SPIRE_LV100_SET = ['EQ_074', 'EQ_075', 'EQ_076', 'EQ_077', 'EQ_078', 'EQ_069', 'EQ_079', 'EQ_080', 'EQ_081', 'EQ_082', 'EQ_083', 'EQ_084', 'EQ_085', 'EQ_086'];
+
+// 通灵学院8件 10精通
+const SCHOLOMANCE_LV100_SET = ['EQ_087', 'EQ_088', 'EQ_089', 'EQ_090', 'EQ_091', 'EQ_092', 'EQ_093', 'EQ_094'];
+
+// 斯坦索姆8件 10急速
+const STRATHOLME_lv100_SET = ['EQ_095', 'EQ_096', 'EQ_097', 'EQ_098', 'EQ_099', 'EQ_100', 'EQ_101', 'EQ_102'];
+
+// 黑石塔上10件 500攻击强度/法术强度
+const UPPER_BLACKROCK_SPIRE_LV100_SET = ['EQ_103', 'EQ_104', 'EQ_105', 'EQ_106', 'EQ_107', 'EQ_108', 'EQ_109', 'EQ_110', 'EQ_111', 'EQ_112'];
+
 // ==================== 图鉴集齐效果配置 ====================
 const CODEX_SET_EFFECTS = [
     {
@@ -5589,12 +5601,45 @@ function calculateTotalStats(character, partyAuras = { hpMul: 1, spellPowerMul: 
         totalStats.mastery = (totalStats.mastery || 0) + 10;
     }
 
-    // 沉默的神庙 10 件装备全部达到过 Lv.100 → 全队精通 +10，急速 +10
+    // 沉没的神庙 10 件装备全部达到过 Lv.100 → 全队全能 +10
     if (
         gameState &&
         SUNKEN_TEMPLE_LV100_SET.every(id => gameState.codexEquipLv100.includes(id))
     ) {
         totalStats.versatility = (totalStats.versatility || 0) + 10;
+    }
+
+    // 黑石塔下14件全部达到过 Lv.100 10暴击
+    if (
+        gameState &&
+        LOWER_BLACKROCK_SPIRE_LV100_SET.every(id => gameState.codexEquipLv100.includes(id))
+    ) {
+        totalStats.critRate = (totalStats.critRate || 0) + 10;
+    }
+
+    // 通灵学院8件全部达到过 Lv.100 10精通
+    if (
+        gameState &&
+        SCHOLOMANCE_LV100_SET.every(id => gameState.codexEquipLv100.includes(id))
+    ) {
+        totalStats.mastery = (totalStats.mastery || 0) + 10;
+    }
+
+    // 斯坦索姆8件全部达到过 Lv.100 10急速
+    if (
+        gameState &&
+        STRATHOLME_lv100_SET.every(id => gameState.codexEquipLv100.includes(id))
+    ) {
+        totalStats.haste = (totalStats.haste || 0) + 10;
+    }
+
+    // 黑石塔上10件 全部达到过 Lv.100 500攻击强度/法术强度
+    if (
+        gameState &&
+        UPPER_BLACKROCK_SPIRE_LV100_SET.every(id => gameState.codexEquipLv100.includes(id))
+    ) {
+        totalStats.attack = (totalStats.attack || 0) + 500;
+        totalStats.spellPower = (totalStats.spellPower || 0) + 500;
     }
 
     // 简约而不简单羁绊：单一职业队伍普通攻击伤害提高150%

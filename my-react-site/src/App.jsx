@@ -4996,7 +4996,7 @@ const ITEMS = {
         sellPrice: 0,  // 不可出售
         icon: 'icons/wow/vanilla/armor/INV_Jewelry_Talisman_12.png',
         description: '使用后选择一件【荆棘谷，塔纳利斯】装备，使其等级提升 +2（最高100级）'
-    }
+    },
 
     // 索瑞森大帝的徽章（达尔戈索瑞森掉落）
     IT_THAURISSAN_BADGE: {
@@ -5015,6 +5015,7 @@ const ITEMS = {
 
 const BUILDINGS = {
     house: { id: 'house', name: '民居', cost: { gold: 100, wood: 50 }, production: { population: 2 }, consumption: {} },
+
 };
 
 function ItemIcon({ item, size = 28 }) {

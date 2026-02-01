@@ -5078,6 +5078,16 @@ const RESEARCH = {
         bonus: 0.03,
         unlockBoss: 'prestor_lady',
     },
+    // ✅ 击败裂魂者萨尔诺斯后解锁
+    alchemy_mastery: {
+        id: 'siphon_mastery',
+        name: '炼金精通',
+        description: '提升炼金术效率（击败裂魂者萨尔诺斯后解锁）',
+        baseCost: 10000,
+        effect: 'alchemyOil',
+        bonus: 0.03,
+        unlockBoss: 'thalnos',
+    },
 };
 
 const ACHIEVEMENTS = {

@@ -4998,6 +4998,18 @@ const ITEMS = {
         description: '使用后选择一件【荆棘谷，塔纳利斯】装备，使其等级提升 +2（最高100级）'
     }
 
+    // 索瑞森大帝的徽章（达尔戈索瑞森掉落）
+    IT_THAURISSAN_BADGE: {
+        id: 'IT_THAURISSAN_BADGE',
+        name: '索瑞森大帝的徽章',
+        type: 'consumable',
+        rarity: 'purple',
+        canUse: true,
+        sellPrice: 0,  // 不可出售
+        icon: 'icons/wow/vanilla/items/INV_Misc_Rune_04.png',
+        description: '使用后选择一件【沉没的神庙，黑石深渊】装备，使其等级提升 +2（最高100级）'
+    }
+
 };
 
 

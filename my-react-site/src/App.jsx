@@ -5279,6 +5279,24 @@ const ACHIEVEMENTS = {
         reward: { dropBonus: 0.05 },
         icon: '🏴‍☠️'
     },
+
+    // ✅ 新增：道心澄澈系列（BOSS挑战延后失败累计）
+    dao_xin_cheng_che_1: {
+        id: 'dao_xin_cheng_che_1',
+        name: '道心澄澈Ⅰ',
+        description: '在BOSS挑战中超过4回合后战斗失败累计达到100次',
+        condition: (state) => (state.stats?.bossLateRoundDefeats || 0) >= 100,
+        reward: { bossHpPct: 0.05 },
+        icon: '🧘'
+    },
+    dao_xin_cheng_che_2: {
+        id: 'dao_xin_cheng_che_2',
+        name: '道心澄澈Ⅱ',
+        description: '在BOSS挑战中超过4回合后战斗失败累计达到1000次',
+        condition: (state) => (state.stats?.bossLateRoundDefeats || 0) >= 1000,
+        reward: { bossHpPct: 0.05 },
+        icon: '🧘'
+    },
 };
 
 const WORLD_BOSSES = {
@@ -5643,6 +5661,7 @@ function formatBonusText(bonusObj) {
     const nameMap = {
         atkPct: '攻击',
         hpPct: '生命',
+        bossHpPct: 'BOSS战斗生命',
         expBonus: '经验值增幅',
         goldBonus: '金币增幅',
         dropBonus: '掉落增幅',
@@ -5705,6 +5724,20 @@ function getAchievementHpPctBonus(state) {
     });
     return bonus; // 例如 0.02 = +2%
 }
+
+// ✅ 成就：仅BOSS战斗生命百分比加成（跨成就加法叠加）
+// 说明：只在 BOSS 战斗初始化时应用（见 START_BOSS_COMBAT）
+function getAchievementBossHpPctBonus(state) {
+    const unlocked = state?.achievements || {};
+    let bonus = 0;
+    Object.values(ACHIEVEMENTS).forEach(a => {
+        if (unlocked[a.id] && a.reward?.bossHpPct) {
+            bonus += Number(a.reward.bossHpPct) || 0;
+        }
+    });
+    return bonus; // 例如 0.05 = +5%
+}
+
 
 function getAchievementDropBonus(state) {
     const unlocked = state?.achievements || {};
@@ -7707,6 +7740,12 @@ function stepBossCombat(state) {
 
         } else {
             addLog('××× 失败，全队阵亡 ×××');
+
+            // ✅ 统计：BOSS挑战超过4回合后失败次数（用于成就【道心澄澈Ⅰ/Ⅱ】）
+            if ((combat.round || 0) > 4) {
+                const prev = newState.stats?.bossLateRoundDefeats || 0;
+                newState.stats = { ...(newState.stats || {}), bossLateRoundDefeats: prev + 1 };
+            }
         }
 
         const bossLogEntry = {
@@ -7784,7 +7823,7 @@ const initialState = {
     zones: JSON.parse(JSON.stringify(ZONES)),
     assignments: {},
     combatLogs: [],
-    stats: { battlesWon: 0, totalDamage: 0, totalHealing: 0 },
+    stats: { battlesWon: 0, totalDamage: 0, totalHealing: 0, bossLateRoundDefeats: 0 },
     // 地图区域击杀统计（跨世累计，不会随轮回/重生重置）
     // 例如：{ elwynn_forest: 12345 }
     zoneKillCounts: {},
@@ -10419,7 +10458,14 @@ function gameReducer(state, action) {
                     decoded.zoneKillCounts = {};
                 }
 
-                // ===== 2️⃣ 关键：重算全队属性 =====
+                // stats（用于成就/统计）
+                decoded.stats ??= {};
+                decoded.stats.battlesWon ??= 0;
+                decoded.stats.totalDamage ??= 0;
+                decoded.stats.totalHealing ??= 0;
+                decoded.stats.bossLateRoundDefeats ??= 0;
+
+// ===== 2️⃣ 关键：重算全队属性 =====
                 const fixedCharacters = recalcPartyStats(
                     decoded,
                     decoded.characters
@@ -10510,8 +10556,28 @@ function gameReducer(state, action) {
             const teamChars = teamIds.map(id => state.characters.find(c => c.id === id)).filter(Boolean);
             // 重新计算队伍光环
             const recalcedTeam = recalcPartyStats(state,teamChars.map(c => ({ ...c })));
+            // ✅ 成就：仅BOSS战斗生命加成（如【道心澄澈Ⅰ/Ⅱ】）
+            const bossHpPctBonus = getAchievementBossHpPctBonus(state);
+            const recalcedTeamForBoss = (Number.isFinite(bossHpPctBonus) && bossHpPctBonus > 0)
+                ? recalcedTeam.map(char => {
+                    const baseMaxHp = Number(char.stats?.maxHp) || 0;
+                    const nextMaxHp = Math.floor(baseMaxHp * (1 + bossHpPctBonus));
+                    const baseHp = Number(char.stats?.hp) || baseMaxHp;
+                    const nextHp = Math.floor(baseHp * (1 + bossHpPctBonus));
+                    return {
+                        ...char,
+                        stats: {
+                            ...char.stats,
+                            hp: nextHp,
+                            maxHp: nextMaxHp,
+                            currentHp: nextMaxHp,
+                        }
+                    };
+                })
+                : recalcedTeam;
 
-            const playerStates = recalcedTeam.map(char => ({
+
+            const playerStates = recalcedTeamForBoss.map(char => ({
                 char,
                 currentHp: char.stats.maxHp,
                 currentMp: char.stats.maxMp,

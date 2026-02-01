@@ -3227,8 +3227,17 @@ const FIXED_EQUIPMENTS = {
             critRate: 2,
             versatility: 2,
             critDamage: 2
+        },
+        specialEffect: {
+            type: 'proc_stat',
+            trigger: 'turn_start',
+            chance: 0.20,
+            stats: { attack: 500 },
+            scaleWithLevel: true
         }
+
     },
+
     EQ_058: {
         id: 'EQ_058',
         name: '公正之手',
@@ -3295,6 +3304,13 @@ const FIXED_EQUIPMENTS = {
             critRate: 2,
             versatility: 2,
             haste: 2
+        },
+        specialEffect: {
+            type: 'proc_stat',
+            trigger: 'turn_start',
+            chance: 0.20,
+            stats: { spellPower: 500 },
+            scaleWithLevel: true
         }
     },
     EQ_061: {

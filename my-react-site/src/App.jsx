@@ -5584,10 +5584,10 @@ const BOSS_DATA = {
 
         // 烈焰打击：对坦克造成 3×火焰伤害（魔抗）+ 3×物理伤害（护甲/格挡）
         flameStrikeFireMultiplier: 3,
-        flameStrikePhysicalMultiplier: 6,
+        flameStrikePhysicalMultiplier: 5,
 
-        // 熔岩爆裂：随机目标 3×火焰伤害，并留下灼烧DOT（1.5×攻击，持续3回合）
-        lavaBurstMultiplier: 3,
+        // 熔岩爆裂：随机目标 2×火焰伤害，并留下灼烧DOT（1.5×攻击，持续3回合）
+        lavaBurstMultiplier: 2,
         burnDoTMultiplier: 1.5,
         burnDoTDuration: 3,
 

@@ -5312,14 +5312,28 @@ function mergeEquipments(eqA, eqB) {
 }
 
 
+function getEquipmentTemplate(templateId) {
+    // 常规掉落装备：FIXED_EQUIPMENTS
+    // 任务/剧情奖励装备：QUEST_REWARD_EQUIPMENTS
+    return FIXED_EQUIPMENTS?.[templateId] || QUEST_REWARD_EQUIPMENTS?.[templateId];
+}
+
 function createEquipmentInstance(templateId) {
-    const tpl = FIXED_EQUIPMENTS[templateId];
+    const tpl = getEquipmentTemplate(templateId);
+
+    if (!tpl) {
+        console.error(`[createEquipmentInstance] 装备模板不存在: ${templateId}`);
+        return null;
+    }
+
+    const level = Number.isFinite(Number(tpl.level)) ? Number(tpl.level) : 0;
+
     return {
         ...tpl,
         instanceId: `eq_${Date.now()}_${Math.random()}`,
-        qualityColor: getRarityColor(tpl?.rarity),
-        currentLevel: tpl.level,
-        stats: scaleStats(tpl.baseStats, tpl.growth, tpl.level)
+        qualityColor: getRarityColor(tpl.rarity),
+        currentLevel: level,
+        stats: scaleStats(tpl.baseStats || {}, tpl.growth || {}, level)
     };
 }
 
@@ -7560,7 +7574,8 @@ function calculateOfflineRewards(state, offlineSeconds) {
                         const base = (drop.chance ?? 0);
                         const effective = Math.min(1, base * (1 + achDropBonus));
                         if (Math.random() < effective) {
-                            rewards.items.push(createEquipmentInstance(drop.id));
+                            const inst = createEquipmentInstance(drop.id);
+                            if (inst) rewards.items.push(inst);
                         }
                     });
 
@@ -9145,15 +9160,17 @@ function gameReducer(state, action) {
 
                                     if (Math.random() < effectiveChance) {
                                         const instance = createEquipmentInstance(drop.id);
-                                        newState.inventory.push(instance);
-                                        newState = addEquipmentIdToCodex(newState, drop.id);
+                                        if (instance) {
+                                            newState.inventory.push(instance);
+                                            newState = addEquipmentIdToCodex(newState, drop.id);
 
-                                        // ✅ 记录掉落信息
-                                        droppedItems.push({
-                                            name: instance.name,
-                                            rarity: instance.rarity,
-                                            chance: baseChance * 100 // 转换为百分比
-                                        });
+                                            // ✅ 记录掉落信息
+                                            droppedItems.push({
+                                                name: instance.name,
+                                                rarity: instance.rarity,
+                                                chance: baseChance * 100 // 转换为百分比
+                                            });
+                                        }
                                     }
                                 });
                             }
@@ -10720,8 +10737,10 @@ function gameReducer(state, action) {
                             const tpl = QUEST_REWARD_EQUIPMENTS[itemDef.id] || FIXED_EQUIPMENTS[itemDef.id];
                             if (tpl) {
                                 const instance = createEquipmentInstance(itemDef.id);
-                                newState.inventory = [...newState.inventory, instance];
-                                newState = addEquipmentIdToCodex(newState, itemDef.id);
+                                if (instance) {
+                                    newState.inventory = [...newState.inventory, instance];
+                                    newState = addEquipmentIdToCodex(newState, itemDef.id);
+                                }
                             }
                         }
                     });

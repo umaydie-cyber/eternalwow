@@ -5093,6 +5093,16 @@ const RESEARCH = {
 const ACHIEVEMENTS = {
     novice: { id: 'novice', name: '初出茅庐', description: '角色升级到10级', condition: (state) => state.characters.some(c => c.level >= 10), reward: { expBonus: 0.02 }, icon: '⚔️' },
     first_blood: { id: 'first_blood', name: '初战告捷', description: '完成第一次战斗', condition: (state) => state.stats.battlesWon >= 1, reward: { goldBonus: 0.05 }, icon: '🩸' },
+    tenli_po_sword_saint: {
+        id: 'tenli_po_sword_saint',
+        name: '十里坡剑圣',
+        description: '在LV1区域【艾尔文森林】击杀100000个怪物（跨世累计，任何操作/重生均不会重置计数）',
+        // 计数来源：state.zoneKillCounts.elwynn_forest（跨世累计）
+        condition: (state) => (state.zoneKillCounts?.elwynn_forest || 0) >= 100000,
+        // 地图区域战斗：总伤害 +5%
+        reward: { mapDamageBonus: 0.05 },
+        icon: '🗡️'
+    },
     collector: { id: 'collector', name: '收藏家', description: '收集10种不同物品', condition: (state) => state.codex.length >= 10, reward: { dropBonus: 0.1 }, icon: '📦' },
     builder: { id: 'builder', name: '建设者', description: '建造5座建筑', condition: (state) => Object.values(state.buildings||{}).reduce((a, b) => a + b, 0) >= 5, reward: { resourceBonus: 0.05 }, icon: '🏗️' },
     susas: {
@@ -5471,12 +5481,13 @@ function formatBonusText(bonusObj) {
         goldBonus: '金币增幅',
         dropBonus: '掉落增幅',
         resourceBonus: '资源产出增幅',
+        mapDamageBonus: '地图战斗伤害',
     };
 
     return entries.map(([k, v]) => {
         if (typeof v === 'number') {
             // 明确按百分比展示的字段
-            if (k.endsWith('Pct') || k === 'expBonus' || k === 'goldBonus' || k === 'dropBonus') {
+            if (k.endsWith('Pct') || k === 'expBonus' || k === 'goldBonus' || k === 'dropBonus' || k === 'resourceBonus' || k === 'mapDamageBonus') {
                 return `${nameMap[k] || k} +${Math.round(v * 100)}%`;
             }
             return `${nameMap[k] || k} +${v}`;
@@ -5503,6 +5514,25 @@ function getAchievementDropBonus(state) {
         }
     });
     return bonus; // 例如 0.05 = +5%
+}
+
+// ✅ 成就：地图战斗伤害加成（跨成就加法叠加）
+// 注意：与装备特效（如 map_slayer）的加成将在战斗计算处“乘算”（见 getMapDamageDealtMult）
+function getAchievementMapDamageBonus(state) {
+    const unlocked = state?.achievements || {};
+    let bonus = 0;
+    Object.values(ACHIEVEMENTS).forEach(a => {
+        if (unlocked[a.id] && a.reward?.mapDamageBonus) {
+            bonus += Number(a.reward.mapDamageBonus) || 0;
+        }
+    });
+    return bonus; // 例如 0.05 = +5%
+}
+
+function getAchievementMapDamageDealtMult(state) {
+    const bonus = getAchievementMapDamageBonus(state);
+    if (!Number.isFinite(bonus) || bonus <= 0) return 1;
+    return 1 + bonus;
 }
 
 function addEquipmentIdToCodex(state, equipmentId) {
@@ -5849,6 +5879,19 @@ function getMapSlayerDamageDealtMult(character) {
     if (!Number.isFinite(bonus) || bonus <= 0) return 1;
 
     return 1 + bonus;
+}
+
+// ✅ 地图战斗总伤害倍率
+// - 装备特效（map_slayer）内部：加法叠加 => 1 + Σbonus
+// - 成就（mapDamageBonus）内部：加法叠加 => 1 + Σbonus
+// - 两者之间：乘算（用户需求：成就地图伤害 与 装备特效伤害 乘算）
+function getMapDamageDealtMult(character, gameState) {
+    const equipMult = getMapSlayerDamageDealtMult(character);
+    const achMult = getAchievementMapDamageDealtMult(gameState);
+
+    const m1 = (Number.isFinite(equipMult) && equipMult > 0) ? equipMult : 1;
+    const m2 = (Number.isFinite(achMult) && achMult > 0) ? achMult : 1;
+    return m1 * m2;
 }
 
 // ==================== 装备特效：通用「概率触发属性增益」框架 ====================
@@ -7522,6 +7565,9 @@ const initialState = {
     assignments: {},
     combatLogs: [],
     stats: { battlesWon: 0, totalDamage: 0, totalHealing: 0 },
+    // 地图区域击杀统计（跨世累计，不会随轮回/重生重置）
+    // 例如：{ elwynn_forest: 12345 }
+    zoneKillCounts: {},
     worldBossProgress: {},
     lastOnlineTime: Date.now(),
     offlineRewards: null,
@@ -7618,7 +7664,9 @@ function calculateOfflineRewards(state, offlineSeconds) {
         items: [],
         kingdomResources: {},   // ✅ 新增：主城资源
         researchProgress: 0,
-        combats: 0
+        combats: 0,
+        // 离线期间各地图区域的击杀数（combat 视为击杀 1 个怪物）
+        killsByZone: {}
     };
     Object.entries(state.assignments).forEach(([charId, zoneId]) => {
         const character = state.characters.find(c => c.id === charId);
@@ -7629,6 +7677,9 @@ function calculateOfflineRewards(state, offlineSeconds) {
             const totalCombats = Math.floor(actualSeconds * combatsPerSecond);
 
             rewards.combats += totalCombats;
+
+            // ✅ 离线战斗也计入地图区域击杀计数（用于成就：十里坡剑圣等）
+            rewards.killsByZone[zoneId] = (rewards.killsByZone[zoneId] || 0) + totalCombats;
 
             for (let i = 0; i < totalCombats; i++) {
                 const enemy = zone.enemies[Math.floor(Math.random() * zone.enemies.length)];
@@ -7746,7 +7797,7 @@ function createCombatState(character, enemy, skillSlots) {
     };
 }
 
-function stepCombatRounds(character, combatState, roundsPerTick = 1) {
+function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) {
     let logs = [...(combatState.logs || [])];
 
     let charHp = Number.isFinite(character?.stats?.currentHp)
@@ -7757,8 +7808,8 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1) {
     let round = combatState.round ?? 0;
     let skillIndex = combatState.skillIndex ?? 0;
 
-    // ✅ 地图战斗伤害加成（例如：奥妮克希亚鳞片披风 map_slayer）
-    const mapDamageDealtMult = getMapSlayerDamageDealtMult(character);
+    // ✅ 地图战斗总伤害加成（装备特效 + 成就加成，二者乘算）
+    const mapDamageDealtMult = getMapDamageDealtMult(character, gameState);
 
     // buffs
     let buffs = Array.isArray(combatState.buffs) ? [...combatState.buffs] : [];
@@ -8804,6 +8855,33 @@ function gameReducer(state, action) {
                 );
             }
 
+            // ✅ 离线战斗统计：计入总战斗胜利数 & 各区域击杀数（跨世累计，不会被重生重置）
+            const offlineCombats = Number(rewards.combats) || 0;
+            if (offlineCombats > 0) {
+                newState.stats = {
+                    ...(newState.stats || {}),
+                    battlesWon: (newState.stats?.battlesWon || 0) + offlineCombats,
+                };
+            }
+
+            const killsByZone = (rewards.killsByZone && typeof rewards.killsByZone === 'object' && !Array.isArray(rewards.killsByZone))
+                ? rewards.killsByZone
+                : null;
+
+            if (killsByZone) {
+                const nextZoneKillCounts = (newState.zoneKillCounts && typeof newState.zoneKillCounts === 'object' && !Array.isArray(newState.zoneKillCounts))
+                    ? { ...newState.zoneKillCounts }
+                    : {};
+
+                Object.entries(killsByZone).forEach(([zid, cnt]) => {
+                    const add = Math.max(0, Math.floor(Number(cnt) || 0));
+                    if (!zid || add <= 0) return;
+                    nextZoneKillCounts[zid] = (nextZoneKillCounts[zid] || 0) + add;
+                });
+
+                newState.zoneKillCounts = nextZoneKillCounts;
+            }
+
             newState.offlineRewards = null;
             newState.lastOnlineTime = Date.now();
 
@@ -8843,6 +8921,13 @@ function gameReducer(state, action) {
                 ...state,
                 frame: state.frame + deltaSeconds ,
                 lifeFrame: (state.lifeFrame || 0) + deltaSeconds,};
+
+            // ===== 跨世累计：地图区域击杀计数（用于成就，如「十里坡剑圣」） =====
+            // 说明：该计数不应因重生/任何操作而被重置，因此挂在 state.zoneKillCounts 并随存档持久化。
+            let zoneKillCountsUpdated = false;
+            let nextZoneKillCounts = (newState.zoneKillCounts && typeof newState.zoneKillCounts === 'object' && !Array.isArray(newState.zoneKillCounts))
+                ? { ...newState.zoneKillCounts }
+                : {};
 
 
             // ===== 世界Boss重生冷却（秒） =====
@@ -9161,7 +9246,7 @@ function gameReducer(state, action) {
                 if (char.combatState) {
                     char.lastCombatTime = now; // 战斗中持续刷新，确保不会被脱战回血逻辑影响
 
-                    const step = stepCombatRounds(char, char.combatState, COMBAT_ROUNDS_PER_TICK);
+                    const step = stepCombatRounds(char, char.combatState, COMBAT_ROUNDS_PER_TICK, newState);
 
                     const endHp = Number.isFinite(step.charHp)
                         ? Math.max(0, Math.floor(step.charHp))
@@ -9215,6 +9300,12 @@ function gameReducer(state, action) {
                             }
 
                             newState.stats.battlesWon++;
+
+                            // ✅ 跨世累计：地图区域击杀计数（用于成就进度，任何操作/重生不重置）
+                            if (zoneId) {
+                                nextZoneKillCounts[zoneId] = (nextZoneKillCounts[zoneId] || 0) + 1;
+                                zoneKillCountsUpdated = true;
+                            }
 
                             const mapResourceNameToKey = (name) => {
                                 const m = {
@@ -9324,6 +9415,11 @@ function gameReducer(state, action) {
                 const newAssignments = { ...newState.assignments };
                 toRecall.forEach(id => delete newAssignments[id]);
                 newState.assignments = newAssignments;
+            }
+
+            // 写回跨世累计击杀计数（用于成就进度）
+            if (zoneKillCountsUpdated) {
+                newState.zoneKillCounts = nextZoneKillCounts;
             }
 
             Object.entries(ACHIEVEMENTS).forEach(([id, achievement]) => {
@@ -10087,6 +10183,10 @@ function gameReducer(state, action) {
                 decoded.bossCooldowns ??= {};
                 decoded.worldBossKillCounts ??= {};
                 decoded.worldBossAutoKill ??= {};
+                decoded.zoneKillCounts ??= {};
+                if (typeof decoded.zoneKillCounts !== 'object' || Array.isArray(decoded.zoneKillCounts)) {
+                    decoded.zoneKillCounts = {};
+                }
 
                 // ===== 2️⃣ 关键：重算全队属性 =====
                 const fixedCharacters = recalcPartyStats(

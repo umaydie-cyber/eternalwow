@@ -5103,6 +5103,89 @@ const ACHIEVEMENTS = {
         reward: { mapDamageBonus: 0.05 },
         icon: '🗡️'
     },
+
+    // ✅ 新增：持续战斗系列（地图累计击杀，跨世累计）
+    continuous_battle_1: {
+        id: 'continuous_battle_1',
+        name: '持续战斗Ⅰ',
+        description: '在地图累计击杀1万只怪物（跨世累计，任何操作/重生均不会重置计数）',
+        condition: (state) => getTotalMapKills(state) >= 10000,
+        reward: { hpPct: 0.02 },
+        icon: '🔥'
+    },
+    continuous_battle_2: {
+        id: 'continuous_battle_2',
+        name: '持续战斗Ⅱ',
+        description: '在地图累计击杀5万只怪物（跨世累计，任何操作/重生均不会重置计数）',
+        condition: (state) => getTotalMapKills(state) >= 50000,
+        reward: { hpPct: 0.02 },
+        icon: '🔥'
+    },
+    continuous_battle_3: {
+        id: 'continuous_battle_3',
+        name: '持续战斗Ⅲ',
+        description: '在地图累计击杀10万只怪物（跨世累计，任何操作/重生均不会重置计数）',
+        condition: (state) => getTotalMapKills(state) >= 100000,
+        reward: { hpPct: 0.02 },
+        icon: '🔥'
+    },
+    continuous_battle_4: {
+        id: 'continuous_battle_4',
+        name: '持续战斗Ⅳ',
+        description: '在地图累计击杀50万只怪物（跨世累计，任何操作/重生均不会重置计数）',
+        condition: (state) => getTotalMapKills(state) >= 500000,
+        reward: { hpPct: 0.02 },
+        icon: '🔥'
+    },
+    continuous_battle_5: {
+        id: 'continuous_battle_5',
+        name: '持续战斗Ⅴ',
+        description: '在地图累计击杀100万只怪物（跨世累计，任何操作/重生均不会重置计数）',
+        condition: (state) => getTotalMapKills(state) >= 1000000,
+        reward: { hpPct: 0.02 },
+        icon: '🔥'
+    },
+    continuous_battle_6: {
+        id: 'continuous_battle_6',
+        name: '持续战斗Ⅵ',
+        description: '在地图累计击杀500万只怪物（跨世累计，任何操作/重生均不会重置计数）',
+        condition: (state) => getTotalMapKills(state) >= 5000000,
+        reward: { hpPct: 0.02 },
+        icon: '🔥'
+    },
+    continuous_battle_7: {
+        id: 'continuous_battle_7',
+        name: '持续战斗Ⅶ',
+        description: '在地图累计击杀1000万只怪物（跨世累计，任何操作/重生均不会重置计数）',
+        condition: (state) => getTotalMapKills(state) >= 10000000,
+        reward: { hpPct: 0.02 },
+        icon: '🔥'
+    },
+    continuous_battle_8: {
+        id: 'continuous_battle_8',
+        name: '持续战斗Ⅷ',
+        description: '在地图累计击杀5000万只怪物（跨世累计，任何操作/重生均不会重置计数）',
+        condition: (state) => getTotalMapKills(state) >= 50000000,
+        reward: { hpPct: 0.02 },
+        icon: '🔥'
+    },
+    continuous_battle_9: {
+        id: 'continuous_battle_9',
+        name: '持续战斗Ⅸ',
+        description: '在地图累计击杀1亿只怪物（跨世累计，任何操作/重生均不会重置计数）',
+        condition: (state) => getTotalMapKills(state) >= 100000000,
+        reward: { hpPct: 0.02 },
+        icon: '🔥'
+    },
+    continuous_battle_10: {
+        id: 'continuous_battle_10',
+        name: '持续战斗Ⅹ',
+        description: '在地图累计击杀5亿只怪物（跨世累计，任何操作/重生均不会重置计数）',
+        condition: (state) => getTotalMapKills(state) >= 500000000,
+        reward: { hpPct: 0.02 },
+        icon: '🔥'
+    },
+
     collector: { id: 'collector', name: '收藏家', description: '收集10种不同物品', condition: (state) => state.codex.length >= 10, reward: { dropBonus: 0.1 }, icon: '📦' },
     builder: { id: 'builder', name: '建设者', description: '建造5座建筑', condition: (state) => Object.values(state.buildings||{}).reduce((a, b) => a + b, 0) >= 5, reward: { resourceBonus: 0.05 }, icon: '🏗️' },
     susas: {
@@ -5505,6 +5588,27 @@ function formatStatForDisplay(stat, value) {
     return Math.floor(value);
 }
 
+// 地图累计击杀数（跨区域累计）：用于成就【持续战斗Ⅰ~Ⅹ】等
+function getTotalMapKills(state) {
+    const counts = (state?.zoneKillCounts && typeof state.zoneKillCounts === 'object' && !Array.isArray(state.zoneKillCounts))
+        ? state.zoneKillCounts
+        : {};
+
+    return Object.values(counts).reduce((sum, v) => sum + (Math.max(0, Math.floor(Number(v) || 0))), 0);
+}
+
+// ✅ 成就：全队生命百分比加成（跨成就加法叠加）
+function getAchievementHpPctBonus(state) {
+    const unlocked = state?.achievements || {};
+    let bonus = 0;
+    Object.values(ACHIEVEMENTS).forEach(a => {
+        if (unlocked[a.id] && a.reward?.hpPct) {
+            bonus += Number(a.reward.hpPct) || 0;
+        }
+    });
+    return bonus; // 例如 0.02 = +2%
+}
+
 function getAchievementDropBonus(state) {
     const unlocked = state?.achievements || {};
     let bonus = 0;
@@ -5751,6 +5855,13 @@ function calculateTotalStats(character, partyAuras = { hpMul: 1, spellPowerMul: 
             1.20 + (mastery / 2) / 100;
 
         totalStats.iceLanceBaseMultiplier = iceLanceBaseMultiplier;
+    }
+
+    // ==================== 成就：全队生命百分比加成（如【持续战斗Ⅰ~Ⅹ】） ====================
+    // 规则：hpPct 为加法叠加，然后作为乘区作用在最终 hp 上
+    const achHpPctBonus = getAchievementHpPctBonus(gameState);
+    if (Number.isFinite(achHpPctBonus) && achHpPctBonus > 0) {
+        totalStats.hp = (Number(totalStats.hp) || 0) * (1 + achHpPctBonus);
     }
 
     totalStats.maxHp = Math.floor((totalStats.hp || 0) * (partyAuras.hpMul || 1));
@@ -9422,11 +9533,19 @@ function gameReducer(state, action) {
                 newState.zoneKillCounts = nextZoneKillCounts;
             }
 
+            // ✅ 成就解锁检测（若成就会影响属性，如 hpPct，需要重算全队面板）
+            let achievementUnlockedThisTick = false;
             Object.entries(ACHIEVEMENTS).forEach(([id, achievement]) => {
                 if (!newState.achievements[id] && achievement.condition(newState)) {
                     newState.achievements = { ...newState.achievements, [id]: true };
+                    achievementUnlockedThisTick = true;
                 }
             });
+
+            if (achievementUnlockedThisTick) {
+                // 成就可能改变角色总血量等永久属性，需要立即重算，否则需要等到下次升级/重算才生效
+                newState.characters = recalcPartyStats(newState, newState.characters);
+            }
 
             const maxCharLevel = Math.max(...newState.characters.map(c => c.level), 0);
             Object.values(newState.zones).forEach(zone => {

@@ -1910,6 +1910,18 @@ function isPrestorBadgeEquipment(eq) {
     return PRESTOR_BADGE_EQUIP_IDS.has(eq.id);
 }
 
+const BLACKROCK_DEPTHS_EQUIP_IDS = new Set([
+    'EQ_062', 'EQ_063', 'EQ_064', 'EQ_065', 'EQ_066', 'EQ_067',
+    'EQ_068', 'EQ_069', 'EQ_070', 'EQ_071', 'EQ_072', 'EQ_073'
+]);
+
+function isBlackrockDepthsEquipment(eq) {
+    if (!eq || eq.type !== 'equipment') return false;
+    const tpl = FIXED_EQUIPMENTS?.[eq.id];
+    if (tpl?.setId === 'blackrock_depths') return true;
+    return BLACKROCK_DEPTHS_EQUIP_IDS.has(eq.id);
+}
+
 
 // ==================== 徽章升级规则（复用“血色十字军徽章”的通用模式） ====================
 // 以后新增 Boss 徽章：只需要在这里加一条规则 + 在 USE_ITEM 里让该徽章走同一套入口即可。
@@ -1949,6 +1961,15 @@ const BADGE_UPGRADE_RULES = {
         cap: 100,
         isEligible: isPrestorBadgeEquipment,
         theme: { border: '#2b2d42', title: '#b388ff', shadow: 'rgba(179,136,255,0.22)' }
+    },
+    IT_THAURISSAN_BADGE: {
+        badgeId: 'IT_THAURISSAN_BADGE',
+        title: '索瑞森大帝的徽章',
+        zoneLabel: '沉没的神庙 / 黑石深渊',
+        inc: 2,
+        cap: 100,
+        isEligible: isBlackrockDepthsEquipment,
+        theme: { border: '#c62828', title: '#ff6b6b', shadow: 'rgba(198,40,40,0.25)' }
     },
 };
 

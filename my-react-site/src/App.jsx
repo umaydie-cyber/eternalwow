@@ -5326,6 +5326,18 @@ const WORLD_BOSSES = {
         unlockLevel: 50
     },
 
+    // ✅ 新增：50级世界首领 - 达格兰·索瑞森大帝
+    dagran_thaurissan: {
+        id: 'dagran_thaurissan',
+        name: '达格兰·索瑞森大帝',
+        icon: 'icons/wow/vanilla/boss/dagran_thaurissan.png',
+        hp: 1200000,
+        attack: 2800,
+        defense: 900,
+        rewards: { gold: 300000, exp: 165000 },
+        unlockLevel: 50
+    },
+
 };
 
 // 装备槽位定义
@@ -5536,6 +5548,38 @@ const BOSS_DATA = {
             items: [
                 // ✅ 萨尔诺斯专属掉落
                 { id: 'IT_SCARLET_CRUSADER_BADGE', chance: 0.8 }
+            ]
+        }
+    },
+
+    // ✅ 新增：达格兰·索瑞森大帝（火焰 / 物理混合）
+    dagran_thaurissan: {
+        id: 'dagran_thaurissan',
+        name: '达格兰·索瑞森大帝',
+        maxHp: 1200000,
+        attack: 2800,
+        defense: 900,
+
+        // 技能循环：烈焰打击 → 熔岩爆裂 → 烈焰打击 → 战斗怒吼
+        cycle: ['flame_strike', 'lava_burst', 'flame_strike', 'battle_shout'],
+
+        // 烈焰打击：对坦克造成 3×火焰伤害（魔抗）+ 3×物理伤害（护甲/格挡）
+        flameStrikeFireMultiplier: 3,
+        flameStrikePhysicalMultiplier: 3,
+
+        // 熔岩爆裂：随机目标 3×火焰伤害，并留下灼烧DOT（1.5×攻击，持续3回合）
+        lavaBurstMultiplier: 3,
+        burnDoTMultiplier: 1.5,
+        burnDoTDuration: 3,
+
+        // 战斗怒吼：本场战斗BOSS攻击 +10%，可叠加
+        battleShoutAttackPct: 0.10,
+
+        rewards: {
+            gold: 300000,
+            exp: 165000,
+            items: [
+                { id: 'IT_THAURISSAN_BADGE', chance: 0.8 }
             ]
         }
     },
@@ -7544,6 +7588,131 @@ function stepBossCombat(state) {
         }
     }
 
+    // ==================== 达格兰·索瑞森大帝技能处理 ====================
+    else if (combat.bossId === 'dagran_thaurissan') {
+        // 本Boss需要在战斗中记录“战斗怒吼”叠层
+        combat.bossBuffs = combat.bossBuffs || {};
+        combat.bossBuffs.battleShoutStacks = combat.bossBuffs.battleShoutStacks || 0;
+
+        const shoutPct = Number(boss.battleShoutAttackPct ?? 0.10);
+        const getEffectiveAttack = () => {
+            const stacks = combat.bossBuffs.battleShoutStacks || 0;
+            return Math.floor((boss.attack || 0) * (1 + stacks * shoutPct));
+        };
+
+        // 火焰伤害：计算魔抗（并套用伤害减免/全能）
+        const calcFireDamage = (playerState, rawDamage) => {
+            const magicResist = playerState?.char?.stats?.magicResist || 0;
+            const resistReduction = magicResist / (magicResist + 500);
+            let damage = Math.floor((rawDamage || 0) * (1 - resistReduction));
+
+            // 应用受伤减免
+            const takenMult = playerState?.char?.stats?.damageTakenMult ?? 1;
+            let buffTakenMult = 1;
+            if (playerState?.buffs) {
+                playerState.buffs.forEach(b => {
+                    if (b.damageTakenMult) buffTakenMult *= b.damageTakenMult;
+                });
+            }
+            const versTakenMult = getVersatilityDamageTakenMult(playerState?.char?.stats?.versatility);
+            damage = Math.max(1, Math.floor(damage * takenMult * buffTakenMult * versTakenMult));
+
+            return { damage, resistReduction };
+        };
+
+        // 烈焰打击：对当前坦克造成 3×火焰伤害 + 3×物理伤害（可格挡）
+        if (bossAction === 'flame_strike') {
+            const tIdx = pickAlivePlayerIndex(); // 1号位（坦克位）
+            if (tIdx >= 0) {
+                const target = combat.playerStates[tIdx];
+                const atk = getEffectiveAttack();
+
+                // ① 火焰伤害
+                const rawFire = Math.floor(atk * (boss.flameStrikeFireMultiplier || 3));
+                const fireRes = calcFireDamage(target, rawFire);
+                const shieldResultFire = applyShieldAbsorb(target, fireRes.damage, logs, currentRound);
+                target.currentHp -= shieldResultFire.finalDamage;
+
+                const fireResPct = Math.round(fireRes.resistReduction * 100);
+                const fireShieldText = shieldResultFire.absorbed > 0 ? `，护盾吸收 ${shieldResultFire.absorbed}` : '';
+                addLog(`【${boss.name}】施放【烈焰打击】对 位置${tIdx + 1} ${target.char.name} 造成 ${shieldResultFire.finalDamage} 点火焰伤害（魔抗减伤${fireResPct}%${fireShieldText}）`);
+
+                // ② 物理伤害（可格挡）
+                if (target.currentHp > 0) {
+                    const rawPhys = Math.floor(atk * (boss.flameStrikePhysicalMultiplier || 3));
+                    const { damage: physDmg, dr, blockedAmount } = calcMitigatedAndBlockedDamage(target, rawPhys, true);
+
+                    const shieldResultPhys = applyShieldAbsorb(target, physDmg, logs, currentRound);
+                    target.currentHp -= shieldResultPhys.finalDamage;
+
+                    const drPct = Math.round(dr * 100);
+                    const blockText = blockedAmount > 0 ? `，格挡 ${blockedAmount}` : '';
+                    const shieldText = shieldResultPhys.absorbed > 0 ? `，护盾吸收 ${shieldResultPhys.absorbed}` : '';
+                    addLog(`→ 同时造成 ${shieldResultPhys.finalDamage} 点物理伤害（护甲减伤${drPct}%${blockText}${shieldText}）`);
+                }
+            } else {
+                addLog(`【${boss.name}】施放【烈焰打击】，但没有存活目标`);
+            }
+        }
+
+        // 熔岩爆裂：对随机目标造成 3×火焰伤害，并留下灼烧DOT（1.5×攻击，持续3回合）
+        else if (bossAction === 'lava_burst') {
+            const alivePlayers = combat.playerStates.filter(p => p.currentHp > 0);
+            if (alivePlayers.length > 0) {
+                const randomTarget = alivePlayers[Math.floor(Math.random() * alivePlayers.length)];
+                const tIdx = combat.playerStates.findIndex(p => p.char.id === randomTarget.char.id);
+
+                if (tIdx >= 0) {
+                    const target = combat.playerStates[tIdx];
+                    const atk = getEffectiveAttack();
+
+                    const raw = Math.floor(atk * (boss.lavaBurstMultiplier || 3));
+                    const fireRes = calcFireDamage(target, raw);
+
+                    const shieldResult = applyShieldAbsorb(target, fireRes.damage, logs, currentRound);
+                    target.currentHp -= shieldResult.finalDamage;
+
+                    const fireResPct = Math.round(fireRes.resistReduction * 100);
+                    const shieldText = shieldResult.absorbed > 0 ? `，护盾吸收 ${shieldResult.absorbed}` : '';
+                    addLog(`【${boss.name}】施放【熔岩爆裂】对 位置${tIdx + 1} ${target.char.name} 造成 ${shieldResult.finalDamage} 点火焰伤害（魔抗减伤${fireResPct}%${shieldText}）`);
+
+                    // 施加灼烧DOT
+                    const dotDamage = Math.floor(atk * (boss.burnDoTMultiplier || 1.5));
+                    const dotDuration = boss.burnDoTDuration || 3;
+
+                    target.dots = target.dots || [];
+                    const existing = target.dots.find(d => d.name === '灼烧');
+                    if (existing) {
+                        existing.damagePerTurn = dotDamage;
+                        existing.duration = dotDuration;
+                        existing.school = 'fire';
+                        addLog(`→ 位置${tIdx + 1} ${target.char.name} 的【灼烧】持续时间刷新（每回合 ${dotDamage} 点火焰伤害，持续 ${dotDuration} 回合）`);
+                    } else {
+                        target.dots.push({
+                            name: '灼烧',
+                            type: 'dot',
+                            school: 'fire',
+                            damagePerTurn: dotDamage,
+                            duration: dotDuration
+                        });
+                        addLog(`→ 位置${tIdx + 1} ${target.char.name} 获得【灼烧】：每回合 ${dotDamage} 点火焰伤害，持续 ${dotDuration} 回合`);
+                    }
+                }
+            } else {
+                addLog(`【${boss.name}】施放【熔岩爆裂】，但没有存活目标`);
+            }
+        }
+
+        // 战斗怒吼：攻击 +10%，可叠加，持续整场战斗
+        else if (bossAction === 'battle_shout') {
+            combat.bossBuffs.battleShoutStacks += 1;
+            const stacks = combat.bossBuffs.battleShoutStacks;
+            const totalPct = Math.round(stacks * shoutPct * 100);
+            const curAtk = getEffectiveAttack();
+            addLog(`【${boss.name}】施放【战斗怒吼】：攻击提高 +${Math.round(shoutPct * 100)}%（当前${stacks}层，总提升${totalPct}%），当前攻击 ${curAtk}`);
+        }
+    }
+
     // ==================== 小弟行动 ====================
     for (let i = 0; i < (combat.minions || []).length; i++) {
         const m = combat.minions[i];
@@ -7629,12 +7798,26 @@ function stepBossCombat(state) {
         if (!ps.dots || ps.dots.length === 0) return;
 
         ps.dots = ps.dots.filter(dot => {
+            // DOT伤害类型：
+            // - physical：沿用现有逻辑（主要用于“流血”）
+            // - 其他（fire/shadow/...）：按魔抗减伤（满足“火焰伤害计算魔抗”设计）
             const versTakenMult = getVersatilityDamageTakenMult(ps.char?.stats?.versatility);
-            const dmg = Math.max(1, Math.floor(dot.damagePerTurn * versTakenMult));
+
+            let base = Math.floor(dot.damagePerTurn || 0);
+            let extraText = '';
+
+            if (dot.school && dot.school !== 'physical') {
+                const magicResist = ps.char?.stats?.magicResist || 0;
+                const resistReduction = magicResist / (magicResist + 500);
+                base = Math.floor(base * (1 - resistReduction));
+                extraText = `（魔抗减伤${Math.round(resistReduction * 100)}%）`;
+            }
+
+            const dmg = Math.max(1, Math.floor(base * versTakenMult));
             ps.currentHp -= dmg;
 
             const stackText = dot.stacks ? `（${dot.stacks}层）` : '';
-            addLog(`【${dot.name}】${stackText}对 位置${pIdx + 1} ${ps.char.name} 造成 ${dmg} 点${dot.school === 'physical' ? '流血' : ''}伤害（剩余${dot.duration - 1}回合）`);
+            addLog(`【${dot.name}】${stackText}对 位置${pIdx + 1} ${ps.char.name} 造成 ${dmg} 点${dot.school === 'physical' ? '流血' : ''}伤害${extraText}（剩余${dot.duration - 1}回合）`);
 
             // 永久DOT不减少持续时间
             if (!dot.isPermanent) {
@@ -7989,8 +8172,8 @@ function calculateOfflineRewards(state, offlineSeconds) {
     };
 }
 
-const ARMOR_DR_CAP = 0.99999;
-const ARMOR_K = 1000; // 你可以调参：1000/5000/10000...
+const ARMOR_DR_CAP = 0.99;
+const ARMOR_K = 3000; // 你可以调参：1000/5000/10000...
 
 function getArmorDamageReduction(armor) {
     const a = Math.max(0, armor || 0);
@@ -10646,6 +10829,7 @@ function gameReducer(state, action) {
                 vancleef: 0.10,   // 范克里夫+10%（预留）
                 prestor_lady: 0.15,//普瑞斯托女士+15%
                 thalnos: 0.2, //萨尔诺斯+20%
+                dagran_thaurissan: 0.25, // 达格兰·索瑞森大帝 +25%
             };
             const defeatedBosses = state.defeatedBosses || [];
             const totalBossBonus = defeatedBosses.reduce((sum, bossId) => sum + (bossBonus[bossId] || 0), 0);
@@ -16417,6 +16601,11 @@ const BossPrepareModal = ({ state, dispatch }) => {
         fallen_crusaders :'堕落的十字军',
         banish_soul:'放逐灵魂',
         soul_reaper:'灵魂收割者',
+
+        // ✅ 达格兰·索瑞森大帝
+        flame_strike: '烈焰打击',
+        lava_burst: '熔岩爆裂',
+        battle_shout: '战斗怒吼',
     };
 
     const formatBossCycle = (boss) =>
@@ -16850,6 +17039,56 @@ const BossPrepareModal = ({ state, dispatch }) => {
                                                 对所有目标造成 <span style={{ color: '#ffd700' }}>(当前存活十字军数量 + {boss.soulReaperBaseMultiplier}) × Boss攻击</span> 的暗影伤害
                                                 <br/>
                                                 <span style={{ color: '#ff9800' }}>十字军越多，伤害越高！</span>
+                                            </div>
+                                        </div>
+                                    </>
+                                )}
+
+                                {bossId === 'dagran_thaurissan' && (
+                                    <>
+                                        <div style={{
+                                            padding: 10,
+                                            background: 'rgba(255,152,0,0.12)',
+                                            borderRadius: 6,
+                                            borderLeft: '3px solid #ff9800'
+                                        }}>
+                                            <div style={{ fontSize: 12, color: '#ffb74d', fontWeight: 600, marginBottom: 4 }}>
+                                                🔥 烈焰打击
+                                            </div>
+                                            <div style={{ fontSize: 11, color: '#aaa', lineHeight: 1.5 }}>
+                                                对当前坦克造成 <span style={{ color: '#ffd700' }}>{boss.flameStrikeFireMultiplier}倍</span> Boss攻击 的火焰伤害（计算魔抗）
+                                                <br/>
+                                                并额外造成 <span style={{ color: '#ffd700' }}>{boss.flameStrikePhysicalMultiplier}倍</span> Boss攻击 的物理伤害（可被护甲/格挡减免）
+                                            </div>
+                                        </div>
+
+                                        <div style={{
+                                            padding: 10,
+                                            background: 'rgba(244,67,54,0.12)',
+                                            borderRadius: 6,
+                                            borderLeft: '3px solid #f44336'
+                                        }}>
+                                            <div style={{ fontSize: 12, color: '#ff6b6b', fontWeight: 600, marginBottom: 4 }}>
+                                                🌋 熔岩爆裂
+                                            </div>
+                                            <div style={{ fontSize: 11, color: '#aaa', lineHeight: 1.5 }}>
+                                                对随机目标造成 <span style={{ color: '#ffd700' }}>{boss.lavaBurstMultiplier}倍</span> Boss攻击 的火焰伤害（计算魔抗）
+                                                <br/>
+                                                并施加【灼烧】DOT：每回合 <span style={{ color: '#ffd700' }}>{boss.burnDoTMultiplier}倍</span> Boss攻击 的火焰伤害，持续 {boss.burnDoTDuration} 回合
+                                            </div>
+                                        </div>
+
+                                        <div style={{
+                                            padding: 10,
+                                            background: 'rgba(156,39,176,0.12)',
+                                            borderRadius: 6,
+                                            borderLeft: '3px solid #9C27B0'
+                                        }}>
+                                            <div style={{ fontSize: 12, color: '#ce93d8', fontWeight: 600, marginBottom: 4 }}>
+                                                📣 战斗怒吼
+                                            </div>
+                                            <div style={{ fontSize: 11, color: '#aaa', lineHeight: 1.5 }}>
+                                                本场战斗 Boss 攻击提高 <span style={{ color: '#ffd700' }}>{Math.round((boss.battleShoutAttackPct || 0.1) * 100)}%</span>（可叠加），持续到战斗结束
                                             </div>
                                         </div>
                                     </>

@@ -3565,7 +3565,7 @@ const FIXED_EQUIPMENTS = {
         },
         specialEffect: {
             type: 'skill_slot_buff',
-            slots: [0, 1],
+            slots: [1, 2],
             spellPowerBonus: 500
         }
     },
@@ -3898,7 +3898,7 @@ const FIXED_EQUIPMENTS = {
         },
         specialEffect: {
             type: 'skill_slot_buff',
-            slots: [0, 1],
+            slots: [1, 2],
             spellPowerBonus: 800
         }
     },
@@ -4468,7 +4468,7 @@ const FIXED_EQUIPMENTS = {
         },
         specialEffect: {
             type: 'skill_slot_buff',
-            slots: [0, 1],
+            slots: [1, 2],
             attackBonus: 1200,
         }
     },

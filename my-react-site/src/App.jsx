@@ -8855,8 +8855,8 @@ function gameReducer(state, action) {
                 );
             }
 
-            // ✅ 离线战斗统计：计入总战斗胜利数 & 各区域击杀数（跨世累计，不会被重生重置）
-            const offlineCombats = Number(rewards.combats) || 0;
+            // ✅ 离线战斗统计：计入总战斗胜利数 & 各区域击杀数（跨世累计，不会被重生重置）暂时不记录
+            /*const offlineCombats = Number(rewards.combats) || 0;
             if (offlineCombats > 0) {
                 newState.stats = {
                     ...(newState.stats || {}),
@@ -8880,7 +8880,7 @@ function gameReducer(state, action) {
                 });
 
                 newState.zoneKillCounts = nextZoneKillCounts;
-            }
+            }*/
 
             newState.offlineRewards = null;
             newState.lastOnlineTime = Date.now();

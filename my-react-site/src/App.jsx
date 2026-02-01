@@ -11936,7 +11936,7 @@ const ItemDetailsModal = ({ item, onClose, onEquip, characters, state , dispatch
                                 }}
                                 style={{ flex: 1 }}
                             >
-                                ⚗️ 合成鞭笞者苏萨斯
+                                ⚗️ 苏萨斯
                             </Button>
                         );
                     })()}

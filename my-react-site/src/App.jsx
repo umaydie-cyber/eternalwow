@@ -5773,6 +5773,35 @@ function getBasicAttackRepeatChance(character) {
     return 0;
 }
 
+// ==================== 装备特效：地图屠戮（地图战斗伤害加成） ====================
+// 数据约定：
+// specialEffect: {
+//   type: 'map_slayer',
+//   bonusDamageVsMap: 0.25  // 地图战斗+25%伤害
+// }
+// 说明：
+// - 仅在「地图战斗」(stepCombatRounds) 生效
+// - 支持未来出现多件同类特效时叠加（加法叠加）
+function getMapSlayerDamageDealtMult(character) {
+    const eqList = Object.values(character?.equipment || {}).filter(Boolean);
+    if (eqList.length === 0) return 1;
+
+    let bonus = 0;
+    for (const eq of eqList) {
+        const effects = getEquipmentSpecialEffectList(eq);
+        if (effects.length === 0) continue;
+        for (const se of effects) {
+            if (!se || se.type !== 'map_slayer') continue;
+            bonus += Number(se.bonusDamageVsMap) || 0;
+        }
+    }
+
+    // 防御性：避免出现负值或 NaN
+    if (!Number.isFinite(bonus) || bonus <= 0) return 1;
+
+    return 1 + bonus;
+}
+
 // ==================== 装备特效：通用「概率触发属性增益」框架 ====================
 // 目标：支持类似“每回合XX%概率获得XXXX属性（仅本回合生效）”的特效，并便于后续扩展更多触发时机。
 //
@@ -7679,6 +7708,9 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1) {
     let round = combatState.round ?? 0;
     let skillIndex = combatState.skillIndex ?? 0;
 
+    // ✅ 地图战斗伤害加成（例如：奥妮克希亚鳞片披风 map_slayer）
+    const mapDamageDealtMult = getMapSlayerDamageDealtMult(character);
+
     // buffs
     let buffs = Array.isArray(combatState.buffs) ? [...combatState.buffs] : [];
     // enemy debuffs
@@ -7855,6 +7887,9 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1) {
             });
             damage *= buffDamageDealtMult;
 
+            // ✅ 装备特效：地图屠戮（地图战斗伤害加成）
+            damage *= mapDamageDealtMult;
+
             // 全能等通用乘区已在上层calculate中处理，这里直接扣防御
             const actualDamage = Math.max(1, Math.floor(damage - (combatState.enemy?.defense ?? 0)));
             enemyHp -= actualDamage;
@@ -7912,7 +7947,7 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1) {
             // 30级天赋：山丘之王 - 雷霆一击有50%几率再次释放一次
             if (character.talents?.[30] === 'mountain_king' && Math.random() < 0.5) {
                 const extraResult = skill.calculate(charForCalc);
-                const extraDamage = Math.max(1, Math.floor(extraResult.aoeDamage - (combatState.enemy?.defense ?? 0)));
+                const extraDamage = Math.max(1, Math.floor((extraResult.aoeDamage * mapDamageDealtMult) - (combatState.enemy?.defense ?? 0)));
                 enemyHp -= extraDamage;
 
                 logs.push({
@@ -7994,6 +8029,9 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1) {
                 }
             });
             damage *= buffDamageDealtMultForDamage;
+
+            // ✅ 装备特效：地图屠戮（地图战斗伤害加成）
+            damage *= mapDamageDealtMult;
 
             // ===== 10级天赋：神圣增幅（惩击：目标受法术伤害 +10% 持续2回合）=====
             if (character.talents?.[10] === 'holy_vuln' && currentSkillId === 'smite') {
@@ -8080,7 +8118,7 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1) {
 
                     // ===== 50级天赋：圣剑 - 普攻额外造成格挡值伤害 =====
                     if (result.holySwordDamage && result.holySwordDamage > 0) {
-                        const holySwordActualDamage = Math.max(1, result.holySwordDamage);
+                        const holySwordActualDamage = Math.max(1, Math.floor(result.holySwordDamage * mapDamageDealtMult));
                         enemyHp -= holySwordActualDamage;
 
                         logs.push({
@@ -8217,7 +8255,10 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1) {
 
             // 40级天赋：终极苦修 - 造成伤害
             if (result.penanceDamage) {
-                const actualDamage = Math.max(1, result.penanceDamage - (combatState.enemy?.defense ?? 0));
+                const actualDamage = Math.max(
+                    1,
+                    Math.floor(result.penanceDamage * mapDamageDealtMult) - (combatState.enemy?.defense ?? 0)
+                );
                 enemyHp -= actualDamage;
                 logs.push({
                     round,
@@ -8355,6 +8396,9 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1) {
 
                 // 急速：DOT 伤害提高（急速 * 2%）
                 dotDamage *= (1 + ((character.stats.haste || 0) * 0.02));
+
+                // ✅ 装备特效：地图屠戮（地图战斗伤害加成）
+                dotDamage *= mapDamageDealtMult;
                 dotDamage = Math.floor(dotDamage);
                 const actualDot = Math.max(1, dotDamage - (combatState.enemy?.defense ?? 0));
                 enemyHp -= actualDot;
@@ -11938,6 +11982,29 @@ const ItemDetailsModal = ({ item, onClose, onEquip, characters, state , dispatch
                                 )}
                             </div>
                         )}
+
+                        {/* map_slayer 类型（地图战斗伤害加成） */}
+                        {item.specialEffect.type === 'map_slayer' && (
+                            <div style={{ fontSize: 12, color: '#ffb74d', lineHeight: 1.6 }}>
+                                <div style={{ marginBottom: 8, color: '#fff' }}>
+                                    地图战斗中造成的伤害提高{' '}
+                                    <span style={{ color: '#ffd700', fontWeight: 600 }}>
+                                        {((item.specialEffect.bonusDamageVsMap || 0) * 100).toFixed(0)}%
+                                    </span>
+                                </div>
+                                <div style={{
+                                    marginTop: 12,
+                                    padding: '8px 12px',
+                                    background: 'rgba(255,215,0,0.1)',
+                                    borderRadius: 6,
+                                    border: '1px dashed rgba(255,215,0,0.3)',
+                                    fontSize: 11,
+                                    color: '#c9a227'
+                                }}>
+                                    💡 提示：仅对地图战斗生效，不影响 Boss 战
+                                </div>
+                            </div>
+                        )}
                     </div>
                 )}
 
@@ -13099,6 +13166,12 @@ const InventoryPage = ({ state, dispatch }) => {
                                                 );
                                                 return `${brief.join(' ')}${entries.length > 2 ? '…' : ''}`;
                                             })()}
+                                        </>
+                                    )}
+
+                                    {item.specialEffect.type === 'map_slayer' && (
+                                        <>
+                                            🗺️ 地图伤害 +{((item.specialEffect.bonusDamageVsMap || 0) * 100).toFixed(0)}%
                                         </>
                                     )}
                                 </div>

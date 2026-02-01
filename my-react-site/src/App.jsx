@@ -4876,7 +4876,9 @@ function calculateBuildingProduction(building, workers, gameState) {
         totalProduction += finalProduction;
     });
 
-    return totalProduction;
+    // ✅ 成就：所有建筑产量加成（建设者系列等）
+    const achResourceBonus = getAchievementResourceBonus(gameState);
+    return totalProduction * (1 + achResourceBonus);
 }
 
 const ITEMS = {
@@ -5187,7 +5189,88 @@ const ACHIEVEMENTS = {
     },
 
     collector: { id: 'collector', name: '收藏家', description: '收集10种不同物品', condition: (state) => state.codex.length >= 10, reward: { dropBonus: 0.1 }, icon: '📦' },
-    builder: { id: 'builder', name: '建设者', description: '建造5座建筑', condition: (state) => Object.values(state.buildings||{}).reduce((a, b) => a + b, 0) >= 5, reward: { resourceBonus: 0.05 }, icon: '🏗️' },
+
+    // ✅ 建设者系列：累计建造建筑数量（含旧建筑 & 功能建筑）
+    builder_1: {
+        id: 'builder_1',
+        name: '建设者Ⅰ',
+        description: '累计建造10座建筑',
+        condition: (state) => getTotalBuildingsBuilt(state) >= 10,
+        reward: { resourceBonus: 0.02 },
+        icon: '🏗️'
+    },
+    builder_2: {
+        id: 'builder_2',
+        name: '建设者Ⅱ',
+        description: '累计建造50座建筑',
+        condition: (state) => getTotalBuildingsBuilt(state) >= 50,
+        reward: { resourceBonus: 0.02 },
+        icon: '🏗️'
+    },
+    builder_3: {
+        id: 'builder_3',
+        name: '建设者Ⅲ',
+        description: '累计建造100座建筑',
+        condition: (state) => getTotalBuildingsBuilt(state) >= 100,
+        reward: { resourceBonus: 0.02 },
+        icon: '🏗️'
+    },
+    builder_4: {
+        id: 'builder_4',
+        name: '建设者Ⅳ',
+        description: '累计建造200座建筑',
+        condition: (state) => getTotalBuildingsBuilt(state) >= 200,
+        reward: { resourceBonus: 0.02 },
+        icon: '🏗️'
+    },
+    builder_5: {
+        id: 'builder_5',
+        name: '建设者Ⅴ',
+        description: '累计建造500座建筑',
+        condition: (state) => getTotalBuildingsBuilt(state) >= 500,
+        reward: { resourceBonus: 0.02 },
+        icon: '🏗️'
+    },
+    builder_6: {
+        id: 'builder_6',
+        name: '建设者Ⅵ',
+        description: '累计建造1000座建筑',
+        condition: (state) => getTotalBuildingsBuilt(state) >= 1000,
+        reward: { resourceBonus: 0.02 },
+        icon: '🏗️'
+    },
+    builder_7: {
+        id: 'builder_7',
+        name: '建设者Ⅶ',
+        description: '累计建造2000座建筑',
+        condition: (state) => getTotalBuildingsBuilt(state) >= 2000,
+        reward: { resourceBonus: 0.02 },
+        icon: '🏗️'
+    },
+    builder_8: {
+        id: 'builder_8',
+        name: '建设者Ⅷ',
+        description: '累计建造5000座建筑',
+        condition: (state) => getTotalBuildingsBuilt(state) >= 5000,
+        reward: { resourceBonus: 0.02 },
+        icon: '🏗️'
+    },
+    builder_9: {
+        id: 'builder_9',
+        name: '建设者Ⅸ',
+        description: '累计建造10000座建筑',
+        condition: (state) => getTotalBuildingsBuilt(state) >= 10000,
+        reward: { resourceBonus: 0.02 },
+        icon: '🏗️'
+    },
+    builder_10: {
+        id: 'builder_10',
+        name: '建设者Ⅹ',
+        description: '累计建造20000座建筑',
+        condition: (state) => getTotalBuildingsBuilt(state) >= 20000,
+        reward: { resourceBonus: 0.02 },
+        icon: '🏗️'
+    },
     susas: {
         id: 'susas',
         name: '鞭笞者苏萨斯',
@@ -5563,7 +5646,7 @@ function formatBonusText(bonusObj) {
         expBonus: '经验值增幅',
         goldBonus: '金币增幅',
         dropBonus: '掉落增幅',
-        resourceBonus: '资源产出增幅',
+        resourceBonus: '所有建筑产量',
         mapDamageBonus: '地图战斗伤害',
     };
 
@@ -5597,6 +5680,20 @@ function getTotalMapKills(state) {
     return Object.values(counts).reduce((sum, v) => sum + (Math.max(0, Math.floor(Number(v) || 0))), 0);
 }
 
+// 主城累计建筑建造数：用于成就【建设者Ⅰ~Ⅹ】等
+// 说明：兼容旧系统（state.buildings）与新系统（state.functionalBuildings）
+function getTotalBuildingsBuilt(state) {
+    const buildings = (state?.buildings && typeof state.buildings === 'object' && !Array.isArray(state.buildings))
+        ? state.buildings
+        : {};
+    const functional = (state?.functionalBuildings && typeof state.functionalBuildings === 'object' && !Array.isArray(state.functionalBuildings))
+        ? state.functionalBuildings
+        : {};
+
+    const sumObj = (obj) => Object.values(obj).reduce((sum, v) => sum + Math.max(0, Math.floor(Number(v) || 0)), 0);
+    return sumObj(buildings) + sumObj(functional);
+}
+
 // ✅ 成就：全队生命百分比加成（跨成就加法叠加）
 function getAchievementHpPctBonus(state) {
     const unlocked = state?.achievements || {};
@@ -5618,6 +5715,18 @@ function getAchievementDropBonus(state) {
         }
     });
     return bonus; // 例如 0.05 = +5%
+}
+
+// ✅ 成就：建筑产量加成（跨成就加法叠加）
+function getAchievementResourceBonus(state) {
+    const unlocked = state?.achievements || {};
+    let bonus = 0;
+    Object.values(ACHIEVEMENTS).forEach(a => {
+        if (unlocked[a.id] && a.reward?.resourceBonus) {
+            bonus += Number(a.reward.resourceBonus) || 0;
+        }
+    });
+    return bonus; // 例如 0.02 = +2%
 }
 
 // ✅ 成就：地图战斗伤害加成（跨成就加法叠加）
@@ -9244,12 +9353,15 @@ function gameReducer(state, action) {
                 }
             });
 
+            // ✅ 成就：所有建筑产量加成（建设者系列等）
+            const achResourceBonus = getAchievementResourceBonus(newState);
+
             Object.entries(newState.buildings || {}).forEach(([buildingId, count]) => {
                 if (count > 0) {
                     const building = BUILDINGS[buildingId];
                     Object.entries(building.production || {}).forEach(([resource, amount]) => {
                         const bonus = researchBonus[resource] || 0;
-                        const production = amount * count * (1 + bonus);
+                        const production = amount * count * (1 + bonus) * (1 + achResourceBonus);
                         newResources[resource] = (newResources[resource] || 0) + production;
                     });
                     Object.entries(building.consumption || {}).forEach(([resource, amount]) => {

@@ -14067,7 +14067,10 @@ const CodexPage = ({ state, dispatch }) => {
     const allowDrop = (id) => state.dropFilters?.[id] !== false;
 
     // ===== 装备图鉴 =====
-    const allEquipTemplates = Object.values(FIXED_EQUIPMENTS);
+    const allEquipTemplates = [
+        ...Object.values(FIXED_EQUIPMENTS),
+        ...Object.values(QUEST_REWARD_EQUIPMENTS),
+    ];
     const equipCodexSet = new Set(state.codex || []);
     const lv100CodexSet = new Set(state.codexEquipLv100 || []);
 

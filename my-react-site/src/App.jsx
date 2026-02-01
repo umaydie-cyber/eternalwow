@@ -4779,6 +4779,18 @@ function calculateBuildingProduction(building, workers, gameState) {
     const buildingData = RESOURCE_BUILDINGS[building];
     if (!buildingData) return 0;
 
+    // ===== 研究加成（按资源类型生效） =====
+    // 例：伐木精通(effect='wood') 会提升 resourceType='wood' 的产出
+    let researchBonus = 0;
+    const resType = buildingData.resourceType;
+    const researchLv = gameState?.research || {};
+    Object.entries(researchLv).forEach(([rid, lv]) => {
+        const r = RESEARCH?.[rid];
+        if (r && r.effect === resType) {
+            researchBonus += (r.bonus || 0) * (lv || 0);
+        }
+    });
+
     let totalProduction = 0;
 
     workers.forEach(charId => {
@@ -4804,6 +4816,11 @@ function calculateBuildingProduction(building, workers, gameState) {
                     efficiency *= (1 + tier.bonus.gatherEfficiency);
                 }
             }
+        }
+
+        // 研究效率（伐木/采矿/采集所/挖毛皮等）
+        if (researchBonus > 0) {
+            efficiency *= (1 + researchBonus);
         }
 
         const production = buildingData.baseProduction * efficiency;
@@ -4960,8 +4977,43 @@ function SlotIcon({ slot, size = 28 }) {
 
 
 const RESEARCH = {
-    lumber_mastery: { id: 'lumber_mastery', name: '伐木精通', description: '提升伐木效率', baseCost: 150, effect: 'wood', bonus: 0.15 },
-    mining_mastery: { id: 'mining_mastery', name: '采矿精通', description: '提升采矿效率', baseCost: 150, effect: 'ironOre', bonus: 0.15 },
+    // 每级提升 3%（0.03）
+    lumber_mastery: {
+        id: 'lumber_mastery',
+        name: '伐木精通',
+        description: '提升伐木效率',
+        baseCost: 150,
+        effect: 'wood',
+        bonus: 0.03,
+    },
+    mining_mastery: {
+        id: 'mining_mastery',
+        name: '采矿精通',
+        description: '提升采矿效率',
+        baseCost: 150,
+        effect: 'ironOre',
+        bonus: 0.03,
+    },
+
+    // ✅ 击败范克里夫后解锁
+    gathering_efficiency: {
+        id: 'gathering_efficiency',
+        name: '采集所效率',
+        description: '提升采集所采集草药的效率（击败范克里夫后解锁）',
+        baseCost: 150,
+        effect: 'herb',
+        bonus: 0.03,
+        unlockBoss: 'vancleef',
+    },
+    skinning_efficiency: {
+        id: 'skinning_efficiency',
+        name: '挖毛皮效率',
+        description: '提升猎人小屋获取毛皮的效率（击败范克里夫后解锁）',
+        baseCost: 150,
+        effect: 'leather',
+        bonus: 0.03,
+        unlockBoss: 'vancleef',
+    },
 };
 
 const ACHIEVEMENTS = {
@@ -7521,7 +7573,7 @@ function calculateOfflineRewards(state, offlineSeconds) {
         const research = RESEARCH[state.currentResearch];
         if (research) {
             const level = state.research[state.currentResearch] || 0;
-            const cost = Math.floor(research.baseCost * Math.pow(1.5, level));
+            const cost = Math.floor(research.baseCost * Math.pow(1.2, level));
             const progressPerSecond = state.resources.gold >= cost ? 1 : 0;
             rewards.researchProgress = actualSeconds * progressPerSecond;
         }
@@ -8911,7 +8963,7 @@ function gameReducer(state, action) {
             if (newState.currentResearch) {
                 const research = RESEARCH[newState.currentResearch];
                 const level = newState.research[newState.currentResearch] || 0;
-                const cost = Math.floor(research.baseCost * Math.pow(1.5, level));
+                const cost = Math.floor(research.baseCost * Math.pow(1.2, level));
 
                 if (newState.resources.gold >= cost) {
                     newState.researchProgress += 1;
@@ -9649,6 +9701,16 @@ function gameReducer(state, action) {
 
         case 'START_RESEARCH': {
             const { researchId } = action.payload;
+            const research = RESEARCH?.[researchId];
+
+            // 安全校验：不存在/未解锁则拒绝开始研究
+            if (!research) return state;
+            if (research.unlockBoss && !(state.defeatedBosses || []).includes(research.unlockBoss)) {
+                alert(`未解锁：需要击败 ${WORLD_BOSSES?.[research.unlockBoss]?.name || research.unlockBoss}`);
+                return state;
+            }
+
+            if (state.currentResearch) return state;
             return {
                 ...state,
                 currentResearch: researchId,
@@ -13615,8 +13677,12 @@ const ResearchPage = ({ state, dispatch }) => {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: 12 }}>
                 {Object.values(RESEARCH).map(research => {
                     const level = state.research[research.id] || 0;
-                    const cost = Math.floor(research.baseCost * Math.pow(1.5, level));
-                    const canResearch = !state.currentResearch && state.resources.gold >= cost;
+
+                    // 解锁条件：击败指定世界首领
+                    const unlocked = !research.unlockBoss || (state.defeatedBosses || []).includes(research.unlockBoss);
+
+                    const cost = Math.floor(research.baseCost * Math.pow(1.2, level));
+                    const canResearch = unlocked && !state.currentResearch && state.resources.gold >= cost;
 
                     return (
                         <div
@@ -13637,6 +13703,12 @@ const ResearchPage = ({ state, dispatch }) => {
                             <div style={{ fontSize: 11, color: '#4CAF50', marginBottom: 12 }}>
                                 效果: +{(research.bonus * 100).toFixed(0)}% {research.effect}
                             </div>
+
+                            {!unlocked && (
+                                <div style={{ fontSize: 11, color: '#f44336', marginBottom: 12 }}>
+                                    未解锁：需要击败 {WORLD_BOSSES?.[research.unlockBoss]?.name || research.unlockBoss}
+                                </div>
+                            )}
                             <div style={{ fontSize: 11, color: '#888', marginBottom: 12 }}>
                                 成本: 🪙{cost}
                             </div>
@@ -13645,7 +13717,7 @@ const ResearchPage = ({ state, dispatch }) => {
                                 disabled={!canResearch}
                                 style={{ width: '100%' }}
                             >
-                                研究
+                                {unlocked ? '研究' : '未解锁'}
                             </Button>
                         </div>
                     );

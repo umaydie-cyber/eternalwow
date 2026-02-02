@@ -5854,6 +5854,170 @@ const ACHIEVEMENTS = {
         reward: { bossHpPct: 0.05 },
         icon: '🧘'
     },
+
+    // ✅ 新增：我重生了系列（累计重生次数）
+    reborn_1: {
+        id: 'reborn_1',
+        name: '我重生了Ⅰ',
+        description: '累计重生达到10次',
+        condition: (state) => (state.rebirthCount || 0) >= 10,
+        reward: { goldBonus: 0.05 },
+        icon: '♻️'
+    },
+    reborn_2: {
+        id: 'reborn_2',
+        name: '我重生了Ⅱ',
+        description: '累计重生达到20次',
+        condition: (state) => (state.rebirthCount || 0) >= 20,
+        reward: { goldBonus: 0.05 },
+        icon: '♻️'
+    },
+    reborn_3: {
+        id: 'reborn_3',
+        name: '我重生了Ⅲ',
+        description: '累计重生达到50次',
+        condition: (state) => (state.rebirthCount || 0) >= 50,
+        reward: { goldBonus: 0.05 },
+        icon: '♻️'
+    },
+    reborn_4: {
+        id: 'reborn_4',
+        name: '我重生了Ⅳ',
+        description: '累计重生达到100次',
+        condition: (state) => (state.rebirthCount || 0) >= 100,
+        reward: { goldBonus: 0.05 },
+        icon: '♻️'
+    },
+    reborn_5: {
+        id: 'reborn_5',
+        name: '我重生了Ⅴ',
+        description: '累计重生达到200次',
+        condition: (state) => (state.rebirthCount || 0) >= 200,
+        reward: { goldBonus: 0.05 },
+        icon: '♻️'
+    },
+    reborn_6: {
+        id: 'reborn_6',
+        name: '我重生了Ⅵ',
+        description: '累计重生达到500次',
+        condition: (state) => (state.rebirthCount || 0) >= 500,
+        reward: { goldBonus: 0.05 },
+        icon: '♻️'
+    },
+    reborn_7: {
+        id: 'reborn_7',
+        name: '我重生了Ⅶ',
+        description: '累计重生达到1000次',
+        condition: (state) => (state.rebirthCount || 0) >= 1000,
+        reward: { goldBonus: 0.05 },
+        icon: '♻️'
+    },
+    reborn_8: {
+        id: 'reborn_8',
+        name: '我重生了Ⅷ',
+        description: '累计重生达到2000次',
+        condition: (state) => (state.rebirthCount || 0) >= 2000,
+        reward: { goldBonus: 0.05 },
+        icon: '♻️'
+    },
+    reborn_9: {
+        id: 'reborn_9',
+        name: '我重生了Ⅸ',
+        description: '累计重生达到5000次',
+        condition: (state) => (state.rebirthCount || 0) >= 5000,
+        reward: { goldBonus: 0.05 },
+        icon: '♻️'
+    },
+    reborn_10: {
+        id: 'reborn_10',
+        name: '我重生了Ⅹ',
+        description: '累计重生达到10000次',
+        condition: (state) => (state.rebirthCount || 0) >= 10000,
+        reward: { goldBonus: 0.50 },
+        icon: '♻️'
+    },
+
+    // ✅ 新增：低保又黑了系列（累计领取宏伟宝库奖励次数）
+    low_welfare_1: {
+        id: 'low_welfare_1',
+        name: '低保又黑了Ⅰ',
+        description: '累计选择宏伟宝库奖励1次',
+        condition: (state) => (state.stats?.grandVaultPicks || 0) >= 1,
+        reward: { expBonus: 0.02 },
+        icon: '🏦'
+    },
+    low_welfare_2: {
+        id: 'low_welfare_2',
+        name: '低保又黑了Ⅱ',
+        description: '累计选择宏伟宝库奖励5次',
+        condition: (state) => (state.stats?.grandVaultPicks || 0) >= 5,
+        reward: { expBonus: 0.02 },
+        icon: '🏦'
+    },
+    low_welfare_3: {
+        id: 'low_welfare_3',
+        name: '低保又黑了Ⅲ',
+        description: '累计选择宏伟宝库奖励10次',
+        condition: (state) => (state.stats?.grandVaultPicks || 0) >= 10,
+        reward: { expBonus: 0.02 },
+        icon: '🏦'
+    },
+    low_welfare_4: {
+        id: 'low_welfare_4',
+        name: '低保又黑了Ⅳ',
+        description: '累计选择宏伟宝库奖励20次',
+        condition: (state) => (state.stats?.grandVaultPicks || 0) >= 20,
+        reward: { expBonus: 0.02 },
+        icon: '🏦'
+    },
+    low_welfare_5: {
+        id: 'low_welfare_5',
+        name: '低保又黑了Ⅴ',
+        description: '累计选择宏伟宝库奖励50次',
+        condition: (state) => (state.stats?.grandVaultPicks || 0) >= 50,
+        reward: { expBonus: 0.02 },
+        icon: '🏦'
+    },
+    low_welfare_6: {
+        id: 'low_welfare_6',
+        name: '低保又黑了Ⅵ',
+        description: '累计选择宏伟宝库奖励100次',
+        condition: (state) => (state.stats?.grandVaultPicks || 0) >= 100,
+        reward: { expBonus: 0.02 },
+        icon: '🏦'
+    },
+    low_welfare_7: {
+        id: 'low_welfare_7',
+        name: '低保又黑了Ⅶ',
+        description: '累计选择宏伟宝库奖励200次',
+        condition: (state) => (state.stats?.grandVaultPicks || 0) >= 200,
+        reward: { expBonus: 0.02 },
+        icon: '🏦'
+    },
+    low_welfare_8: {
+        id: 'low_welfare_8',
+        name: '低保又黑了Ⅷ',
+        description: '累计选择宏伟宝库奖励500次',
+        condition: (state) => (state.stats?.grandVaultPicks || 0) >= 500,
+        reward: { expBonus: 0.02 },
+        icon: '🏦'
+    },
+    low_welfare_9: {
+        id: 'low_welfare_9',
+        name: '低保又黑了Ⅸ',
+        description: '累计选择宏伟宝库奖励1000次',
+        condition: (state) => (state.stats?.grandVaultPicks || 0) >= 1000,
+        reward: { expBonus: 0.02 },
+        icon: '🏦'
+    },
+    low_welfare_10: {
+        id: 'low_welfare_10',
+        name: '低保又黑了Ⅹ',
+        description: '累计选择宏伟宝库奖励2000次',
+        condition: (state) => (state.stats?.grandVaultPicks || 0) >= 2000,
+        reward: { expBonus: 0.20 },
+        icon: '🏦'
+    },
 };
 
 const WORLD_BOSSES = {
@@ -6523,6 +6687,46 @@ function getAchievementBossHpPctBonus(state) {
     return bonus; // 例如 0.05 = +5%
 }
 
+// ✅ 成就：全队经验获取加成（跨成就加法叠加）
+function getAchievementExpBonus(state) {
+    const unlocked = state?.achievements || {};
+    let bonus = 0;
+    Object.values(ACHIEVEMENTS).forEach(a => {
+        if (unlocked[a.id] && a.reward?.expBonus) {
+            bonus += Number(a.reward.expBonus) || 0;
+        }
+    });
+    return bonus; // 例如 0.02 = +2%
+}
+
+// ✅ 成就：金币获取加成（跨成就加法叠加）
+function getAchievementGoldBonus(state) {
+    const unlocked = state?.achievements || {};
+    let bonus = 0;
+    Object.values(ACHIEVEMENTS).forEach(a => {
+        if (unlocked[a.id] && a.reward?.goldBonus) {
+            bonus += Number(a.reward.goldBonus) || 0;
+        }
+    });
+    return bonus; // 例如 0.05 = +5%
+}
+
+// ✅ 总金币获取加成：成就金币增幅 + 轮回金币增幅（加法叠加）
+function getTotalGoldBonus(state) {
+    const ach = Number(getAchievementGoldBonus(state)) || 0;
+    const rebirth = Number(state?.rebirthBonuses?.gold) || 0;
+    return Math.max(0, ach + rebirth);
+}
+
+// 基础金币 baseGold，应用金币获取加成：effective = floor(baseGold * (1 + bonus))
+function getEffectiveGoldGain(baseGold, state) {
+    const base = Number(baseGold) || 0;
+    if (base <= 0) return 0;
+    const bonus = getTotalGoldBonus(state);
+    if (!Number.isFinite(bonus) || bonus <= 0) return Math.floor(base);
+    return Math.floor(base * (1 + bonus));
+}
+
 
 function getAchievementDropBonus(state) {
     const unlocked = state?.achievements || {};
@@ -6706,6 +6910,18 @@ function calculateTotalStats(character, partyAuras = { hpMul: 1, spellPowerMul: 
 
     // 重生全局加成
     totalStats.expBonus = (totalStats.expBonus || 0) + (gameState?.rebirthBonuses?.exp || 0);
+
+    // ✅ 功能建筑：训练假人经验加成（每座 +1%）
+    const trainingCount = Math.max(0, Math.floor(Number(gameState?.functionalBuildings?.training_dummy) || 0));
+    if (trainingCount > 0) {
+        totalStats.expBonus = (totalStats.expBonus || 0) + trainingCount * 0.01;
+    }
+
+    // ✅ 成就：经验获取加成（跨成就加法叠加）
+    const achExpBonus = getAchievementExpBonus(gameState);
+    if (Number.isFinite(achExpBonus) && achExpBonus !== 0) {
+        totalStats.expBonus = (totalStats.expBonus || 0) + achExpBonus;
+    }
 
     // ==================== 图鉴 Lv.100 集齐加成（全队永久） ====================
     const codexLv100 = Array.isArray(gameState?.codexEquipLv100) ? gameState.codexEquipLv100 : [];
@@ -9139,7 +9355,7 @@ function stepBossCombat(state) {
 
             newState.resources = {
                 ...newState.resources,
-                gold: newState.resources.gold + boss.rewards.gold
+                gold: newState.resources.gold + getEffectiveGoldGain(boss.rewards.gold, newState)
             };
 
             newState.characters = newState.characters.map(char => {
@@ -9282,7 +9498,7 @@ const initialState = {
     zones: JSON.parse(JSON.stringify(ZONES)),
     assignments: {},
     combatLogs: [],
-    stats: { battlesWon: 0, totalDamage: 0, totalHealing: 0, bossLateRoundDefeats: 0 },
+    stats: { battlesWon: 0, totalDamage: 0, totalHealing: 0, bossLateRoundDefeats: 0, grandVaultPicks: 0 },
     // 地图区域击杀统计（跨世累计，不会随轮回/重生重置）
     // 例如：{ elwynn_forest: 12345 }
     zoneKillCounts: {},
@@ -9415,12 +9631,12 @@ function calculateOfflineRewards(state, offlineSeconds) {
 
             for (let i = 0; i < totalCombats; i++) {
                 const enemy = zone.enemies[Math.floor(Math.random() * zone.enemies.length)];
-                rewards.gold += enemy.gold;
+                rewards.gold += getEffectiveGoldGain(enemy.gold, state);
 
                 if (!rewards.exp[charId]) {
                     rewards.exp[charId] = 0;
                 }
-                rewards.exp[charId] += enemy.exp;
+                rewards.exp[charId] += enemy.exp * (1 + (character.stats?.expBonus || 0));
 
                 if (Math.random() < 0.1 && zone.resources) {
                     const resourceName = zone.resources[Math.floor(Math.random() * zone.resources.length)];
@@ -10748,7 +10964,7 @@ function gameReducer(state, action) {
                     // 4) 金币
                     newState.resources = {
                         ...newState.resources,
-                        gold: (newState.resources.gold || 0) + (bossData.rewards.gold || 0)
+                        gold: (newState.resources.gold || 0) + getEffectiveGoldGain((bossData.rewards.gold || 0), newState)
                     };
 
                     // 5) 经验：自动击杀不发经验（只发金币/装备），避免挂机刷等级
@@ -11040,7 +11256,7 @@ function gameReducer(state, action) {
                             }
                         } else {
                             // 胜利结算
-                            newState.resources.gold += enemy.gold;
+                            newState.resources.gold += getEffectiveGoldGain(enemy.gold, newState);
 
                             let expGained = (1 + (char.stats.expBonus || 0));
                             char.exp += enemy.exp * expGained;
@@ -11883,7 +12099,7 @@ function gameReducer(state, action) {
                 inventory: newInventory,
                 resources: {
                     ...state.resources,
-                    gold: state.resources.gold + item.sellPrice
+                    gold: state.resources.gold + getEffectiveGoldGain(item.sellPrice, state)
                 }
             };
         }
@@ -11902,7 +12118,7 @@ function gameReducer(state, action) {
                 inventory: newInventory,
                 resources: {
                     ...state.resources,
-                    gold: state.resources.gold + totalGold
+                    gold: state.resources.gold + getEffectiveGoldGain(totalGold, state)
                 }
             };
         }
@@ -11953,6 +12169,10 @@ function gameReducer(state, action) {
 
             let newState = {
                 ...state,
+                stats: {
+                    ...(state.stats || {}),
+                    grandVaultPicks: (state.stats?.grandVaultPicks || 0) + 1
+                },
                 grandVault: {
                     ...gv,
                     claimedDayKey: dayKey,
@@ -12046,6 +12266,7 @@ function gameReducer(state, action) {
                 decoded.stats.totalDamage ??= 0;
                 decoded.stats.totalHealing ??= 0;
                 decoded.stats.bossLateRoundDefeats ??= 0;
+                decoded.stats.grandVaultPicks ??= 0;
 
 // ===== 2️⃣ 关键：重算全队属性 =====
                 const fixedCharacters = recalcPartyStats(
@@ -12731,13 +12952,14 @@ function gameReducer(state, action) {
                 if (choice.rewards.gold) {
                     newState.resources = {
                         ...newState.resources,
-                        gold: newState.resources.gold + choice.rewards.gold
+                        gold: newState.resources.gold + getEffectiveGoldGain(choice.rewards.gold, newState)
                     };
                 }
                 if (choice.rewards.exp) {
                     // 给所有角色加经验
                     newState.characters = newState.characters.map(char => {
-                        let newExp = char.exp + choice.rewards.exp;
+                        let gained = choice.rewards.exp * (1 + (char.stats?.expBonus || 0));
+                        let newExp = char.exp + gained;
                         let level = char.level;
                         let expToNext = char.expToNext;
                         while (newExp >= expToNext && level < 200) {
@@ -12800,7 +13022,7 @@ function gameReducer(state, action) {
                 if (rewards.gold) {
                     newState.resources = {
                         ...newState.resources,
-                        gold: newState.resources.gold + rewards.gold
+                        gold: newState.resources.gold + getEffectiveGoldGain(rewards.gold, newState)
                     };
                 }
                 if (rewards.exp) {

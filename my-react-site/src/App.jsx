@@ -1955,7 +1955,9 @@ function isScholomanceEquipment(eq) {
 // 如未来扩展斯坦索姆掉落装备，只需要把新模板ID加入该集合即可。
 const STRATHOLME_EQUIP_IDS = new Set([
     'EQ_095', 'EQ_096', 'EQ_097', 'EQ_098',
-    'EQ_099', 'EQ_100', 'EQ_101', 'EQ_102'
+    'EQ_099', 'EQ_100', 'EQ_101', 'EQ_102',
+    // ✅ 瑞文戴尔男爵新增掉落（T0 战靴/便鞋）
+    'EQ_117', 'EQ_118', 'EQ_119', 'EQ_120'
 ]);
 
 function isStratholmeEquipment(eq) {
@@ -4763,6 +4765,109 @@ const FIXED_EQUIPMENTS = {
         }
     },
 
+    // ==================== 瑞文戴尔男爵（60级世界首领）新增：T0 套装战靴/便鞋 ====================
+    // 设计说明：数值大小参考 T0 护肩（EQ_113~EQ_116），并适当调整副属性以拉开差异。
+    EQ_117: {
+        id: 'EQ_117',
+        name: '勇气战靴',
+        icon: "icons/wow/vanilla/armor/INV_Boots_02.png",
+        type: 'equipment',
+        slot: 'feet',
+        rarity: 'blue',
+        setId: 'valor_set',
+        setName: '勇气',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            hp: 1350,
+            armor: 190,
+            mastery: 26,
+            blockRate: 4,
+            blockValue: 320
+        },
+        growth: {
+            hp: 2,
+            armor: 2,
+            mastery: 2,
+            blockRate: 2,
+            blockValue: 2
+        }
+    },
+    EQ_118: {
+        id: 'EQ_118',
+        name: '迅影战靴',
+        icon: "icons/wow/vanilla/armor/INV_Boots_05.png",
+        type: 'equipment',
+        slot: 'feet',
+        rarity: 'blue',
+        setId: 'swiftshadow_set',
+        setName: '迅影',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            attack: 510,
+            hp: 780,
+            armor: 110,
+            critRate: 18,
+            mastery: 22
+        },
+        growth: {
+            attack: 2,
+            hp: 2,
+            armor: 2,
+            critRate: 2,
+            mastery: 2
+        }
+    },
+    EQ_119: {
+        id: 'EQ_119',
+        name: '虔诚便鞋',
+        icon: "icons/wow/vanilla/armor/INV_Boots_05.png",
+        type: 'equipment',
+        slot: 'feet',
+        rarity: 'blue',
+        setId: 'devout_set',
+        setName: '虔诚',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            spellPower: 760,
+            hp: 980,
+            mastery: 26,
+            haste: 22
+        },
+        growth: {
+            spellPower: 2,
+            hp: 2,
+            mastery: 2,
+            haste: 2
+        }
+    },
+    EQ_120: {
+        id: 'EQ_120',
+        name: '博学者便鞋',
+        icon: "icons/wow/vanilla/armor/INV_Boots_05.png",
+        type: 'equipment',
+        slot: 'feet',
+        rarity: 'blue',
+        setId: 'scholar_set',
+        setName: '博学者',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            spellPower: 860,
+            hp: 920,
+            critRate: 18,
+            haste: 28
+        },
+        growth: {
+            spellPower: 2,
+            hp: 2,
+            critRate: 2,
+            haste: 2
+        }
+    },
+
     EQ_HOGGER_001: {
         id: 'EQ_HOGGER_001',
         name: '霍格的毛皮披风',
@@ -5991,6 +6096,11 @@ const BOSS_DATA = {
             gold: 550000,
             exp: 300000,
             items: [
+                // ✅ 新增：T0 套装战靴/便鞋（每件 20%）
+                { id: 'EQ_117', chance: 0.2 },  // 勇气战靴
+                { id: 'EQ_118', chance: 0.2 },  // 迅影战靴
+                { id: 'EQ_119', chance: 0.2 },  // 虔诚便鞋
+                { id: 'EQ_120', chance: 0.2 },  // 博学者便鞋
                 { id: 'IT_RIVENDARE_BADGE', chance: 0.8 }
             ]
         }

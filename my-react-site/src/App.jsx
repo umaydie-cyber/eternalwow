@@ -1459,7 +1459,7 @@ const ZONES = {
             {
                 name: '血色拷问者',
                 hp: 82000,
-                attack: 1500,
+                attack: 1250,
                 defense: 500,
                 exp: 4000,
                 gold: 4000
@@ -1467,7 +1467,7 @@ const ZONES = {
             {
                 name: '血色僧侣',
                 hp: 100000,
-                attack: 1300,
+                attack: 1150,
                 defense: 600,
                 exp: 4500,
                 gold: 5000
@@ -1475,7 +1475,7 @@ const ZONES = {
             {
                 name: '血色招魂师',
                 hp: 82000,
-                attack: 1400,
+                attack: 1200,
                 defense: 550,
                 exp: 4500,
                 gold: 5000
@@ -1483,7 +1483,7 @@ const ZONES = {
             {
                 name: '血色巫师',
                 hp: 90000,
-                attack: 1500,
+                attack: 1400,
                 defense: 600,
                 exp: 5000,
                 gold: 5500

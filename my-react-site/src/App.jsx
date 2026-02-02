@@ -12227,17 +12227,18 @@ function gameReducer(state, action) {
                 hogger: 0.05,      // 霍格+5%
                 vancleef: 0.10,   // 范克里夫+10%（预留）
                 prestor_lady: 0.15,//普瑞斯托女士+15%
-                thalnos: 0.15, //萨尔诺斯+15%
-                dagran_thaurissan: 0.15, // 达格兰·索瑞森大帝 +15%
-                darkmaster_gandling: 0.2, // 黑暗院长加丁 +20%
-                baron_rivendare: 0.2, // 瑞文戴尔男爵 +20%
-                rend_blackhand: 0.2,//雷德黑手 +20%
+                thalnos: 0.2, //萨尔诺斯+20%
+                dagran_thaurissan: 0.2, // 达格兰·索瑞森大帝 +20%
+                darkmaster_gandling: 0.1, // 黑暗院长加丁 +10%
+                baron_rivendare: 0.1, // 瑞文戴尔男爵 +10%
+                rend_blackhand: 0.1,//雷德黑手 +10%
             };
             const defeatedBosses = state.defeatedBosses || [];
             const totalBossBonus = defeatedBosses.reduce((sum, bossId) => sum + (bossBonus[bossId] || 0), 0);
 
             // 总加成（经验/金币相同，掉落和研究有系数）
-            const newExp = frameBonus + levelBonus + totalBossBonus;
+            // 三项乘区：帧数 / 最高等级 / Boss击杀 —— 乘算，不加算
+            const newExp = (1 + frameBonus) * (1 + levelBonus) * (1 + totalBossBonus) - 1;
             const newGold = newExp;
             const newDrop = newExp * 0.6;
             const newResearch = newExp * 0.5;
@@ -20867,7 +20868,8 @@ const RebirthBonusModal = ({ state, onClose }) => {
     const totalBossBonus = defeatedBosses.reduce((sum, bossId) => sum + (BOSS_BONUS_CONFIG[bossId]?.bonus || 0), 0);
 
     // 总预测加成
-    const predictedExp = frameBonus + levelBonus + totalBossBonus;
+    // 三项乘区：帧数 / 最高等级 / Boss击杀 —— 乘算，不加算
+    const predictedExp = (1 + frameBonus) * (1 + levelBonus) * (1 + totalBossBonus) - 1;
     const predictedGold = predictedExp;
     const predictedDrop = predictedExp * 0.6;
     const predictedResearch = predictedExp * 0.5;

@@ -4666,8 +4666,8 @@ const FIXED_EQUIPMENTS = {
     // 设计说明：整体数值略高于 55 级副本掉落的 T0 套装散件（腰带/手套/头盔/护腿），但不超过 60 级胸甲强度太多。
     EQ_113: {
         id: 'EQ_113',
-        name: '勇气护肩',
-        icon: "icons/wow/vanilla/armor/INV_Shoulder_22.png",
+        name: '勇气肩甲',
+        icon: "icons/wow/vanilla/armor/INV_Shoulder_30.png",
         type: 'equipment',
         slot: 'shoulder',
         rarity: 'blue',
@@ -4693,7 +4693,7 @@ const FIXED_EQUIPMENTS = {
     EQ_114: {
         id: 'EQ_114',
         name: '迅影护肩',
-        icon: "icons/wow/vanilla/armor/INV_Shoulder_23.png",
+        icon: "icons/wow/vanilla/armor/INV_Shoulder_07.png",
         type: 'equipment',
         slot: 'shoulder',
         rarity: 'blue',
@@ -4718,8 +4718,8 @@ const FIXED_EQUIPMENTS = {
     },
     EQ_115: {
         id: 'EQ_115',
-        name: '虔诚护肩',
-        icon: "icons/wow/vanilla/armor/INV_Shoulder_02.png",
+        name: '虔诚衬肩',
+        icon: "icons/wow/vanilla/armor/INV_Shoulder_09.png",
         type: 'equipment',
         slot: 'shoulder',
         rarity: 'blue',
@@ -4742,8 +4742,8 @@ const FIXED_EQUIPMENTS = {
     },
     EQ_116: {
         id: 'EQ_116',
-        name: '博学者护肩',
-        icon: "icons/wow/vanilla/armor/INV_Shoulder_19.png",
+        name: '博学者衬肩',
+        icon: "icons/wow/vanilla/armor/INV_Shoulder_23.png",
         type: 'equipment',
         slot: 'shoulder',
         rarity: 'blue',
@@ -4770,7 +4770,7 @@ const FIXED_EQUIPMENTS = {
     EQ_117: {
         id: 'EQ_117',
         name: '勇气战靴',
-        icon: "icons/wow/vanilla/armor/INV_Boots_02.png",
+        icon: "icons/wow/vanilla/armor/INV_Boots_Plate_03.png",
         type: 'equipment',
         slot: 'feet',
         rarity: 'blue',
@@ -4795,8 +4795,8 @@ const FIXED_EQUIPMENTS = {
     },
     EQ_118: {
         id: 'EQ_118',
-        name: '迅影战靴',
-        icon: "icons/wow/vanilla/armor/INV_Boots_05.png",
+        name: '迅影长靴',
+        icon: "icons/wow/vanilla/armor/INV_Boots_04.png",
         type: 'equipment',
         slot: 'feet',
         rarity: 'blue',
@@ -4821,7 +4821,7 @@ const FIXED_EQUIPMENTS = {
     },
     EQ_119: {
         id: 'EQ_119',
-        name: '虔诚便鞋',
+        name: '虔诚软鞋',
         icon: "icons/wow/vanilla/armor/INV_Boots_05.png",
         type: 'equipment',
         slot: 'feet',
@@ -4845,8 +4845,8 @@ const FIXED_EQUIPMENTS = {
     },
     EQ_120: {
         id: 'EQ_120',
-        name: '博学者便鞋',
-        icon: "icons/wow/vanilla/armor/INV_Boots_05.png",
+        name: '博学者长靴',
+        icon: "icons/wow/vanilla/armor/INV_Boots_02.png",
         type: 'equipment',
         slot: 'feet',
         rarity: 'blue',

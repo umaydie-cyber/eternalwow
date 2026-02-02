@@ -5995,28 +5995,32 @@ const SET_BONUSES = {
         name: '勇气',
         tiers: [
             { count: 2, bonus: { hp: 500, armor: 80, mastery: 10 } },
-            { count: 4, bonus: { blockRate: 5, blockValue: 300 } }
+            { count: 4, bonus: { blockRate: 5, blockValue: 300 } },
+            { count: 8, bonus: { hp: 2000, attack:500 } }
         ]
     },
     swiftshadow_set: {
         name: '迅影',
         tiers: [
             { count: 2, bonus: { attack: 200, haste: 10 } },
-            { count: 4, bonus: { critRate: 10, critDamage: 0.30 } }
+            { count: 4, bonus: { critRate: 10, critDamage: 0.30 } },
+            { count: 8, bonus: { hp: 1000, versatility:20 } }
         ]
     },
     devout_set: {
         name: '虔诚',
         tiers: [
             { count: 2, bonus: { spellPower: 250, mastery: 10 } },
-            { count: 4, bonus: { hp: 800, versatility: 15 } }
+            { count: 4, bonus: { hp: 800, versatility: 15 } },
+            { count: 8, bonus: { hp: 1500, spellPower:500 } }
         ]
     },
     scholar_set: {
         name: '博学者',
         tiers: [
-            { count: 2, bonus: { spellPower: 250, haste: 15 } },
-            { count: 4, bonus: { critRate: 10, mastery: 15 } }
+            { count: 2, bonus: { spellPower: 250, haste: 10 } },
+            { count: 4, bonus: { critRate: 10, mastery: 15 } },
+            { count: 8, bonus: { hp: 1000, versatility:20 } }
         ]
     }
 };

@@ -4719,9 +4719,9 @@ const FIXED_EQUIPMENTS = {
         baseStats: {
             hp: 1400,
             armor: 180,
-            mastery: 28,
-            blockRate: 5,
-            blockValue: 300
+            mastery: 15,
+            blockRate: 4,
+            blockValue: 280
         },
         growth: {
             hp: 2,
@@ -4743,18 +4743,18 @@ const FIXED_EQUIPMENTS = {
         level: 0,
         maxLevel: 100,
         baseStats: {
-            attack: 520,
+            attack: 320,
             hp: 750,
             armor: 100,
-            critRate: 18,
-            haste: 22
+            critRate: 10,
+            versatility: 15
         },
         growth: {
             attack: 2,
             hp: 2,
             armor: 2,
             critRate: 2,
-            haste: 2
+            versatility: 2
         }
     },
     EQ_115: {
@@ -4769,10 +4769,10 @@ const FIXED_EQUIPMENTS = {
         level: 0,
         maxLevel: 100,
         baseStats: {
-            spellPower: 750,
+            spellPower: 300,
             hp: 1000,
-            mastery: 28,
-            versatility: 18
+            mastery: 15,
+            versatility: 10
         },
         growth: {
             spellPower: 2,
@@ -4793,10 +4793,10 @@ const FIXED_EQUIPMENTS = {
         level: 0,
         maxLevel: 100,
         baseStats: {
-            spellPower: 850,
+            spellPower: 350,
             hp: 950,
-            critRate: 17,
-            mastery: 28
+            critRate: 15,
+            mastery: 10
         },
         growth: {
             spellPower: 2,
@@ -4822,9 +4822,9 @@ const FIXED_EQUIPMENTS = {
         baseStats: {
             hp: 1350,
             armor: 190,
-            mastery: 26,
+            mastery: 12,
             blockRate: 4,
-            blockValue: 320
+            blockValue: 300
         },
         growth: {
             hp: 2,
@@ -4846,11 +4846,11 @@ const FIXED_EQUIPMENTS = {
         level: 0,
         maxLevel: 100,
         baseStats: {
-            attack: 510,
+            attack: 280,
             hp: 780,
             armor: 110,
-            critRate: 18,
-            mastery: 22
+            critRate: 10,
+            mastery: 15
         },
         growth: {
             attack: 2,
@@ -4872,10 +4872,10 @@ const FIXED_EQUIPMENTS = {
         level: 0,
         maxLevel: 100,
         baseStats: {
-            spellPower: 760,
+            spellPower: 260,
             hp: 980,
-            mastery: 26,
-            haste: 22
+            mastery: 15,
+            haste: 10
         },
         growth: {
             spellPower: 2,
@@ -4896,10 +4896,10 @@ const FIXED_EQUIPMENTS = {
         level: 0,
         maxLevel: 100,
         baseStats: {
-            spellPower: 860,
+            spellPower: 330,
             hp: 920,
-            critRate: 18,
-            haste: 28
+            critRate: 10,
+            haste: 15
         },
         growth: {
             spellPower: 2,
@@ -4925,8 +4925,8 @@ const FIXED_EQUIPMENTS = {
         baseStats: {
             hp: 1280,
             armor: 165,
-            mastery: 26,
-            blockValue: 300,
+            mastery: 10,
+            blockValue: 250,
             magicResist: 40
         },
         growth: {
@@ -4949,11 +4949,11 @@ const FIXED_EQUIPMENTS = {
         level: 0,
         maxLevel: 100,
         baseStats: {
-            attack: 500,
+            attack: 240,
             hp: 760,
-            armor: 105,
-            mastery: 20,
-            haste: 20
+            armor: 85,
+            mastery: 10,
+            haste: 15
         },
         growth: {
             attack: 2,
@@ -4975,10 +4975,10 @@ const FIXED_EQUIPMENTS = {
         level: 0,
         maxLevel: 100,
         baseStats: {
-            spellPower: 740,
+            spellPower: 240,
             hp: 980,
-            haste: 20,
-            versatility: 20
+            haste: 10,
+            versatility: 15
         },
         growth: {
             spellPower: 2,
@@ -4999,10 +4999,10 @@ const FIXED_EQUIPMENTS = {
         level: 0,
         maxLevel: 100,
         baseStats: {
-            spellPower: 840,
+            spellPower: 280,
             hp: 930,
-            mastery: 24,
-            versatility: 22
+            mastery: 10,
+            versatility: 15
         },
         growth: {
             spellPower: 2,

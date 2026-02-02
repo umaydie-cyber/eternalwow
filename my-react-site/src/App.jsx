@@ -5565,7 +5565,7 @@ const WORLD_BOSSES = {
         name: '普瑞斯托女士',
         icon: 'icons/wow/vanilla/boss/prestor_lady.jpg', // 需要添加对应图标
         hp: 800000,
-        attack: 2000,
+        attack: 1700,
         defense: 800,
         rewards: { gold: 100000, exp: 80000 },
         // 特殊解锁条件：需要使用【黑龙化身的证明】物品
@@ -5764,7 +5764,7 @@ const BOSS_DATA = {
         id: 'prestor_lady',
         name: '普瑞斯托女士',
         maxHp: 800000,
-        attack: 2000,
+        attack: 1700,
         defense: 800,
         // 技能循环：谍报 → 黑龙之炎 → 尖牙与利爪 → 普通攻击
         cycle: ['espionage', 'black_dragon_flame', 'fangs_and_claws', 'normal_attack'],

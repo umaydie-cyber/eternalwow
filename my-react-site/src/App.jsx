@@ -1986,7 +1986,9 @@ function isStratholmeEquipment(eq) {
 // 如未来扩展黑石塔上掉落装备，只需要把新模板ID加入该集合即可。
 const UPPER_BLACKROCK_SPIRE_EQUIP_IDS = new Set([
     'EQ_103', 'EQ_104', 'EQ_105', 'EQ_106', 'EQ_107', 'EQ_108',
-    'EQ_109', 'EQ_110', 'EQ_111', 'EQ_112'
+    'EQ_109', 'EQ_110', 'EQ_111', 'EQ_112',
+    // ✅ 雷德黑手新增掉落（T0 护腕/裹腕）
+    'EQ_121', 'EQ_122', 'EQ_123', 'EQ_124'
 ]);
 
 function isUpperBlackrockSpireEquipment(eq) {
@@ -4907,6 +4909,109 @@ const FIXED_EQUIPMENTS = {
         }
     },
 
+    // ==================== 雷德·黑手（60级世界首领）新增：T0 套装护腕/裹腕 ====================
+    // 设计说明：数值大小参考 T0 护肩（EQ_113~EQ_116），并适当调整副属性以拉开差异。
+    EQ_121: {
+        id: 'EQ_121',
+        name: '勇气护腕',
+        icon: "icons/wow/vanilla/armor/INV_Bracer_16.png",
+        type: 'equipment',
+        slot: 'wrist',
+        rarity: 'blue',
+        setId: 'valor_set',
+        setName: '勇气',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            hp: 1280,
+            armor: 165,
+            mastery: 26,
+            blockValue: 300,
+            magicResist: 40
+        },
+        growth: {
+            hp: 2,
+            armor: 2,
+            mastery: 2,
+            blockValue: 2,
+            magicResist: 2
+        }
+    },
+    EQ_122: {
+        id: 'EQ_122',
+        name: '迅影护腕',
+        icon: "icons/wow/vanilla/armor/INV_Bracer_03.png",
+        type: 'equipment',
+        slot: 'wrist',
+        rarity: 'blue',
+        setId: 'swiftshadow_set',
+        setName: '迅影',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            attack: 500,
+            hp: 760,
+            armor: 105,
+            mastery: 20,
+            haste: 20
+        },
+        growth: {
+            attack: 2,
+            hp: 2,
+            armor: 2,
+            mastery: 2,
+            haste: 2
+        }
+    },
+    EQ_123: {
+        id: 'EQ_123',
+        name: '虔诚裹腕',
+        icon: "icons/wow/vanilla/armor/INV_Bracer_11.png",
+        type: 'equipment',
+        slot: 'wrist',
+        rarity: 'blue',
+        setId: 'devout_set',
+        setName: '虔诚',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            spellPower: 740,
+            hp: 980,
+            haste: 20,
+            versatility: 20
+        },
+        growth: {
+            spellPower: 2,
+            hp: 2,
+            haste: 2,
+            versatility: 2
+        }
+    },
+    EQ_124: {
+        id: 'EQ_124',
+        name: '博学者裹腕',
+        icon: "icons/wow/vanilla/armor/INV_Bracer_11.png",
+        type: 'equipment',
+        slot: 'wrist',
+        rarity: 'blue',
+        setId: 'scholar_set',
+        setName: '博学者',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            spellPower: 840,
+            hp: 930,
+            mastery: 24,
+            versatility: 22
+        },
+        growth: {
+            spellPower: 2,
+            hp: 2,
+            mastery: 2,
+            versatility: 2
+        }
+    },
+
     EQ_HOGGER_001: {
         id: 'EQ_HOGGER_001',
         name: '霍格的毛皮披风',
@@ -6194,6 +6299,11 @@ const BOSS_DATA = {
             gold: 580000,
             exp: 350000,
             items: [
+                // ✅ 新增：T0 套装护腕/裹腕（每件 20%）
+                { id: 'EQ_121', chance: 0.2 },  // 勇气护腕
+                { id: 'EQ_122', chance: 0.2 },  // 迅影护腕
+                { id: 'EQ_123', chance: 0.2 },  // 虔诚裹腕
+                { id: 'EQ_124', chance: 0.2 },  // 博学者裹腕
                 { id: 'IT_REND_BADGE', chance: 0.8 }
             ]
         }

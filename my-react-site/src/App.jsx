@@ -4914,7 +4914,7 @@ const FIXED_EQUIPMENTS = {
     EQ_121: {
         id: 'EQ_121',
         name: '勇气护腕',
-        icon: "icons/wow/vanilla/armor/INV_Bracer_16.png",
+        icon: "icons/wow/vanilla/armor/INV_Bracer_18.png",
         type: 'equipment',
         slot: 'wrist',
         rarity: 'blue',
@@ -4940,7 +4940,7 @@ const FIXED_EQUIPMENTS = {
     EQ_122: {
         id: 'EQ_122',
         name: '迅影护腕',
-        icon: "icons/wow/vanilla/armor/INV_Bracer_03.png",
+        icon: "icons/wow/vanilla/armor/INV_Bracer_07.png",
         type: 'equipment',
         slot: 'wrist',
         rarity: 'blue',
@@ -4965,8 +4965,8 @@ const FIXED_EQUIPMENTS = {
     },
     EQ_123: {
         id: 'EQ_123',
-        name: '虔诚裹腕',
-        icon: "icons/wow/vanilla/armor/INV_Bracer_11.png",
+        name: '虔诚护腕',
+        icon: "icons/wow/vanilla/armor/INV_Belt_31.png",
         type: 'equipment',
         slot: 'wrist',
         rarity: 'blue',
@@ -4989,8 +4989,8 @@ const FIXED_EQUIPMENTS = {
     },
     EQ_124: {
         id: 'EQ_124',
-        name: '博学者裹腕',
-        icon: "icons/wow/vanilla/armor/INV_Bracer_11.png",
+        name: '博学者腕轮',
+        icon: "icons/wow/vanilla/armor/INV_Jewelry_Ring_23.png",
         type: 'equipment',
         slot: 'wrist',
         rarity: 'blue',

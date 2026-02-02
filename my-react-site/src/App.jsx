@@ -11063,21 +11063,22 @@ function gameReducer(state, action) {
                 rebirthCount: newState.rebirthCount
             };
 
-            // ==================== 重生保留：功能建筑（仓库 & 机械臂） ====================
-            // 需求：重生后保留“仓库”（用于背包格子加成）与“机械臂”（自动合成前N格）数量，其它功能建筑按重置处理。
-            const keptWarehouseCount = newState.functionalBuildings?.warehouse || 0;
-            const keptMechanicalArmCount = newState.functionalBuildings?.mechanical_arm || 0;
+            // ==================== 重生保留：功能建筑（全部保留，不会消失） ====================
+            // 需求：重生后【所有】功能建筑数量都保留（包含：喷泉/仓库/训练假人/机械臂/寻龙会等）。
+            // 兼容旧档：functionalBuildings 可能为空/非对象
+            const keptFunctionalBuildings = (newState.functionalBuildings && typeof newState.functionalBuildings === 'object' && !Array.isArray(newState.functionalBuildings))
+                ? { ...newState.functionalBuildings }
+                : {};
+
+            const keptWarehouseCount = Math.max(0, Math.floor(Number(keptFunctionalBuildings.warehouse) || 0));
             const keptInventorySizeExtra = newState.inventorySizeExtra || 0;
 
             // 重置游戏进度
             newState.characters = [];
             newState.resources = { ...initialState.resources, gold: 500 };
             newState.buildings = {};
-            // 只保留仓库 & 机械臂，其它功能建筑清空
-            newState.functionalBuildings = {
-                ...(keptWarehouseCount > 0 ? { warehouse: keptWarehouseCount } : {}),
-                ...(keptMechanicalArmCount > 0 ? { mechanical_arm: keptMechanicalArmCount } : {})
-            };
+            // ✅ 保留所有功能建筑
+            newState.functionalBuildings = keptFunctionalBuildings;
             // 立刻同步背包上限（避免UI/掉落逻辑使用旧值）
             newState.inventorySizeExtra = keptInventorySizeExtra;
             newState.inventorySize = 80 + keptWarehouseCount * 1 + keptInventorySizeExtra;
@@ -18580,7 +18581,7 @@ const RebirthConfirmModal = ({ state, dispatch }) => {
                 <p style={{ lineHeight: 1.6, margin: '20px 0' }}>
                     重生轮回将重置王国的建筑、资源、研究等级以及角色，<br/>
                     但道具栏和装备会保留。<br/>
-                    功能建筑中的【仓库】与【机械臂】数量会保留。<br/><br/>
+                    ✅ 功能建筑将全部保留（不会消失）。<br/><br/>
                     {spaceNeeded ?
                         <span style={{ color: '#ff6b6b' }}>⚠️ 背包空间不足，无法容纳所有装备！</span> :
                         `需要 ${equippedCount} 个背包空格存放当前装备。`

@@ -11544,6 +11544,7 @@ function gameReducer(state, action) {
             if (state.characters.length >= state.characterSlots) return state;
 
             const classData = CLASSES[classId];
+            const baseSkillSlots = Array(8).fill('basic_attack');
             const newChar = {
                 id: `char_${Date.now()}`,
                 name,
@@ -11554,7 +11555,15 @@ function gameReducer(state, action) {
                 expToNext: 100,
                 equipment: {},
                 talents: {},
-                skillSlots: ['basic_attack', 'basic_attack', 'basic_attack', 'basic_attack', 'basic_attack', 'basic_attack', 'basic_attack', 'basic_attack'], // 8个技能槽位
+                // 当前激活的技能槽位（用于战斗读取）
+                skillSlots: [...baseSkillSlots],
+                // 三套技能配置：1/2/3
+                skillSets: [
+                    [...baseSkillSlots],
+                    [...baseSkillSlots],
+                    [...baseSkillSlots]
+                ],
+                activeSkillSet: 0,
                 skills: classData.skills.filter(s => s.level <= 1).map(s => s.skillId),
                 buffs: [],
                 lastCombatTime: 0,
@@ -11569,13 +11578,80 @@ function gameReducer(state, action) {
             };
         }
 
-        case 'UPDATE_SKILL_SLOTS': {
-            const { characterId, skillSlots } = action.payload;
+        case 'UPDATE_SKILL_SETS': {
+            const { characterId, skillSets, activeSkillSet } = action.payload || {};
             const charIndex = state.characters.findIndex(c => c.id === characterId);
             if (charIndex === -1) return state;
 
-            let newChars = [...state.characters];
-            newChars[charIndex] = { ...newChars[charIndex], skillSlots };
+            const make8 = (arr, fallback) => Array.from({ length: 8 }, (_, i) => (arr?.[i] ?? fallback?.[i] ?? ''));
+
+            const newChars = [...state.characters];
+            const target = newChars[charIndex];
+
+            const base = make8(target.skillSlots || [], Array(8).fill('basic_attack'));
+
+            let setsRaw = Array.isArray(skillSets) ? skillSets : null;
+            if (!setsRaw || setsRaw.length === 0) {
+                setsRaw = [base, [...base], [...base]];
+            }
+
+            const s0 = make8(setsRaw[0], base);
+            const s1 = make8(setsRaw[1], s0);
+            const s2 = make8(setsRaw[2], s0);
+            const normalizedSets = [s0, s1, s2];
+
+            let active = Number.isFinite(Number(activeSkillSet))
+                ? Math.floor(Number(activeSkillSet))
+                : (Number.isFinite(Number(target.activeSkillSet)) ? Math.floor(Number(target.activeSkillSet)) : 0);
+            active = Math.max(0, Math.min(2, active));
+
+            const activeSlots = normalizedSets[active] || s0;
+
+            newChars[charIndex] = {
+                ...target,
+                skillSets: normalizedSets,
+                activeSkillSet: active,
+                // 同步：战斗读取 skillSlots（激活的那套）
+                skillSlots: [...activeSlots],
+            };
+
+            return {
+                ...state,
+                characters: newChars
+            };
+        }
+
+        // legacy：只更新“当前激活配置”的 skillSlots，并写回到 skillSets[active]
+        case 'UPDATE_SKILL_SLOTS': {
+            const { characterId, skillSlots } = action.payload || {};
+            const charIndex = state.characters.findIndex(c => c.id === characterId);
+            if (charIndex === -1) return state;
+
+            const make8 = (arr, fallback) => Array.from({ length: 8 }, (_, i) => (arr?.[i] ?? fallback?.[i] ?? ''));
+
+            const newChars = [...state.characters];
+            const target = newChars[charIndex];
+
+            let active = Number.isFinite(Number(target.activeSkillSet)) ? Math.floor(Number(target.activeSkillSet)) : 0;
+            active = Math.max(0, Math.min(2, active));
+
+            const slots8 = make8(skillSlots, target.skillSlots || Array(8).fill(''));
+            const base = make8(target.skillSlots || [], Array(8).fill('basic_attack'));
+
+            // ensure existing sets
+            const raw = Array.isArray(target.skillSets) ? target.skillSets : null;
+            const s0 = make8(raw?.[0], base);
+            const s1 = make8(raw?.[1], s0);
+            const s2 = make8(raw?.[2], s0);
+            const normalizedSets = [s0, s1, s2];
+            normalizedSets[active] = [...slots8];
+
+            newChars[charIndex] = {
+                ...target,
+                skillSlots: [...slots8],
+                skillSets: normalizedSets,
+                activeSkillSet: active
+            };
 
             return {
                 ...state,
@@ -12268,7 +12344,38 @@ function gameReducer(state, action) {
                 decoded.stats.bossLateRoundDefeats ??= 0;
                 decoded.stats.grandVaultPicks ??= 0;
 
-// ===== 2️⃣ 关键：重算全队属性 =====
+// ===== 2️⃣ 角色技能栏：三套技能配置兼容旧档 =====
+                if (Array.isArray(decoded.characters)) {
+                    decoded.characters = decoded.characters.map(c => {
+                        const make8 = (arr, fallback) => Array.from({ length: 8 }, (_, i) => (arr?.[i] ?? fallback?.[i] ?? ''));
+                        const baseSlots = make8(c.skillSlots || [], Array(8).fill('basic_attack'));
+
+                        let sets = Array.isArray(c.skillSets) ? c.skillSets : null;
+                        if (!sets || sets.length === 0) {
+                            sets = [baseSlots, [...baseSlots], [...baseSlots]];
+                        } else {
+                            const s0 = make8(sets[0], baseSlots);
+                            const s1 = make8(sets[1], s0);
+                            const s2 = make8(sets[2], s0);
+                            sets = [s0, s1, s2];
+                        }
+
+                        let active = Number.isFinite(Number(c.activeSkillSet)) ? Math.floor(Number(c.activeSkillSet)) : 0;
+                        active = Math.max(0, Math.min(2, active));
+
+                        const activeSlots = sets[active] || baseSlots;
+
+                        return {
+                            ...c,
+                            skillSets: sets,
+                            activeSkillSet: active,
+                            // 同步：战斗读取 skillSlots（激活的那套）
+                            skillSlots: make8(activeSlots, baseSlots),
+                        };
+                    });
+                }
+
+// ===== 3️⃣ 关键：重算全队属性 =====
                 const fixedCharacters = recalcPartyStats(
                     decoded,
                     decoded.characters
@@ -13188,7 +13295,36 @@ const StatBar = ({ label, current, max, color = '#4CAF50' }) => (
 
 // 技能编辑模态框
 const SkillEditorModal = ({ character, onClose, onSave, state }) => {
-    const [skillSlots, setSkillSlots] = useState(character.skillSlots || Array(8).fill(''));
+    // ===== 三套技能配置（兼容旧存档：只有 skillSlots）=====
+    const initSkillSets = () => {
+        const base = Array.from({ length: 8 }, (_, i) => (character.skillSlots?.[i] ?? ''));
+        const setsRaw = Array.isArray(character.skillSets) ? character.skillSets : null;
+
+        const make8 = (arr, fallback) => Array.from({ length: 8 }, (_, i) => (arr?.[i] ?? fallback?.[i] ?? ''));
+
+        if (!setsRaw || setsRaw.length === 0) {
+            // 旧档：只有 skillSlots，三套先复制一份
+            const s0 = make8(base, base);
+            return [s0, [...s0], [...s0]];
+        }
+
+        const s0 = make8(setsRaw[0], base);
+        const s1 = make8(setsRaw[1], s0);
+        const s2 = make8(setsRaw[2], s0);
+
+        return [s0, s1, s2];
+    };
+
+    const initActiveSet = () => {
+        const v = Number(character.activeSkillSet);
+        if (!Number.isFinite(v)) return 0;
+        return Math.max(0, Math.min(2, Math.floor(v)));
+    };
+
+    const [activeSet, setActiveSet] = useState(initActiveSet);
+    const [skillSets, setSkillSets] = useState(initSkillSets);
+
+    const skillSlots = skillSets?.[activeSet] || Array(8).fill('');
 
     // 获取技能的实际限制（考虑天赋效果）
     const getSkillLimit = (skillId) => {
@@ -13235,7 +13371,35 @@ const SkillEditorModal = ({ character, onClose, onSave, state }) => {
             }
         }
 
-        setSkillSlots(newSlots);
+        const nextSets = [...(skillSets || [Array(8).fill(''), Array(8).fill(''), Array(8).fill('')])];
+        nextSets[activeSet] = newSlots;
+        setSkillSets(nextSets);
+    };
+
+    const SwitchButton = ({ idx }) => {
+        const isActive = activeSet === idx;
+        return (
+            <button
+                onClick={() => setActiveSet(idx)}
+                style={{
+                    width: 38,
+                    height: 38,
+                    borderRadius: 8,
+                    cursor: 'pointer',
+                    fontWeight: 800,
+                    fontSize: 14,
+                    color: isActive ? '#1a1510' : '#c9a227',
+                    background: isActive
+                        ? 'linear-gradient(180deg, rgba(255,215,0,0.95), rgba(201,162,39,0.95))'
+                        : 'rgba(0,0,0,0.35)',
+                    border: isActive ? '2px solid #ffd700' : '2px solid #5a4c3a',
+                    boxShadow: isActive ? '0 0 14px rgba(255,215,0,0.35)' : 'none',
+                }}
+                title={`技能配置 ${idx + 1}（选中后将用于地图战斗 / BOSS战斗）`}
+            >
+                {idx + 1}
+            </button>
+        );
     };
 
     return (
@@ -13257,16 +13421,42 @@ const SkillEditorModal = ({ character, onClose, onSave, state }) => {
                 border: '3px solid #c9a227',
                 borderRadius: 12,
                 padding: 24,
-                maxWidth: 600,
+                maxWidth: 650,
                 width: '100%',
                 boxShadow: '0 8px 32px rgba(201,162,39,0.3)',
             }} onClick={(e) => e.stopPropagation()}>
-                <div style={{ marginBottom: 20 }}>
+                <div style={{ marginBottom: 18 }}>
                     <h2 style={{ margin: '0 0 8px 0', fontSize: 20, color: '#ffd700' }}>
                         编辑技能栏 - {character.name}
                     </h2>
-                    <div style={{ fontSize: 12, color: '#888' }}>
-                        战斗时会循环使用这8个技能
+                    <div style={{ fontSize: 12, color: '#888', lineHeight: 1.6 }}>
+                        <div>战斗时会循环使用这 8 个技能。</div>
+                        <div>下面的 <b style={{ color: '#ffd700' }}>1/2/3</b> 为三套技能配置，选择哪套，地图战斗 / BOSS 战斗就读取哪套。</div>
+                    </div>
+
+                    <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 10,
+                        marginTop: 12
+                    }}>
+                        <div style={{ fontSize: 12, color: '#aaa' }}>技能配置：</div>
+                        <div style={{ display: 'flex', gap: 8 }}>
+                            <SwitchButton idx={0} />
+                            <SwitchButton idx={1} />
+                            <SwitchButton idx={2} />
+                        </div>
+                        <div style={{
+                            marginLeft: 'auto',
+                            fontSize: 12,
+                            color: '#c9a227',
+                            background: 'rgba(0,0,0,0.25)',
+                            border: '1px solid rgba(201,162,39,0.35)',
+                            padding: '6px 10px',
+                            borderRadius: 999
+                        }}>
+                            当前：配置 {activeSet + 1}
+                        </div>
                     </div>
                 </div>
 
@@ -13344,7 +13534,8 @@ const SkillEditorModal = ({ character, onClose, onSave, state }) => {
 
                 <div style={{ display: 'flex', gap: 12 }}>
                     <Button onClick={() => {
-                        onSave(character.id, skillSlots);
+                        // ✅ 保存三套配置 + 当前激活配置
+                        onSave(character.id, skillSets, activeSet);
                         onClose();
                     }} style={{ flex: 1 }}>
                         ✓ 保存
@@ -13357,6 +13548,8 @@ const SkillEditorModal = ({ character, onClose, onSave, state }) => {
         </div>
     );
 };
+
+
 
 // 查看可用技能（排除“休息/普通攻击”）
 const SkillViewerModal = ({ character, onClose }) => {
@@ -14886,8 +15079,8 @@ const CharacterPage = ({ state, dispatch }) => {
                 <SkillEditorModal
                     character={showSkillEditor}
                     onClose={() => setShowSkillEditor(null)}
-                    onSave={(charId, skillSlots) => {
-                        dispatch({ type: 'UPDATE_SKILL_SLOTS', payload: { characterId: charId, skillSlots } });
+                    onSave={(charId, skillSets, activeSkillSet) => {
+                        dispatch({ type: 'UPDATE_SKILL_SETS', payload: { characterId: charId, skillSets, activeSkillSet } });
                     }}
                     state={state}
                 />

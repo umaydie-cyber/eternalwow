@@ -1933,6 +1933,23 @@ function isBlackrockDepthsEquipment(eq) {
     return BLACKROCK_DEPTHS_EQUIP_IDS.has(eq.id);
 }
 
+// ==================== 通灵学院装备池（用于加丁徽章判定） ====================
+// 说明：当前通灵学院在本游戏中的掉落装备模板为 EQ_087 ~ EQ_094。
+// 如未来扩展通灵学院掉落装备，只需要把新模板ID加入该集合即可。
+const SCHOLOMANCE_EQUIP_IDS = new Set([
+    'EQ_087', 'EQ_088', 'EQ_089', 'EQ_090', 'EQ_091', 'EQ_092', 'EQ_093', 'EQ_094'
+]);
+
+function isScholomanceEquipment(eq) {
+    if (!eq || eq.type !== 'equipment') return false;
+    const tpl = FIXED_EQUIPMENTS?.[eq.id];
+    // 未来如果你给通灵学院装备加了 setId=scholomance，也会自动识别
+    if (tpl?.setId === 'scholomance') return true;
+    return SCHOLOMANCE_EQUIP_IDS.has(eq.id);
+}
+
+
+
 
 // ==================== 徽章升级规则（复用“血色十字军徽章”的通用模式） ====================
 // 以后新增 Boss 徽章：只需要在这里加一条规则 + 在 USE_ITEM 里让该徽章走同一套入口即可。
@@ -1981,6 +1998,16 @@ const BADGE_UPGRADE_RULES = {
         cap: 100,
         isEligible: isBlackrockDepthsEquipment,
         theme: { border: '#c62828', title: '#ff6b6b', shadow: 'rgba(198,40,40,0.25)' }
+    },
+
+    IT_GANDLING_BADGE: {
+        badgeId: 'IT_GANDLING_BADGE',
+        title: '加丁的徽章',
+        zoneLabel: '通灵学院',
+        inc: 2,
+        cap: 100,
+        isEligible: isScholomanceEquipment,
+        theme: { border: '#4a148c', title: '#ce93d8', shadow: 'rgba(74,20,140,0.25)' }
     },
 };
 
@@ -5020,6 +5047,19 @@ const ITEMS = {
         icon: 'icons/wow/vanilla/items/INV_Misc_Rune_04.png',
         description: '使用后选择一件【沉没的神庙，黑石深渊】装备，使其等级提升 +2（最高100级）'
     }
+    ,
+
+// 加丁的徽章（黑暗院长加丁掉落）
+    IT_GANDLING_BADGE: {
+        id: 'IT_GANDLING_BADGE',
+        name: '加丁的徽章',
+        type: 'consumable',
+        rarity: 'purple',
+        canUse: true,
+        sellPrice: 0,  // 不可出售
+        icon: 'icons/wow/vanilla/items/INV_Misc_Rune_08.png',
+        description: '使用后选择一件【通灵学院】装备，使其等级提升 +2（最高100级）'
+    }
 
 };
 
@@ -5451,6 +5491,20 @@ const WORLD_BOSSES = {
         unlockLevel: 50
     },
 
+// ✅ 新增：60级世界首领 - 黑暗院长加丁
+    darkmaster_gandling: {
+        id: 'darkmaster_gandling',
+        name: '黑暗院长加丁',
+        icon: 'icons/wow/vanilla/boss/darkmaster_gandling.png', // 需要添加对应图标
+        hp: 2200000,
+        attack: 3600,
+        defense: 1200,
+        rewards: { gold: 450000, exp: 240000 },
+        unlockLevel: 60
+    },
+
+
+
 };
 
 // 装备槽位定义
@@ -5696,6 +5750,47 @@ const BOSS_DATA = {
             ]
         }
     },
+
+// ✅ 新增：60级世界首领 - 黑暗院长加丁（通灵学院）
+    darkmaster_gandling: {
+        id: 'darkmaster_gandling',
+        name: '黑暗院长加丁',
+        maxHp: 2200000,
+        attack: 3600,
+        defense: 1200,
+
+        // 技能循环：暗影箭 → 召唤亡灵学徒 → 暗影诅咒 → 黑暗风暴
+        cycle: ['shadow_bolt', 'summon_apprentices', 'shadow_curse', 'dark_storm'],
+
+        // 暗影箭：对坦克造成 5 × Boss攻击 的暗影伤害（计算魔抗）
+        shadowBoltMultiplier: 5,
+
+        // 黑暗风暴：3 × Boss攻击 的暗影伤害（分散：随机单体；集中：全体）
+        darkStormMultiplier: 3,
+
+        // 暗影诅咒：目标魔法抗性降低 100，持续 4 回合（允许为负，按 magicresist_k 公式增伤）
+        shadowCurseMagicResistDown: 100,
+        shadowCurseDuration: 4,
+
+        // 亡灵学徒：召唤 2 个，攻击/防御与Boss相同，血量 20万；每回合随机释放暗影箭（2 × Boss攻击）
+        summonCount: 2,
+        minion: {
+            name: '亡灵学徒',
+            maxHp: 200000,
+            attack: 3600,
+            defense: 1200
+        },
+        minionShadowBoltMultiplier: 2,
+
+        rewards: {
+            gold: 450000,
+            exp: 240000,
+            items: [
+                { id: 'IT_GANDLING_BADGE', chance: 0.8 }
+            ]
+        }
+    }
+
 };
 
 // ==================== 羁绊名称映射 ====================
@@ -6572,6 +6667,8 @@ function stepBossCombat(state) {
                             addLog(`位置${i + 1} ${p.char.name} 的【致死打击】减疗效果消失`);
                         } else if (key === 'fear') {
                             addLog(`位置${i + 1} ${p.char.name} 的【恐惧】效果消失`);
+                        } else if (key === 'shadowCurse') {
+                            addLog(`位置${i + 1} ${p.char.name} 的【暗影诅咒】效果消失`);
                         } else {
                             addLog(`位置${i + 1} ${p.char.name} 的【${key}】效果消失`);
                         }
@@ -7880,7 +7977,148 @@ function stepBossCombat(state) {
         }
     }
 
-    // ==================== 小弟行动 ====================
+
+    // ==================== 黑暗院长加丁技能处理 ====================
+    else if (combat.bossId === 'darkmaster_gandling') {
+        // 暗影伤害：计算魔抗（考虑【暗影诅咒】魔抗降低）
+        const getEffectiveMagicResist = (playerState) => {
+            const base = playerState?.char?.stats?.magicResist || 0;
+            const curseDelta = playerState?.debuffs?.shadowCurse?.magicResistDelta || 0;
+            return base + curseDelta;
+        };
+
+        const calcShadowDamage = (playerState, rawDamage) => {
+            const magicResist = getEffectiveMagicResist(playerState);
+            const resistReduction = getMagicResistDamageReduction(magicResist);
+            let damage = Math.floor((rawDamage || 0) * (1 - resistReduction));
+
+            // 应用受伤减免
+            const takenMult = playerState?.char?.stats?.damageTakenMult ?? 1;
+            let buffTakenMult = 1;
+            if (playerState?.buffs) {
+                playerState.buffs.forEach(b => {
+                    if (b.damageTakenMult) buffTakenMult *= b.damageTakenMult;
+                });
+            }
+            const versTakenMult = getVersatilityDamageTakenMult(playerState?.char?.stats?.versatility);
+            damage = Math.max(1, Math.floor(damage * takenMult * buffTakenMult * versTakenMult));
+
+            return { damage, resistReduction, magicResist };
+        };
+
+        // 暗影箭：对坦克造成5倍攻击的暗影伤害
+        if (bossAction === 'shadow_bolt') {
+            const tIdx = pickAlivePlayerIndex(); // 1号位（坦克位）
+            if (tIdx >= 0) {
+                const target = combat.playerStates[tIdx];
+                const raw = Math.floor((boss.attack || 0) * (boss.shadowBoltMultiplier || 5));
+                const shadowRes = calcShadowDamage(target, raw);
+
+                const shieldResult = applyShieldAbsorb(target, shadowRes.damage, logs, currentRound);
+                target.currentHp -= shieldResult.finalDamage;
+
+                const resPct = Math.round(shadowRes.resistReduction * 100);
+                const mrText = Number(shadowRes.magicResist) < 0 ? `（有效魔抗 ${Math.floor(shadowRes.magicResist)}）` : '';
+                const shieldText = shieldResult.absorbed > 0 ? `，护盾吸收 ${shieldResult.absorbed}` : '';
+                addLog(`【${boss.name}】施放【暗影箭】对 位置${tIdx + 1} ${target.char.name} 造成 ${shieldResult.finalDamage} 点暗影伤害（魔抗减伤${resPct}%${mrText}${shieldText}）`);
+            } else {
+                addLog(`【${boss.name}】施放【暗影箭】，但没有存活目标`);
+            }
+        }
+        // 召唤亡灵学徒
+        else if (bossAction === 'summon_apprentices') {
+            const aliveMinions = (combat.minions || []).filter(m => (m.hp ?? 0) > 0 && m.isApprentice);
+            const need = Math.max(0, (boss.summonCount || 2) - aliveMinions.length);
+
+            for (let i = 0; i < need; i++) {
+                combat.minions.push({
+                    hp: boss.minion.maxHp,
+                    maxHp: boss.minion.maxHp,
+                    attack: boss.attack,
+                    defense: boss.defense,
+                    isApprentice: true,
+                    dots: []
+                });
+            }
+
+            if (need > 0) {
+                addLog(`【${boss.name}】使用【召唤亡灵学徒】召唤了 ${need} 个${boss.minion.name}！`);
+                addLog(`→ ${boss.minion.name} 属性：HP ${boss.minion.maxHp}，攻击/防御 = Boss；每回合随机释放【暗影箭】（2×Boss攻击）`);
+            } else {
+                addLog(`【${boss.name}】尝试召唤亡灵学徒，但场上亡灵学徒已满`);
+            }
+        }
+        // 暗影诅咒：随机目标，魔抗 -100，持续4回合
+        else if (bossAction === 'shadow_curse') {
+            const alivePlayers = combat.playerStates.filter(p => p.currentHp > 0);
+            if (alivePlayers.length > 0) {
+                const randomTarget = alivePlayers[Math.floor(Math.random() * alivePlayers.length)];
+                const tIdx = combat.playerStates.findIndex(p => p.char.id === randomTarget.char.id);
+
+                if (tIdx >= 0) {
+                    const target = combat.playerStates[tIdx];
+                    target.debuffs = target.debuffs || {};
+
+                    const duration = boss.shadowCurseDuration || 4;
+                    const delta = -Math.abs(Number(boss.shadowCurseMagicResistDown || 100));
+
+                    target.debuffs.shadowCurse = {
+                        type: 'curse',
+                        magicResistDelta: delta,
+                        duration
+                    };
+
+                    addLog(`【${boss.name}】对 位置${tIdx + 1} ${target.char.name} 施放【暗影诅咒】：魔法抗性 ${delta}，持续 ${duration} 回合`, 'debuff');
+                }
+            } else {
+                addLog(`【${boss.name}】施放【暗影诅咒】，但没有存活目标`);
+            }
+        }
+        // 黑暗风暴：3倍攻击暗影伤害（分散：随机单体；集中：全体）
+        else if (bossAction === 'dark_storm') {
+            const raw = Math.floor((boss.attack || 0) * (boss.darkStormMultiplier || 3));
+
+            if (combat.strategy.stance === 'dispersed') {
+                const alivePlayers = combat.playerStates.filter(p => p.currentHp > 0);
+                if (alivePlayers.length > 0) {
+                    const randomTarget = alivePlayers[Math.floor(Math.random() * alivePlayers.length)];
+                    const tIdx = combat.playerStates.findIndex(p => p.char.id === randomTarget.char.id);
+
+                    if (tIdx >= 0) {
+                        const target = combat.playerStates[tIdx];
+                        const shadowRes = calcShadowDamage(target, raw);
+
+                        const shieldResult = applyShieldAbsorb(target, shadowRes.damage, logs, currentRound);
+                        target.currentHp -= shieldResult.finalDamage;
+
+                        const resPct = Math.round(shadowRes.resistReduction * 100);
+                        const mrText = Number(shadowRes.magicResist) < 0 ? `（有效魔抗 ${Math.floor(shadowRes.magicResist)}）` : '';
+                        const shieldText = shieldResult.absorbed > 0 ? `，护盾吸收 ${shieldResult.absorbed}` : '';
+                        addLog(`【${boss.name}】施放【黑暗风暴】（分散站位）命中 位置${tIdx + 1} ${target.char.name}，造成 ${shieldResult.finalDamage} 点暗影伤害（魔抗减伤${resPct}%${mrText}${shieldText}）`);
+                    }
+                } else {
+                    addLog(`【${boss.name}】施放【黑暗风暴】，但没有存活目标`);
+                }
+            } else {
+                addLog(`【${boss.name}】施放【黑暗风暴】（集中站位），所有角色受到伤害！`);
+
+                combat.playerStates.forEach((ps, pIdx) => {
+                    if (ps.currentHp <= 0) return;
+
+                    const shadowRes = calcShadowDamage(ps, raw);
+                    const shieldResult = applyShieldAbsorb(ps, shadowRes.damage, logs, currentRound);
+                    ps.currentHp -= shieldResult.finalDamage;
+
+                    const resPct = Math.round(shadowRes.resistReduction * 100);
+                    const mrText = Number(shadowRes.magicResist) < 0 ? `（有效魔抗 ${Math.floor(shadowRes.magicResist)}）` : '';
+                    const shieldText = shieldResult.absorbed > 0 ? `，护盾吸收 ${shieldResult.absorbed}` : '';
+                    addLog(`→ 位置${pIdx + 1} ${ps.char.name} 受到 ${shieldResult.finalDamage} 点暗影伤害（魔抗减伤${resPct}%${mrText}${shieldText}）`);
+                });
+            }
+        }
+    }
+
+// ==================== 小弟行动 ====================
     for (let i = 0; i < (combat.minions || []).length; i++) {
         const m = combat.minions[i];
         if ((m.hp ?? 0) <= 0) continue;
@@ -7920,7 +8158,49 @@ function stepBossCombat(state) {
                 addLog(`【${boss.minion.name}${i + 1}】炮击 位置${pIdx + 1} ${ps.char.name}，造成 ${shieldResult.finalDamage} 点伤害（护甲减伤${drPct}%${shieldText}）`);
             });
         }
-        // 霍格的小弟：普通攻击
+// 加丁的亡灵学徒：每回合随机释放暗影箭
+        else if (combat.bossId === 'darkmaster_gandling' && m.isApprentice) {
+            const alivePlayers = combat.playerStates.filter(p => p.currentHp > 0);
+            if (alivePlayers.length <= 0) break;
+
+            // 随机选择一个目标
+            const randomTarget = alivePlayers[Math.floor(Math.random() * alivePlayers.length)];
+            const tIdx = combat.playerStates.findIndex(p => p.char.id === randomTarget.char.id);
+            if (tIdx < 0) continue;
+
+            const target = combat.playerStates[tIdx];
+
+            // 计算有效魔抗（考虑【暗影诅咒】）
+            const baseMR = target.char?.stats?.magicResist || 0;
+            const curseDelta = target.debuffs?.shadowCurse?.magicResistDelta || 0;
+            const effectiveMR = baseMR + curseDelta;
+
+            const raw = Math.floor((boss.attack || 0) * (boss.minionShadowBoltMultiplier || 2));
+            const resistReduction = getMagicResistDamageReduction(effectiveMR);
+            let damage = Math.floor(raw * (1 - resistReduction));
+
+            // 应用受伤减免
+            const takenMult = target?.char?.stats?.damageTakenMult ?? 1;
+            let buffTakenMult = 1;
+            if (target?.buffs) {
+                target.buffs.forEach(b => {
+                    if (b.damageTakenMult) buffTakenMult *= b.damageTakenMult;
+                });
+            }
+            const versTakenMult = getVersatilityDamageTakenMult(target?.char?.stats?.versatility);
+            damage = Math.max(1, Math.floor(damage * takenMult * buffTakenMult * versTakenMult));
+
+            // 护盾吸收
+            const shieldResult = applyShieldAbsorb(target, damage, logs, currentRound);
+            target.currentHp -= shieldResult.finalDamage;
+
+            const resPct = Math.round(resistReduction * 100);
+            const mrText = effectiveMR < 0 ? `（有效魔抗 ${Math.floor(effectiveMR)}）` : '';
+            const shieldText = shieldResult.absorbed > 0 ? `，护盾吸收 ${shieldResult.absorbed}` : '';
+            const minionName = boss.minion?.name || '亡灵学徒';
+            addLog(`【${minionName}${i + 1}】施放【暗影箭】命中 位置${tIdx + 1} ${target.char.name}，造成 ${shieldResult.finalDamage} 点暗影伤害（魔抗减伤${resPct}%${mrText}${shieldText}）`);
+        }
+// 霍格的小弟：普通攻击
         else {
             const tIdx = pickAlivePlayerIndex();
             if (tIdx < 0) break;
@@ -11021,6 +11301,7 @@ function gameReducer(state, action) {
                 prestor_lady: 0.15,//普瑞斯托女士+15%
                 thalnos: 0.2, //萨尔诺斯+20%
                 dagran_thaurissan: 0.25, // 达格兰·索瑞森大帝 +25%
+                darkmaster_gandling: 0.30, // 黑暗院长加丁 +30%
             };
             const defeatedBosses = state.defeatedBosses || [];
             const totalBossBonus = defeatedBosses.reduce((sum, bossId) => sum + (bossBonus[bossId] || 0), 0);
@@ -16798,6 +17079,12 @@ const BossPrepareModal = ({ state, dispatch }) => {
         flame_strike: '烈焰打击',
         lava_burst: '熔岩爆裂',
         battle_shout: '战斗怒吼',
+
+        // ✅ 黑暗院长加丁
+        shadow_bolt: '暗影箭',
+        summon_apprentices: '召唤亡灵学徒',
+        shadow_curse: '暗影诅咒',
+        dark_storm: '黑暗风暴',
     };
 
     const formatBossCycle = (boss) =>
@@ -17281,6 +17568,78 @@ const BossPrepareModal = ({ state, dispatch }) => {
                                             </div>
                                             <div style={{ fontSize: 11, color: '#aaa', lineHeight: 1.5 }}>
                                                 本场战斗 Boss 攻击提高 <span style={{ color: '#ffd700' }}>{Math.round((boss.battleShoutAttackPct || 0.1) * 100)}%</span>（可叠加），持续到战斗结束
+                                            </div>
+                                        </div>
+                                    </>
+                                )}
+
+
+                                {bossId === 'darkmaster_gandling' && (
+                                    <>
+                                        <div style={{
+                                            padding: 10,
+                                            background: 'rgba(156,39,176,0.12)',
+                                            borderRadius: 6,
+                                            borderLeft: '3px solid #9C27B0'
+                                        }}>
+                                            <div style={{ fontSize: 12, color: '#ce93d8', fontWeight: 600, marginBottom: 4 }}>
+                                                🏹 暗影箭
+                                            </div>
+                                            <div style={{ fontSize: 11, color: '#aaa', lineHeight: 1.5 }}>
+                                                对当前坦克造成 <span style={{ color: '#ffd700' }}>{boss.shadowBoltMultiplier}倍</span> Boss攻击 的暗影伤害（计算魔抗）
+                                            </div>
+                                        </div>
+
+                                        <div style={{
+                                            padding: 10,
+                                            background: 'rgba(33,150,243,0.10)',
+                                            borderRadius: 6,
+                                            borderLeft: '3px solid #2196F3'
+                                        }}>
+                                            <div style={{ fontSize: 12, color: '#64b5f6', fontWeight: 600, marginBottom: 4 }}>
+                                                👥 召唤亡灵学徒
+                                            </div>
+                                            <div style={{ fontSize: 11, color: '#aaa', lineHeight: 1.5 }}>
+                                                召唤 <span style={{ color: '#ffd700' }}>{boss.summonCount}</span> 个{boss.minion?.name}
+                                                <br/>
+                                                <span style={{ color: '#888' }}>
+                    (HP:{boss.minion?.maxHp} / 攻击&防御: 等于Boss)
+                </span>
+                                                <br/>
+                                                学徒每回合对随机目标释放【暗影箭】：造成 <span style={{ color: '#ffd700' }}>{boss.minionShadowBoltMultiplier}倍</span> Boss攻击 的暗影伤害
+                                            </div>
+                                        </div>
+
+                                        <div style={{
+                                            padding: 10,
+                                            background: 'rgba(244,67,54,0.10)',
+                                            borderRadius: 6,
+                                            borderLeft: '3px solid #f44336'
+                                        }}>
+                                            <div style={{ fontSize: 12, color: '#ff6b6b', fontWeight: 600, marginBottom: 4 }}>
+                                                🕯️ 暗影诅咒
+                                            </div>
+                                            <div style={{ fontSize: 11, color: '#aaa', lineHeight: 1.5 }}>
+                                                对随机目标施加<span style={{ color: '#ffd700' }}>诅咒</span>：魔法抗性降低 <span style={{ color: '#ffd700' }}>{boss.shadowCurseMagicResistDown}</span>
+                                                ，持续 {boss.shadowCurseDuration} 回合
+                                                <br/>
+                                                <span style={{ color: '#ff9800' }}>魔抗可为负，按公式计算增伤</span>
+                                            </div>
+                                        </div>
+
+                                        <div style={{
+                                            padding: 10,
+                                            background: 'rgba(0,0,0,0.22)',
+                                            borderRadius: 6,
+                                            borderLeft: '3px solid #673ab7'
+                                        }}>
+                                            <div style={{ fontSize: 12, color: '#b388ff', fontWeight: 600, marginBottom: 4 }}>
+                                                🌪️ 黑暗风暴
+                                            </div>
+                                            <div style={{ fontSize: 11, color: '#aaa', lineHeight: 1.5 }}>
+                                                对目标造成 <span style={{ color: '#ffd700' }}>{boss.darkStormMultiplier}倍</span> Boss攻击 的暗影伤害（计算魔抗）
+                                                <br/>
+                                                <span style={{ color: '#ff9800' }}>集中站位：对所有目标生效</span>
                                             </div>
                                         </div>
                                     </>

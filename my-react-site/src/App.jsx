@@ -187,6 +187,18 @@ const FUNCTIONAL_BUILDINGS = {
         effect: { type: 'autoMerge', value: 1 }
     },
 
+    glow_lighthouse: {
+        id: 'glow_lighthouse',
+        name: '辉光灯塔',
+        icon: '🗼',
+        description: '每座使角色脱离战斗所需时间降低1秒（最多降低2秒）',
+        cost: { gold: 1000000, ironOre: 200000, wood: 500000, alchemyOil: 100000 },
+        maxCount: 2,
+        effect: { type: 'outOfCombatDelay', value: -1 }
+    },
+
+
+
     // ✅ 新增：寻龙会（每级+5%装备/物品掉落概率，满级+100%）
     dragon_seekers_guild: {
         id: 'dragon_seekers_guild',
@@ -10505,6 +10517,7 @@ function gameReducer(state, action) {
             const fountainCount = newState.functionalBuildings?.plaza_fountain || 0;
             const trainingCount = newState.functionalBuildings?.training_dummy || 0;
             const warehouseCount = newState.functionalBuildings?.warehouse || 0;
+            const glowLighthouseCount = newState.functionalBuildings?.glow_lighthouse || 0;
 
             // 仓库增加背包大小
             const bonusInventorySize = warehouseCount * 1;
@@ -10513,7 +10526,8 @@ function gameReducer(state, action) {
             newState.resources = newResources;
 
             // ===== 脱战回血（喷泉加成） =====
-            const REGEN_DELAY_MS = 5000;
+            const BASE_REGEN_DELAY_MS = 5000;
+            const REGEN_DELAY_MS = Math.max(0, BASE_REGEN_DELAY_MS - glowLighthouseCount * 1000);
             const REGEN_PER_SECOND = 10;
             const now = Date.now();
 
@@ -14376,6 +14390,12 @@ const CharacterPage = ({ state, dispatch }) => {
                         const zone = assignment ? state.zones[assignment] : null;
                         const equippedCount = Object.keys(char.equipment || {}).length;
 
+                        // 脱战时间（可被功能建筑：辉光灯塔 缩短）
+                        const glowLighthouseCount = state.functionalBuildings?.glow_lighthouse || 0;
+                        const regenDelayMs = Math.max(0, 5000 - glowLighthouseCount * 1000);
+                        const timeSinceCombat = Date.now() - (char.lastCombatTime || 0);
+                        const regenSecondsLeft = Math.max(0, Math.ceil((regenDelayMs - timeSinceCombat) / 1000));
+
                         return (
                             <div
                                 key={char.id}
@@ -14446,8 +14466,8 @@ const CharacterPage = ({ state, dispatch }) => {
                                 <div style={{ fontSize: 11, color: '#888', marginTop: 6 }}>
                                     {char.combatState
                                         ? '⚔️ 战斗中'
-                                        : (Date.now() - (char.lastCombatTime || 0) < 5000
-                                                ? `🕒 脱战回血 ${(Math.ceil((5000 - (Date.now() - (char.lastCombatTime || 0))) / 1000))} 秒后开始`
+                                        : (timeSinceCombat < regenDelayMs
+                                                ? `🕒 脱战回血 ${regenSecondsLeft} 秒后开始`
                                                 : `💚 脱战回血中：每秒 +${10 + (state.functionalBuildings?.plaza_fountain || 0) * 2}`
                                         )
                                     }

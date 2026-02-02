@@ -12227,10 +12227,11 @@ function gameReducer(state, action) {
                 hogger: 0.05,      // 霍格+5%
                 vancleef: 0.10,   // 范克里夫+10%（预留）
                 prestor_lady: 0.15,//普瑞斯托女士+15%
-                thalnos: 0.2, //萨尔诺斯+20%
-                dagran_thaurissan: 0.2, // 达格兰·索瑞森大帝 +20%
-                darkmaster_gandling: 0.1, // 黑暗院长加丁 +10%
-                baron_rivendare: 0.1, // 瑞文戴尔男爵 +10%
+                thalnos: 0.15, //萨尔诺斯+15%
+                dagran_thaurissan: 0.15, // 达格兰·索瑞森大帝 +15%
+                darkmaster_gandling: 0.2, // 黑暗院长加丁 +20%
+                baron_rivendare: 0.2, // 瑞文戴尔男爵 +20%
+                rend_blackhand: 0.2,//雷德黑手 +20%
             };
             const defeatedBosses = state.defeatedBosses || [];
             const totalBossBonus = defeatedBosses.reduce((sum, bossId) => sum + (bossBonus[bossId] || 0), 0);
@@ -20841,7 +20842,12 @@ const RebirthBonusModal = ({ state, onClose }) => {
     const BOSS_BONUS_CONFIG = {
         hogger: { name: '霍格', bonus: 0.05 },
         vancleef: { name: '范克里夫', bonus: 0.10 },
-        prestor_lady:{ name: '普瑞斯托女士', bonus: 0.25 },
+        prestor_lady:{ name: '普瑞斯托女士', bonus: 0.15 },
+        thalnos: { name: '裂魂者萨尔诺斯', bonus: 0.15 },
+        dagran_thaurissan: { name: '达格兰·索瑞森大帝', bonus: 0.15 },
+        darkmaster_gandling:{ name: '黑暗院长加丁', bonus: 0.20 },
+        baron_rivendare: { name: '瑞文戴尔男爵', bonus: 0.20 },
+        rend_blackhand:{ name: '雷德黑手', bonus: 0.20 },
     };
 
     // 去重后的已获得羁绊

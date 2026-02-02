@@ -1937,7 +1937,9 @@ function isBlackrockDepthsEquipment(eq) {
 // 说明：当前通灵学院在本游戏中的掉落装备模板为 EQ_087 ~ EQ_094。
 // 如未来扩展通灵学院掉落装备，只需要把新模板ID加入该集合即可。
 const SCHOLOMANCE_EQUIP_IDS = new Set([
-    'EQ_087', 'EQ_088', 'EQ_089', 'EQ_090', 'EQ_091', 'EQ_092', 'EQ_093', 'EQ_094'
+    'EQ_087', 'EQ_088', 'EQ_089', 'EQ_090', 'EQ_091', 'EQ_092', 'EQ_093', 'EQ_094',
+    // ✅ 黑暗院长加丁新增掉落（T0 护肩）
+    'EQ_113', 'EQ_114', 'EQ_115', 'EQ_116'
 ]);
 
 function isScholomanceEquipment(eq) {
@@ -4632,6 +4634,109 @@ const FIXED_EQUIPMENTS = {
         }
     },
 
+    // ==================== 黑暗院长加丁（60级世界首领）新增：T0 套装护肩 ====================
+    // 设计说明：整体数值略高于 55 级副本掉落的 T0 套装散件（腰带/手套/头盔/护腿），但不超过 60 级胸甲强度太多。
+    EQ_113: {
+        id: 'EQ_113',
+        name: '勇气护肩',
+        icon: "icons/wow/vanilla/armor/INV_Shoulder_22.png",
+        type: 'equipment',
+        slot: 'shoulder',
+        rarity: 'blue',
+        setId: 'valor_set',
+        setName: '勇气',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            hp: 1400,
+            armor: 180,
+            mastery: 28,
+            blockRate: 5,
+            blockValue: 300
+        },
+        growth: {
+            hp: 2,
+            armor: 2,
+            mastery: 2,
+            blockRate: 2,
+            blockValue: 2
+        }
+    },
+    EQ_114: {
+        id: 'EQ_114',
+        name: '迅影护肩',
+        icon: "icons/wow/vanilla/armor/INV_Shoulder_23.png",
+        type: 'equipment',
+        slot: 'shoulder',
+        rarity: 'blue',
+        setId: 'swiftshadow_set',
+        setName: '迅影',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            attack: 520,
+            hp: 750,
+            armor: 100,
+            critRate: 18,
+            haste: 22
+        },
+        growth: {
+            attack: 2,
+            hp: 2,
+            armor: 2,
+            critRate: 2,
+            haste: 2
+        }
+    },
+    EQ_115: {
+        id: 'EQ_115',
+        name: '虔诚护肩',
+        icon: "icons/wow/vanilla/armor/INV_Shoulder_02.png",
+        type: 'equipment',
+        slot: 'shoulder',
+        rarity: 'blue',
+        setId: 'devout_set',
+        setName: '虔诚',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            spellPower: 750,
+            hp: 1000,
+            mastery: 28,
+            versatility: 18
+        },
+        growth: {
+            spellPower: 2,
+            hp: 2,
+            mastery: 2,
+            versatility: 2
+        }
+    },
+    EQ_116: {
+        id: 'EQ_116',
+        name: '博学者护肩',
+        icon: "icons/wow/vanilla/armor/INV_Shoulder_19.png",
+        type: 'equipment',
+        slot: 'shoulder',
+        rarity: 'blue',
+        setId: 'scholar_set',
+        setName: '博学者',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            spellPower: 850,
+            hp: 950,
+            critRate: 17,
+            mastery: 28
+        },
+        growth: {
+            spellPower: 2,
+            hp: 2,
+            critRate: 2,
+            mastery: 2
+        }
+    },
+
     EQ_HOGGER_001: {
         id: 'EQ_HOGGER_001',
         name: '霍格的毛皮披风',
@@ -5786,6 +5891,11 @@ const BOSS_DATA = {
             gold: 450000,
             exp: 240000,
             items: [
+                // ✅ 新增：T0 套装护肩（每件 20%）
+                { id: 'EQ_113', chance: 0.2 },  // 勇气护肩
+                { id: 'EQ_114', chance: 0.2 },  // 迅影护肩
+                { id: 'EQ_115', chance: 0.2 },  // 虔诚护肩
+                { id: 'EQ_116', chance: 0.2 },  // 博学者护肩
                 { id: 'IT_GANDLING_BADGE', chance: 0.8 }
             ]
         }

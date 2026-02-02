@@ -1981,6 +1981,23 @@ function isStratholmeEquipment(eq) {
 }
 
 
+// ==================== 黑石塔上装备池（用于雷德黑手徽章判定） ====================
+// 说明：当前黑石塔上在本游戏中的掉落装备模板为 EQ_103 ~ EQ_112。
+// 如未来扩展黑石塔上掉落装备，只需要把新模板ID加入该集合即可。
+const UPPER_BLACKROCK_SPIRE_EQUIP_IDS = new Set([
+    'EQ_103', 'EQ_104', 'EQ_105', 'EQ_106', 'EQ_107', 'EQ_108',
+    'EQ_109', 'EQ_110', 'EQ_111', 'EQ_112'
+]);
+
+function isUpperBlackrockSpireEquipment(eq) {
+    if (!eq || eq.type !== 'equipment') return false;
+    const tpl = FIXED_EQUIPMENTS?.[eq.id];
+    // 未来如果你给黑石塔上装备加了 setId=upper_blackrock_spire，也会自动识别
+    if (tpl?.setId === 'upper_blackrock_spire') return true;
+    return UPPER_BLACKROCK_SPIRE_EQUIP_IDS.has(eq.id);
+}
+
+
 
 
 // ==================== 徽章升级规则（复用“血色十字军徽章”的通用模式） ====================
@@ -2050,6 +2067,16 @@ const BADGE_UPGRADE_RULES = {
         cap: 100,
         isEligible: isStratholmeEquipment,
         theme: { border: '#263238', title: '#b388ff', shadow: 'rgba(38,50,56,0.25)' }
+    },
+
+    IT_REND_BADGE: {
+        badgeId: 'IT_REND_BADGE',
+        title: '雷德黑手的徽章',
+        zoneLabel: '黑石塔上',
+        inc: 2,
+        cap: 100,
+        isEligible: isUpperBlackrockSpireEquipment,
+        theme: { border: '#4e342e', title: '#ffab91', shadow: 'rgba(78,52,46,0.25)' }
     },
 };
 
@@ -5319,6 +5346,18 @@ const ITEMS = {
         sellPrice: 0,  // 不可出售
         icon: 'icons/wow/vanilla/items/INV_Misc_Rune_07.png',
         description: '使用后选择一件【斯坦索姆】装备，使其等级提升 +2（最高100级）'
+    },
+
+    // 雷德黑手的徽章（雷德黑手掉落）
+    IT_REND_BADGE: {
+        id: 'IT_REND_BADGE',
+        name: '雷德黑手的徽章',
+        type: 'consumable',
+        rarity: 'purple',
+        canUse: true,
+        sellPrice: 0,  // 不可出售
+        icon: 'icons/wow/vanilla/items/INV_Misc_Rune_02.png', // 需要添加对应图标
+        description: '使用后选择一件【黑石塔上】装备，使其等级提升 +2（最高100级）'
     }
 
 };
@@ -5775,6 +5814,18 @@ const WORLD_BOSSES = {
         unlockLevel: 60
     },
 
+    // ✅ 新增：60级世界首领 - 雷德·黑手（黑石塔上）
+    rend_blackhand: {
+        id: 'rend_blackhand',
+        name: '雷德·黑手',
+        icon: 'icons/wow/vanilla/boss/rend_blackhand.png', // 需要添加对应图标
+        hp: 3000000,
+        attack: 4000,
+        defense: 1400,
+        rewards: { gold: 580000, exp: 350000 },
+        unlockLevel: 60
+    },
+
 
 
 };
@@ -6114,6 +6165,36 @@ const BOSS_DATA = {
                 { id: 'EQ_119', chance: 0.2 },  // 虔诚便鞋
                 { id: 'EQ_120', chance: 0.2 },  // 博学者便鞋
                 { id: 'IT_RIVENDARE_BADGE', chance: 0.8 }
+            ]
+        }
+    },
+
+    // ✅ 新增：60级世界首领 - 雷德·黑手（黑石塔上）
+    rend_blackhand: {
+        id: 'rend_blackhand',
+        name: '雷德·黑手',
+        maxHp: 3000000,
+        attack: 4000,
+        defense: 1400,
+
+        // 技能循环：烈焰吐息 → 顺劈斩 → 烈焰吐息 → 跳跃斩击
+        cycle: ['flame_breath', 'cleave', 'flame_breath', 'leap_slash'],
+
+        // 烈焰吐息：对坦克 4×攻击 物理伤害（护甲/格挡）
+        // 并对全队追加一次“坦克实际承伤”的火焰伤害（计算各自魔抗）
+        flameBreathMultiplier: 4,
+
+        // 顺劈斩：分散=打坦克；集中=打全体（2×攻击，物理，可格挡/护甲）
+        cleaveMultiplier: 2,
+
+        // 跳跃斩击：集中=打坦克；分散=随机非坦克（4×攻击，物理，可格挡/护甲）
+        leapSlashMultiplier: 4,
+
+        rewards: {
+            gold: 580000,
+            exp: 350000,
+            items: [
+                { id: 'IT_REND_BADGE', chance: 0.8 }
             ]
         }
     }
@@ -8592,6 +8673,142 @@ function stepBossCombat(state) {
                 }
             } else {
                 addLog(`【${boss.name}】施放【暗影震击】，但没有存活目标`);
+            }
+        }
+    }
+
+    // ==================== 雷德·黑手技能处理 ====================
+    else if (combat.bossId === 'rend_blackhand') {
+        // 火焰伤害：计算魔抗（并套用伤害减免/全能）
+        const calcFireDamage = (playerState, rawDamage) => {
+            const magicResist = playerState?.char?.stats?.magicResist || 0;
+            const resistReduction = getMagicResistDamageReduction(magicResist);
+            let damage = Math.floor((rawDamage || 0) * (1 - resistReduction));
+
+            // 应用受伤减免
+            const takenMult = playerState?.char?.stats?.damageTakenMult ?? 1;
+            let buffTakenMult = 1;
+            if (playerState?.buffs) {
+                playerState.buffs.forEach(b => {
+                    if (b.damageTakenMult) buffTakenMult *= b.damageTakenMult;
+                });
+            }
+            const versTakenMult = getVersatilityDamageTakenMult(playerState?.char?.stats?.versatility);
+            damage = Math.max(1, Math.floor(damage * takenMult * buffTakenMult * versTakenMult));
+
+            return { damage, resistReduction, magicResist };
+        };
+
+        // 技能1：烈焰吐息
+        // 对坦克造成 4×攻击 的物理伤害（护甲/格挡），并对全队追加一次“坦克实际承伤”的火焰伤害
+        if (bossAction === 'flame_breath') {
+            const tIdx = pickAlivePlayerIndex();
+            if (tIdx >= 0) {
+                const target = combat.playerStates[tIdx];
+                const raw = Math.floor((boss.attack || 0) * (boss.flameBreathMultiplier || 4));
+                const { damage, dr, blockedAmount } = calcMitigatedAndBlockedDamage(target, raw, true);
+                const shieldResult = applyShieldAbsorb(target, damage, logs, currentRound);
+                target.currentHp -= shieldResult.finalDamage;
+
+                const drPct = Math.round(dr * 100);
+                const blockText = blockedAmount > 0 ? `，格挡 ${blockedAmount}` : '';
+                const shieldText = shieldResult.absorbed > 0 ? `，护盾吸收 ${shieldResult.absorbed}` : '';
+                addLog(`【${boss.name}】施放【烈焰吐息】对 位置${tIdx + 1} ${target.char.name} 造成 ${shieldResult.finalDamage} 点物理伤害（护甲减伤${drPct}%${blockText}${shieldText}）`);
+
+                const splashBase = shieldResult.finalDamage;
+                if (splashBase <= 0) {
+                    addLog(`→ 烈焰吐息的物理伤害被完全吸收，未触发额外火焰伤害`);
+                } else {
+                    addLog(`→ 烈焰喷涌：全队额外受到一次火焰伤害（基准 ${splashBase}，按各自魔抗结算）`);
+                    combat.playerStates.forEach((ps, pIdx) => {
+                        if (ps.currentHp <= 0) return;
+
+                        const fireRes = calcFireDamage(ps, splashBase);
+                        const shieldRes2 = applyShieldAbsorb(ps, fireRes.damage, logs, currentRound);
+                        ps.currentHp -= shieldRes2.finalDamage;
+
+                        const resPct = Math.round(fireRes.resistReduction * 100);
+                        const mrText = Number(fireRes.magicResist) < 0 ? `（魔抗 ${Math.floor(fireRes.magicResist)}）` : '';
+                        const shieldText2 = shieldRes2.absorbed > 0 ? `，护盾吸收 ${shieldRes2.absorbed}` : '';
+                        addLog(`→ 位置${pIdx + 1} ${ps.char.name} 受到 ${shieldRes2.finalDamage} 点火焰伤害（魔抗减伤${resPct}%${mrText}${shieldText2}）`);
+                    });
+                }
+            } else {
+                addLog(`【${boss.name}】施放【烈焰吐息】，但没有存活目标`);
+            }
+        }
+
+            // 技能2：顺劈斩
+        // 分散：打坦克；集中：打全体（2×攻击，物理）
+        else if (bossAction === 'cleave') {
+            const raw = Math.floor((boss.attack || 0) * (boss.cleaveMultiplier || 2));
+
+            if (combat.strategy.stance === 'dispersed') {
+                const tIdx = pickAlivePlayerIndex();
+                if (tIdx >= 0) {
+                    const target = combat.playerStates[tIdx];
+                    const { damage, dr, blockedAmount } = calcMitigatedAndBlockedDamage(target, raw, true);
+                    const shieldResult = applyShieldAbsorb(target, damage, logs, currentRound);
+                    target.currentHp -= shieldResult.finalDamage;
+
+                    const drPct = Math.round(dr * 100);
+                    const blockText = blockedAmount > 0 ? `，格挡 ${blockedAmount}` : '';
+                    const shieldText = shieldResult.absorbed > 0 ? `，护盾吸收 ${shieldResult.absorbed}` : '';
+                    addLog(`【${boss.name}】施放【顺劈斩】（分散站位）对 位置${tIdx + 1} ${target.char.name} 造成 ${shieldResult.finalDamage} 点物理伤害（护甲减伤${drPct}%${blockText}${shieldText}）`);
+                } else {
+                    addLog(`【${boss.name}】施放【顺劈斩】，但没有存活目标`);
+                }
+            } else {
+                addLog(`【${boss.name}】施放【顺劈斩】（集中站位），所有角色受到伤害！`);
+                combat.playerStates.forEach((ps, pIdx) => {
+                    if (ps.currentHp <= 0) return;
+                    const { damage, dr, blockedAmount } = calcMitigatedAndBlockedDamage(ps, raw, true);
+                    const shieldResult = applyShieldAbsorb(ps, damage, logs, currentRound);
+                    ps.currentHp -= shieldResult.finalDamage;
+
+                    const drPct = Math.round(dr * 100);
+                    const blockText = blockedAmount > 0 ? `，格挡 ${blockedAmount}` : '';
+                    const shieldText = shieldResult.absorbed > 0 ? `，护盾吸收 ${shieldResult.absorbed}` : '';
+                    addLog(`→ 位置${pIdx + 1} ${ps.char.name} 受到 ${shieldResult.finalDamage} 点物理伤害（护甲减伤${drPct}%${blockText}${shieldText}）`);
+                });
+            }
+        }
+
+            // 技能3：跳跃斩击
+        // 集中：打坦克；分散：随机非坦克（4×攻击，物理）
+        else if (bossAction === 'leap_slash') {
+            const tankIdx = pickAlivePlayerIndex();
+            if (tankIdx < 0) {
+                addLog(`【${boss.name}】施放【跳跃斩击】，但没有存活目标`);
+            } else {
+                const raw = Math.floor((boss.attack || 0) * (boss.leapSlashMultiplier || 4));
+
+                let targetIdx = tankIdx;
+                let modeText = '（集中站位）';
+
+                if (combat.strategy.stance === 'dispersed') {
+                    const candidates = combat.playerStates
+                        .map((ps, idx) => ({ ps, idx }))
+                        .filter(o => (o.ps?.currentHp ?? 0) > 0 && o.idx !== tankIdx)
+                        .map(o => o.idx);
+
+                    if (candidates.length > 0) {
+                        targetIdx = candidates[Math.floor(Math.random() * candidates.length)];
+                        modeText = '（分散站位：随机目标）';
+                    } else {
+                        modeText = '（分散站位：仅剩坦克）';
+                    }
+                }
+
+                const target = combat.playerStates[targetIdx];
+                const { damage, dr, blockedAmount } = calcMitigatedAndBlockedDamage(target, raw, true);
+                const shieldResult = applyShieldAbsorb(target, damage, logs, currentRound);
+                target.currentHp -= shieldResult.finalDamage;
+
+                const drPct = Math.round(dr * 100);
+                const blockText = blockedAmount > 0 ? `，格挡 ${blockedAmount}` : '';
+                const shieldText = shieldResult.absorbed > 0 ? `，护盾吸收 ${shieldResult.absorbed}` : '';
+                addLog(`【${boss.name}】施放【跳跃斩击】${modeText}命中 位置${targetIdx + 1} ${target.char.name}，造成 ${shieldResult.finalDamage} 点物理伤害（护甲减伤${drPct}%${blockText}${shieldText}）`);
             }
         }
     }
@@ -17596,6 +17813,10 @@ const BossPrepareModal = ({ state, dispatch }) => {
         cleave: '顺劈斩',
         summon_skeleton_army: '召唤骷髅大军',
         shadow_shock: '暗影震击',
+
+        // ✅ 雷德·黑手
+        flame_breath: '烈焰吐息',
+        leap_slash: '跳跃斩击',
     };
 
     const formatBossCycle = (boss) =>
@@ -18219,6 +18440,58 @@ const BossPrepareModal = ({ state, dispatch }) => {
                                                 召唤 <span style={{ color: '#ffd700' }}>{boss.summonCount}</span> 个{boss.minion?.name}
                                                 <br/>
                                                 骷髅每回合对坦克挥砍：造成 <span style={{ color: '#ffd700' }}>{boss.skeletonSlashMultiplier}倍</span> Boss攻击 的物理伤害
+                                            </div>
+                                        </div>
+                                    </>
+                                )}
+
+                                {bossId === 'rend_blackhand' && (
+                                    <>
+                                        <div style={{
+                                            padding: 10,
+                                            background: 'rgba(255,87,34,0.12)',
+                                            borderRadius: 6,
+                                            borderLeft: '3px solid #ff5722'
+                                        }}>
+                                            <div style={{ fontSize: 12, color: '#ffab91', fontWeight: 600, marginBottom: 4 }}>
+                                                🔥 烈焰吐息
+                                            </div>
+                                            <div style={{ fontSize: 11, color: '#aaa', lineHeight: 1.5 }}>
+                                                对当前坦克造成 <span style={{ color: '#ffd700' }}>{boss.flameBreathMultiplier}倍</span> Boss攻击 的物理伤害（护甲/格挡可减免）
+                                                <br/>
+                                                并对<span style={{ color: '#ff9800' }}>所有角色</span>造成一次等同于“坦克实际承伤”的<span style={{ color: '#ff9800' }}>火焰伤害</span>（各自计算魔抗）
+                                            </div>
+                                        </div>
+
+                                        <div style={{
+                                            padding: 10,
+                                            background: 'rgba(244,67,54,0.10)',
+                                            borderRadius: 6,
+                                            borderLeft: '3px solid #f44336'
+                                        }}>
+                                            <div style={{ fontSize: 12, color: '#ff6b6b', fontWeight: 600, marginBottom: 4 }}>
+                                                🪓 顺劈斩
+                                            </div>
+                                            <div style={{ fontSize: 11, color: '#aaa', lineHeight: 1.5 }}>
+                                                <span style={{ color: '#ff9800' }}>分散站位：</span>对坦克造成 <span style={{ color: '#ffd700' }}>{boss.cleaveMultiplier}倍</span> Boss攻击 的物理伤害（护甲/格挡可减免）
+                                                <br/>
+                                                <span style={{ color: '#ff9800' }}>集中站位：</span>对所有角色造成 <span style={{ color: '#ffd700' }}>{boss.cleaveMultiplier}倍</span> Boss攻击 的物理伤害
+                                            </div>
+                                        </div>
+
+                                        <div style={{
+                                            padding: 10,
+                                            background: 'rgba(33,150,243,0.10)',
+                                            borderRadius: 6,
+                                            borderLeft: '3px solid #2196F3'
+                                        }}>
+                                            <div style={{ fontSize: 12, color: '#64b5f6', fontWeight: 600, marginBottom: 4 }}>
+                                                🦘 跳跃斩击
+                                            </div>
+                                            <div style={{ fontSize: 11, color: '#aaa', lineHeight: 1.5 }}>
+                                                <span style={{ color: '#ff9800' }}>集中站位：</span>对坦克造成 <span style={{ color: '#ffd700' }}>{boss.leapSlashMultiplier}倍</span> Boss攻击 的物理伤害
+                                                <br/>
+                                                <span style={{ color: '#ff9800' }}>分散站位：</span>对<span style={{ color: '#ffd700' }}>除坦克外</span>的随机目标造成 <span style={{ color: '#ffd700' }}>{boss.leapSlashMultiplier}倍</span> Boss攻击 的物理伤害
                                             </div>
                                         </div>
                                     </>
@@ -19550,7 +19823,8 @@ const RebirthPlotModal = ({ state, dispatch }) => {
             thalnos: '萨尔诺斯',
             dagran_thaurissan: '索瑞森大帝',
             darkmaster_gandling: '黑暗院长加丁',
-            baron_rivendare: '瑞文戴尔男爵'
+            baron_rivendare: '瑞文戴尔男爵',
+            rend_blackhand: '雷德黑手'
         };
         return names[id] || id;
     });

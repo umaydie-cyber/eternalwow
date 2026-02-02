@@ -186,6 +186,17 @@ const FUNCTIONAL_BUILDINGS = {
         maxCount: 10,
         effect: { type: 'autoMerge', value: 1 }
     },
+
+    // ✅ 新增：寻龙会（每级+5%装备/物品掉落概率，满级+100%）
+    dragon_seekers_guild: {
+        id: 'dragon_seekers_guild',
+        name: '寻龙会',
+        icon: '🐉',
+        description: '每级提高装备/物品掉落概率5%（满级+100%：0.1%→0.2%）',
+        cost: { gold: 50000, ironIngot: 30000, magicEssence: 30000 },
+        maxCount: 20,
+        effect: { type: 'dropBonus', value: 0.05 }
+    },
 };
 
 // ==================== TALENTS ====================
@@ -5907,6 +5918,29 @@ function getAchievementDropBonus(state) {
     return bonus; // 例如 0.05 = +5%
 }
 
+// ✅ 功能建筑：寻龙会掉落加成（每级+5%，20级=+100%）
+function getDragonSeekersGuildDropBonus(state) {
+    const level = Math.max(0, Math.floor(Number(state?.functionalBuildings?.dragon_seekers_guild) || 0));
+    // 每级 +5% 掉落概率（线性），最多 +100%
+    return Math.min(1, level * 0.05);
+}
+
+// ✅ 总掉落加成：成就掉落增幅 + 寻龙会掉落增幅
+// 规则：将各来源的“掉落增幅”先线性相加，再作用到基础概率：effective = base * (1 + bonus)，最后封顶 100%
+function getTotalDropBonus(state) {
+    const ach = Number(getAchievementDropBonus(state)) || 0;
+    const guild = Number(getDragonSeekersGuildDropBonus(state)) || 0;
+    return Math.max(0, ach + guild);
+}
+
+// 基础概率 baseChance（0~1），应用掉落加成并封顶 1
+function getEffectiveDropChance(baseChance, state) {
+    const base = Math.max(0, Math.min(1, Number(baseChance) || 0));
+    if (base <= 0) return 0;
+    const bonus = getTotalDropBonus(state);
+    return Math.min(1, base * (1 + bonus));
+}
+
 // ✅ 成就：建筑产量加成（跨成就加法叠加）
 function getAchievementResourceBonus(state) {
     const unlocked = state?.achievements || {};
@@ -8024,8 +8058,9 @@ function stepBossCombat(state) {
 
                 if (newState.dropFilters?.[dropId] === false) return;
 
-                // ===== 新增：概率判定 =====
-                const dropChance = itemTpl?.chance ?? 1;  // 默认100%
+                // ===== 概率判定（叠加掉落增幅：成就 + 寻龙会） =====
+                const baseDropChance = itemTpl?.chance ?? 1;  // 默认100%
+                const dropChance = getEffectiveDropChance(baseDropChance, newState);
                 if (Math.random() > dropChance) return;   // 未命中则跳过
 
                 if (FIXED_EQUIPMENTS?.[dropId]) {
@@ -8273,10 +8308,9 @@ function calculateOfflineRewards(state, offlineSeconds) {
                 const dropTable = DROP_TABLES[zone.id];
                 if (dropTable?.equipment) {
                     const allowDrop = (id) => state.dropFilters?.[id] !== false; // 默认允许
-                    const achDropBonus = getAchievementDropBonus(state);
                     dropTable.equipment.filter(drop => allowDrop(drop.id)).forEach(drop => {
                         const base = (drop.chance ?? 0);
-                        const effective = Math.min(1, base * (1 + achDropBonus));
+                        const effective = getEffectiveDropChance(base, state);
                         if (Math.random() < effective) {
                             const inst = createEquipmentInstance(drop.id);
                             if (inst) rewards.items.push(inst);
@@ -9604,7 +9638,8 @@ function gameReducer(state, action) {
 
                         if (newState.dropFilters?.[dropId] === false) return;
 
-                        const dropChance = itemTpl?.chance ?? 1;
+                        const baseDropChance = itemTpl?.chance ?? 1;
+                        const dropChance = getEffectiveDropChance(baseDropChance, newState);
                         if (Math.random() > dropChance) return;
 
                         if (FIXED_EQUIPMENTS?.[dropId]) {
@@ -9929,13 +9964,12 @@ function gameReducer(state, action) {
                             const dropTable = DROP_TABLES[zone.id];
                             if (dropTable?.equipment && newState.inventory.length < newState.inventorySize) {
                                 const allowDrop = (id) => state.dropFilters?.[id] !== false;
-                                const achDropBonus = getAchievementDropBonus(newState);
 
                                 dropTable.equipment.filter(drop => allowDrop(drop.id)).forEach(drop => {
                                     if (newState.inventory.length >= newState.inventorySize) return;
 
                                     const baseChance = drop.chance ?? 0;
-                                    const effectiveChance = Math.min(1, baseChance * (1 + achDropBonus));
+                                    const effectiveChance = getEffectiveDropChance(baseChance, newState);
 
                                     if (Math.random() < effectiveChance) {
                                         const instance = createEquipmentInstance(drop.id);
@@ -9947,7 +9981,8 @@ function gameReducer(state, action) {
                                             droppedItems.push({
                                                 name: instance.name,
                                                 rarity: instance.rarity,
-                                                chance: baseChance * 100 // 转换为百分比
+                                                chance: effectiveChance * 100, // 转换为百分比（加成后）
+                                                baseChance: baseChance * 100   // 转换为百分比（基础）
                                             });
                                         }
                                     }
@@ -9963,7 +9998,8 @@ function gameReducer(state, action) {
                                     if (newState.inventory.length >= newState.inventorySize) return;
 
                                     const baseChance = drop.chance ?? 0;
-                                    if (Math.random() < baseChance) {
+                                    const effectiveChance = getEffectiveDropChance(baseChance, newState);
+                                    if (Math.random() < effectiveChance) {
                                         const tpl = ITEMS[drop.id];
                                         if (tpl) {
                                             newState.inventory.push({
@@ -9977,7 +10013,8 @@ function gameReducer(state, action) {
                                             droppedItems.push({
                                                 name: tpl.name,
                                                 rarity: tpl.rarity || 'white',
-                                                chance: baseChance * 100
+                                                chance: effectiveChance * 100, // 转换为百分比（加成后）
+                                                baseChance: baseChance * 100   // 转换为百分比（基础）
                                             });
                                         }
                                     }
@@ -9986,14 +10023,18 @@ function gameReducer(state, action) {
 
                             // ✅ 将掉落信息添加到战斗日志
                             if (droppedItems.length > 0) {
+                                const fmtPct = (pct) => (pct < 1 ? pct.toFixed(2) : pct.toFixed(1));
                                 droppedItems.forEach(item => {
+                                    const basePct = Number.isFinite(item.baseChance) ? item.baseChance : item.chance;
+                                    const effPct = item.chance;
+                                    const showArrow = Number.isFinite(item.baseChance) && Math.abs(basePct - effPct) > 1e-9;
                                     finalLogs.push({
                                         round: '结算',
                                         kind: 'drop',
                                         itemName: item.name,
                                         rarity: item.rarity,
                                         chance: item.chance,
-                                        text: `🎁 掉落【${item.name}】，概率：${item.chance < 1 ? item.chance.toFixed(2) : item.chance.toFixed(1)}%`
+                                        text: `🎁 掉落【${item.name}】，概率：${fmtPct(basePct)}%${showArrow ? ` → ${fmtPct(effPct)}%` : ''}`
                                     });
                                 });
                             }
@@ -12849,8 +12890,8 @@ const ItemDetailsModal = ({ item, onClose, onEquip, characters, state , dispatch
                             isMatA
                                 ? state.inventory.some(i => i?.type === 'equipment' && i.id === 'EQ_042' && getLevel(i) >= 100)
                                 : isMatB
-                                    ? state.inventory.some(i => i?.type === 'equipment' && i.id === 'EQ_041' && getLevel(i) >= 100)
-                                    : false;
+                                ? state.inventory.some(i => i?.type === 'equipment' && i.id === 'EQ_041' && getLevel(i) >= 100)
+                                : false;
 
                         if (!(hasOther && (isMatA || isMatB))) return null;
 
@@ -16412,13 +16453,13 @@ const QuestPage = ({ state, dispatch }) => {
                             }}>
                                 {requirementMet ? '✓' : '✗'}
                                 {currentStep.requirement.type === 'character_level' &&
-                                    `需要角色等级 ${currentStep.requirement.level}`}
+                                `需要角色等级 ${currentStep.requirement.level}`}
                                 {currentStep.requirement.type === 'zone_battles' &&
-                                    `需要在${ZONES[currentStep.requirement.zoneId]?.name}战斗${currentStep.requirement.count}次`}
+                                `需要在${ZONES[currentStep.requirement.zoneId]?.name}战斗${currentStep.requirement.count}次`}
                                 {currentStep.requirement.type === 'boss_defeated' &&
-                                    `需要击败${BOSS_DATA[currentStep.requirement.bossId]?.name}`}
+                                `需要击败${BOSS_DATA[currentStep.requirement.bossId]?.name}`}
                                 {currentStep.requirement.type === 'have_gold' &&
-                                    `需要${currentStep.requirement.amount}金币`}
+                                `需要${currentStep.requirement.amount}金币`}
                             </div>
                         </div>
                     )}

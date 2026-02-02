@@ -13431,7 +13431,6 @@ const SkillEditorModal = ({ character, onClose, onSave, state }) => {
                     </h2>
                     <div style={{ fontSize: 12, color: '#888', lineHeight: 1.6 }}>
                         <div>战斗时会循环使用这 8 个技能。</div>
-                        <div>下面的 <b style={{ color: '#ffd700' }}>1/2/3</b> 为三套技能配置，选择哪套，地图战斗 / BOSS 战斗就读取哪套。</div>
                     </div>
 
                     <div style={{

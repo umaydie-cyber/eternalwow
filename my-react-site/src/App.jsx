@@ -1950,6 +1950,22 @@ function isScholomanceEquipment(eq) {
     return SCHOLOMANCE_EQUIP_IDS.has(eq.id);
 }
 
+// ==================== 斯坦索姆装备池（用于瑞文戴尔徽章判定） ====================
+// 说明：当前斯坦索姆在本游戏中的掉落装备模板为 EQ_095 ~ EQ_102。
+// 如未来扩展斯坦索姆掉落装备，只需要把新模板ID加入该集合即可。
+const STRATHOLME_EQUIP_IDS = new Set([
+    'EQ_095', 'EQ_096', 'EQ_097', 'EQ_098',
+    'EQ_099', 'EQ_100', 'EQ_101', 'EQ_102'
+]);
+
+function isStratholmeEquipment(eq) {
+    if (!eq || eq.type !== 'equipment') return false;
+    const tpl = FIXED_EQUIPMENTS?.[eq.id];
+    // 未来如果你给斯坦索姆装备加了 setId=stratholme，也会自动识别
+    if (tpl?.setId === 'stratholme') return true;
+    return STRATHOLME_EQUIP_IDS.has(eq.id);
+}
+
 
 
 
@@ -2010,6 +2026,16 @@ const BADGE_UPGRADE_RULES = {
         cap: 100,
         isEligible: isScholomanceEquipment,
         theme: { border: '#4a148c', title: '#ce93d8', shadow: 'rgba(74,20,140,0.25)' }
+    },
+
+    IT_RIVENDARE_BADGE: {
+        badgeId: 'IT_RIVENDARE_BADGE',
+        title: '瑞文戴尔男爵的徽章',
+        zoneLabel: '斯坦索姆',
+        inc: 2,
+        cap: 100,
+        isEligible: isStratholmeEquipment,
+        theme: { border: '#263238', title: '#b388ff', shadow: 'rgba(38,50,56,0.25)' }
     },
 };
 
@@ -5164,6 +5190,18 @@ const ITEMS = {
         sellPrice: 0,  // 不可出售
         icon: 'icons/wow/vanilla/items/INV_Misc_Rune_08.png',
         description: '使用后选择一件【通灵学院】装备，使其等级提升 +2（最高100级）'
+    },
+
+    // 瑞文戴尔男爵的徽章（瑞文戴尔男爵掉落）
+    IT_RIVENDARE_BADGE: {
+        id: 'IT_RIVENDARE_BADGE',
+        name: '瑞文戴尔男爵的徽章',
+        type: 'consumable',
+        rarity: 'purple',
+        canUse: true,
+        sellPrice: 0,  // 不可出售
+        icon: 'icons/wow/vanilla/items/INV_Misc_Rune_07.png',
+        description: '使用后选择一件【斯坦索姆】装备，使其等级提升 +2（最高100级）'
     }
 
 };
@@ -5608,6 +5646,18 @@ const WORLD_BOSSES = {
         unlockLevel: 60
     },
 
+    // ✅ 新增：60级世界首领 - 瑞文戴尔男爵（斯坦索姆）
+    baron_rivendare: {
+        id: 'baron_rivendare',
+        name: '瑞文戴尔男爵',
+        icon: 'icons/wow/vanilla/boss/baron_rivendare.png',
+        hp: 2600000,
+        attack: 4000,
+        defense: 1350,
+        rewards: { gold: 550000, exp: 300000 },
+        unlockLevel: 60
+    },
+
 
 
 };
@@ -5897,6 +5947,51 @@ const BOSS_DATA = {
                 { id: 'EQ_115', chance: 0.2 },  // 虔诚护肩
                 { id: 'EQ_116', chance: 0.2 },  // 博学者护肩
                 { id: 'IT_GANDLING_BADGE', chance: 0.8 }
+            ]
+        }
+    },
+
+    // ✅ 新增：60级世界首领 - 瑞文戴尔男爵（斯坦索姆）
+    baron_rivendare: {
+        id: 'baron_rivendare',
+        name: '瑞文戴尔男爵',
+        maxHp: 2600000,
+        attack: 4000,
+        defense: 1350,
+
+        // 技能循环：顺劈斩 → 致死打击 → 召唤骷髅大军 → 暗影震击
+        cycle: ['cleave', 'mortal_strike', 'summon_skeleton_army', 'shadow_shock'],
+
+        // 顺劈斩：分散站位打坦克 / 集中站位打全体（5×攻击，物理，可格挡/护甲）
+        cleaveMultiplier: 5,
+
+        // 致死打击：4×攻击（物理）+ 减疗50% debuff（参考范克里夫）
+        mortalStrikeMultiplier: 4,
+        mortalStrikeDebuff: {
+            healingReduction: 0.5,
+            duration: 2
+        },
+
+        // 暗影震击：3×攻击暗影伤害 + DOT（每回合1.5×攻击，持续3回合）
+        shadowShockMultiplier: 3,
+        shadowShockDotMultiplier: 1.5,
+        shadowShockDotDuration: 3,
+
+        // 召唤骷髅大军：召唤5个骷髅，对坦克挥砍（1.2×攻击，物理）
+        summonCount: 5,
+        skeletonSlashMultiplier: 1.2,
+        minion: {
+            name: '骷髅战士',
+            maxHp: 180000,
+            attack: 4000,
+            defense: 1100
+        },
+
+        rewards: {
+            gold: 550000,
+            exp: 300000,
+            items: [
+                { id: 'IT_RIVENDARE_BADGE', chance: 0.8 }
             ]
         }
     }
@@ -8228,6 +8323,157 @@ function stepBossCombat(state) {
         }
     }
 
+    // ==================== 瑞文戴尔男爵技能处理 ====================
+    else if (combat.bossId === 'baron_rivendare') {
+        // 暗影伤害：计算魔抗（并套用伤害减免/全能）
+        const calcShadowDamage = (playerState, rawDamage) => {
+            const magicResist = playerState?.char?.stats?.magicResist || 0;
+            const resistReduction = getMagicResistDamageReduction(magicResist);
+            let damage = Math.floor((rawDamage || 0) * (1 - resistReduction));
+
+            // 应用受伤减免
+            const takenMult = playerState?.char?.stats?.damageTakenMult ?? 1;
+            let buffTakenMult = 1;
+            if (playerState?.buffs) {
+                playerState.buffs.forEach(b => {
+                    if (b.damageTakenMult) buffTakenMult *= b.damageTakenMult;
+                });
+            }
+            const versTakenMult = getVersatilityDamageTakenMult(playerState?.char?.stats?.versatility);
+            damage = Math.max(1, Math.floor(damage * takenMult * buffTakenMult * versTakenMult));
+
+            return { damage, resistReduction, magicResist };
+        };
+
+        // 顺劈斩：分散=打坦克；集中=打全体（5×攻击，物理）
+        if (bossAction === 'cleave') {
+            const raw = Math.floor((boss.attack || 0) * (boss.cleaveMultiplier || 5));
+
+            if (combat.strategy.stance === 'dispersed') {
+                const tIdx = pickAlivePlayerIndex();
+                if (tIdx >= 0) {
+                    const target = combat.playerStates[tIdx];
+                    const { damage, dr, blockedAmount } = calcMitigatedAndBlockedDamage(target, raw, true);
+                    const shieldResult = applyShieldAbsorb(target, damage, logs, currentRound);
+                    target.currentHp -= shieldResult.finalDamage;
+
+                    const drPct = Math.round(dr * 100);
+                    const blockText = blockedAmount > 0 ? `，格挡 ${blockedAmount}` : '';
+                    const shieldText = shieldResult.absorbed > 0 ? `，护盾吸收 ${shieldResult.absorbed}` : '';
+                    addLog(`【${boss.name}】施放【顺劈斩】（分散站位）对 位置${tIdx + 1} ${target.char.name} 造成 ${shieldResult.finalDamage} 点物理伤害（护甲减伤${drPct}%${blockText}${shieldText}）`);
+                } else {
+                    addLog(`【${boss.name}】施放【顺劈斩】，但没有存活目标`);
+                }
+            } else {
+                addLog(`【${boss.name}】施放【顺劈斩】（集中站位），所有角色受到伤害！`);
+                combat.playerStates.forEach((ps, pIdx) => {
+                    if (ps.currentHp <= 0) return;
+                    const { damage, dr, blockedAmount } = calcMitigatedAndBlockedDamage(ps, raw, true);
+                    const shieldResult = applyShieldAbsorb(ps, damage, logs, currentRound);
+                    ps.currentHp -= shieldResult.finalDamage;
+
+                    const drPct = Math.round(dr * 100);
+                    const blockText = blockedAmount > 0 ? `，格挡 ${blockedAmount}` : '';
+                    const shieldText = shieldResult.absorbed > 0 ? `，护盾吸收 ${shieldResult.absorbed}` : '';
+                    addLog(`→ 位置${pIdx + 1} ${ps.char.name} 受到 ${shieldResult.finalDamage} 点物理伤害（护甲减伤${drPct}%${blockText}${shieldText}）`);
+                });
+            }
+        }
+
+        // 致死打击：对坦克 4×攻击物理伤害 + 减疗50%
+        else if (bossAction === 'mortal_strike') {
+            const tIdx = pickAlivePlayerIndex();
+            if (tIdx >= 0) {
+                const target = combat.playerStates[tIdx];
+                const raw = Math.floor((boss.attack || 0) * (boss.mortalStrikeMultiplier || 4));
+                const { damage, dr, blockedAmount } = calcMitigatedAndBlockedDamage(target, raw, true);
+
+                const shieldResult = applyShieldAbsorb(target, damage, logs, currentRound);
+                target.currentHp -= shieldResult.finalDamage;
+
+                // 施加减疗debuff（参考范克里夫）
+                target.debuffs = target.debuffs || {};
+                target.debuffs.mortalStrike = {
+                    healingReduction: boss.mortalStrikeDebuff?.healingReduction ?? 0.5,
+                    duration: boss.mortalStrikeDebuff?.duration ?? 2
+                };
+
+                const drPct = Math.round(dr * 100);
+                const blockText = blockedAmount > 0 ? `，格挡 ${blockedAmount}` : '';
+                const shieldText = shieldResult.absorbed > 0 ? `，护盾吸收 ${shieldResult.absorbed}` : '';
+                addLog(`【${boss.name}】施放【致死打击】对 位置${tIdx + 1} ${target.char.name} 造成 ${shieldResult.finalDamage} 点物理伤害（护甲减伤${drPct}%${blockText}${shieldText}），并施加【致死打击】减疗${Math.round((boss.mortalStrikeDebuff?.healingReduction ?? 0.5) * 100)}%（持续${boss.mortalStrikeDebuff?.duration ?? 2}回合）`, 'debuff');
+            } else {
+                addLog(`【${boss.name}】施放【致死打击】，但没有存活目标`);
+            }
+        }
+
+        // 召唤骷髅大军：召唤5个骷髅（填充到上限）
+        else if (bossAction === 'summon_skeleton_army') {
+            const aliveSkeletons = (combat.minions || []).filter(m => (m.hp ?? 0) > 0 && m.isSkeleton);
+            const need = Math.max(0, (boss.summonCount || 5) - aliveSkeletons.length);
+
+            for (let i = 0; i < need; i++) {
+                combat.minions.push({
+                    hp: boss.minion.maxHp,
+                    maxHp: boss.minion.maxHp,
+                    attack: boss.attack,
+                    defense: boss.minion.defense,
+                    isSkeleton: true,
+                    dots: []
+                });
+            }
+
+            if (need > 0) {
+                addLog(`【${boss.name}】使用【召唤骷髅大军】召唤了 ${need} 个${boss.minion.name}！`);
+                addLog(`→ ${boss.minion.name}：HP ${boss.minion.maxHp}，挥砍攻击 = ${boss.skeletonSlashMultiplier || 1.2}×Boss攻击（只攻击坦克）`);
+            } else {
+                addLog(`【${boss.name}】尝试召唤骷髅大军，但场上骷髅已满`);
+            }
+        }
+
+        // 暗影震击：对坦克 3×攻击暗影伤害 + DOT（1.5×攻击，持续3回合）
+        else if (bossAction === 'shadow_shock') {
+            const tIdx = pickAlivePlayerIndex();
+            if (tIdx >= 0) {
+                const target = combat.playerStates[tIdx];
+
+                const raw = Math.floor((boss.attack || 0) * (boss.shadowShockMultiplier || 3));
+                const shadowRes = calcShadowDamage(target, raw);
+                const shieldResult = applyShieldAbsorb(target, shadowRes.damage, logs, currentRound);
+                target.currentHp -= shieldResult.finalDamage;
+
+                const resPct = Math.round(shadowRes.resistReduction * 100);
+                const mrText = Number(shadowRes.magicResist) < 0 ? `（魔抗 ${Math.floor(shadowRes.magicResist)}）` : '';
+                const shieldText = shieldResult.absorbed > 0 ? `，护盾吸收 ${shieldResult.absorbed}` : '';
+                addLog(`【${boss.name}】施放【暗影震击】对 位置${tIdx + 1} ${target.char.name} 造成 ${shieldResult.finalDamage} 点暗影伤害（魔抗减伤${resPct}%${mrText}${shieldText}）`);
+
+                // 施加DOT
+                const dotDamage = Math.floor((boss.attack || 0) * (boss.shadowShockDotMultiplier || 1.5));
+                const dotDuration = boss.shadowShockDotDuration || 3;
+
+                target.dots = target.dots || [];
+                const existing = target.dots.find(d => d.name === '暗影震击');
+                if (existing) {
+                    existing.damagePerTurn = dotDamage;
+                    existing.duration = dotDuration;
+                    existing.school = 'shadow';
+                    addLog(`→ 位置${tIdx + 1} ${target.char.name} 的【暗影震击】持续时间刷新（每回合 ${dotDamage} 点暗影伤害，持续 ${dotDuration} 回合）`);
+                } else {
+                    target.dots.push({
+                        name: '暗影震击',
+                        type: 'dot',
+                        school: 'shadow',
+                        damagePerTurn: dotDamage,
+                        duration: dotDuration
+                    });
+                    addLog(`→ 位置${tIdx + 1} ${target.char.name} 获得【暗影震击】：每回合 ${dotDamage} 点暗影伤害，持续 ${dotDuration} 回合`);
+                }
+            } else {
+                addLog(`【${boss.name}】施放【暗影震击】，但没有存活目标`);
+            }
+        }
+    }
+
 // ==================== 小弟行动 ====================
     for (let i = 0; i < (combat.minions || []).length; i++) {
         const m = combat.minions[i];
@@ -8309,6 +8555,25 @@ function stepBossCombat(state) {
             const shieldText = shieldResult.absorbed > 0 ? `，护盾吸收 ${shieldResult.absorbed}` : '';
             const minionName = boss.minion?.name || '亡灵学徒';
             addLog(`【${minionName}${i + 1}】施放【暗影箭】命中 位置${tIdx + 1} ${target.char.name}，造成 ${shieldResult.finalDamage} 点暗影伤害（魔抗减伤${resPct}%${mrText}${shieldText}）`);
+        }
+
+        // 瑞文戴尔男爵的骷髅：对坦克（1号位）挥砍攻击
+        else if (combat.bossId === 'baron_rivendare' && m.isSkeleton) {
+            const tIdx = pickAlivePlayerIndex();
+            if (tIdx < 0) break;
+
+            const target = combat.playerStates[tIdx];
+            const raw = Math.floor((boss.attack || 0) * (boss.skeletonSlashMultiplier || 1.2));
+            const { damage, dr, blockedAmount } = calcMitigatedAndBlockedDamage(target, raw, false);
+
+            const shieldResult = applyShieldAbsorb(target, damage, logs, currentRound);
+            target.currentHp -= shieldResult.finalDamage;
+
+            const drPct = Math.round(dr * 100);
+            const blockText = blockedAmount > 0 ? `，格挡 ${blockedAmount}` : '';
+            const shieldText = shieldResult.absorbed > 0 ? `，护盾吸收 ${shieldResult.absorbed}` : '';
+            const minionName = boss.minion?.name || '骷髅战士';
+            addLog(`【${minionName}${i + 1}】挥砍 位置${tIdx + 1} ${target.char.name}，造成 ${shieldResult.finalDamage} 点伤害（护甲减伤${drPct}%${blockText}${shieldText}）`);
         }
 // 霍格的小弟：普通攻击
         else {
@@ -11410,8 +11675,9 @@ function gameReducer(state, action) {
                 vancleef: 0.10,   // 范克里夫+10%（预留）
                 prestor_lady: 0.15,//普瑞斯托女士+15%
                 thalnos: 0.2, //萨尔诺斯+20%
-                dagran_thaurissan: 0.25, // 达格兰·索瑞森大帝 +25%
-                darkmaster_gandling: 0.30, // 黑暗院长加丁 +30%
+                dagran_thaurissan: 0.2, // 达格兰·索瑞森大帝 +20%
+                darkmaster_gandling: 0.1, // 黑暗院长加丁 +10%
+                baron_rivendare: 0.1, // 瑞文戴尔男爵 +10%
             };
             const defeatedBosses = state.defeatedBosses || [];
             const totalBossBonus = defeatedBosses.reduce((sum, bossId) => sum + (bossBonus[bossId] || 0), 0);
@@ -17195,6 +17461,11 @@ const BossPrepareModal = ({ state, dispatch }) => {
         summon_apprentices: '召唤亡灵学徒',
         shadow_curse: '暗影诅咒',
         dark_storm: '黑暗风暴',
+
+        // ✅ 瑞文戴尔男爵
+        cleave: '顺劈斩',
+        summon_skeleton_army: '召唤骷髅大军',
+        shadow_shock: '暗影震击',
     };
 
     const formatBossCycle = (boss) =>
@@ -17750,6 +18021,74 @@ const BossPrepareModal = ({ state, dispatch }) => {
                                                 对目标造成 <span style={{ color: '#ffd700' }}>{boss.darkStormMultiplier}倍</span> Boss攻击 的暗影伤害（计算魔抗）
                                                 <br/>
                                                 <span style={{ color: '#ff9800' }}>集中站位：对所有目标生效</span>
+                                            </div>
+                                        </div>
+                                    </>
+                                )}
+
+                                {bossId === 'baron_rivendare' && (
+                                    <>
+                                        <div style={{
+                                            padding: 10,
+                                            background: 'rgba(244,67,54,0.10)',
+                                            borderRadius: 6,
+                                            borderLeft: '3px solid #f44336'
+                                        }}>
+                                            <div style={{ fontSize: 12, color: '#ff6b6b', fontWeight: 600, marginBottom: 4 }}>
+                                                🪓 顺劈斩
+                                            </div>
+                                            <div style={{ fontSize: 11, color: '#aaa', lineHeight: 1.5 }}>
+                                                <span style={{ color: '#ff9800' }}>分散站位：</span>对坦克造成 <span style={{ color: '#ffd700' }}>{boss.cleaveMultiplier}倍</span> Boss攻击 的物理伤害（护甲/格挡可减免）
+                                                <br/>
+                                                <span style={{ color: '#ff9800' }}>集中站位：</span>对所有角色造成 <span style={{ color: '#ffd700' }}>{boss.cleaveMultiplier}倍</span> Boss攻击 的物理伤害
+                                            </div>
+                                        </div>
+
+                                        <div style={{
+                                            padding: 10,
+                                            background: 'rgba(0,0,0,0.22)',
+                                            borderRadius: 6,
+                                            borderLeft: '3px solid #673ab7'
+                                        }}>
+                                            <div style={{ fontSize: 12, color: '#b388ff', fontWeight: 600, marginBottom: 4 }}>
+                                                ☠️ 致死打击
+                                            </div>
+                                            <div style={{ fontSize: 11, color: '#aaa', lineHeight: 1.5 }}>
+                                                对坦克造成 <span style={{ color: '#ffd700' }}>{boss.mortalStrikeMultiplier}倍</span> Boss攻击 的物理伤害
+                                                <br/>
+                                                并施加<span style={{ color: '#ffd700' }}>减疗</span>：治疗量降低 <span style={{ color: '#ffd700' }}>{Math.round((boss.mortalStrikeDebuff?.healingReduction ?? 0.5) * 100)}%</span>，持续 {boss.mortalStrikeDebuff?.duration ?? 2} 回合
+                                            </div>
+                                        </div>
+
+                                        <div style={{
+                                            padding: 10,
+                                            background: 'rgba(156,39,176,0.12)',
+                                            borderRadius: 6,
+                                            borderLeft: '3px solid #9C27B0'
+                                        }}>
+                                            <div style={{ fontSize: 12, color: '#ce93d8', fontWeight: 600, marginBottom: 4 }}>
+                                                🕯️ 暗影震击
+                                            </div>
+                                            <div style={{ fontSize: 11, color: '#aaa', lineHeight: 1.5 }}>
+                                                对坦克造成 <span style={{ color: '#ffd700' }}>{boss.shadowShockMultiplier}倍</span> Boss攻击 的暗影伤害（计算魔抗）
+                                                <br/>
+                                                并施加DOT：每回合 <span style={{ color: '#ffd700' }}>{boss.shadowShockDotMultiplier}倍</span> Boss攻击 的暗影伤害，持续 {boss.shadowShockDotDuration} 回合
+                                            </div>
+                                        </div>
+
+                                        <div style={{
+                                            padding: 10,
+                                            background: 'rgba(33,150,243,0.10)',
+                                            borderRadius: 6,
+                                            borderLeft: '3px solid #2196F3'
+                                        }}>
+                                            <div style={{ fontSize: 12, color: '#64b5f6', fontWeight: 600, marginBottom: 4 }}>
+                                                💀 召唤骷髅大军
+                                            </div>
+                                            <div style={{ fontSize: 11, color: '#aaa', lineHeight: 1.5 }}>
+                                                召唤 <span style={{ color: '#ffd700' }}>{boss.summonCount}</span> 个{boss.minion?.name}
+                                                <br/>
+                                                骷髅每回合对坦克挥砍：造成 <span style={{ color: '#ffd700' }}>{boss.skeletonSlashMultiplier}倍</span> Boss攻击 的物理伤害
                                             </div>
                                         </div>
                                     </>
@@ -19074,7 +19413,15 @@ const RebirthPlotModal = ({ state, dispatch }) => {
     if (!state.showRebirthPlot) return null;
     const p = state.showRebirthPlot;
     const bossNames = (p.defeatedBosses || []).map(id => {
-        const names = { hogger: '霍格', vancleef: '范克里夫' ,prestor_lady:'普瑞斯托女士',thalnos:'萨尔诺斯'};
+        const names = {
+            hogger: '霍格',
+            vancleef: '范克里夫',
+            prestor_lady: '普瑞斯托女士',
+            thalnos: '萨尔诺斯',
+            dagran_thaurissan: '索瑞森大帝',
+            darkmaster_gandling: '黑暗院长加丁',
+            baron_rivendare: '瑞文戴尔男爵'
+        };
         return names[id] || id;
     });
     return (

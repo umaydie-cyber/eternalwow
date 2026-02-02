@@ -11889,6 +11889,38 @@ function gameReducer(state, action) {
             };
         }
 
+        // ==================== 宏伟宝库：领取奖励 ====================
+        // payload: { templateId }
+        // 领取时装备等级固定为 5 级
+        case 'CLAIM_GRAND_VAULT_REWARD': {
+            const { templateId } = action.payload || {};
+            if (!templateId) return state;
+
+            // 背包满则不领取
+            if ((state.inventory?.length || 0) >= (state.inventorySize || 0)) return state;
+
+            const inst0 = createEquipmentInstance(templateId);
+            if (!inst0) return state;
+
+            const lv = GRAND_VAULT_EQUIP_LEVEL;
+            const baseStats = inst0.baseStats || FIXED_EQUIPMENTS?.[templateId]?.baseStats || {};
+            const growth = inst0.growth || FIXED_EQUIPMENTS?.[templateId]?.growth || {};
+
+            const inst = {
+                ...inst0,
+                currentLevel: lv,
+                stats: scaleStats(baseStats, growth, lv)
+            };
+
+            let newState = {
+                ...state,
+                inventory: [...(state.inventory || []), inst]
+            };
+
+            newState = addEquipmentIdToCodex(newState, templateId);
+            return newState;
+        }
+
         case 'SET_TALENT': {
             const { characterId, tier, talentId } = action.payload || {};
             if (!characterId || !tier) return state;
@@ -13999,8 +14031,8 @@ const ItemDetailsModal = ({ item, onClose, onEquip, characters, state , dispatch
                             isMatA
                                 ? state.inventory.some(i => i?.type === 'equipment' && i.id === 'EQ_042' && getLevel(i) >= 100)
                                 : isMatB
-                                ? state.inventory.some(i => i?.type === 'equipment' && i.id === 'EQ_041' && getLevel(i) >= 100)
-                                : false;
+                                    ? state.inventory.some(i => i?.type === 'equipment' && i.id === 'EQ_041' && getLevel(i) >= 100)
+                                    : false;
 
                         if (!(hasOther && (isMatA || isMatB))) return null;
 
@@ -15755,10 +15787,542 @@ const ResearchPage = ({ state, dispatch }) => {
     );
 };
 
+// ==================== 宏伟宝库（世界首领页入口） ====================
+// 说明：
+// - 3 行 3 列，共 9 个装备槽位
+// - 每行来自一种徽章可升级装备池（通过 isXXXEquipment 判定）
+// - 每种徽章随机 3 件，作为宏伟宝库候选
+// - 选择 1 件后点击“选择奖励”获得（奖励装备等级固定为 5 级）
+
+const GRAND_VAULT_EQUIP_LEVEL = 5;
+
+const GRAND_VAULT_ROW_DEFS = [
+    {
+        badgeId: 'IT_GANDLING_BADGE',
+        zoneLabel: '通灵学院',
+        bossLabel: '黑暗院长加丁',
+        isEligible: isScholomanceEquipment,
+    },
+    {
+        badgeId: 'IT_RIVENDARE_BADGE',
+        zoneLabel: '斯坦索姆',
+        bossLabel: '瑞文戴尔男爵',
+        isEligible: isStratholmeEquipment,
+    },
+    {
+        badgeId: 'IT_REND_BADGE',
+        zoneLabel: '黑石塔上',
+        bossLabel: '雷德黑手',
+        isEligible: isUpperBlackrockSpireEquipment,
+    },
+];
+
+function pickRandomUniqueIds(ids = [], count = 3) {
+    const arr = Array.isArray(ids) ? [...ids] : [];
+    // Fisher–Yates shuffle
+    for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr.slice(0, Math.min(count, arr.length));
+}
+
+function buildGrandVaultRows() {
+    return GRAND_VAULT_ROW_DEFS.map(def => {
+        const pool = Object.values(FIXED_EQUIPMENTS || {})
+            .filter(tpl => tpl?.type === 'equipment' && def.isEligible?.(tpl))
+            .map(tpl => tpl.id)
+            .filter(Boolean);
+
+        return {
+            ...def,
+            equipTemplateIds: pickRandomUniqueIds(pool, 3)
+        };
+    });
+}
+
+function getEquipmentPreviewAtLevel(templateId, level = GRAND_VAULT_EQUIP_LEVEL) {
+    const tpl = getEquipmentTemplate(templateId);
+    if (!tpl) return null;
+    const lv = clamp(Number(level) || 0, 0, tpl.maxLevel ?? 100);
+    return {
+        ...tpl,
+        qualityColor: getRarityColor(tpl.rarity),
+        currentLevel: lv,
+        stats: scaleStats(tpl.baseStats || {}, tpl.growth || {}, lv)
+    };
+}
+
+function describeEquipmentSpecialEffect(eq) {
+    const effects = getEquipmentSpecialEffectList(eq);
+    if (!effects || effects.length === 0) return [];
+
+    return effects.map(se => {
+        if (!se) return '';
+
+        if (se.type === 'skill_slot_buff') {
+            const slots = (se.slots || []).map(s => (Number(s) + 1)).filter(n => Number.isFinite(n));
+            const parts = [];
+            if (se.attackBonus) parts.push(`攻+${formatItemStatValue('attack', se.attackBonus)}`);
+            if (se.spellPowerBonus) parts.push(`法+${formatItemStatValue('spellPower', se.spellPowerBonus)}`);
+            return `⚡ 技能格 ${slots.join('/') || '?'}：${parts.join(' ') || '强化'}`;
+        }
+
+        if (se.type === 'basic_attack_repeat') {
+            return `⚔️ 普攻 ${(Number(se.chance || 0) * 100).toFixed(0)}% 连击`;
+        }
+
+        if (se.type === 'proc_stat' && se.trigger === 'turn_start') {
+            const chance = (Number(se.chance || 0) * 100).toFixed(0);
+            const bonusText = formatProcStatBonusText(se.stats || {});
+            return `🎲 每回合 ${chance}%：${bonusText || '触发增益'}`;
+        }
+
+        if (se.type === 'map_slayer') {
+            return `🗺️ 地图伤害 +${((Number(se.bonusDamageVsMap || 0)) * 100).toFixed(0)}%`;
+        }
+
+        return `⚡ 特效：${se.type}`;
+    }).filter(Boolean);
+}
+
+const GrandVaultModal = ({ rows, inventoryFull, onClose, onClaim }) => {
+    const [selectedId, setSelectedId] = React.useState('');
+    const [hover, setHover] = React.useState(null); // { id, x, y }
+
+    const selectedPreview = selectedId ? getEquipmentPreviewAtLevel(selectedId, GRAND_VAULT_EQUIP_LEVEL) : null;
+
+    if (!rows || rows.length === 0) return null;
+
+    const tooltipPreview = hover?.id ? getEquipmentPreviewAtLevel(hover.id, GRAND_VAULT_EQUIP_LEVEL) : null;
+    const tooltipEffects = tooltipPreview ? describeEquipmentSpecialEffect(tooltipPreview) : [];
+
+    const tooltipX = (() => {
+        const x = Number(hover?.x) || 0;
+        const w = 300;
+        const pad = 14;
+        if (typeof window === 'undefined') return x + 16;
+        return Math.max(pad, Math.min(x + 16, window.innerWidth - w - pad));
+    })();
+    const tooltipY = (() => {
+        const y = Number(hover?.y) || 0;
+        const h = 240;
+        const pad = 14;
+        if (typeof window === 'undefined') return y + 16;
+        return Math.max(pad, Math.min(y + 16, window.innerHeight - h - pad));
+    })();
+
+    const canClaim = !!selectedId && !inventoryFull;
+
+    return (
+        <div
+            style={{
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                background: 'rgba(0,0,0,0.88)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 2400,
+                padding: 18,
+            }}
+            onClick={onClose}
+        >
+            <div
+                style={{
+                    width: 980,
+                    maxWidth: '96vw',
+                    maxHeight: '92vh',
+                    overflow: 'auto',
+                    background: 'linear-gradient(135deg, rgba(35,28,22,0.98) 0%, rgba(18,14,11,0.98) 100%)',
+                    border: '3px solid rgba(201,162,39,0.85)',
+                    borderRadius: 14,
+                    boxShadow: '0 12px 44px rgba(0,0,0,0.65), inset 0 1px 0 rgba(255,255,255,0.06)',
+                    position: 'relative',
+                    padding: 22,
+                }}
+                onClick={(e) => e.stopPropagation()}
+            >
+                {/* 顶部标题 */}
+                <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    position: 'relative',
+                    paddingBottom: 12,
+                    marginBottom: 14,
+                    borderBottom: '1px solid rgba(201,162,39,0.20)'
+                }}>
+                    <div style={{
+                        fontSize: 22,
+                        fontWeight: 800,
+                        color: '#ffd700',
+                        textShadow: '2px 2px 6px rgba(0,0,0,0.8)',
+                        letterSpacing: 1
+                    }}>
+                        🏛️ 宏伟宝库
+                    </div>
+
+                    <button
+                        onClick={onClose}
+                        style={{
+                            position: 'absolute',
+                            right: 0,
+                            top: 0,
+                            width: 34,
+                            height: 34,
+                            borderRadius: 8,
+                            border: '1px solid rgba(255,255,255,0.15)',
+                            background: 'rgba(0,0,0,0.35)',
+                            color: '#ffd700',
+                            fontWeight: 900,
+                            cursor: 'pointer'
+                        }}
+                        title="关闭"
+                    >
+                        ✕
+                    </button>
+                </div>
+
+                <div style={{
+                    textAlign: 'center',
+                    color: '#c9a227',
+                    fontSize: 13,
+                    marginBottom: 18,
+                    opacity: 0.95
+                }}>
+                    你只能从宏伟宝库中选择 <b style={{ color: '#ffd700' }}>一件</b> 奖励。
+                </div>
+
+                {/* 3 行 3 列 */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                    {rows.map((row) => {
+                        const badge = ITEMS?.[row.badgeId];
+                        return (
+                            <div
+                                key={row.badgeId}
+                                style={{
+                                    display: 'grid',
+                                    gridTemplateColumns: '180px 1fr',
+                                    gap: 14,
+                                    alignItems: 'stretch',
+                                    padding: 14,
+                                    background: 'rgba(0,0,0,0.22)',
+                                    border: '1px solid rgba(255,255,255,0.08)',
+                                    borderRadius: 12,
+                                }}
+                            >
+                                {/* 左侧标签 */}
+                                <div style={{
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    justifyContent: 'center',
+                                    padding: 12,
+                                    borderRadius: 10,
+                                    background: 'linear-gradient(135deg, rgba(201,162,39,0.16) 0%, rgba(60,45,18,0.10) 100%)',
+                                    border: '1px solid rgba(201,162,39,0.25)'
+                                }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                        <div style={{
+                                            width: 34,
+                                            height: 34,
+                                            borderRadius: 8,
+                                            background: 'rgba(0,0,0,0.35)',
+                                            border: '1px solid rgba(255,255,255,0.10)',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center'
+                                        }}>
+                                            <ItemIcon item={badge} size={28} />
+                                        </div>
+                                        <div style={{ lineHeight: 1.2 }}>
+                                            <div style={{ fontSize: 16, fontWeight: 900, color: '#ffd700' }}>
+                                                {row.zoneLabel}
+                                            </div>
+                                            <div style={{ fontSize: 11, color: '#aaa', marginTop: 2 }}>
+                                                {badge?.name || row.badgeId}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div style={{ marginTop: 10, fontSize: 11, color: '#aaa', lineHeight: 1.45 }}>
+                                        来源：<span style={{ color: '#e8dcc4' }}>{row.bossLabel}</span>
+                                        <div style={{ color: '#888', marginTop: 4 }}>
+                                            随机 3 件可升级装备
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* 右侧 3 个装备槽 */}
+                                <div
+                                    style={{
+                                        display: 'grid',
+                                        gridTemplateColumns: 'repeat(3, 1fr)',
+                                        gap: 12,
+                                    }}
+                                >
+                                    {(row.equipTemplateIds || []).map((templateId) => {
+                                        const preview = getEquipmentPreviewAtLevel(templateId, GRAND_VAULT_EQUIP_LEVEL);
+                                        if (!preview) return null;
+                                        const picked = selectedId === templateId;
+
+                                        return (
+                                            <div
+                                                key={templateId}
+                                                onClick={() => setSelectedId(templateId)}
+                                                onMouseEnter={(e) => setHover({ id: templateId, x: e.clientX, y: e.clientY })}
+                                                onMouseMove={(e) => {
+                                                    setHover((h) => (h && h.id === templateId)
+                                                        ? { ...h, x: e.clientX, y: e.clientY }
+                                                        : h
+                                                    );
+                                                }}
+                                                onMouseLeave={() => setHover(null)}
+                                                style={{
+                                                    userSelect: 'none',
+                                                    cursor: 'pointer',
+                                                    padding: 14,
+                                                    borderRadius: 12,
+                                                    background: picked
+                                                        ? 'linear-gradient(135deg, rgba(201,162,39,0.18) 0%, rgba(90,70,18,0.12) 100%)'
+                                                        : 'rgba(0,0,0,0.25)',
+                                                    border: picked
+                                                        ? '2px solid #ffd700'
+                                                        : `2px solid ${preview.qualityColor}55`,
+                                                    boxShadow: picked
+                                                        ? '0 0 16px rgba(255,215,0,0.20)'
+                                                        : 'none',
+                                                    position: 'relative',
+                                                    minHeight: 92,
+                                                    transition: 'all 0.12s',
+                                                    opacity: inventoryFull ? 0.95 : 1
+                                                }}
+                                                title="点击选择（悬停查看属性）"
+                                            >
+                                                {picked && (
+                                                    <div style={{
+                                                        position: 'absolute',
+                                                        top: 10,
+                                                        right: 10,
+                                                        fontSize: 12,
+                                                        fontWeight: 900,
+                                                        color: '#0b0b0b',
+                                                        background: 'linear-gradient(180deg, #ffd700, #c9a227)',
+                                                        borderRadius: 999,
+                                                        padding: '4px 10px',
+                                                        border: '1px solid rgba(0,0,0,0.25)',
+                                                        boxShadow: '0 2px 10px rgba(0,0,0,0.35)'
+                                                    }}>
+                                                        ✓ 已选
+                                                    </div>
+                                                )}
+
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                                                    <div style={{
+                                                        width: 46,
+                                                        height: 46,
+                                                        borderRadius: 10,
+                                                        background: 'rgba(0,0,0,0.35)',
+                                                        border: '1px solid rgba(255,255,255,0.10)',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        flexShrink: 0
+                                                    }}>
+                                                        <ItemIcon item={preview} size={38} />
+                                                    </div>
+
+                                                    <div style={{ minWidth: 0 }}>
+                                                        <div style={{
+                                                            fontSize: 13,
+                                                            fontWeight: 800,
+                                                            color: preview.qualityColor,
+                                                            whiteSpace: 'nowrap',
+                                                            overflow: 'hidden',
+                                                            textOverflow: 'ellipsis'
+                                                        }}>
+                                                            {preview.name}
+                                                        </div>
+                                                        <div style={{ fontSize: 11, color: '#aaa', marginTop: 4 }}>
+                                                            {EQUIPMENT_SLOTS?.[preview.slot]?.name || preview.slot} · Lv.{GRAND_VAULT_EQUIP_LEVEL}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+
+                {/* 底部：选择奖励 */}
+                <div style={{
+                    marginTop: 18,
+                    paddingTop: 16,
+                    borderTop: '1px solid rgba(201,162,39,0.18)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: 10
+                }}>
+                    {selectedPreview ? (
+                        <div style={{
+                            fontSize: 12,
+                            color: '#aaa',
+                            textAlign: 'center'
+                        }}>
+                            已选择：<span style={{ color: selectedPreview.qualityColor, fontWeight: 800 }}>{selectedPreview.name}</span>
+                            <span style={{ color: '#888' }}>（Lv.{GRAND_VAULT_EQUIP_LEVEL}）</span>
+                        </div>
+                    ) : (
+                        <div style={{ fontSize: 12, color: '#888', textAlign: 'center' }}>
+                            请选择一件装备作为奖励。
+                        </div>
+                    )}
+
+                    {inventoryFull && (
+                        <div style={{
+                            fontSize: 12,
+                            color: '#ff6b6b',
+                            textAlign: 'center'
+                        }}>
+                            ⚠️ 背包已满，无法领取奖励。
+                        </div>
+                    )}
+
+                    <Button
+                        onClick={() => {
+                            if (!canClaim) return;
+                            onClaim?.(selectedId);
+                        }}
+                        disabled={!canClaim}
+                        style={{
+                            padding: '12px 40px',
+                            fontSize: 14,
+                            borderRadius: 8
+                        }}
+                    >
+                        选择奖励
+                    </Button>
+                </div>
+
+                {/* 悬停属性 Tooltip */}
+                {tooltipPreview && (
+                    <div
+                        style={{
+                            position: 'fixed',
+                            left: tooltipX,
+                            top: tooltipY,
+                            width: 300,
+                            padding: 12,
+                            background: 'rgba(10,10,10,0.92)',
+                            border: `2px solid ${tooltipPreview.qualityColor}`,
+                            borderRadius: 10,
+                            boxShadow: '0 10px 30px rgba(0,0,0,0.6)',
+                            zIndex: 2600,
+                            pointerEvents: 'none'
+                        }}
+                    >
+                        <div style={{
+                            fontWeight: 900,
+                            color: tooltipPreview.qualityColor,
+                            fontSize: 14,
+                            marginBottom: 4
+                        }}>
+                            {tooltipPreview.name}
+                        </div>
+                        <div style={{ fontSize: 11, color: '#bbb', marginBottom: 10 }}>
+                            {EQUIPMENT_SLOTS?.[tooltipPreview.slot]?.name || tooltipPreview.slot} · Lv.{GRAND_VAULT_EQUIP_LEVEL}
+                        </div>
+
+                        <div style={{
+                            borderTop: '1px solid rgba(255,255,255,0.10)',
+                            paddingTop: 8,
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: 4
+                        }}>
+                            {Object.entries(tooltipPreview.stats || {}).length === 0 ? (
+                                <div style={{ fontSize: 11, color: '#888' }}>（无属性）</div>
+                            ) : (
+                                Object.entries(tooltipPreview.stats || {}).map(([stat, value]) => (
+                                    <div key={stat} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
+                                        <span style={{ color: '#aaa' }}>{STAT_LABELS?.[stat] || stat}</span>
+                                        <span style={{ color: '#4CAF50', fontWeight: 800 }}>+{formatItemStatValue(stat, value)}</span>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+
+                        {tooltipEffects.length > 0 && (
+                            <div style={{
+                                marginTop: 10,
+                                paddingTop: 8,
+                                borderTop: '1px solid rgba(255,255,255,0.10)',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: 4
+                            }}>
+                                {tooltipEffects.map((line, idx) => (
+                                    <div key={idx} style={{ fontSize: 11, color: '#ffb74d', lineHeight: 1.35 }}>
+                                        {line}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+};
+
 // ==================== WorldBossPage 修改 ====================
 const WorldBossPage = ({ state, dispatch }) => {
+    const [showVault, setShowVault] = useState(false);
+    const [vaultRows, setVaultRows] = useState(null);
+
+    const openVault = () => {
+        setVaultRows(buildGrandVaultRows());
+        setShowVault(true);
+    };
+
+    const VaultButton = ({ onClick }) => (
+        <button
+            onClick={onClick}
+            style={{
+                padding: '8px 14px',
+                borderRadius: 8,
+                border: '2px solid rgba(201,162,39,0.9)',
+                background: 'linear-gradient(180deg, rgba(201,162,39,0.25), rgba(139,115,25,0.18))',
+                color: '#ffd700',
+                fontWeight: 900,
+                fontSize: 12,
+                cursor: 'pointer',
+                boxShadow: '0 2px 10px rgba(0,0,0,0.35)',
+                textShadow: '1px 1px 2px rgba(0,0,0,0.7)',
+                letterSpacing: 0.5
+            }}
+            title="打开宏伟宝库"
+        >
+            🏛️ 宏伟宝库
+        </button>
+    );
+
     return (
-        <Panel title="世界首领">
+        <Panel
+            title="世界首领"
+            actions={
+                <>
+                    <VaultButton onClick={openVault} />
+                </>
+            }
+        >
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 16 }}>
                 {Object.values(WORLD_BOSSES).map(boss => {
                     const bossData = BOSS_DATA[boss.id] || boss;
@@ -15986,6 +16550,19 @@ const WorldBossPage = ({ state, dispatch }) => {
                     );
                 })}
             </div>
+
+            {showVault && (
+                <GrandVaultModal
+                    rows={vaultRows}
+                    inventoryFull={(state.inventory?.length || 0) >= (state.inventorySize || 0)}
+                    onClose={() => setShowVault(false)}
+                    onClaim={(templateId) => {
+                        if (!templateId) return;
+                        dispatch({ type: 'CLAIM_GRAND_VAULT_REWARD', payload: { templateId } });
+                        setShowVault(false);
+                    }}
+                />
+            )}
         </Panel>
     );
 };
@@ -17568,13 +18145,13 @@ const QuestPage = ({ state, dispatch }) => {
                             }}>
                                 {requirementMet ? '✓' : '✗'}
                                 {currentStep.requirement.type === 'character_level' &&
-                                `需要角色等级 ${currentStep.requirement.level}`}
+                                    `需要角色等级 ${currentStep.requirement.level}`}
                                 {currentStep.requirement.type === 'zone_battles' &&
-                                `需要在${ZONES[currentStep.requirement.zoneId]?.name}战斗${currentStep.requirement.count}次`}
+                                    `需要在${ZONES[currentStep.requirement.zoneId]?.name}战斗${currentStep.requirement.count}次`}
                                 {currentStep.requirement.type === 'boss_defeated' &&
-                                `需要击败${BOSS_DATA[currentStep.requirement.bossId]?.name}`}
+                                    `需要击败${BOSS_DATA[currentStep.requirement.bossId]?.name}`}
                                 {currentStep.requirement.type === 'have_gold' &&
-                                `需要${currentStep.requirement.amount}金币`}
+                                    `需要${currentStep.requirement.amount}金币`}
                             </div>
                         </div>
                     )}

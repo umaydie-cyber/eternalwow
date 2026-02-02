@@ -1502,7 +1502,7 @@ const ZONES = {
             {
                 name: '黑铁矮人守卫',
                 hp: 132000,
-                attack: 3700,
+                attack: 3200,
                 defense: 1400,
                 exp: 5000,
                 gold: 5500
@@ -1510,7 +1510,7 @@ const ZONES = {
             {
                 name: '被奴役的土元素',
                 hp: 150000,
-                attack: 2900,
+                attack: 2500,
                 defense: 1900,
                 exp: 5500,
                 gold: 5000
@@ -1518,7 +1518,7 @@ const ZONES = {
             {
                 name: '战斗傀儡',
                 hp: 182000,
-                attack: 4100,
+                attack: 3500,
                 defense: 1750,
                 exp: 6500,
                 gold: 6000
@@ -1537,7 +1537,7 @@ const ZONES = {
             {
                 name: '绿龙守卫',
                 hp: 140000,
-                attack: 3600,
+                attack: 3100,
                 defense: 1300,
                 exp: 5600,
                 gold: 5500
@@ -1545,7 +1545,7 @@ const ZONES = {
             {
                 name: '潜伏的食腐者',
                 hp: 150000,
-                attack: 3800,
+                attack: 3300,
                 defense: 1850,
                 exp: 6600,
                 gold: 5800
@@ -1553,7 +1553,7 @@ const ZONES = {
             {
                 name: '哈卡之子',
                 hp: 200000,
-                attack: 4000,
+                attack: 3500,
                 defense: 1950,
                 exp: 7000,
                 gold: 6500

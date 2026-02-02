@@ -9300,6 +9300,20 @@ const initialState = {
     worldBossKillCounts: {},
     worldBossAutoKill: {},
 
+    // ===== 宏伟宝库（每日早上 9 点刷新） =====
+    // dayKey：以“早上9点”为分界的日周期标识（例如 2026-02-02）
+    // rows：当日宝库内容（持久化，避免反复打开刷新不同结果）
+    // claimedDayKey：已领取的日周期（用于“当日已领取”判定）
+    grandVault: {
+        dayKey: '',
+        rows: null,
+        // { [badgeId]: [templateId1, templateId2, templateId3] }
+        badgePicks: {},
+        claimedDayKey: '',
+        lastRefreshAt: 0,
+        claimedAt: 0,
+    },
+
     showHoggerPlot: false,
     showRebirthConfirm: false,
     showRebirthPlot: null,
@@ -11896,11 +11910,32 @@ function gameReducer(state, action) {
             const { templateId } = action.payload || {};
             if (!templateId) return state;
 
+            const nowTs = Date.now();
+            const snap = computeGrandVaultSnapshot(state, nowTs);
+            const dayKey = snap.dayKey;
+            const gv = snap.grandVault || {};
+            const rows = snap.rows || [];
+
+            // 当日已领取：阻止再次领取
+            if (gv.claimedDayKey === dayKey) {
+                alert('宏伟宝库：当日已经领取。');
+                return state;
+            }
+
+            // 只允许领取当前宝库候选中的装备（防止绕过 UI/过期领取）
+            const isInVault = Array.isArray(rows) && rows.some(r => (r?.equipTemplateIds || []).includes(templateId));
+            if (!isInVault) {
+                alert('宏伟宝库：该奖励不属于当前宝库（可能已刷新）。');
+                return { ...state, grandVault: gv };
+            }
+
             // 背包满则不领取
-            if ((state.inventory?.length || 0) >= (state.inventorySize || 0)) return state;
+            if ((state.inventory?.length || 0) >= (state.inventorySize || 0)) {
+                return { ...state, grandVault: gv };
+            }
 
             const inst0 = createEquipmentInstance(templateId);
-            if (!inst0) return state;
+            if (!inst0) return { ...state, grandVault: gv };
 
             const lv = GRAND_VAULT_EQUIP_LEVEL;
             const baseStats = inst0.baseStats || FIXED_EQUIPMENTS?.[templateId]?.baseStats || {};
@@ -11914,11 +11949,26 @@ function gameReducer(state, action) {
 
             let newState = {
                 ...state,
+                grandVault: {
+                    ...gv,
+                    claimedDayKey: dayKey,
+                    claimedAt: nowTs,
+                },
                 inventory: [...(state.inventory || []), inst]
             };
 
             newState = addEquipmentIdToCodex(newState, templateId);
             return newState;
+        }
+
+        case 'SET_GRAND_VAULT': {
+            const gv = action.payload?.grandVault;
+            if (!gv || typeof gv !== 'object' || Array.isArray(gv)) return state;
+
+            return {
+                ...state,
+                grandVault: gv
+            };
         }
 
         case 'SET_TALENT': {
@@ -11965,6 +12015,22 @@ function gameReducer(state, action) {
                 decoded.bossCooldowns ??= {};
                 decoded.worldBossKillCounts ??= {};
                 decoded.worldBossAutoKill ??= {};
+
+                // ===== 宏伟宝库（每日早上9点刷新）兼容旧档 =====
+                decoded.grandVault ??= {};
+                if (typeof decoded.grandVault !== 'object' || Array.isArray(decoded.grandVault)) {
+                    decoded.grandVault = {};
+                }
+                decoded.grandVault.dayKey ??= '';
+                decoded.grandVault.rows ??= null;
+                decoded.grandVault.badgePicks ??= {};
+                if (typeof decoded.grandVault.badgePicks !== 'object' || Array.isArray(decoded.grandVault.badgePicks)) {
+                    decoded.grandVault.badgePicks = {};
+                }
+                decoded.grandVault.claimedDayKey ??= '';
+                decoded.grandVault.lastRefreshAt ??= 0;
+                decoded.grandVault.claimedAt ??= 0;
+
                 decoded.zoneKillCounts ??= {};
                 if (typeof decoded.zoneKillCounts !== 'object' || Array.isArray(decoded.zoneKillCounts)) {
                     decoded.zoneKillCounts = {};
@@ -15796,26 +15862,113 @@ const ResearchPage = ({ state, dispatch }) => {
 
 const GRAND_VAULT_EQUIP_LEVEL = 5;
 
-const GRAND_VAULT_ROW_DEFS = [
-    {
-        badgeId: 'IT_GANDLING_BADGE',
-        zoneLabel: '通灵学院',
-        bossLabel: '黑暗院长加丁',
-        isEligible: isScholomanceEquipment,
-    },
-    {
-        badgeId: 'IT_RIVENDARE_BADGE',
-        zoneLabel: '斯坦索姆',
-        bossLabel: '瑞文戴尔男爵',
-        isEligible: isStratholmeEquipment,
-    },
-    {
-        badgeId: 'IT_REND_BADGE',
-        zoneLabel: '黑石塔上',
-        bossLabel: '雷德黑手',
-        isEligible: isUpperBlackrockSpireEquipment,
-    },
-];
+const GRAND_VAULT_RESET_HOUR = 9;
+
+// 以“早上 9 点”为分界，得到当前宝库的“日周期”key（YYYY-MM-DD）
+// - 08:59 属于“昨天”的宝库周期
+// - 09:00 起属于“今天”的宝库周期
+function getGrandVaultDayKey(now = new Date(), resetHour = GRAND_VAULT_RESET_HOUR) {
+    const d = new Date(now);
+    const h = d.getHours();
+    if (h < resetHour) {
+        d.setDate(d.getDate() - 1);
+    }
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+}
+
+function getGrandVaultDayKeyByTs(ts = Date.now(), resetHour = GRAND_VAULT_RESET_HOUR) {
+    return getGrandVaultDayKey(new Date(ts), resetHour);
+}
+
+// 从世界首领奖励表中推导：bossId -> badgeId（只取 BADGE_UPGRADE_RULES 中存在的徽章）
+const GRAND_VAULT_BOSS_TO_BADGE = (() => {
+    const map = {};
+    Object.entries(BOSS_DATA || {}).forEach(([bossId, boss]) => {
+        const items = boss?.rewards?.items || [];
+        items.forEach(it => {
+            const id = (typeof it === 'string') ? it : it?.id;
+            if (!id) return;
+            if (!BADGE_UPGRADE_RULES?.[id]) return;
+            map[bossId] = id;
+        });
+    });
+    return map;
+})();
+
+function getBossStrengthSnapshot(bossId) {
+    const b = BOSS_DATA?.[bossId] || WORLD_BOSSES?.[bossId] || {};
+    return {
+        unlockLevel: Number(b.unlockLevel || 0),
+        hp: Number(b.maxHp || b.hp || 0),
+        attack: Number(b.attack || 0),
+        defense: Number(b.defense || 0),
+    };
+}
+
+function compareBossByStrengthDesc(aBossId, bBossId) {
+    const a = getBossStrengthSnapshot(aBossId);
+    const b = getBossStrengthSnapshot(bBossId);
+
+    if (a.unlockLevel !== b.unlockLevel) return b.unlockLevel - a.unlockLevel;
+    if (a.hp !== b.hp) return b.hp - a.hp;
+    if (a.attack !== b.attack) return b.attack - a.attack;
+    return b.defense - a.defense;
+}
+
+// 取“已击杀过”的世界首领（优先用跨世累计 worldBossKillCounts；兼容本世 defeatedBosses）
+function getKilledWorldBossIdsForVault(state) {
+    const killed = new Set();
+
+    const counts = state?.worldBossKillCounts || {};
+    if (counts && typeof counts === 'object' && !Array.isArray(counts)) {
+        Object.entries(counts).forEach(([bossId, n]) => {
+            if ((Number(n) || 0) > 0) killed.add(bossId);
+        });
+    }
+
+    (state?.defeatedBosses || []).forEach(bossId => {
+        if (bossId) killed.add(bossId);
+    });
+
+    return Array.from(killed);
+}
+
+// 根据“是否击杀过该BOSS”决定宝库展示的 3 个徽章：取最强的三个
+function pickTopGrandVaultRowDefs(state, maxRows = 3) {
+    const killedBosses = getKilledWorldBossIdsForVault(state)
+        .filter(bossId => !!GRAND_VAULT_BOSS_TO_BADGE?.[bossId]);
+
+    // 先把 boss -> badge -> 规则整理出来，再按“徽章强度”排序（cap 越高越强）
+    const enriched = killedBosses.map(bossId => {
+        const badgeId = GRAND_VAULT_BOSS_TO_BADGE[bossId];
+        const rule = BADGE_UPGRADE_RULES?.[badgeId];
+        const cap = Number(rule?.cap || 0);
+        const inc = Number(rule?.inc || 0);
+        return { bossId, badgeId, rule, cap, inc };
+    }).filter(x => x?.badgeId && x?.rule && typeof x.rule.isEligible === 'function');
+
+    enriched.sort((a, b) => {
+        // ✅ 取最强的徽章：先比 cap（上限），再比 inc（单次提升）
+        if (a.cap !== b.cap) return b.cap - a.cap;
+        if (a.inc !== b.inc) return b.inc - a.inc;
+
+        // 同档位兜底：再按 Boss 本体强度排序，保证稳定
+        return compareBossByStrengthDesc(a.bossId, b.bossId);
+    });
+
+    const chosen = enriched.slice(0, Math.max(0, Number(maxRows) || 0));
+
+    return chosen.map(({ bossId, badgeId, rule }) => ({
+        badgeId,
+        zoneLabel: rule?.zoneLabel || '未知地区',
+        bossLabel: BOSS_DATA?.[bossId]?.name || WORLD_BOSSES?.[bossId]?.name || bossId,
+        isEligible: rule?.isEligible,
+    }));
+}
+
 
 function pickRandomUniqueIds(ids = [], count = 3) {
     const arr = Array.isArray(ids) ? [...ids] : [];
@@ -15827,18 +15980,119 @@ function pickRandomUniqueIds(ids = [], count = 3) {
     return arr.slice(0, Math.min(count, arr.length));
 }
 
-function buildGrandVaultRows() {
-    return GRAND_VAULT_ROW_DEFS.map(def => {
+// 生成/同步当日宏伟宝库内容：
+// - 以“早上9点”为日刷新分界（dayKey）
+// - 宝库展示的 3 个徽章：根据是否击杀过 BOSS，取最强的三个
+// - 同一日周期内，每个徽章的 3 个候选装备固定（存于 grandVault.badgePicks），避免反复打开刷出不同结果
+function computeGrandVaultSnapshot(state, nowTs = Date.now()) {
+    const dayKey = getGrandVaultDayKeyByTs(nowTs);
+
+    const gv0 = (state?.grandVault && typeof state.grandVault === 'object' && !Array.isArray(state.grandVault))
+        ? state.grandVault
+        : {};
+
+    let gv = { ...gv0 };
+
+    // 兼容旧档/异常字段
+    if (typeof gv.dayKey !== 'string') gv.dayKey = '';
+    if (typeof gv.claimedDayKey !== 'string') gv.claimedDayKey = '';
+    if (typeof gv.lastRefreshAt !== 'number') gv.lastRefreshAt = 0;
+    if (typeof gv.claimedAt !== 'number') gv.claimedAt = 0;
+    if (typeof gv.badgePicks !== 'object' || gv.badgePicks == null || Array.isArray(gv.badgePicks)) gv.badgePicks = {};
+
+    let changed = false;
+
+    // ===== 每日早上9点刷新：进入新 dayKey 后清空当日缓存 =====
+    if (gv.dayKey !== dayKey) {
+        gv.dayKey = dayKey;
+        gv.badgePicks = {};
+        gv.rows = null;
+        gv.lastRefreshAt = nowTs;
+        changed = true;
+    }
+
+    // 取最强的三个徽章（随击杀解锁而变化）
+    const rowDefs = pickTopGrandVaultRowDefs(state, 3);
+
+    const nextBadgePicks = { ...(gv.badgePicks || {}) };
+    let picksChanged = false;
+
+    const rows = rowDefs.map(def => {
         const pool = Object.values(FIXED_EQUIPMENTS || {})
             .filter(tpl => tpl?.type === 'equipment' && def.isEligible?.(tpl))
             .map(tpl => tpl.id)
             .filter(Boolean);
 
+        // 读取/校验旧的 picks
+        let picks = nextBadgePicks[def.badgeId];
+        if (Array.isArray(picks)) {
+            const used = new Set();
+            picks = picks
+                .filter(id => pool.includes(id))
+                .filter(id => (used.has(id) ? false : (used.add(id), true)));
+        } else {
+            picks = [];
+        }
+
+        // 不足 3 个则补齐（从剩余池随机取）
+        if (picks.length < 3) {
+            const remain = pool.filter(id => !picks.includes(id));
+            const fill = pickRandomUniqueIds(remain, 3 - picks.length);
+            if (fill.length > 0) picksChanged = true;
+            picks = [...picks, ...fill];
+        }
+
+        // 如果池子不足 3 个，就按池子长度截断
+        picks = picks.slice(0, Math.min(3, pool.length));
+
+        const prev = nextBadgePicks[def.badgeId];
+        const prevKey = Array.isArray(prev) ? prev.join('|') : '';
+        const nowKey = picks.join('|');
+        if (prevKey !== nowKey) picksChanged = true;
+
+        nextBadgePicks[def.badgeId] = picks;
+
         return {
             ...def,
-            equipTemplateIds: pickRandomUniqueIds(pool, 3)
+            equipTemplateIds: picks
         };
     });
+
+    // rows 变化（例如击杀了更强 Boss，Top3 徽章变化）
+    const prevRows = Array.isArray(gv.rows) ? gv.rows : null;
+    const sameRows = (() => {
+        if (!prevRows) return false;
+        if (prevRows.length !== rows.length) return false;
+        for (let i = 0; i < rows.length; i++) {
+            const a = prevRows[i];
+            const b = rows[i];
+            if (a?.badgeId !== b?.badgeId) return false;
+            const ae = Array.isArray(a?.equipTemplateIds) ? a.equipTemplateIds : [];
+            const be = Array.isArray(b?.equipTemplateIds) ? b.equipTemplateIds : [];
+            if (ae.length !== be.length) return false;
+            for (let j = 0; j < ae.length; j++) {
+                if (ae[j] !== be[j]) return false;
+            }
+        }
+        return true;
+    })();
+
+    if (!sameRows) {
+        gv.rows = rows;
+        changed = true;
+    }
+
+    if (picksChanged) {
+        gv.badgePicks = nextBadgePicks;
+        changed = true;
+    }
+
+    return { dayKey, rows, grandVault: gv, changed };
+}
+
+// 旧调用点兼容：直接返回 rows
+function buildGrandVaultRows(state) {
+    return computeGrandVaultSnapshot(state).rows;
 }
 
 function getEquipmentPreviewAtLevel(templateId, level = GRAND_VAULT_EQUIP_LEVEL) {
@@ -16288,7 +16542,29 @@ const WorldBossPage = ({ state, dispatch }) => {
     const [vaultRows, setVaultRows] = useState(null);
 
     const openVault = () => {
-        setVaultRows(buildGrandVaultRows());
+        const nowTs = Date.now();
+        const snap = computeGrandVaultSnapshot(state, nowTs);
+        const dayKey = snap.dayKey;
+        const gv = snap.grandVault || {};
+
+        // ✅ 当日已领取：点击提示
+        if (gv.claimedDayKey === dayKey) {
+            alert('宏伟宝库：当日已经领取。');
+            return;
+        }
+
+        const rows = Array.isArray(snap.rows) ? snap.rows : [];
+        if (!rows || rows.length === 0) {
+            alert('宏伟宝库：你尚未击杀过可计入宝库的世界首领，暂无可用奖励。');
+            return;
+        }
+
+        // ✅ 同步到存档：保证同一日周期内不会反复打开刷新出不同结果
+        if (snap.changed) {
+            dispatch({ type: 'SET_GRAND_VAULT', payload: { grandVault: gv } });
+        }
+
+        setVaultRows(rows);
         setShowVault(true);
     };
 

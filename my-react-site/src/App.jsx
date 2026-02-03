@@ -7578,7 +7578,7 @@ function calculateTotalStats(character, partyAuras = { hpMul: 1, spellPowerMul: 
 
         // 基础救赎 20% + 精通/5 %
         const atonementRate =
-            0.20 + (mastery / 5) / 100;
+            0.20 + (mastery / 10) / 100;
 
         totalStats.atonement = {
             healingRate: atonementRate
@@ -7928,6 +7928,35 @@ function stepBossCombat(state) {
     const addLog = (text, type = 'normal') => {
         logs.push({ round: currentRound, text, type });
     };
+
+    const triggerAtonementHeal = (source, damageDone) => {
+        if (!source || damageDone <= 0) return;
+
+        // 只允许戒律牧师的伤害触发救赎（否则现在会变成“全队吸血”）
+        if (source.char?.classId !== 'discipline_priest') return;
+
+        combat.playerStates.forEach(ps => {
+            if (!ps || ps.currentHp <= 0) return;
+            if (!ps.char?.stats?.atonement) return;
+
+            // 每个目标自己的减疗（致死打击）应当各算各的
+            let healingMult = 1;
+            if (ps.debuffs?.mortalStrike) {
+                healingMult = 1 - (ps.debuffs.mortalStrike.healingReduction || 0);
+            }
+
+            const rate = ps.char.stats.atonement.healingRate ?? 0.20;
+            const heal = Math.floor(damageDone * rate * healingMult);
+
+            const maxHp = ps.char.stats.maxHp || 0;
+            const actualHeal = Math.min(heal, maxHp - ps.currentHp);
+
+            ps.currentHp += actualHeal;
+            ps.char.stats.currentHp = ps.currentHp; // 让UI也同步
+        });
+    };
+
+
     // ===== 护盾吸收伤害辅助函数 =====
     const applyShieldAbsorb = (playerState, damage, logs, currentRound) => {
         if (!playerState.buffs || damage <= 0) {
@@ -8395,7 +8424,10 @@ function stepBossCombat(state) {
             if (combat.bossHp > 0) {
                 combat.bossHp -= damage;
                 addLog(`位置${i + 1} ${p.char.name} 的${skillName}对 ${boss.name} 造成 ${Math.floor(damage)} 伤害${result.isCrit ? '（暴击！）' : ''}`);
-
+                // 救赎机制
+                if (p.char.stats.atonement) {
+                    triggerAtonementHeal(p, damage);
+                }
                 if (result.isCrit && result.dotOnCrit) {
                     combat.bossDots = combat.bossDots || [];
                     combat.bossDots.push({ ...result.dotOnCrit, sourcePlayerId: p.char.id });
@@ -8429,6 +8461,11 @@ function stepBossCombat(state) {
                 m.hp -= damage;
                 const minionName = boss.minion?.name || boss.cannoneer?.name || '小弟';
                 addLog(`位置${i + 1} ${p.char.name} 的${skillName}对 ${minionName}${idx + 1} 造成 ${Math.floor(damage)} 伤害${result.isCrit ? '（暴击！）' : ''}`);
+
+                // 救赎机制
+                if (p.char.stats.atonement) {
+                    triggerAtonementHeal(p, damage);
+                }
 
                 if (result.isCrit && result.dotOnCrit) {
                     m.dots = m.dots || [];
@@ -8523,21 +8560,7 @@ function stepBossCombat(state) {
 
                 // 救赎机制
                 if (p.char.stats.atonement) {
-                    // 检查减疗debuff
-                    let healingMult = 1;
-                    if (p.debuffs?.mortalStrike) {
-                        healingMult = 1 - (p.debuffs.mortalStrike.healingReduction || 0);
-                    }
-                    const healFromAtonement = Math.floor(actualDamage * p.char.stats.atonement.healingRate * healingMult);
-                    const maxHp = p.char.stats.maxHp || 0;
-                    const actualHeal = Math.min(healFromAtonement, maxHp - p.currentHp);
-                    p.currentHp += actualHeal;
-
-                    let healLog = `因为救赎恢复 ${actualHeal} 点生命`;
-                    if (healingMult < 1) {
-                        healLog += `（受到致死打击减疗${Math.round((1 - healingMult) * 100)}%）`;
-                    }
-                    addLog(healLog);
+                    triggerAtonementHeal(p, actualDamage);
                 }
 
                 // 鞭笞者苏萨斯特效
@@ -8574,13 +8597,22 @@ function stepBossCombat(state) {
         if (result.applyAtonement) {
             const dur = Number(result.applyAtonement.duration) || 2;
 
+            // ✅ 救赎治疗比例应当按“施法者（戒律牧师）”的精通来计算
+            // 旧逻辑：每个目标使用自己的 atonement.healingRate（非牧师默认 20%）
+            // 新逻辑：全队统一使用施法者的救赎比例（即：基础 20% + 牧师精通加成）
+            const casterExistingRate = p.char?.stats?.atonement?.healingRate;
+            const casterMastery = Number(p.char?.stats?.mastery) || 0;
+
+            // 与角色被动“精通：救赎”的计算保持一致
+            // （若角色 stats.atonement 已经有 healingRate，就直接复用，避免公式变更时两处不一致）
+            const casterHealingRate = (typeof casterExistingRate === 'number')
+                ? casterExistingRate
+                : (0.20 + (casterMastery / 10) / 100);
+
             combat.playerStates.forEach(ps => {
                 if (ps.currentHp > 0) {
-                    const existingRate = ps.char?.stats?.atonement?.healingRate;
-                    const healingRate = (typeof existingRate === 'number') ? existingRate : 0.20;
-
                     ps.char.stats.atonement = {
-                        healingRate,
+                        healingRate: casterHealingRate,
                         duration: dur
                     };
                 }
@@ -8634,6 +8666,11 @@ function stepBossCombat(state) {
                         }
 
                         addLog(`位置${i + 1} ${p.char.name}【终极苦修】造成 ${actualDamage} 伤害`);
+
+                        // 救赎机制
+                        if (p.char.stats.atonement) {
+                            triggerAtonementHeal(p, actualDamage);
+                        }
                     }
                 }
 
@@ -11341,6 +11378,21 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
                     Math.floor(result.penanceDamage * racialSlotDamageMult * mapDamageDealtMult) - (combatState.enemy?.defense ?? 0)
                 );
                 enemyHp -= actualDamage;
+                if (character.stats.atonement) {
+                    const healFromAtonement = Math.floor(actualDamage * character.stats.atonement.healingRate);
+                    const maxHp = character.stats.maxHp ?? character.stats.hp ?? 0;
+                    const actualHeal = Math.min(healFromAtonement, maxHp - charHp);
+                    charHp += actualHeal;
+                    logs.push({
+                        round,
+                        actor: character.name,
+                        action: `救赎`,
+                        target: character.name,
+                        value: actualHeal,
+                        type: 'heal',
+                        text: `因为救赎恢复 ${healFromAtonement} 点生命`
+                    });
+                }
                 logs.push({
                     round,
                     actor: character.name,
@@ -11350,6 +11402,7 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
                     type: 'damage',
                     text: '【终极苦修】造成伤害'
                 });
+
             }
 
             // 40级天赋：争分夺秒 - 急速buff
@@ -11375,7 +11428,14 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
         }
 
         if (result.applyAtonement) {
-            const actualHeal = 0.2;
+            // ✅ 救赎比例需要吃戒律牧师精通（基础 20% + 精通加成）
+            const existingRate = character.stats.atonement?.healingRate;
+            const mastery = Number(character.stats.mastery) || 0;
+
+            // 与 calculateTotalStats 里的“精通：救赎”保持一致
+            const actualHeal = (typeof existingRate === 'number')
+                ? existingRate
+                : (0.20 + (mastery / 10) / 100);
             const atonementDuration = result.applyAtonement.duration || 2;
             character.stats.atonement = {
                 healingRate: actualHeal,
@@ -15697,8 +15757,8 @@ const ItemDetailsModal = ({ item, onClose, onEquip, characters, state , dispatch
                             isMatA
                                 ? state.inventory.some(i => i?.type === 'equipment' && i.id === 'EQ_042' && getLevel(i) >= 100)
                                 : isMatB
-                                ? state.inventory.some(i => i?.type === 'equipment' && i.id === 'EQ_041' && getLevel(i) >= 100)
-                                : false;
+                                    ? state.inventory.some(i => i?.type === 'equipment' && i.id === 'EQ_041' && getLevel(i) >= 100)
+                                    : false;
 
                         if (!(hasOther && (isMatA || isMatB))) return null;
 
@@ -20080,13 +20140,13 @@ const QuestPage = ({ state, dispatch }) => {
                             }}>
                                 {requirementMet ? '✓' : '✗'}
                                 {currentStep.requirement.type === 'character_level' &&
-                                `需要角色等级 ${currentStep.requirement.level}`}
+                                    `需要角色等级 ${currentStep.requirement.level}`}
                                 {currentStep.requirement.type === 'zone_battles' &&
-                                `需要在${ZONES[currentStep.requirement.zoneId]?.name}战斗${currentStep.requirement.count}次`}
+                                    `需要在${ZONES[currentStep.requirement.zoneId]?.name}战斗${currentStep.requirement.count}次`}
                                 {currentStep.requirement.type === 'boss_defeated' &&
-                                `需要击败${BOSS_DATA[currentStep.requirement.bossId]?.name}`}
+                                    `需要击败${BOSS_DATA[currentStep.requirement.bossId]?.name}`}
                                 {currentStep.requirement.type === 'have_gold' &&
-                                `需要${currentStep.requirement.amount}金币`}
+                                    `需要${currentStep.requirement.amount}金币`}
                             </div>
                         </div>
                     )}
@@ -21463,8 +21523,8 @@ const BossPrepareModal = ({ state, dispatch }) => {
                                                     isMapFighting
                                                         ? `地图战斗中：${zoneName || zoneId}`
                                                         : isGathering
-                                                        ? `采集中：${buildingName || gatherBuildingId}`
-                                                        : '待命'
+                                                            ? `采集中：${buildingName || gatherBuildingId}`
+                                                            : '待命'
                                                 }
                                             >
                                                 <div style={{ fontSize: 24 }}>

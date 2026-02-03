@@ -19643,7 +19643,24 @@ const BossPrepareModal = ({ state, dispatch }) => {
     console.log('boss:', BOSS_DATA[bossId]);
     if (!bossId) return null;
     const boss = BOSS_DATA[bossId];
-    const available = state.characters.filter(c => !state.assignments[c.id]);
+    // ===== 角色状态（待命 / 地图战斗 / 采集） =====
+    const mapAssignments = state.assignments || {};
+    const resourceAssignments = state.resourceAssignments || {};
+
+    // charId -> buildingId（主城采集）
+    const resourceBuildingByCharId = {};
+    Object.entries(resourceAssignments).forEach(([buildingId, workers]) => {
+        (workers || []).forEach(cid => { resourceBuildingByCharId[cid] = buildingId; });
+    });
+
+    // Boss准备界面需要展示【所有角色】（包含地图战斗/采集中角色）
+    // 排序：待命角色优先展示
+    const allCharacters = [...(state.characters || [])].sort((a, b) => {
+        const aBusy = !!(mapAssignments[a.id] || resourceBuildingByCharId[a.id]);
+        const bBusy = !!(mapAssignments[b.id] || resourceBuildingByCharId[b.id]);
+        if (aBusy !== bBusy) return aBusy ? 1 : -1; // 待命在前
+        return (b.level || 0) - (a.level || 0); // 同组按等级降序
+    });
     const [dragged, setDragged] = useState(null);
 
     const BOSS_ACTION_NAME = {
@@ -20580,7 +20597,7 @@ const BossPrepareModal = ({ state, dispatch }) => {
                             )}
                         </div>
 
-                        {/* 可用角色列表 */}
+                        {/* 角色列表（展示全部角色：待命/地图战斗/采集） */}
                         <div style={{
                             background: 'rgba(0,0,0,0.2)',
                             borderRadius: 10,
@@ -20594,56 +20611,110 @@ const BossPrepareModal = ({ state, dispatch }) => {
                                 fontWeight: 600,
                                 marginBottom: 12
                             }}>
-                                👥 可用角色 <span style={{ color: '#888', fontWeight: 400 }}>（拖拽到上方队伍位置）</span>
+                                👥 所有角色 <span style={{ color: '#888', fontWeight: 400 }}>（仅待命角色可拖拽；地图战斗/采集中角色可在此召回）</span>
                             </div>
 
-                            {available.length === 0 ? (
+                            {allCharacters.length === 0 ? (
                                 <div style={{
                                     textAlign: 'center',
                                     padding: 30,
                                     color: '#555'
                                 }}>
-                                    没有可用角色（角色可能已被派遣到其他区域）
+                                    暂无角色（请先在【角色】页面创建角色）
                                 </div>
                             ) : (
                                 <div style={{
                                     display: 'grid',
                                     gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
                                     gap: 10,
-                                    maxHeight: 200,
+                                    maxHeight: 240,
                                     overflowY: 'auto',
                                     padding: 4
                                 }}>
-                                    {available.map(char => {
+                                    {allCharacters.map(char => {
                                         const isInTeam = state.bossTeam.includes(char.id);
+                                        const zoneId = mapAssignments?.[char.id];
+                                        const gatherBuildingId = resourceBuildingByCharId?.[char.id];
+                                        const isMapFighting = !!zoneId;
+                                        const isGathering = !!gatherBuildingId;
+                                        const isBusy = isMapFighting || isGathering;
+                                        const canDrag = !isInTeam && !isBusy;
+
+                                        const zoneName = zoneId
+                                            ? (state.zones?.[zoneId]?.name || ZONES?.[zoneId]?.name || zoneId)
+                                            : '';
+                                        const buildingName = gatherBuildingId
+                                            ? (RESOURCE_BUILDINGS?.[gatherBuildingId]?.name || gatherBuildingId)
+                                            : '';
+
+                                        const recallCharacter = (e) => {
+                                            e?.stopPropagation?.();
+                                            // 允许同时兼容异常存档（同一角色被错误地分配到多处）
+                                            if (isMapFighting) {
+                                                dispatch({
+                                                    type: 'UNASSIGN_CHARACTER',
+                                                    payload: { characterId: char.id }
+                                                });
+                                            }
+                                            if (isGathering) {
+                                                dispatch({
+                                                    type: 'UNASSIGN_RESOURCE_BUILDING',
+                                                    payload: { characterId: char.id, buildingId: gatherBuildingId }
+                                                });
+                                            }
+                                        };
+
                                         return (
                                             <div
                                                 key={char.id}
-                                                draggable={!isInTeam}
-                                                onDragStart={() => !isInTeam && setDragged(char.id)}
+                                                draggable={canDrag}
+                                                onDragStart={(e) => {
+                                                    if (!canDrag) return;
+                                                    setDragged(char.id);
+                                                    // ✅ 部分浏览器需要 setData 才会认为这是“有效拖拽”
+                                                    try {
+                                                        e.dataTransfer.setData('text/plain', char.id);
+                                                        e.dataTransfer.effectAllowed = 'move';
+                                                    } catch (_) {}
+                                                }}
                                                 style={{
                                                     padding: 12,
                                                     background: isInTeam
                                                         ? 'rgba(76,175,80,0.1)'
-                                                        : 'rgba(0,0,0,0.3)',
+                                                        : isMapFighting
+                                                            ? 'rgba(244,67,54,0.08)'
+                                                            : isGathering
+                                                                ? 'rgba(33,150,243,0.08)'
+                                                                : 'rgba(0,0,0,0.3)',
                                                     border: isInTeam
                                                         ? '1px solid rgba(76,175,80,0.3)'
-                                                        : '1px solid rgba(74,60,42,0.5)',
+                                                        : isMapFighting
+                                                            ? '1px solid rgba(244,67,54,0.35)'
+                                                            : isGathering
+                                                                ? '1px solid rgba(33,150,243,0.35)'
+                                                                : '1px solid rgba(74,60,42,0.5)',
                                                     borderRadius: 8,
-                                                    cursor: isInTeam ? 'default' : 'grab',
-                                                    opacity: isInTeam ? 0.6 : 1,
+                                                    cursor: canDrag ? 'grab' : 'default',
+                                                    opacity: isInTeam ? 0.6 : isBusy ? 0.85 : 1,
                                                     transition: 'all 0.15s',
                                                     display: 'flex',
                                                     alignItems: 'center',
                                                     gap: 10
                                                 }}
+                                                title={
+                                                    isMapFighting
+                                                        ? `地图战斗中：${zoneName || zoneId}`
+                                                        : isGathering
+                                                        ? `采集中：${buildingName || gatherBuildingId}`
+                                                        : '待命'
+                                                }
                                             >
                                                 <div style={{ fontSize: 24 }}>
                                                     {char.classId === 'protection_warrior' ? '🛡️' :
                                                         char.classId === 'discipline_priest' ? '✝️' :
                                                             char.classId === 'frost_mage' ? '❄️' : '👤'}
                                                 </div>
-                                                <div>
+                                                <div style={{ flex: 1, minWidth: 0 }}>
                                                     <div style={{
                                                         fontSize: 12,
                                                         color: isInTeam ? '#4CAF50' : '#ffd700',
@@ -20654,7 +20725,70 @@ const BossPrepareModal = ({ state, dispatch }) => {
                                                     <div style={{ fontSize: 10, color: '#888' }}>
                                                         Lv.{char.level} {CLASSES[char.classId].name}
                                                     </div>
+
+                                                    {/* 状态标签：地图战斗 / 采集 / 待命 */}
+                                                    <div style={{
+                                                        marginTop: 6,
+                                                        display: 'flex',
+                                                        flexWrap: 'wrap',
+                                                        gap: 4
+                                                    }}>
+                                                        {!isBusy && (
+                                                            <span style={{
+                                                                fontSize: 9,
+                                                                padding: '2px 6px',
+                                                                borderRadius: 4,
+                                                                background: 'rgba(255,255,255,0.06)',
+                                                                border: '1px solid rgba(255,255,255,0.12)',
+                                                                color: '#aaa',
+                                                                fontWeight: 700
+                                                            }}>
+                                                                ✅ 待命
+                                                            </span>
+                                                        )}
+                                                        {isMapFighting && (
+                                                            <span style={{
+                                                                fontSize: 9,
+                                                                padding: '2px 6px',
+                                                                borderRadius: 4,
+                                                                background: 'rgba(244,67,54,0.15)',
+                                                                border: '1px solid rgba(244,67,54,0.35)',
+                                                                color: '#ff8a80',
+                                                                fontWeight: 700
+                                                            }}>
+                                                                ⚔️ 地图战斗中{zoneName ? `：${zoneName}` : ''}
+                                                            </span>
+                                                        )}
+                                                        {isGathering && (
+                                                            <span style={{
+                                                                fontSize: 9,
+                                                                padding: '2px 6px',
+                                                                borderRadius: 4,
+                                                                background: 'rgba(33,150,243,0.15)',
+                                                                border: '1px solid rgba(33,150,243,0.35)',
+                                                                color: '#90caf9',
+                                                                fontWeight: 700
+                                                            }}>
+                                                                ⛏️ 采集中{buildingName ? `：${buildingName}` : ''}
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                 </div>
+
+                                                {/* 召回按钮：地图战斗/采集中角色可召回 */}
+                                                {isBusy && (
+                                                    <Button
+                                                        onClick={recallCharacter}
+                                                        variant="danger"
+                                                        style={{
+                                                            padding: '4px 8px',
+                                                            fontSize: 10,
+                                                            whiteSpace: 'nowrap'
+                                                        }}
+                                                    >
+                                                        召回
+                                                    </Button>
+                                                )}
                                             </div>
                                         );
                                     })}

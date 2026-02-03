@@ -1459,7 +1459,7 @@ const SKILLS = {
     // ==================== 狂徒盗贼 ====================
     mastery_sword_heart: {
         id: 'mastery_sword_heart',
-        name: '精通：剑心',
+        name: '精通：通明剑心',
         icon: '🗡️',
         type: 'passive',
         description: '被动：剑刃乱舞复制伤害的比例提高（精通/10）%。你可以积攒“星”（连击点）来加强【刺骨】【切割】【正中眉心】，最高5星。'

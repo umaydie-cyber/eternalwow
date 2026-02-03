@@ -4151,8 +4151,11 @@ const FIXED_EQUIPMENTS = {
             hp: 2,
             mastery: 2,
             versatility: 2,
-
-
+        }
+    },
+    EQ_073: {
+        id: 'EQ_073',
+        name: '哈卡的毒牙',
         icon: "icons/wow/vanilla/weapons/INV_Weapon_ShortBlade_25.png",
         type: 'equipment',
         slot: 'offHand',

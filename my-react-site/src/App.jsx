@@ -935,7 +935,7 @@ const SKILLS = {
         icon: '✝️',
         iconUrl : 'icons/wow/vanilla/items/INV_Banner_01.png',
         type: 'passive',
-        description: '被动：救赎治疗比例提升(精通/5)%。该数值直接加在基础20%上。'
+        description: '被动：救赎治疗比例提升(精通/10)%。该数值直接加在基础20%上。'
     },
     smite: {
         id: 'smite',
@@ -11241,8 +11241,10 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
                 type: 'buff',
                 text: buffText
             });
-        }// ===== 护盾技能处理 =====
-        else if (result.shield) {
+        }
+
+        // ===== 护盾技能处理 =====
+        if (result.shield) {
             // 检查是否已有同类型护盾，如果有则刷新
             const existingShieldIdx = buffs.findIndex(b => b.type === result.shield.type);
             if (existingShieldIdx !== -1) {
@@ -11275,7 +11277,8 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
                 });
             }
         }
-        else if (result.dot) {
+
+        if (result.dot) {
             enemyDebuffs.push({
                 type: 'dot',
                 sourceSkillId: currentSkillId,
@@ -11295,7 +11298,8 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
                 text: `施加持续伤害：每回合 ${Math.floor((result.dot.damagePerTurn || 0) * racialSlotDamageMult)}，持续 ${result.dot.duration} 回合`
             });
         }
-        else if (result.healAll) {
+
+        if (result.healAll) {
             const maxHp = character.stats.maxHp ?? character.stats.hp ?? 0;
             const actualHeal = Math.min(result.healAll, maxHp - charHp);
             charHp += actualHeal;

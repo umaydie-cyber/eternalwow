@@ -7564,8 +7564,8 @@ function calculateTotalStats(character, partyAuras = { hpMul: 1, spellPowerMul: 
     if (character.classId === 'protection_warrior') {
         const mastery = totalStats.mastery || 0;
 
-        // (10 + mastery / 2)%
-        const masteryBonusPct = (10 + mastery / 2) / 100;
+        // (12 + mastery / 2)%
+        const masteryBonusPct = (12 + mastery / 2) / 100;
 
         // 只放大“原始格挡率 / 原始格挡值”
         //totalStats.blockRate += totalStats.blockRate * masteryBonusPct;

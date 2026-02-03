@@ -52,6 +52,31 @@ const RACE_TRAITS = {
         // 血性狂怒：前4个技能格造成的伤害提高10%（乘算）
         firstNSlotDamageMult: { n: 4, mult: 1.10 },
     },
+    '巨魔': {
+        // 选择巨魔角色：额外获得两个种族技能
+        extraSkills: ['racial_troll_spirit', 'racial_troll_berserking'],
+        // 巨魔精魄：获得6精通
+        statBonus: { mastery: 6 },
+        // 狂暴：前4个技能格额外获得20急速（加法）
+        firstNSlotStatBonus: { n: 4, stats: { haste: 20 } },
+    },
+    '牛头人': {
+        // 选择牛头人角色：额外获得两个种族技能
+        extraSkills: ['racial_tauren_spirit', 'racial_tauren_cultivation'],
+        // 牛头精魄：获得10%额外生命值（乘区）
+        hpPctBonus: 0.10,
+        // 栽培：增加30点精细
+        gatherStatBonus: { precision: 30 },
+    },
+    '亡灵': {
+        // 选择亡灵角色：额外获得两个种族技能
+        extraSkills: ['racial_undead_spirit', 'racial_undead_will'],
+        // 亡灵精魄：获得6暴击
+        statBonus: { critRate: 6 },
+        // 亡灵意志：Boss战斗中免疫受到的第一次恐惧效果
+        firstFearImmunity: true,
+    },
+
 };
 
 
@@ -711,6 +736,53 @@ const SKILLS = {
         description: '兽人永不为奴！前4个技能格造成的伤害提高10%。'
     },
 
+
+
+
+    racial_troll_spirit: {
+        id: 'racial_troll_spirit',
+        name: '巨魔精魄',
+        icon: '🌀',
+        type: 'passive',
+        description: '精通 +6。'
+    },
+    racial_troll_berserking: {
+        id: 'racial_troll_berserking',
+        name: '狂暴',
+        icon: '💢',
+        type: 'passive',
+        description: '前4个技能格额外获得20急速（加法）。'
+    },
+
+    racial_tauren_spirit: {
+        id: 'racial_tauren_spirit',
+        name: '牛头精魄',
+        icon: '🐂',
+        type: 'passive',
+        description: '最大生命值 +10%。'
+    },
+    racial_tauren_cultivation: {
+        id: 'racial_tauren_cultivation',
+        name: '栽培',
+        icon: '🌱',
+        type: 'passive',
+        description: '采集精细 +30。'
+    },
+
+    racial_undead_spirit: {
+        id: 'racial_undead_spirit',
+        name: '亡灵精魄',
+        icon: '💀',
+        type: 'passive',
+        description: '暴击率 +6。'
+    },
+    racial_undead_will: {
+        id: 'racial_undead_will',
+        name: '亡灵意志',
+        icon: '🧠',
+        type: 'passive',
+        description: 'Boss战斗中免疫受到的第一次恐惧效果。'
+    },
 
 
 
@@ -7217,6 +7289,14 @@ function calculateTotalStats(character, partyAuras = { hpMul: 1, spellPowerMul: 
         totalStats.versatility = (Number(totalStats.versatility) || 0) + achVersatilityBonus;
     }
 
+
+    // ==================== 种族：生命值百分比加成（例如：牛头人【牛头精魄】） ====================
+    // 规则：作为乘区作用在最终 hp 上（与成就/光环可叠加）
+    const raceHpPctBonus = Number(raceTrait?.hpPctBonus) || 0;
+    if (Number.isFinite(raceHpPctBonus) && raceHpPctBonus !== 0) {
+        totalStats.hp = (Number(totalStats.hp) || 0) * (1 + raceHpPctBonus);
+    }
+
 // ==================== 成就：全队生命百分比加成（如【持续战斗Ⅰ~Ⅹ】） ====================
     // 规则：hpPct 为加法叠加，然后作为乘区作用在最终 hp 上
     const achHpPctBonus = getAchievementHpPctBonus(gameState);
@@ -7305,6 +7385,36 @@ function getSkillSlotBuffBonus(character, slotIndex) {
         attackBonus: Math.floor(attackBonus),
         spellPowerBonus: Math.floor(spellPowerBonus)
     };
+}
+
+
+// ==================== RACE: 技能格属性加成（前N格等） ====================
+// 约定：RACE_TRAITS[race].firstNSlotStatBonus = { n: 4, stats: { haste: 20 } }
+// 返回：{ haste: 20 } 这类“加法属性”
+function getRacialSkillSlotStatBonus(character, slotIndex) {
+    const idx = Number(slotIndex);
+    if (!Number.isFinite(idx)) return {};
+
+    const raceTrait = RACE_TRAITS?.[character?.race];
+    const cfg = raceTrait?.firstNSlotStatBonus;
+    if (!cfg || typeof cfg !== 'object') return {};
+
+    const n = Math.max(0, Math.floor(Number(cfg.n) || 0));
+    if (n <= 0 || idx >= n) return {};
+
+    const stats = (cfg.stats && typeof cfg.stats === 'object')
+        ? cfg.stats
+        : ((cfg.bonus && typeof cfg.bonus === 'object') ? cfg.bonus : {});
+
+    const out = {};
+    Object.entries(stats || {}).forEach(([k, v]) => {
+        const num = Number(v);
+        if (Number.isFinite(num) && num !== 0) {
+            out[k] = (out[k] || 0) + num;
+        }
+    });
+
+    return out;
 }
 
 // 检查角色是否有普攻重复特效，返回触发概率
@@ -7548,6 +7658,7 @@ function stepBossCombat(state) {
         if (!ps.racialFlags || typeof ps.racialFlags !== 'object') ps.racialFlags = {};
         if (ps.racialFlags.stoneformCurseUsed === undefined) ps.racialFlags.stoneformCurseUsed = false;
         if (ps.racialFlags.stoneformPoisonUsed === undefined) ps.racialFlags.stoneformPoisonUsed = false;
+        if (ps.racialFlags.undeadWillUsed === undefined) ps.racialFlags.undeadWillUsed = false;
         return ps.racialFlags;
     };
 
@@ -7572,6 +7683,27 @@ function stepBossCombat(state) {
         const posText = (Number.isFinite(Number(idx)) && idx !== null) ? `位置${Number(idx) + 1} ` : '';
         const srcText = sourceName ? `（${sourceName}）` : '';
         addLog(`【石像形态】触发：${posText}${ps.char?.name || ''} 免疫了本场战斗的首次${kindText}效果${srcText}`);
+        return true;
+    };
+
+    // ==================== 种族：亡灵【亡灵意志】 ====================
+    // 效果：Boss战斗中免疫受到的第一次恐惧效果（每场Boss战 1 次）
+    const tryFirstFearImmunity = (ps, idx = null, sourceName = '') => {
+        if (!ps || ps.currentHp <= 0) return false;
+
+        const raceTrait = RACE_TRAITS?.[ps?.char?.race];
+        const enabled = !!raceTrait?.firstFearImmunity;
+        if (!enabled) return false;
+
+        const flags = ensureRacialFlags(ps);
+        if (flags.undeadWillUsed) return false;
+
+        // 消耗次数
+        flags.undeadWillUsed = true;
+
+        const posText = (Number.isFinite(Number(idx)) && idx !== null) ? `位置${Number(idx) + 1} ` : '';
+        const srcText = sourceName ? `（${sourceName}）` : '';
+        addLog(`【亡灵意志】触发：${posText}${ps.char?.name || ''} 免疫了本场Boss战的首次【恐惧】效果${srcText}`);
         return true;
     };
 
@@ -7705,6 +7837,9 @@ function stepBossCombat(state) {
 
         // 饰品/装备特效：技能栏强化
         const slotBuff = getSkillSlotBuffBonus(p.char, slotIndex);
+        // 种族：技能格属性加成（例如：巨魔【狂暴】前4格急速+20）
+        const racialSlotBonus = getRacialSkillSlotStatBonus(p.char, slotIndex);
+
 
         // 计算本回合用于技能结算的面板（不会写回角色本体）
         const calcStats = {
@@ -7713,6 +7848,11 @@ function stepBossCombat(state) {
             blockValue: (p.char.stats.blockValue || 0) + (p.talentBuffs?.blockValueFlat || 0),
             spellPower: (p.char.stats.spellPower || 0) + (p.talentBuffs?.spellPowerFlat || 0) + (slotBuff.spellPowerBonus || 0)
         };
+
+        // 种族：技能格属性加成（加法叠加）
+        Object.entries(racialSlotBonus || {}).forEach(([stat, add]) => {
+            calcStats[stat] = (calcStats[stat] || 0) + (Number(add) || 0);
+        });
 
         // 叠加本回合触发的临时属性
         Object.entries(turnProcBonus || {}).forEach(([stat, add]) => {
@@ -8749,12 +8889,14 @@ function stepBossCombat(state) {
                     const shieldText = shieldResult.absorbed > 0 ? `，护盾吸收 ${shieldResult.absorbed}` : '';
                     addLog(`【${boss.name}】施放【放逐灵魂】对 位置${tIdx + 1} ${target.char.name} 造成 ${shieldResult.finalDamage} 点暗影伤害（护甲减伤${drPct}%${blockText}${shieldText}）`);
 
-                    // 施加恐惧debuff
-                    target.debuffs = target.debuffs || {};
-                    target.debuffs.fear = {
-                        duration: boss.fearDuration || 3
-                    };
-                    addLog(`→ 位置${tIdx + 1} ${target.char.name} 陷入【恐惧】！无法行动 ${boss.fearDuration || 3} 回合`);
+                    // 施加恐惧debuff（亡灵：首次恐惧免疫）
+                    if (!tryFirstFearImmunity(target, tIdx, '放逐灵魂')) {
+                        target.debuffs = target.debuffs || {};
+                        target.debuffs.fear = {
+                            duration: boss.fearDuration || 3
+                        };
+                        addLog(`→ 位置${tIdx + 1} ${target.char.name} 陷入【恐惧】！无法行动 ${boss.fearDuration || 3} 回合`);
+                    }
                 }
             } else {
                 addLog(`【${boss.name}】施放【放逐灵魂】，但没有存活目标`);
@@ -10150,6 +10292,9 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
 
         // 饰品/装备特效：技能栏强化（例如：第1格与第4格）
         const slotBuff = getSkillSlotBuffBonus(character, slotIndex);
+        // 种族：技能格属性加成（例如：巨魔【狂暴】前4格急速+20）
+        const racialSlotBonus = getRacialSkillSlotStatBonus(character, slotIndex);
+
 
         // 计算本回合用于技能结算的面板（不会写回角色本体）
         const calcStats = {
@@ -10158,6 +10303,11 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
             blockValue: (character.stats.blockValue || 0) + (talentBuffs.blockValueFlat || 0),
             spellPower: (character.stats.spellPower || 0) + (talentBuffs.spellPowerFlat || 0) + (slotBuff.spellPowerBonus || 0),
         };
+
+        // 种族：技能格属性加成（加法叠加）
+        Object.entries(racialSlotBonus || {}).forEach(([stat, add]) => {
+            calcStats[stat] = (calcStats[stat] || 0) + (Number(add) || 0);
+        });
 
         // 叠加本回合触发的临时属性
         Object.entries(turnProcBonus || {}).forEach(([stat, add]) => {

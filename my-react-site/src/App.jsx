@@ -23,6 +23,19 @@ const RACE_TRAITS = {
         // 石像形态：战斗中首次受到诅咒/中毒效果时免疫（每种各 1 次）
         firstDebuffImmunity: { curse: true, poison: true },
     },
+    '暗夜精灵': {
+        // 选择暗夜精灵角色：额外获得两个种族技能
+        extraSkills: ['racial_nightelf_spirit', 'racial_nightelf_shadowmeld'],
+        // 精灵精魄：早晨6点-晚上6点暴击+6；晚上6点-次日早晨6点急速+6
+        timeBasedStatBonus: {
+            dayStart: 6,
+            nightStart: 18,
+            dayBonus: { critRate: 6 },
+            nightBonus: { haste: 6 },
+        },
+        // 隐遁：地图战斗第一格技能造成的伤害提高20%（乘算）
+        mapFirstSlotDamageMult: 1.2,
+    },
 };
 
 const CLASSES = {
@@ -634,6 +647,23 @@ const SKILLS = {
         type: 'passive',
         description: '战斗中首次受到【诅咒】与【中毒】效果时免疫（每种各 1 次）。'
     },
+
+    racial_nightelf_spirit: {
+        id: 'racial_nightelf_spirit',
+        name: '精灵精魄',
+        icon: '🌙',
+        type: 'passive',
+        description: '早晨6点-晚上6点：暴击率+6；晚上6点-次日早晨6点：急速+6。'
+    },
+    racial_nightelf_shadowmeld: {
+        id: 'racial_nightelf_shadowmeld',
+        name: '隐遁',
+        icon: '🫥',
+        type: 'passive',
+        description: '地图战斗中：第1格技能造成的伤害提高20%（乘算）。'
+    },
+
+
 
     mastery_precise_block: {
         id: 'mastery_precise_block',
@@ -6968,6 +6998,26 @@ function calculateTotalStats(character, partyAuras = { hpMul: 1, spellPowerMul: 
         }
     }
 
+// ✅ 时间段属性加成（例如：暗夜精灵【精灵精魄】）
+// 约定：dayStart(含)~nightStart(不含) 为“白天”，其余为“夜晚”
+    if (raceTrait?.timeBasedStatBonus) {
+        const cfg = raceTrait.timeBasedStatBonus || {};
+        const dayStart = Number.isFinite(Number(cfg.dayStart)) ? Number(cfg.dayStart) : 6;
+        const nightStart = Number.isFinite(Number(cfg.nightStart)) ? Number(cfg.nightStart) : 18;
+
+        const hour = new Date().getHours();
+        const isDay = dayStart < nightStart
+            ? (hour >= dayStart && hour < nightStart)
+            : (hour >= dayStart || hour < nightStart);
+
+        const bonus = (isDay ? cfg.dayBonus : cfg.nightBonus) || {};
+        if (bonus && typeof bonus === 'object') {
+            for (const [k, v] of Object.entries(bonus)) {
+                totalStats[k] = (totalStats[k] || 0) + (Number(v) || 0);
+            }
+        }
+    }
+
 
     // 套装加成（expBonus / goldBonus / dropBonus 等）
     const setBonuses = getSetBonusesForCharacter(character);
@@ -9585,6 +9635,17 @@ const initialState = {
     currentMenu: 'map',
     frame: 0,      // 总帧
     lifeFrame: 0,  // 本世帧
+    // 当前时间段（用于暗夜精灵【精灵精魄】等时间段被动；6:00-18:00=day）
+    nightElfSpiritPhase: (() => {
+        const h = new Date().getHours();
+        const cfg = RACE_TRAITS?.['暗夜精灵']?.timeBasedStatBonus || {};
+        const dayStart = Number.isFinite(Number(cfg.dayStart)) ? Number(cfg.dayStart) : 6;
+        const nightStart = Number.isFinite(Number(cfg.nightStart)) ? Number(cfg.nightStart) : 18;
+        const isDay = dayStart < nightStart
+            ? (h >= dayStart && h < nightStart)
+            : (h >= dayStart || h < nightStart);
+        return isDay ? 'day' : 'night';
+    })(),
     characters: [],
     characterSlots: 1,
     maxCharacterSlots: 15,
@@ -9998,6 +10059,15 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
 
         const slotIndex = skillIndex % validSkills.length;
 
+        // ✅ 种族：暗夜精灵【隐遁】
+        // 效果：地图战斗第1格(索引0)技能造成的伤害提高20%（乘算）
+        const raceTraitCombat = RACE_TRAITS?.[character?.race];
+        let racialSlotDamageMult = 1;
+        if (slotIndex === 0) {
+            const m = Number(raceTraitCombat?.mapFirstSlotDamageMult);
+            if (Number.isFinite(m) && m > 0) racialSlotDamageMult *= m;
+        }
+
         // ==================== 装备特效：回合开始概率属性增益（仅本回合） ====================
         const { bonus: turnProcBonus, triggered: turnProcTriggered } = rollProcStatEffects(character, 'turn_start');
         if (turnProcTriggered.length > 0) {
@@ -10070,6 +10140,9 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
             });
             damage *= buffDamageDealtMult;
 
+            // ✅ 种族：暗夜精灵【隐遁】（地图战斗第1格技能伤害+20%，乘算）
+            damage *= racialSlotDamageMult;
+
             // ✅ 装备特效：地图屠戮（地图战斗伤害加成）
             damage *= mapDamageDealtMult;
 
@@ -10093,7 +10166,7 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
                     type: 'dot',
                     sourceSkillId: currentSkillId,
                     sourceSkillName: skill.name,
-                    damagePerTurn: result.dotOnCrit.damagePerTurn,
+                    damagePerTurn: Math.floor((result.dotOnCrit.damagePerTurn || 0) * racialSlotDamageMult),
                     duration: result.dotOnCrit.duration
                 });
 
@@ -10102,9 +10175,9 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
                     actor: character.name,
                     action: `${skill.name}(重伤)`,
                     target: combatState.enemy?.name,
-                    value: result.dotOnCrit.damagePerTurn,
+                    value: Math.floor((result.dotOnCrit.damagePerTurn || 0) * racialSlotDamageMult),
                     type: 'debuff',
-                    text: `【重伤】施加：每回合 ${result.dotOnCrit.damagePerTurn} 伤害，持续 ${result.dotOnCrit.duration} 回合`
+                    text: `【重伤】施加：每回合 ${Math.floor((result.dotOnCrit.damagePerTurn || 0) * racialSlotDamageMult)} 伤害，持续 ${result.dotOnCrit.duration} 回合`
                 });
             }
 
@@ -10130,7 +10203,7 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
             // 30级天赋：山丘之王 - 雷霆一击有50%几率再次释放一次
             if (character.talents?.[30] === 'mountain_king' && Math.random() < 0.5) {
                 const extraResult = skill.calculate(charForCalc);
-                const extraDamage = Math.max(1, Math.floor((extraResult.aoeDamage * mapDamageDealtMult) - (combatState.enemy?.defense ?? 0)));
+                const extraDamage = Math.max(1, Math.floor((extraResult.aoeDamage * racialSlotDamageMult * mapDamageDealtMult) - (combatState.enemy?.defense ?? 0)));
                 enemyHp -= extraDamage;
 
                 logs.push({
@@ -10156,7 +10229,7 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
                         type: 'dot',
                         sourceSkillId: currentSkillId,
                         sourceSkillName: skill.name,
-                        damagePerTurn: extraResult.dotOnCrit.damagePerTurn,
+                        damagePerTurn: Math.floor((extraResult.dotOnCrit.damagePerTurn || 0) * racialSlotDamageMult),
                         duration: extraResult.dotOnCrit.duration
                     });
 
@@ -10165,9 +10238,9 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
                         actor: character.name,
                         action: `${skill.name}(山丘之王-重伤)`,
                         target: combatState.enemy?.name,
-                        value: extraResult.dotOnCrit.damagePerTurn,
+                        value: Math.floor((extraResult.dotOnCrit.damagePerTurn || 0) * racialSlotDamageMult),
                         type: 'debuff',
-                        text: `【重伤】施加：每回合 ${extraResult.dotOnCrit.damagePerTurn} 伤害，持续 ${extraResult.dotOnCrit.duration} 回合`
+                        text: `【重伤】施加：每回合 ${Math.floor((extraResult.dotOnCrit.damagePerTurn || 0) * racialSlotDamageMult)} 伤害，持续 ${extraResult.dotOnCrit.duration} 回合`
                     });
                 }
             }
@@ -10178,6 +10251,8 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
                 sourceSkillId: currentSkillId,
                 sourceSkillName: result.aoeDot.name || skill.name,
                 ...result.aoeDot, // school, damagePerTurn, duration, canGenerateFinger, name 等
+                // ✅ 种族：暗夜精灵【隐遁】——若该技能位于第1格，则DOT也享受伤害乘算
+                damagePerTurn: Math.floor((result.aoeDot.damagePerTurn || 0) * racialSlotDamageMult),
             });
 
             logs.push({
@@ -10186,7 +10261,7 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
                 action: skill.name,
                 target: combatState.enemy?.name,
                 type: 'debuff',
-                text: `施放【${result.aoeDot.name || skill.name}】：每回合 ${result.aoeDot.damagePerTurn}，持续 ${result.aoeDot.duration} 回合`
+                text: `施放【${result.aoeDot.name || skill.name}】：每回合 ${Math.floor((result.aoeDot.damagePerTurn || 0) * racialSlotDamageMult)}，持续 ${result.aoeDot.duration} 回合`
             });
         }
 
@@ -10212,6 +10287,9 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
                 }
             });
             damage *= buffDamageDealtMultForDamage;
+
+            // ✅ 种族：暗夜精灵【隐遁】（地图战斗第1格技能伤害+20%，乘算）
+            damage *= racialSlotDamageMult;
 
             // ✅ 装备特效：地图屠戮（地图战斗伤害加成）
             damage *= mapDamageDealtMult;
@@ -10301,7 +10379,7 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
 
                     // ===== 50级天赋：圣剑 - 普攻额外造成格挡值伤害 =====
                     if (result.holySwordDamage && result.holySwordDamage > 0) {
-                        const holySwordActualDamage = Math.max(1, Math.floor(result.holySwordDamage * mapDamageDealtMult));
+                        const holySwordActualDamage = Math.max(1, Math.floor(result.holySwordDamage * racialSlotDamageMult * mapDamageDealtMult));
                         enemyHp -= holySwordActualDamage;
 
                         logs.push({
@@ -10388,7 +10466,9 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
                 type: 'dot',
                 sourceSkillId: currentSkillId,
                 sourceSkillName: skill.name,
-                ...result.dot
+                ...result.dot,
+                // ✅ 种族：暗夜精灵【隐遁】——若该技能位于第1格，则DOT也享受伤害乘算
+                damagePerTurn: Math.floor((result.dot.damagePerTurn || 0) * racialSlotDamageMult),
             });
 
             logs.push({
@@ -10396,9 +10476,9 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
                 actor: character.name,
                 action: `${skill.name}(施加)`,
                 target: combatState.enemy?.name,
-                value: result.dot.damagePerTurn,
+                value: Math.floor((result.dot.damagePerTurn || 0) * racialSlotDamageMult),
                 type: 'debuff',
-                text: `施加持续伤害：每回合 ${result.dot.damagePerTurn}，持续 ${result.dot.duration} 回合`
+                text: `施加持续伤害：每回合 ${Math.floor((result.dot.damagePerTurn || 0) * racialSlotDamageMult)}，持续 ${result.dot.duration} 回合`
             });
         }
         else if (result.healAll) {
@@ -10440,7 +10520,7 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
             if (result.penanceDamage) {
                 const actualDamage = Math.max(
                     1,
-                    Math.floor(result.penanceDamage * mapDamageDealtMult) - (combatState.enemy?.defense ?? 0)
+                    Math.floor(result.penanceDamage * racialSlotDamageMult * mapDamageDealtMult) - (combatState.enemy?.defense ?? 0)
                 );
                 enemyHp -= actualDamage;
                 logs.push({
@@ -11004,6 +11084,27 @@ function gameReducer(state, action) {
                 ...state,
                 frame: state.frame + deltaSeconds ,
                 lifeFrame: (state.lifeFrame || 0) + deltaSeconds,};
+// ===== 时间段切换：暗夜精灵【精灵精魄】 =====
+// 仅在 6:00 / 18:00 边界发生变化时重算一次全队属性，避免每秒全量重算。
+            {
+                const hour = new Date().getHours();
+                const cfg = RACE_TRAITS?.['暗夜精灵']?.timeBasedStatBonus || {};
+                const dayStart = Number.isFinite(Number(cfg.dayStart)) ? Number(cfg.dayStart) : 6;
+                const nightStart = Number.isFinite(Number(cfg.nightStart)) ? Number(cfg.nightStart) : 18;
+                const isDay = dayStart < nightStart
+                    ? (hour >= dayStart && hour < nightStart)
+                    : (hour >= dayStart || hour < nightStart);
+                const phase = isDay ? 'day' : 'night';
+                if (newState.nightElfSpiritPhase !== phase) {
+                    newState.nightElfSpiritPhase = phase;
+
+                    // 队伍里有暗夜精灵时才需要重算
+                    if ((newState.characters || []).some(c => c?.race === '暗夜精灵')) {
+                        newState.characters = recalcPartyStats(newState, newState.characters);
+                    }
+                }
+            }
+
 
             // ===== 跨世累计：地图区域击杀计数（用于成就，如「十里坡剑圣」） =====
             // 说明：该计数不应因重生/任何操作而被重置，因此挂在 state.zoneKillCounts 并随存档持久化。

@@ -7576,7 +7576,7 @@ function calculateTotalStats(character, partyAuras = { hpMul: 1, spellPowerMul: 
     if (character.classId === 'discipline_priest') {
         const mastery = Number(totalStats.mastery) || 0;
 
-        // 基础救赎 20% + 精通/5 %
+        // 基础救赎 20% + 精通/10 %
         const atonementRate =
             0.20 + (mastery / 10) / 100;
 

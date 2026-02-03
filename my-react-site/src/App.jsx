@@ -146,6 +146,32 @@ const CLASSES = {
             { level: 50, skillId: 'ice_barrier' },
             { level: 52, skillId: 'conditional_frost_strike' },
         ]
+    },
+    outlaw_rogue: {
+        id: 'outlaw_rogue',
+        name: '狂徒盗贼',
+        baseStats: {
+            hp: 120,
+            mp: 60,
+            attack: 18,
+            spellPower: 5,
+            armor: 18,
+            magicResist: 10,
+        },
+        baseGatherStats: { proficiency: 5, precision: 3, perception: 2 },
+        skills: [
+            { level: 1, skillId: 'basic_attack' },
+            { level: 1, skillId: 'rest' },
+            { level: 1, skillId: 'mastery_sword_heart' },
+            { level: 3, skillId: 'blade_flurry' },
+            { level: 5, skillId: 'shadowstrike' },
+            { level: 10, skillId: 'eviscerate' },
+            { level: 20, skillId: 'ambush' },
+            { level: 30, skillId: 'crimson_vial' },
+            { level: 40, skillId: 'slice_and_dice' },
+            { level: 50, skillId: 'between_the_eyes' },
+            { level: 60, skillId: 'adrenaline_rush' },
+        ]
     }
 };
 
@@ -1429,6 +1455,199 @@ const SKILLS = {
             };
         }
     },
+
+    // ==================== 狂徒盗贼 ====================
+    mastery_sword_heart: {
+        id: 'mastery_sword_heart',
+        name: '精通：剑心',
+        icon: '🗡️',
+        type: 'passive',
+        description: '被动：剑刃乱舞复制伤害的比例提高（精通/10）%。你可以积攒“星”（连击点）来加强【刺骨】【切割】【正中眉心】，最高5星。'
+    },
+    blade_flurry: {
+        id: 'blade_flurry',
+        name: '剑刃乱舞',
+        icon: '🌀',
+        type: 'aoe_damage',
+        limit: 1,
+        description: '对所有目标造成1倍攻击强度的伤害。本场战斗中你的普通攻击、刺骨、伏击、正中眉心会对主目标外的所有敌人造成本次伤害*50%的复制伤害（精通提高比例）。',
+        calculate: (char) => {
+            let damage = (char.stats.attack || 0) * 1.0;
+
+            const critRate = Number(char.stats.critRate) || 0;
+            const isCrit = Math.random() < critRate / 100;
+            if (isCrit) {
+                damage *= (Number(char.stats.critDamage) || 2.0);
+            }
+
+            // 全能：通用乘区
+            damage *= (1 + (Number(char.stats.versatility) || 0) / 100);
+
+            return {
+                aoeDamage: Math.floor(damage),
+                isCrit,
+                buff: {
+                    type: 'blade_flurry',
+                    name: '剑刃乱舞',
+                    duration: 999
+                }
+            };
+        }
+    },
+    shadowstrike: {
+        id: 'shadowstrike',
+        name: '影袭',
+        icon: '🗡️',
+        type: 'damage',
+        limit: 8,
+        description: '造成1.2倍攻击强度的伤害，获得1颗星。',
+        calculate: (char) => {
+            let damage = (char.stats.attack || 0) * 1.2;
+            const critRate = Number(char.stats.critRate) || 0;
+            const isCrit = Math.random() < critRate / 100;
+            if (isCrit) damage *= (Number(char.stats.critDamage) || 2.0);
+            damage *= (1 + (Number(char.stats.versatility) || 0) / 100);
+            return {
+                damage: Math.floor(damage),
+                isCrit,
+                generateComboPoints: 1
+            };
+        }
+    },
+    eviscerate: {
+        id: 'eviscerate',
+        name: '刺骨',
+        icon: '🩸',
+        type: 'damage',
+        limit: 8,
+        description: '造成1.5 +（当前星数*0.5）倍攻击强度的伤害，消耗所有星。',
+        calculate: (char, combatContext) => {
+            const combo = Math.max(0, Math.min(5, Math.floor(Number(combatContext?.comboPoints) || 0)));
+            const mult = 1.5 + combo * 0.5;
+
+            let damage = (char.stats.attack || 0) * mult;
+            const critRate = Number(char.stats.critRate) || 0;
+            const isCrit = Math.random() < critRate / 100;
+            if (isCrit) damage *= (Number(char.stats.critDamage) || 2.0);
+            damage *= (1 + (Number(char.stats.versatility) || 0) / 100);
+
+            return {
+                damage: Math.floor(damage),
+                isCrit,
+                consumeComboPoints: 'all'
+            };
+        }
+    },
+    ambush: {
+        id: 'ambush',
+        name: '伏击',
+        icon: '🥷',
+        type: 'damage',
+        limit: 2,
+        description: '造成2倍攻击强度的伤害，获得2颗星。',
+        calculate: (char) => {
+            let damage = (char.stats.attack || 0) * 2.0;
+            const critRate = Number(char.stats.critRate) || 0;
+            const isCrit = Math.random() < critRate / 100;
+            if (isCrit) damage *= (Number(char.stats.critDamage) || 2.0);
+            damage *= (1 + (Number(char.stats.versatility) || 0) / 100);
+            return {
+                damage: Math.floor(damage),
+                isCrit,
+                generateComboPoints: 2
+            };
+        }
+    },
+    crimson_vial: {
+        id: 'crimson_vial',
+        name: '猩红之瓶',
+        icon: '🧪',
+        type: 'buff',
+        limit: 1,
+        description: '每回合回复15%生命值，持续3回合。',
+        calculate: () => {
+            return {
+                buff: {
+                    type: 'crimson_vial',
+                    name: '猩红之瓶',
+                    healPctPerTurn: 0.15,
+                    duration: 3
+                }
+            };
+        }
+    },
+    slice_and_dice: {
+        id: 'slice_and_dice',
+        name: '切割',
+        icon: '⚡',
+        type: 'buff',
+        limit: 1,
+        description: '急速提高20 +（当前星数*20），持续8回合，消耗所有星。',
+        calculate: (char, combatContext) => {
+            const combo = Math.max(0, Math.min(5, Math.floor(Number(combatContext?.comboPoints) || 0)));
+            const hasteBonus = 20 + combo * 20;
+            return {
+                buff: {
+                    type: 'slice_and_dice',
+                    name: '切割',
+                    hasteBonus,
+                    duration: 8
+                },
+                consumeComboPoints: 'all'
+            };
+        }
+    },
+    between_the_eyes: {
+        id: 'between_the_eyes',
+        name: '正中眉心',
+        icon: '🎯',
+        type: 'damage',
+        limit: 1,
+        description: '造成2 +（当前星数*0.5）倍攻击强度的伤害，提高10 +（当前星数*5）的暴击率，持续4回合，消耗所有星。',
+        calculate: (char, combatContext) => {
+            const combo = Math.max(0, Math.min(5, Math.floor(Number(combatContext?.comboPoints) || 0)));
+            const mult = 2 + combo * 0.5;
+            const critRateBonus = 10 + combo * 5;
+
+            let damage = (char.stats.attack || 0) * mult;
+            const critRate = Number(char.stats.critRate) || 0;
+            const isCrit = Math.random() < critRate / 100;
+            if (isCrit) damage *= (Number(char.stats.critDamage) || 2.0);
+            damage *= (1 + (Number(char.stats.versatility) || 0) / 100);
+
+            return {
+                damage: Math.floor(damage),
+                isCrit,
+                buff: {
+                    type: 'between_the_eyes',
+                    name: '正中眉心',
+                    critRateBonus,
+                    duration: 4
+                },
+                consumeComboPoints: 'all'
+            };
+        }
+    },
+    adrenaline_rush: {
+        id: 'adrenaline_rush',
+        name: '冲动',
+        icon: '🔥',
+        type: 'buff',
+        limit: 1,
+        description: '获得20急速，每回合获取1颗星，持续8回合。',
+        calculate: () => {
+            return {
+                buff: {
+                    type: 'adrenaline_rush',
+                    name: '冲动',
+                    hasteBonus: 20,
+                    comboPerTurn: 1,
+                    duration: 8
+                }
+            };
+        }
+    },
+
     // 在 SKILLS 对象中添加
     conditional_frost_strike: {
         id: 'conditional_frost_strike',
@@ -7776,6 +7995,52 @@ function stepBossCombat(state) {
             addLog(`【幻想曲】位置${i + 1} ${p.char.name} 获得1层（当前${p.fantasiaStacks}层）`);
         }
 
+        // ==================== 回合开始：持续性buff效果（盗贼等） ====================
+        // 1) 猩红之瓶：每回合回复最大生命值一定比例
+        // 2) 冲动：每回合获得连击点
+        p.comboPoints = Number.isFinite(p.comboPoints) ? p.comboPoints : 0;
+        if (Array.isArray(p.buffs) && p.buffs.length > 0) {
+            p.buffs.forEach(b => {
+                // 每回合治疗
+                if (b && typeof b.healPctPerTurn === 'number' && b.healPctPerTurn > 0) {
+                    const maxHp = Number(p.char?.stats?.maxHp) || 0;
+                    const baseHeal = Math.floor(maxHp * b.healPctPerTurn);
+
+                    // 致死打击：减疗
+                    let healingMult = 1;
+                    if (p.debuffs?.mortalStrike) {
+                        healingMult = 1 - (p.debuffs.mortalStrike.healingReduction || 0);
+                    }
+                    const actualHeal = Math.max(0, Math.floor(baseHeal * healingMult));
+                    if (actualHeal > 0 && p.currentHp > 0) {
+                        const before = p.currentHp;
+                        p.currentHp = Math.min(maxHp, p.currentHp + actualHeal);
+                        const realHeal = p.currentHp - before;
+                        if (realHeal > 0) {
+                            let healText = `【${b.name || '持续治疗'}】位置${i + 1} ${p.char.name} 回复 ${realHeal} 点生命`;
+                            if (healingMult < 1) {
+                                healText += `（受到致死打击减疗${Math.round((1 - healingMult) * 100)}%）`;
+                            }
+                            addLog(healText);
+                        }
+                    }
+                }
+
+                // 每回合获得连击点
+                if (b && Number.isFinite(Number(b.comboPerTurn)) && Number(b.comboPerTurn) > 0) {
+                    const gain = Math.max(0, Math.floor(Number(b.comboPerTurn)));
+                    if (gain > 0) {
+                        const before = p.comboPoints;
+                        p.comboPoints = Math.min(5, p.comboPoints + gain);
+                        const realGain = p.comboPoints - before;
+                        if (realGain > 0) {
+                            addLog(`【${b.name || '增益'}】位置${i + 1} ${p.char.name} 获得 ${realGain} 星（当前${p.comboPoints}星）`);
+                        }
+                    }
+                }
+            });
+        }
+
         // ==================== 恐惧：跳过本回合行动 ====================
         // 说明：每次 stepBossCombat 视为“1回合”，恐惧期间该角色不释放技能；
         // 但仍然会消耗本回合（技能轮转继续前进），并正常结算 buff/debuff 持续时间。
@@ -7859,6 +8124,31 @@ function stepBossCombat(state) {
             calcStats[stat] = (calcStats[stat] || 0) + (Number(add) || 0);
         });
 
+        // Buff：面板属性加成（如切割/冲动/正中眉心/冰冷血脉/争分夺秒等）
+        if (Array.isArray(p.buffs) && p.buffs.length > 0) {
+            p.buffs.forEach(b => {
+                if (!b) return;
+                if (Number.isFinite(Number(b.hasteBonus)) && Number(b.hasteBonus) !== 0) {
+                    calcStats.haste = (calcStats.haste || 0) + (Number(b.hasteBonus) || 0);
+                }
+                if (Number.isFinite(Number(b.critRateBonus)) && Number(b.critRateBonus) !== 0) {
+                    calcStats.critRate = (calcStats.critRate || 0) + (Number(b.critRateBonus) || 0);
+                }
+                if (Number.isFinite(Number(b.masteryBonus)) && Number(b.masteryBonus) !== 0) {
+                    calcStats.mastery = (calcStats.mastery || 0) + (Number(b.masteryBonus) || 0);
+                }
+                if (Number.isFinite(Number(b.versatilityBonus)) && Number(b.versatilityBonus) !== 0) {
+                    calcStats.versatility = (calcStats.versatility || 0) + (Number(b.versatilityBonus) || 0);
+                }
+                if (Number.isFinite(Number(b.attackBonus)) && Number(b.attackBonus) !== 0) {
+                    calcStats.attack = (calcStats.attack || 0) + (Number(b.attackBonus) || 0);
+                }
+                if (Number.isFinite(Number(b.spellPowerBonus)) && Number(b.spellPowerBonus) !== 0) {
+                    calcStats.spellPower = (calcStats.spellPower || 0) + (Number(b.spellPowerBonus) || 0);
+                }
+            });
+        }
+
         const charForCalc = {
             ...p.char,
             stats: calcStats
@@ -7874,7 +8164,8 @@ function stepBossCombat(state) {
             fantasiaStacks: p.fantasiaStacks || 0,
             icyVeinsBuff,
             blizzardActive,
-            fingersOfFrost: p.fingersOfFrost || 0
+            fingersOfFrost: p.fingersOfFrost || 0,
+            comboPoints: p.comboPoints || 0
         };
         const result = skill.calculate(charForCalc, combatContext);
 
@@ -7902,6 +8193,54 @@ function stepBossCombat(state) {
                 }
             });
         }
+
+        // ==================== 盗贼：剑刃乱舞（复制伤害） ====================
+        const hasBladeFlurry = Array.isArray(p.buffs) && p.buffs.some(b => b?.type === 'blade_flurry' && (b.duration ?? 1) > 0);
+        const getBladeFlurryCopyRatio = () => {
+            // 基础50%，精通提高（精通/10）%
+            const mastery = Number(charForCalc?.stats?.mastery) || 0;
+            return 0.5 + (mastery / 1000);
+        };
+
+        const applyBladeFlurryCleave = (baseDamage, sourceLabel = '') => {
+            if (!hasBladeFlurry) return;
+            if (!Number.isFinite(baseDamage) || baseDamage <= 0) return;
+
+            const ratio = getBladeFlurryCopyRatio();
+            if (!Number.isFinite(ratio) || ratio <= 0) return;
+
+            const cleaveBase = Math.floor(baseDamage * ratio);
+            if (cleaveBase <= 0) return;
+
+            const minionName = boss.minion?.name || boss.cannoneer?.name || '小弟';
+
+            // 主目标是小弟 -> 额外打Boss
+            if (targetType !== 'boss' && combat.bossHp > 0) {
+                const bossDef = Number(boss.defense) || 0;
+                const cleaveToBoss = Math.max(1, cleaveBase - bossDef);
+                combat.bossHp -= cleaveToBoss;
+                addLog(`【剑刃乱舞】${p.char.name} 的${sourceLabel} 额外对 ${boss.name} 造成 ${cleaveToBoss} 伤害`);
+            }
+
+            // 额外打所有非主目标的小弟
+            if (Array.isArray(combat.minions) && combat.minions.length > 0) {
+                combat.minions.forEach((m, idx) => {
+                    if (!m || m.hp <= 0) return;
+                    if (targetType === 'minion' && idx === targetIndex) return;
+
+                    // 免疫
+                    if (m.immune) {
+                        addLog(`【剑刃乱舞】额外伤害被 火炮手${idx + 1}【登上甲板】免疫！`);
+                        return;
+                    }
+
+                    const def = Number(m.defense) || Number(boss.minion?.defense) || Number(boss.cannoneer?.defense) || 0;
+                    const cleaveToMinion = Math.max(1, cleaveBase - def);
+                    m.hp -= cleaveToMinion;
+                    addLog(`【剑刃乱舞】${p.char.name} 的${sourceLabel} 额外对 ${minionName}${idx + 1} 造成 ${cleaveToMinion} 伤害`);
+                });
+            }
+        };
 
         // 普通攻击执行函数
         const executeBasicAttackDamage = (isRepeat = false) => {
@@ -7939,6 +8278,9 @@ function stepBossCombat(state) {
 
                     addLog(`【圣剑】触发：${p.char.name} 额外造成 ${holySwordActualDamage} 点真实伤害`);
                 }
+
+                // 剑刃乱舞：复制伤害（普通攻击也触发）
+                applyBladeFlurryCleave(Math.floor(damage), `普通攻击${repeatText}`);
 
                 return actualDamage;
             }
@@ -8074,6 +8416,11 @@ function stepBossCombat(state) {
 
                 const minionName = boss.minion?.name || boss.cannoneer?.name || '小弟';
                 addLog(`位置${i + 1} ${p.char.name} 使用 ${skill.name} 对 ${targetType === 'boss' ? boss.name : minionName} 造成 ${actualDamage} 伤害${result.isCrit ? '（暴击）' : ''}`);
+
+                // 剑刃乱舞：复制伤害（普通攻击/刺骨/伏击/正中眉心）
+                if (['basic_attack', 'eviscerate', 'ambush', 'between_the_eyes'].includes(skillId)) {
+                    applyBladeFlurryCleave(damage, skill.name);
+                }
 
                 // 救赎机制
                 if (p.char.stats.atonement) {
@@ -8262,6 +8609,23 @@ function stepBossCombat(state) {
             if (result.buff.type === 'icy_veins') {
                 addLog(`位置${i + 1} ${p.char.name} 开启【冰冷血脉】：冰霜伤害+50%，急速+50%，持续${result.buff.duration}回合`);
             }
+
+            // 狂徒盗贼buff
+            if (result.buff.type === 'blade_flurry') {
+                addLog(`位置${i + 1} ${p.char.name} 开启【剑刃乱舞】：后续普攻/刺骨/伏击/正中眉心将触发复制伤害（持续本场战斗）`);
+            }
+            if (result.buff.type === 'slice_and_dice') {
+                addLog(`位置${i + 1} ${p.char.name} 开启【切割】：急速+${result.buff.hasteBonus || 0}，持续${result.buff.duration}回合`);
+            }
+            if (result.buff.type === 'between_the_eyes') {
+                addLog(`位置${i + 1} ${p.char.name} 获得【正中眉心】：暴击率+${result.buff.critRateBonus || 0}%，持续${result.buff.duration}回合`);
+            }
+            if (result.buff.type === 'adrenaline_rush') {
+                addLog(`位置${i + 1} ${p.char.name} 开启【冲动】：急速+${result.buff.hasteBonus || 0}，每回合+${result.buff.comboPerTurn || 0}星，持续${result.buff.duration}回合`);
+            }
+            if (result.buff.type === 'crimson_vial') {
+                addLog(`位置${i + 1} ${p.char.name} 使用【猩红之瓶】：每回合回复${Math.round((result.buff.healPctPerTurn || 0) * 100)}%最大生命值，持续${result.buff.duration}回合`);
+            }
         }
 
         // ===== 护盾技能处理 =====
@@ -8342,6 +8706,32 @@ function stepBossCombat(state) {
             const used = Number(result.fantasiaStacksUsed) || (p.fantasiaStacks || 0);
             p.fantasiaStacks = 0;
             addLog(`【幻想曲】${p.char.name} 消耗${used}层，强化本次神圣新星后清空层数`);
+        }
+
+        // ==================== 盗贼：连击点（星）结算 ====================
+        // 说明：技能的 calculate 可返回：
+        // - generateComboPoints: number
+        // - consumeComboPoints: 'all' | number
+        p.comboPoints = Number.isFinite(p.comboPoints) ? p.comboPoints : 0;
+        if (result.consumeComboPoints) {
+            const spent = result.consumeComboPoints === 'all'
+                ? p.comboPoints
+                : Math.min(p.comboPoints, Math.max(0, Math.floor(Number(result.consumeComboPoints) || 0)));
+            if (spent > 0) {
+                p.comboPoints = Math.max(0, p.comboPoints - spent);
+                addLog(`【连击点】${p.char.name} 消耗 ${spent} 星（当前${p.comboPoints}星）`);
+            }
+        }
+        if (result.generateComboPoints) {
+            const gain = Math.max(0, Math.floor(Number(result.generateComboPoints) || 0));
+            if (gain > 0) {
+                const before = p.comboPoints;
+                p.comboPoints = Math.min(5, p.comboPoints + gain);
+                const realGain = p.comboPoints - before;
+                if (realGain > 0) {
+                    addLog(`【连击点】${p.char.name} 获得 ${realGain} 星（当前${p.comboPoints}星）`);
+                }
+            }
         }
 
         // 本角色行动结束：结算持续时间
@@ -10124,6 +10514,7 @@ function createCombatState(character, enemy, skillSlots) {
         enemyHp: enemy.hp,
         round: 0,
         skillIndex: 0,
+        comboPoints: 0, // 盗贼“星”(连击点)
         buffs,
         enemyDebuffs: [], // 怪物身上的 debuff
         validSkills,
@@ -10166,6 +10557,9 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
     let fantasiaStacks = combatState.fantasiaStacks || 0;
     // 寒冰指层数
     let fingersOfFrost = combatState.fingersOfFrost || 0;
+
+    // 盗贼连击点（星）
+    let comboPoints = combatState.comboPoints || 0;
 
     const validSkills = Array.isArray(combatState.validSkills) && combatState.validSkills.length > 0
         ? combatState.validSkills
@@ -10216,6 +10610,55 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
                 actor: character.name,
                 proc: '幻想曲',
                 text: `【幻想曲】获得1层（当前${fantasiaStacks}层）`
+            });
+        }
+
+        // ==================== 回合开始：持续性buff效果（盗贼等） ====================
+        comboPoints = Number.isFinite(comboPoints) ? comboPoints : 0;
+        if (Array.isArray(buffs) && buffs.length > 0) {
+            buffs.forEach(b => {
+                if (!b) return;
+
+                // 每回合治疗（例如：猩红之瓶）
+                if (typeof b.healPctPerTurn === 'number' && b.healPctPerTurn > 0) {
+                    const maxHp = character.stats.maxHp ?? character.stats.hp ?? 0;
+                    const healAmount = Math.max(0, Math.floor(maxHp * b.healPctPerTurn));
+                    if (healAmount > 0 && charHp > 0) {
+                        const before = charHp;
+                        charHp = Math.min(maxHp, charHp + healAmount);
+                        const realHeal = charHp - before;
+                        if (realHeal > 0) {
+                            logs.push({
+                                round,
+                                actor: character.name,
+                                action: b.name || '持续治疗',
+                                target: character.name,
+                                value: realHeal,
+                                type: 'heal',
+                                text: `【${b.name || '持续治疗'}】回复 ${realHeal} 点生命`
+                            });
+                        }
+                    }
+                }
+
+                // 每回合获得连击点（例如：冲动）
+                if (Number.isFinite(Number(b.comboPerTurn)) && Number(b.comboPerTurn) > 0) {
+                    const gain = Math.max(0, Math.floor(Number(b.comboPerTurn)));
+                    if (gain > 0) {
+                        const before = comboPoints;
+                        comboPoints = Math.min(5, comboPoints + gain);
+                        const realGain = comboPoints - before;
+                        if (realGain > 0) {
+                            logs.push({
+                                round,
+                                kind: 'proc',
+                                actor: character.name,
+                                proc: b.name || '增益',
+                                text: `【${b.name || '增益'}】获得 ${realGain} 星（当前${comboPoints}星）`
+                            });
+                        }
+                    }
+                }
             });
         }
 
@@ -10314,6 +10757,31 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
             calcStats[stat] = (calcStats[stat] || 0) + (Number(add) || 0);
         });
 
+        // Buff：面板属性加成（如切割/冲动/正中眉心/冰冷血脉/争分夺秒等）
+        if (Array.isArray(buffs) && buffs.length > 0) {
+            buffs.forEach(b => {
+                if (!b) return;
+                if (Number.isFinite(Number(b.hasteBonus)) && Number(b.hasteBonus) !== 0) {
+                    calcStats.haste = (calcStats.haste || 0) + (Number(b.hasteBonus) || 0);
+                }
+                if (Number.isFinite(Number(b.critRateBonus)) && Number(b.critRateBonus) !== 0) {
+                    calcStats.critRate = (calcStats.critRate || 0) + (Number(b.critRateBonus) || 0);
+                }
+                if (Number.isFinite(Number(b.masteryBonus)) && Number(b.masteryBonus) !== 0) {
+                    calcStats.mastery = (calcStats.mastery || 0) + (Number(b.masteryBonus) || 0);
+                }
+                if (Number.isFinite(Number(b.versatilityBonus)) && Number(b.versatilityBonus) !== 0) {
+                    calcStats.versatility = (calcStats.versatility || 0) + (Number(b.versatilityBonus) || 0);
+                }
+                if (Number.isFinite(Number(b.attackBonus)) && Number(b.attackBonus) !== 0) {
+                    calcStats.attack = (calcStats.attack || 0) + (Number(b.attackBonus) || 0);
+                }
+                if (Number.isFinite(Number(b.spellPowerBonus)) && Number(b.spellPowerBonus) !== 0) {
+                    calcStats.spellPower = (calcStats.spellPower || 0) + (Number(b.spellPowerBonus) || 0);
+                }
+            });
+        }
+
         const charForCalc = {
             ...character,
             stats: calcStats
@@ -10335,7 +10803,8 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
             fantasiaStacks,
             fingersOfFrost,
             icyVeinsBuff,
-            blizzardActive
+            blizzardActive,
+            comboPoints
         };
 
         const result = skill.calculate(charForCalc, combatContext);
@@ -10631,6 +11100,26 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
                     buffText += `，造成伤害提高${damageIncrease}%`;
                 }
             }
+
+            // 冰冷血脉 / 盗贼增益等
+            if (!buffText && result.buff.type === 'icy_veins') {
+                buffText = `【冰冷血脉】冰霜伤害+50%，急速+50%`;
+            }
+            if (!buffText && result.buff.type === 'blade_flurry') {
+                buffText = '【剑刃乱舞】普攻/刺骨/伏击/正中眉心将触发复制伤害';
+            }
+            if (!buffText && result.buff.type === 'slice_and_dice') {
+                buffText = `【切割】急速+${result.buff.hasteBonus || 0}`;
+            }
+            if (!buffText && result.buff.type === 'between_the_eyes') {
+                buffText = `【正中眉心】暴击率+${result.buff.critRateBonus || 0}%`;
+            }
+            if (!buffText && result.buff.type === 'adrenaline_rush') {
+                buffText = `【冲动】急速+${result.buff.hasteBonus || 0}，每回合+${result.buff.comboPerTurn || 0}星`;
+            }
+            if (!buffText && result.buff.type === 'crimson_vial') {
+                buffText = `【猩红之瓶】每回合回复${Math.round((result.buff.healPctPerTurn || 0) * 100)}%最大生命值`;
+            }
             logs.push({
                 round,
                 actor: character.name,
@@ -10850,11 +11339,52 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
             });
         }
 
+        // ==================== 盗贼：连击点（星）结算 ====================
+        // 技能的 calculate 可返回：
+        // - generateComboPoints: number
+        // - consumeComboPoints: 'all' | number
+        comboPoints = Number.isFinite(comboPoints) ? comboPoints : 0;
+        if (result.consumeComboPoints) {
+            const spent = result.consumeComboPoints === 'all'
+                ? comboPoints
+                : Math.min(comboPoints, Math.max(0, Math.floor(Number(result.consumeComboPoints) || 0)));
+            if (spent > 0) {
+                comboPoints = Math.max(0, comboPoints - spent);
+                logs.push({
+                    round,
+                    kind: 'proc',
+                    actor: character.name,
+                    proc: '连击点',
+                    text: `【连击点】消耗 ${spent} 星（当前${comboPoints}星）`
+                });
+            }
+        }
+        if (result.generateComboPoints) {
+            const gain = Math.max(0, Math.floor(Number(result.generateComboPoints) || 0));
+            if (gain > 0) {
+                const before = comboPoints;
+                comboPoints = Math.min(5, comboPoints + gain);
+                const realGain = comboPoints - before;
+                if (realGain > 0) {
+                    logs.push({
+                        round,
+                        kind: 'proc',
+                        actor: character.name,
+                        proc: '连击点',
+                        text: `【连击点】获得 ${realGain} 星（当前${comboPoints}星）`
+                    });
+                }
+            }
+        }
+
         skillIndex++;
 
         if (enemyHp <= 0) break;
 
         // ===== DOT 结算（保持原有逻辑，重伤DOT会自动参与）=====
+        const hasteFromBuffsForDot = Array.isArray(buffs)
+            ? buffs.reduce((sum, b) => sum + (Number(b?.hasteBonus) || 0), 0)
+            : 0;
         const dots = enemyDebuffs.filter(d => d.type === 'dot');
         if (dots.length > 0) {
             for (const d of dots) {
@@ -10871,7 +11401,7 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
                 }
 
                 // 急速：DOT 伤害提高（急速 * 2%）
-                dotDamage *= (1 + ((character.stats.haste || 0) * 0.02));
+                dotDamage *= (1 + (((character.stats.haste || 0) + hasteFromBuffsForDot) * 0.02));
 
                 // ✅ 装备特效：地图屠戮（地图战斗伤害加成）
                 dotDamage *= mapDamageDealtMult;
@@ -11080,6 +11610,7 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
             enemyHp,
             round,
             skillIndex,
+            comboPoints,
             buffs,
             enemyDebuffs,
             validSkills,
@@ -12968,6 +13499,7 @@ function gameReducer(state, action) {
                 currentHp: char.stats.maxHp,
                 currentMp: char.stats.maxMp,
                 skillIndex: 0,
+                comboPoints: 0, // 盗贼“星”(连击点)
                 buffs: [],
                 talentBuffs: { attackFlat: 0, blockValueFlat: 0, spellPowerFlat: 0 },
                 fortuneMisfortuneStacks: 0, // 祸福相依层数
@@ -21256,17 +21788,40 @@ const BossCombatModal = ({ combat, state }) => {
                                                 {/* Buff显示 */}
                                                 {p.buffs && p.buffs.length > 0 && (
                                                     <div style={{ display: 'flex', gap: 4 }}>
-                                                        {p.buffs.slice(0, 3).map((buff, bi) => (
-                                                            <span key={bi} style={{
-                                                                padding: '2px 6px',
-                                                                background: 'rgba(76,175,80,0.2)',
-                                                                borderRadius: 3,
-                                                                fontSize: 9,
-                                                                color: '#4CAF50'
-                                                            }}>
-                                                                {buff.type === 'icy_veins' ? '❄️' : '✨'} {buff.duration}
-                                                            </span>
-                                                        ))}
+                                                        {p.buffs.slice(0, 3).map((buff, bi) => {
+                                                            const icon = (() => {
+                                                                switch (buff.type) {
+                                                                    case 'icy_veins': return '❄️';
+                                                                    case 'blade_flurry': return '🌀';
+                                                                    case 'slice_and_dice': return '✂️';
+                                                                    case 'between_the_eyes': return '🎯';
+                                                                    case 'adrenaline_rush': return '⚡';
+                                                                    case 'crimson_vial': return '🩸';
+                                                                    case 'shield_wall': return '🛡️';
+                                                                    case 'haste': return '⚡';
+                                                                    default: return '✨';
+                                                                }
+                                                            })();
+                                                            const d = buff.duration;
+                                                            const durText = (d === undefined || d === null || !Number.isFinite(Number(d)) || Number(d) >= 900)
+                                                                ? '∞'
+                                                                : Number(d);
+                                                            return (
+                                                                <span
+                                                                    key={bi}
+                                                                    title={buff.type}
+                                                                    style={{
+                                                                        padding: '2px 6px',
+                                                                        background: 'rgba(76,175,80,0.2)',
+                                                                        borderRadius: 3,
+                                                                        fontSize: 9,
+                                                                        color: '#4CAF50'
+                                                                    }}
+                                                                >
+                                                                    {icon} {durText}
+                                                                </span>
+                                                            );
+                                                        })}
                                                     </div>
                                                 )}
                                             </>
@@ -21315,8 +21870,8 @@ const BossCombatModal = ({ combat, state }) => {
                                     </div>
                                 </div>
 
-                                {/* 寒冰指/祸福相依/幻想曲层数显示 */}
-                                {!isDead && (p.fingersOfFrost > 0 || p.fortuneMisfortuneStacks > 0 || (p.fantasiaStacks || 0) > 0) && (
+                                {/* 寒冰指/祸福相依/幻想曲/连击点显示 */}
+                                {!isDead && (p.fingersOfFrost > 0 || p.fortuneMisfortuneStacks > 0 || (p.fantasiaStacks || 0) > 0 || (p.comboPoints || 0) > 0) && (
                                     <div style={{
                                         marginTop: 8,
                                         display: 'flex',
@@ -21358,6 +21913,19 @@ const BossCombatModal = ({ combat, state }) => {
                                                 border: '1px solid rgba(156,39,176,0.3)'
                                             }}>
                                                 🎼 幻想曲 ×{p.fantasiaStacks}
+                                            </span>
+                                        )}
+
+                                        {(p.comboPoints || 0) > 0 && (
+                                            <span style={{
+                                                padding: '2px 8px',
+                                                background: 'rgba(255,193,7,0.2)',
+                                                borderRadius: 4,
+                                                fontSize: 10,
+                                                color: '#ffd54f',
+                                                border: '1px solid rgba(255,193,7,0.3)'
+                                            }}>
+                                                ⭐ 星 ×{p.comboPoints}
                                             </span>
                                         )}
                                     </div>

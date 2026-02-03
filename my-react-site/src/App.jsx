@@ -2,6 +2,21 @@ import React, { useState, useEffect, useCallback, useReducer, useRef } from 'rea
 
 // ==================== GAME DATA ====================
 const RACES = ['人类', '矮人', '暗夜精灵', '侏儒', '兽人', '巨魔', '牛头人', '亡灵'];
+
+// ==================== RACE TRAITS ====================
+// 说明：种族被动技能/效果不占用技能栏（SkillEditor 会过滤 passive）。
+// 如需扩展其它种族，往这里继续加即可。
+const RACE_TRAITS = {
+    '人类': {
+        // 初始额外技能（会写进角色 skills 列表，用于展示）
+        extraSkills: ['racial_human_spirit', 'racial_human_hospitality'],
+        // 人类精魂：全能/精通/暴击/急速 +2
+        statBonus: { versatility: 2, mastery: 2, critRate: 2, haste: 2 },
+        // 宾至如归：地图战斗结束后回复最大生命值的 10%
+        mapCombatEndHealPct: 0.10,
+    },
+};
+
 const CLASSES = {
     protection_warrior: {
         id: 'protection_warrior',
@@ -580,6 +595,23 @@ const SKILLS = {
         type: 'heal',
         calculate: (char) => ({ heal: Math.floor(char.stats.maxHp * 0.05) })
     },
+
+    // ==================== 种族技能 ====================
+    racial_human_spirit: {
+        id: 'racial_human_spirit',
+        name: '人类精魂',
+        icon: '🧬',
+        type: 'passive',
+        description: '被动：全能+2，精通+2，暴击+2，急速+2。'
+    },
+    racial_human_hospitality: {
+        id: 'racial_human_hospitality',
+        name: '宾至如归',
+        icon: '🏠',
+        type: 'passive',
+        description: '被动：地图战斗结束后，回复最大生命值的10%。'
+    },
+
     mastery_precise_block: {
         id: 'mastery_precise_block',
         name: '精通：精确格挡',
@@ -6898,6 +6930,16 @@ function calculateTotalStats(character, partyAuras = { hpMul: 1, spellPowerMul: 
         damageTakenMult: 1
     };
 
+    // ==================== RACE (PASSIVE) ====================
+    // 种族被动：直接加到面板属性里，后续精通/天赋/装备等会一起结算
+    const raceTrait = RACE_TRAITS?.[character.race];
+    if (raceTrait?.statBonus) {
+        for (const [k, v] of Object.entries(raceTrait.statBonus)) {
+            totalStats[k] = (totalStats[k] || 0) + v;
+        }
+    }
+
+
     // 套装加成（expBonus / goldBonus / dropBonus 等）
     const setBonuses = getSetBonusesForCharacter(character);
     for (const set of setBonuses) {
@@ -11230,7 +11272,35 @@ function gameReducer(state, action) {
                         char.lastCombatTime = now; // 结束也刷新一次：脱战回血从这里开始计时
 
                         const enemy = step.combatState.enemy;
+
                         const finalLogs = step.combatState.logs || [];
+
+                        // ✅ 种族：宾至如归（人类）- 地图战斗结束后回复最大生命值的 10%
+                        const raceTrait = RACE_TRAITS?.[char.race];
+                        const hospitalityPct = Number(raceTrait?.mapCombatEndHealPct) || 0;
+                        if (hospitalityPct > 0) {
+                            const maxHp = Number(char.stats?.maxHp ?? char.stats?.hp) || 0;
+                            const curHp = Number(char.stats?.currentHp ?? maxHp) || 0;
+
+                            // 死亡（<=0）不触发，避免“复活”；满血不触发
+                            if (maxHp > 0 && curHp > 0 && curHp < maxHp) {
+                                const heal = Math.floor(maxHp * hospitalityPct);
+                                if (heal > 0) {
+                                    const nextHp = Math.min(maxHp, curHp + heal);
+                                    if (nextHp !== curHp) {
+                                        char.stats = { ...char.stats, currentHp: nextHp };
+
+                                        // 写入战斗日志（橙色：被动触发）
+                                        finalLogs.push({
+                                            kind: 'proc',
+                                            proc: '宾至如归',
+                                            text: `【宾至如归】触发：回复 ${nextHp - curHp} 点生命`
+                                        });
+                                    }
+                                }
+                            }
+                        }
+
 
                         newState.combatLogs = [
                             {
@@ -11545,6 +11615,8 @@ function gameReducer(state, action) {
 
             const classData = CLASSES[classId];
             const baseSkillSlots = Array(8).fill('basic_attack');
+            const baseSkills = classData.skills.filter(s => s.level <= 1).map(s => s.skillId);
+            const raceExtraSkills = RACE_TRAITS?.[race]?.extraSkills || [];
             const newChar = {
                 id: `char_${Date.now()}`,
                 name,
@@ -11564,7 +11636,7 @@ function gameReducer(state, action) {
                     [...baseSkillSlots]
                 ],
                 activeSkillSet: 0,
-                skills: classData.skills.filter(s => s.level <= 1).map(s => s.skillId),
+                skills: Array.from(new Set([...(baseSkills || []), ...(raceExtraSkills || [])])),
                 buffs: [],
                 lastCombatTime: 0,
                 combatState: null,
@@ -12365,8 +12437,19 @@ function gameReducer(state, action) {
 
                         const activeSlots = sets[active] || baseSlots;
 
+                        // ✅ 种族额外技能：确保旧存档的人类也能拿到
+                        let learnedSkills = Array.isArray(c.skills) ? c.skills : [];
+                        try {
+                            learnedSkills = learnNewSkills({ ...c, skills: learnedSkills });
+                        } catch (e) {
+                            // ignore
+                        }
+                        const raceExtraSkills = RACE_TRAITS?.[c.race]?.extraSkills || [];
+                        const mergedSkills = Array.from(new Set([...(learnedSkills || []), ...(raceExtraSkills || [])]));
+
                         return {
                             ...c,
+                            skills: mergedSkills,
                             skillSets: sets,
                             activeSkillSet: active,
                             // 同步：战斗读取 skillSlots（激活的那套）
@@ -14517,8 +14600,8 @@ const ItemDetailsModal = ({ item, onClose, onEquip, characters, state , dispatch
                             isMatA
                                 ? state.inventory.some(i => i?.type === 'equipment' && i.id === 'EQ_042' && getLevel(i) >= 100)
                                 : isMatB
-                                    ? state.inventory.some(i => i?.type === 'equipment' && i.id === 'EQ_041' && getLevel(i) >= 100)
-                                    : false;
+                                ? state.inventory.some(i => i?.type === 'equipment' && i.id === 'EQ_041' && getLevel(i) >= 100)
+                                : false;
 
                         if (!(hasOther && (isMatA || isMatB))) return null;
 
@@ -15272,7 +15355,7 @@ const CharacterPage = ({ state, dispatch }) => {
                                             {char.name}
                                         </div>
                                         <div style={{ fontSize: 11, color: '#aaa', marginTop: 4 }}>
-                                            Lv.{char.level} · {RACES[char.race]?.name} · {CLASSES[char.classId]?.name}
+                                            Lv.{char.level} · {char.race} · {CLASSES[char.classId]?.name}
                                         </div>
                                     </div>
 
@@ -18841,13 +18924,13 @@ const QuestPage = ({ state, dispatch }) => {
                             }}>
                                 {requirementMet ? '✓' : '✗'}
                                 {currentStep.requirement.type === 'character_level' &&
-                                    `需要角色等级 ${currentStep.requirement.level}`}
+                                `需要角色等级 ${currentStep.requirement.level}`}
                                 {currentStep.requirement.type === 'zone_battles' &&
-                                    `需要在${ZONES[currentStep.requirement.zoneId]?.name}战斗${currentStep.requirement.count}次`}
+                                `需要在${ZONES[currentStep.requirement.zoneId]?.name}战斗${currentStep.requirement.count}次`}
                                 {currentStep.requirement.type === 'boss_defeated' &&
-                                    `需要击败${BOSS_DATA[currentStep.requirement.bossId]?.name}`}
+                                `需要击败${BOSS_DATA[currentStep.requirement.bossId]?.name}`}
                                 {currentStep.requirement.type === 'have_gold' &&
-                                    `需要${currentStep.requirement.amount}金币`}
+                                `需要${currentStep.requirement.amount}金币`}
                             </div>
                         </div>
                     )}

@@ -602,14 +602,14 @@ const SKILLS = {
         name: '人类精魂',
         icon: '🧬',
         type: 'passive',
-        description: '被动：全能+2，精通+2，暴击+2，急速+2。'
+        description: '全能+2，精通+2，暴击+2，急速+2。'
     },
     racial_human_hospitality: {
         id: 'racial_human_hospitality',
         name: '宾至如归',
         icon: '🏠',
         type: 'passive',
-        description: '被动：地图战斗结束后，回复最大生命值的10%。'
+        description: '炉石...啊不对，地图战斗结束后，回复最大生命值的10%。'
     },
 
     mastery_precise_block: {

@@ -11695,6 +11695,7 @@ function gameReducer(state, action) {
             const baseSkillSlots = Array(8).fill('basic_attack');
             const baseSkills = classData.skills.filter(s => s.level <= 1).map(s => s.skillId);
             const raceExtraSkills = RACE_TRAITS?.[race]?.extraSkills || [];
+            console.log(RACE_TRAITS?.[race]?.extraSkills.length);
             const newChar = {
                 id: `char_${Date.now()}`,
                 name,

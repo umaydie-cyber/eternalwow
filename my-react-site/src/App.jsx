@@ -36,6 +36,14 @@ const RACE_TRAITS = {
         // 隐遁：地图战斗第一格技能造成的伤害提高20%（乘算）
         mapFirstSlotDamageMult: 1.2,
     },
+    '侏儒': {
+        // 选择侏儒角色：额外获得两个种族技能
+        extraSkills: ['racial_gnome_spirit', 'racial_gnome_familiarity'],
+        // 侏儒精魄：全能 +6
+        statBonus: { versatility: 6 },
+        // 熟稔：采集熟练 +30
+        gatherStatBonus: { proficiency: 30 },
+    },
 };
 
 const CLASSES = {
@@ -661,6 +669,21 @@ const SKILLS = {
         icon: '🫥',
         type: 'passive',
         description: '地图战斗中：第1格技能造成的伤害提高20%（乘算）。'
+    },
+
+    racial_gnome_spirit: {
+        id: 'racial_gnome_spirit',
+        name: '侏儒精魄',
+        icon: '⚙️',
+        type: 'passive',
+        description: '全能 +6。'
+    },
+    racial_gnome_familiarity: {
+        id: 'racial_gnome_familiarity',
+        name: '熟稔',
+        icon: '🔧',
+        type: 'passive',
+        description: '一个卑微的侏儒？熟练增加30。'
     },
 
 
@@ -5333,10 +5356,14 @@ function calculateGatherStats(character) {
         }
     });
 
+    // ✅ 种族采集属性加成（例如：侏儒【熟稔】）
+    const raceTrait = RACE_TRAITS?.[character.race];
+    const gatherBonus = raceTrait?.gatherStatBonus || {};
+
     return {
-        proficiency: baseGather.proficiency + levelBonus + equipProficiency,
-        precision: baseGather.precision + levelBonus + equipPrecision,
-        perception: baseGather.perception + levelBonus + equipPerception,
+        proficiency: baseGather.proficiency + levelBonus + equipProficiency + (gatherBonus.proficiency || 0),
+        precision: baseGather.precision + levelBonus + equipPrecision + (gatherBonus.precision || 0),
+        perception: baseGather.perception + levelBonus + equipPerception + (gatherBonus.perception || 0),
     };
 }
 

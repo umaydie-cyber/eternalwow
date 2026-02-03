@@ -6182,7 +6182,7 @@ const SET_BONUSES = {
     scholar_set: {
         name: '博学者',
         tiers: [
-            { count: 2, bonus: { spellPower: 250, haste: 10 } },
+            { count: 2, bonus: { spellPower: 250, versatility: 10 } },
             { count: 4, bonus: { critRate: 10, mastery: 15 } },
             { count: 8, bonus: { hp: 1000, versatility:20 } }
         ]

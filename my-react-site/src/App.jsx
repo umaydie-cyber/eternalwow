@@ -44,7 +44,16 @@ const RACE_TRAITS = {
         // 熟稔：采集熟练 +30
         gatherStatBonus: { proficiency: 30 },
     },
+    '兽人': {
+        // 选择兽人角色：额外获得两个种族技能
+        extraSkills: ['racial_orc_spirit', 'racial_orc_bloodfury'],
+        // 兽人精魄：精通 +3，全能 +3
+        statBonus: { mastery: 3, versatility: 3 },
+        // 血性狂怒：前4个技能格造成的伤害提高10%（乘算）
+        firstNSlotDamageMult: { n: 4, mult: 1.10 },
+    },
 };
+
 
 const CLASSES = {
     protection_warrior: {
@@ -685,6 +694,23 @@ const SKILLS = {
         type: 'passive',
         description: '一个卑微的侏儒？熟练增加30。'
     },
+
+
+    racial_orc_spirit: {
+        id: 'racial_orc_spirit',
+        name: '兽人精魄',
+        icon: '🩸',
+        type: 'passive',
+        description: '精通 +3，全能 +3。'
+    },
+    racial_orc_bloodfury: {
+        id: 'racial_orc_bloodfury',
+        name: '血性狂怒',
+        icon: '🔥',
+        type: 'passive',
+        description: '兽人永不为奴！前4个技能格造成的伤害提高10%。'
+    },
+
 
 
 
@@ -10093,6 +10119,16 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
         if (slotIndex === 0) {
             const m = Number(raceTraitCombat?.mapFirstSlotDamageMult);
             if (Number.isFinite(m) && m > 0) racialSlotDamageMult *= m;
+        }
+
+        // ✅ 种族：通用“前N格伤害乘区”（例如：兽人【血性狂怒】）
+        const firstNSlotCfg = raceTraitCombat?.firstNSlotDamageMult;
+        if (firstNSlotCfg && typeof firstNSlotCfg === 'object') {
+            const n = Math.max(0, Math.floor(Number(firstNSlotCfg.n) || 0));
+            const m = Number(firstNSlotCfg.mult);
+            if (n > 0 && slotIndex < n && Number.isFinite(m) && m > 0) {
+                racialSlotDamageMult *= m;
+            }
         }
 
         // ==================== 装备特效：回合开始概率属性增益（仅本回合） ====================

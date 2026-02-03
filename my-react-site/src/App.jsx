@@ -5527,9 +5527,99 @@ const FIXED_EQUIPMENTS = {
             perception: 20  // 采集感知
         },
         growth: {
-            hp: 2,
-            armor: 2,
+            proficiency: 2,
+            precision: 2,
             perception: 2
+        }
+    },
+    EQ_125: {
+        id: 'EQ_125',
+        name: '神秘琥珀吊坠',
+        icon: "icons/wow/vanilla/armor/INV_Jewelry_Necklace_11.png",
+        type: 'equipment',
+        slot: 'neck',
+        rarity: 'blue',
+
+        setId: 'secret_set',
+        setName: '神秘套装',
+
+        level: 1,
+        maxLevel: 100,
+        baseStats: {
+            hp: 1000,
+            versatility: 15,
+            proficiency: 20,
+            precision: 20,
+            perception: 20,
+        },
+        growth: {
+            hp: 2,
+            versatility: 2,
+            proficiency: 2,
+            precision: 2,
+            perception: 2,
+        }
+    },
+    EQ_126: {
+        id: 'EQ_126',
+        name: '神秘蓝宝石吊坠',
+        icon: "icons/wow/vanilla/armor/INV_Jewelry_Necklace_11.png",
+        type: 'equipment',
+        slot: 'neck',
+        rarity: 'blue',
+
+        setId: 'secret_set',
+        setName: '神秘套装',
+
+        level: 1,
+        maxLevel: 100,
+        baseStats: {
+            hp: 2000,
+            versatility: 20,
+            mastery:10,
+            proficiency: 40,
+            precision: 40,
+            perception: 40,
+
+        },
+        growth: {
+            hp: 2,
+            versatility: 2,
+            mastery:2,
+            proficiency: 2,
+            precision: 2,
+            perception: 2,
+        }
+    },
+    EQ_127: {
+        id: 'EQ_127',
+        name: '神秘红宝石吊坠',
+        icon: "icons/wow/vanilla/armor/INV_Jewelry_Necklace_11.png",
+        type: 'equipment',
+        slot: 'neck',
+        rarity: 'blue',
+
+        setId: 'secret_set',
+        setName: '神秘套装',
+
+        level: 1,
+        maxLevel: 100,
+        baseStats: {
+            hp: 4000,
+            versatility: 25,
+            mastery:15,
+            proficiency: 80,
+            precision: 80,
+            perception: 80,
+
+        },
+        growth: {
+            hp: 2,
+            versatility: 2,
+            mastery:2,
+            proficiency: 2,
+            precision: 2,
+            perception: 2,
         }
     },
 };
@@ -8578,7 +8668,17 @@ function stepBossCombat(state) {
                 } else if (targetIndex >= 0 && combat.minions[targetIndex]?.immune) {
                     addLog(`冰风暴被 火炮手${targetIndex + 1}【登上甲板】免疫！`);
                 }
+            }else{
+                const dotObj = { ...result.dot, name: result.dot.name || skill.name, sourcePlayerId: p.char.id };
+                if (targetType === 'boss') {
+                    combat.bossDots = combat.bossDots || [];
+                    combat.bossDots.push(dotObj);
+                } else if (targetType === 'minion' && !combat.minions[targetIndex]?.immune) {
+                    combat.minions[targetIndex].dots = combat.minions[targetIndex].dots || [];
+                    combat.minions[targetIndex].dots.push(dotObj);
+                }
             }
+
         }
 
         // AOE DOT（寒冰宝珠）
@@ -11419,6 +11519,22 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
                 dotDamage *= mapDamageDealtMult;
                 dotDamage = Math.floor(dotDamage);
                 const actualDot = Math.max(1, dotDamage - (combatState.enemy?.defense ?? 0));
+                if (character.stats.atonement) {
+                    const healFromAtonement = Math.floor(actualDot * character.stats.atonement.healingRate);
+                    const maxHp = character.stats.maxHp ?? character.stats.hp ?? 0;
+                    const actualHeal = Math.min(healFromAtonement, maxHp - charHp);
+                    charHp += actualHeal;
+                    logs.push({
+                        round,
+                        actor: character.name,
+                        action: '救赎',
+                        target: character.name,
+                        value: actualHeal,
+                        type: 'heal',
+                        text: `因为救赎恢复 ${actualHeal} 点生命`
+                    });
+                }
+
                 enemyHp -= actualDot;
 
                 logs.push({

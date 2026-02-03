@@ -7954,15 +7954,11 @@ function stepBossCombat(state) {
             ps.currentHp += actualHeal;
             ps.char.stats.currentHp = ps.currentHp; // 让UI也同步
 
-            logs.push({
-                currentRound,
-                actor: source.name,
-                action: `救赎`,
-                target: ps.name,
-                value: actualHeal,
-                type: 'heal',
-                text: `因为救赎恢复 ${actualHeal} 点生命`
-            });
+            let healLog = `因为救赎恢复 ${actualHeal} 点生命`;
+            if (healingMult < 1) {
+                healLog += `（受到致死打击减疗${Math.round((1 - healingMult) * 100)}%）`;
+            }
+            addLog(healLog);
         });
     };
 

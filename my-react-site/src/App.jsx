@@ -1461,6 +1461,7 @@ const SKILLS = {
         id: 'mastery_sword_heart',
         name: '精通：通明剑心',
         icon: '🗡️',
+        iconUrl: 'icons/wow/vanilla/abilities/Ability_Warrior_Challange.png',
         type: 'passive',
         description: '被动：剑刃乱舞复制伤害的比例提高（精通/10）%。你可以积攒“星”（连击点）来加强【刺骨】【切割】【正中眉心】，最高5星。'
     },
@@ -1468,6 +1469,7 @@ const SKILLS = {
         id: 'blade_flurry',
         name: '剑刃乱舞',
         icon: '🌀',
+        iconUrl: 'icons/wow/vanilla/abilities/Ability_Warrior_PunishingBlow.png',
         type: 'aoe_damage',
         limit: 1,
         description: '对所有目标造成1倍攻击强度的伤害。本场战斗中你的普通攻击、刺骨、伏击、正中眉心会对主目标外的所有敌人造成本次伤害*50%的复制伤害（精通提高比例）。',
@@ -1498,6 +1500,7 @@ const SKILLS = {
         id: 'shadowstrike',
         name: '影袭',
         icon: '🗡️',
+        iconUrl: 'icons/wow/vanilla/abilities/yingxi.png',
         type: 'damage',
         limit: 8,
         description: '造成1.2倍攻击强度的伤害，获得1颗星。',
@@ -4142,11 +4145,8 @@ const FIXED_EQUIPMENTS = {
             hp: 2,
             mastery: 2,
             versatility: 2,
-        }
-    },
-    EQ_073: {
-        id: 'EQ_073',
-        name: '哈卡的毒牙',
+
+
         icon: "icons/wow/vanilla/weapons/INV_Weapon_ShortBlade_25.png",
         type: 'equipment',
         slot: 'offHand',

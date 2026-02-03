@@ -10236,6 +10236,7 @@ const initialState = {
     maxCharacterSlots: 15,
     resources: {
         gold: 500,
+        spacetimeCoin: 0,
         wood: 200,
         ironOre: 50,
         ironIngot: 10,
@@ -10246,6 +10247,8 @@ const initialState = {
         population: 0,
         maxPopulation: 0,
     },
+    // 每日首次点击【保存】奖励时空币的日标识（YYYY-MM-DD）
+    spacetimeCoinDailyRewardDayKey: '',
     buildings: {},  // ← 添加这一行
     // 功能建筑数量
     functionalBuildings: {},
@@ -13298,9 +13301,44 @@ function gameReducer(state, action) {
             return state;
         }
 
+        case 'CLAIM_SPACETIME_COIN_DAILY_SAVE_REWARD': {
+            const { dayKey, amount } = action.payload || {};
+            if (!dayKey) return state;
+            const amt = Math.max(0, Math.floor(Number(amount) || 0));
+            if (amt <= 0) return state;
+
+            // 同一天只能领取一次
+            if (state.spacetimeCoinDailyRewardDayKey === dayKey) return state;
+
+            return {
+                ...state,
+                spacetimeCoinDailyRewardDayKey: dayKey,
+                resources: {
+                    ...(state.resources || {}),
+                    spacetimeCoin: (state.resources?.spacetimeCoin || 0) + amt,
+                }
+            };
+        }
+
         case 'IMPORT_SAVE': {
             try {
                 const decoded = JSON.parse(decodeBase64(action.payload));
+
+                // ===== 0️⃣ resources 深合并（含新增：时空币）=====
+                decoded.resources = {
+                    ...initialState.resources,
+                    ...((decoded.resources && typeof decoded.resources === 'object' && !Array.isArray(decoded.resources))
+                        ? decoded.resources
+                        : {})
+                };
+                // 数值防御：确保是非负整数
+                decoded.resources.spacetimeCoin = Math.max(0, Math.floor(Number(decoded.resources.spacetimeCoin) || 0));
+
+                // 每日首次【保存】奖励标记（YYYY-MM-DD）
+                decoded.spacetimeCoinDailyRewardDayKey ??= '';
+                if (typeof decoded.spacetimeCoinDailyRewardDayKey !== 'string') {
+                    decoded.spacetimeCoinDailyRewardDayKey = '';
+                }
 
                 // ===== 1️⃣ 补老存档字段（防御性）=====
                 decoded.rebirthBonuses ??= {};
@@ -15717,6 +15755,64 @@ const OfflineRewardsModal = ({ rewards, actualSeconds, maxSeconds, onClaim, onDi
     );
 };
 
+
+// 时空币奖励模态框（每日首次保存）
+const SpacetimeCoinRewardModal = ({ amount = 1000, total, onClose }) => {
+    return (
+        <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0,0,0,0.85)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1001,
+            padding: 20
+        }}>
+            <div style={{
+                background: 'linear-gradient(135deg, rgba(25,18,12,0.98) 0%, rgba(15,10,8,0.98) 100%)',
+                border: '3px solid #7bdcff',
+                borderRadius: 12,
+                padding: 28,
+                maxWidth: 420,
+                width: '100%',
+                boxShadow: '0 10px 36px rgba(123,220,255,0.25), inset 0 1px 0 rgba(255,255,255,0.08)',
+            }}>
+                <div style={{ textAlign: 'center', marginBottom: 18 }}>
+                    <div style={{ fontSize: 54, marginBottom: 8 }}>🌀</div>
+                    <h2 style={{
+                        margin: '0 0 8px 0',
+                        fontSize: 22,
+                        color: '#b9f3ff',
+                        textShadow: '2px 2px 4px rgba(0,0,0,0.8)'
+                    }}>
+                        获得时空币！
+                    </h2>
+                    <div style={{ color: '#cfefff', fontSize: 14, lineHeight: 1.6 }}>
+                        每日首次点击 <span style={{ color: '#fff', fontWeight: 700 }}>保存</span> 奖励
+                        <span style={{ color: '#7bdcff', fontWeight: 800 }}> +{Math.floor(amount)} </span>
+                        时空币
+                    </div>
+                    {typeof total === 'number' && (
+                        <div style={{ marginTop: 10, fontSize: 12, color: '#9ad7e8' }}>
+                            当前时空币：<span style={{ color: '#fff', fontWeight: 700 }}>{Math.floor(total)}</span>
+                        </div>
+                    )}
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'center' }}>
+                    <Button onClick={onClose} style={{ minWidth: 140 }}>
+                        ✓ 知道了
+                    </Button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 // ==================== PAGE: MAP (with Drag & Drop) ====================
 const TalentPage = ({ state, dispatch }) => {
     const characters = state.characters || [];
@@ -16764,6 +16860,7 @@ const CityPage = ({ state, dispatch }) => {
     // ✅ 资源显示配置（过滤掉 population 和 maxPopulation）
     const resourceConfig = {
         gold: { icon: '🟡', name: '金币' },
+        spacetimeCoin: { icon: '🌀', name: '时空币' },
         wood: { icon: '🪵', name: '木材' },
         ironOre: { icon: '🪙', name: '铁矿' },
         ironIngot: { icon: '🔩', name: '铁锭' },
@@ -23448,8 +23545,10 @@ export default function WoWIdleGame() {
     const [showExport, setShowExport] = useState(false);
     const [importData, setImportData] = useState('');
     const [showRebirthBonus, setShowRebirthBonus] = useState(false);
+    const [spacetimeRewardInfo, setSpacetimeRewardInfo] = useState(null);
     const intervalRef = useRef(null);
     const saveIntervalRef = useRef(null);
+    const spacetimeRewardDayKeyRef = useRef('');
 
     const lastTickRef = useRef(Date.now());
     const hiddenAtRef = useRef(null);
@@ -23476,6 +23575,10 @@ export default function WoWIdleGame() {
         }
     }, [dispatch]);
 
+    // 同步每日【保存】奖励日标识到 ref，避免极快连点造成判定不一致
+    useEffect(() => {
+        spacetimeRewardDayKeyRef.current = state.spacetimeCoinDailyRewardDayKey || '';
+    }, [state.spacetimeCoinDailyRewardDayKey]);
 
     // 按 ` 键开关控制台
     useEffect(() => {
@@ -23529,6 +23632,13 @@ export default function WoWIdleGame() {
                 ...savedState,
 
                 // ✅ 关键：防止旧存档把对象字段覆盖成 null
+                // ✅ resources 需要做深合并，避免旧存档缺少新资源字段（如：时空币）
+                resources: {
+                    ...initialState.resources,
+                    ...(savedState.resources && typeof savedState.resources === 'object' && !Array.isArray(savedState.resources)
+                        ? savedState.resources
+                        : {})
+                },
                 buildings: savedState.buildings && typeof savedState.buildings === 'object' ? savedState.buildings : {},
                 functionalBuildings: savedState.functionalBuildings && typeof savedState.functionalBuildings === 'object' ? savedState.functionalBuildings : {},
                 resourceAssignments: savedState.resourceAssignments && typeof savedState.resourceAssignments === 'object' ? savedState.resourceAssignments : {},
@@ -23691,9 +23801,76 @@ export default function WoWIdleGame() {
         setCommand('');
     };
 
+    // 生成本地“日标识”（YYYY-MM-DD），用于每日奖励判定
+    const getLocalDateKey = (d = new Date()) => {
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const dd = String(d.getDate()).padStart(2, '0');
+        return `${yyyy}-${mm}-${dd}`;
+    };
+
+    // 下载 txt 文件（内容为存档字符串）
+    const downloadTxtFile = (filename, content) => {
+        try {
+            const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            URL.revokeObjectURL(url);
+        } catch (e) {
+            console.error('downloadTxtFile failed', e);
+        }
+    };
+
     const exportSave = () => {
-        const saveData = encodeBase64(JSON.stringify(state));
-        navigator.clipboard?.writeText(saveData);
+        const now = new Date();
+        const dayKey = getLocalDateKey(now);
+
+        // 用 ref 做一次“即刻防抖”，避免极快连点时出现重复奖励弹窗/重复写入
+        const claimedKey = spacetimeRewardDayKeyRef.current || state.spacetimeCoinDailyRewardDayKey || '';
+        const alreadyClaimed = claimedKey === dayKey;
+
+        // 先构造本次用于“保存”的状态（确保导出的字符串包含奖励与今日标记，避免导出/导入绕过每日限制）
+        let stateForSave = state;
+
+        if (!alreadyClaimed) {
+            const rewardAmount = 1000;
+            const nextTotal = (state.resources?.spacetimeCoin || 0) + rewardAmount;
+
+            // 立刻更新 ref，防止极快连点导致重复判定
+            spacetimeRewardDayKeyRef.current = dayKey;
+
+            // 真正发币：写入 state（进入自动存档/下次导出）
+            dispatch({
+                type: 'CLAIM_SPACETIME_COIN_DAILY_SAVE_REWARD',
+                payload: { dayKey, amount: rewardAmount }
+            });
+
+            // 弹窗提示
+            setSpacetimeRewardInfo({ amount: rewardAmount, total: nextTotal });
+
+            // 导出的存档也同步包含奖励
+            stateForSave = {
+                ...state,
+                spacetimeCoinDailyRewardDayKey: dayKey,
+                resources: {
+                    ...(state.resources || {}),
+                    spacetimeCoin: nextTotal
+                }
+            };
+        }
+
+        const saveData = encodeBase64(JSON.stringify(stateForSave));
+
+        const hh = String(now.getHours()).padStart(2, '0');
+        const mi = String(now.getMinutes()).padStart(2, '0');
+        const ss = String(now.getSeconds()).padStart(2, '0');
+        downloadTxtFile(`wow_save_${dayKey}_${hh}${mi}${ss}.txt`, saveData);
+
         setShowExport(true);
         setTimeout(() => setShowExport(false), 2000);
     };
@@ -23770,6 +23947,14 @@ export default function WoWIdleGame() {
                 />
             )}
 
+            {spacetimeRewardInfo && (
+                <SpacetimeCoinRewardModal
+                    amount={spacetimeRewardInfo.amount}
+                    total={spacetimeRewardInfo.total}
+                    onClose={() => setSpacetimeRewardInfo(null)}
+                />
+            )}
+
             {/* ===== 添加两个Boss模态 ===== */}
             {state.prepareBoss && <BossPrepareModal state={state} dispatch={dispatch} />}
             {state.bossCombat && <BossCombatModal combat={state.bossCombat} state={state} />}
@@ -23814,8 +23999,9 @@ export default function WoWIdleGame() {
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                         <span style={{ fontSize: 12, color: '#888' }}>🪙 {Math.floor(state.resources.gold)}</span>
+                        <span style={{ fontSize: 12, color: '#888' }}>🌀 {Math.floor(state.resources.spacetimeCoin || 0)}</span>
                     </div>
 
                     <Button onClick={() => setShowRebirthBonus(true)} variant="secondary" style={{ padding: '6px 10px', fontSize: 11 }}>
@@ -23832,8 +24018,8 @@ export default function WoWIdleGame() {
                         {isPaused ? '▶️ 继续' : '⏸️ 暂停'}
                     </Button>
 
-                    <Button onClick={exportSave} variant="secondary">
-                        {showExport ? '✓ 已复制' : '💾 导出'}
+                    <Button onClick={exportSave} variant="secondary" disabled={showExport}>
+                        {showExport ? '✓ 已保存' : '💾 保存'}
                     </Button>
 
                     <div style={{ display: 'flex', gap: 4 }}>

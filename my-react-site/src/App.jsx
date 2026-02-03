@@ -11688,6 +11688,7 @@ function gameReducer(state, action) {
 
         case 'CREATE_CHARACTER': {
             const { name, race, classId } = action.payload;
+            console.log(character.race);
             if (state.characters.length >= state.characterSlots) return state;
 
             const classData = CLASSES[classId];

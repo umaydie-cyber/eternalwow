@@ -6933,7 +6933,7 @@ const WORLD_BOSSES = {
         id: 'darkmaster_gandling',
         name: '黑暗院长加丁',
         icon: 'icons/wow/vanilla/boss/darkmaster_gandling.png', // 需要添加对应图标
-        hp: 2200000,
+        hp: 2800000,
         attack: 3600,
         defense: 1200,
         rewards: { gold: 450000, exp: 240000 },
@@ -6945,7 +6945,7 @@ const WORLD_BOSSES = {
         id: 'baron_rivendare',
         name: '瑞文戴尔男爵',
         icon: 'icons/wow/vanilla/boss/baron_rivendare.png',
-        hp: 2600000,
+        hp: 3400000,
         attack: 4000,
         defense: 1350,
         rewards: { gold: 550000, exp: 300000 },
@@ -7220,7 +7220,7 @@ const BOSS_DATA = {
     darkmaster_gandling: {
         id: 'darkmaster_gandling',
         name: '黑暗院长加丁',
-        maxHp: 2200000,
+        maxHp: 2800000,
         attack: 3600,
         defense: 1200,
 
@@ -7265,7 +7265,7 @@ const BOSS_DATA = {
     baron_rivendare: {
         id: 'baron_rivendare',
         name: '瑞文戴尔男爵',
-        maxHp: 2600000,
+        maxHp: 3400000,
         attack: 4000,
         defense: 1350,
 

@@ -818,7 +818,7 @@ const SKILLS = {
         icon: '🎯',
         iconUrl : 'icons/wow/vanilla/abilities/Ability_Warrior_DefensiveStance.png',
         type: 'passive',
-        description: '被动：格挡值提高(10 + 精通/2)%。该提升基于原始格挡数值。'
+        description: '被动：格挡值提高(10 + 精通/4)%。该提升基于原始格挡数值。'
     },
     shield_bash: {
         limit: 3,
@@ -7565,7 +7565,7 @@ function calculateTotalStats(character, partyAuras = { hpMul: 1, spellPowerMul: 
         const mastery = totalStats.mastery || 0;
 
         // (12 + mastery / 2)%
-        const masteryBonusPct = (12 + mastery / 2) / 100;
+        const masteryBonusPct = (10 + mastery / 4) / 100;
 
         // 只放大“原始格挡率 / 原始格挡值”
         //totalStats.blockRate += totalStats.blockRate * masteryBonusPct;

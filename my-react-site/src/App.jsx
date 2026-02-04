@@ -5829,6 +5829,94 @@ const FIXED_EQUIPMENTS = {
             perception: 2,
         }
     },
+    EQ_0128: {
+        id: 'EQ_0128',
+        name: '神秘琥珀戒指',
+        icon: "icons/wow/vanilla/armor/INV_Jewelry_Ring_12.png",
+        type: 'equipment',
+        slot: 'ring1',
+        rarity: 'blue',
+
+        setId: 'secret_set',
+        setName: '神秘套装',
+
+        level: 1,
+        maxLevel: 100,
+        baseStats: {
+            hp: 300,
+            versatility: 15,
+            proficiency: 20,
+            precision: 20,
+            perception: 20,
+        },
+        growth: {
+            hp: 2,
+            versatility: 2,
+            proficiency: 2,
+            precision: 2,
+            perception: 2,
+        }
+    },
+    EQ_0129: {
+        id: 'EQ_0129',
+        name: '神秘蓝宝石戒指',
+        icon: "icons/wow/vanilla/armor/INV_Jewelry_Ring_12.png",
+        type: 'equipment',
+        slot: 'ring1',
+        rarity: 'blue',
+
+        setId: 'secret_set',
+        setName: '神秘套装',
+
+        level: 1,
+        maxLevel: 100,
+        baseStats: {
+            hp: 500,
+            versatility: 20,
+            mastery:10,
+            proficiency: 40,
+            precision: 40,
+            perception: 40,
+        },
+        growth: {
+            hp: 2,
+            versatility: 2,
+            mastery:2,
+            proficiency: 2,
+            precision: 2,
+            perception: 2,
+        }
+    },
+    EQ_0130: {
+        id: 'EQ_0130',
+        name: '神秘红宝石戒指',
+        icon: "icons/wow/vanilla/armor/INV_Jewelry_Ring_12.png",
+        type: 'equipment',
+        slot: 'ring1',
+        rarity: 'blue',
+
+        setId: 'secret_set',
+        setName: '神秘套装',
+
+        level: 1,
+        maxLevel: 100,
+        baseStats: {
+            hp: 3000,
+            versatility: 25,
+            mastery:15,
+            proficiency: 80,
+            precision: 80,
+            perception: 80,
+        },
+        growth: {
+            hp: 2,
+            versatility: 2,
+            mastery:2,
+            proficiency: 2,
+            precision: 2,
+            perception: 2,
+        }
+    },
 };
 
 //赤脊山5件图鉴100级点亮效果
@@ -7269,15 +7357,26 @@ function mergeEquipments(eqA, eqB) {
     // - EQ_003 神秘森林吊坠 Lv100 + 任意等级 EQ_003 → EQ_125 神秘琥珀吊坠
     // - EQ_125 神秘琥珀吊坠 Lv100 + 任意等级 EQ_125 → EQ_126 神秘蓝宝石吊坠
     // - EQ_126 神秘蓝宝石吊坠 Lv100 + 任意等级 EQ_126 → EQ_127 神秘红宝石吊坠
-    const POST_LV100_EVOLVE = {
+    const POST_NECLACE_LV100_EVOLVE = {
         EQ_003: 'EQ_125',
         EQ_125: 'EQ_126',
         EQ_126: 'EQ_127',
     };
+    const POST_RING_LV100_EVOLVE = {
+        EQ_004: 'EQ_128',
+        EQ_128: 'EQ_129',
+        EQ_129: 'EQ_130',
+    };
 
-    const nextId = POST_LV100_EVOLVE[eqA.id];
-    if (nextId && Math.max(levelA, levelB) >= 100) {
-        const evolved = createEquipmentInstance(nextId);
+    const nextNeckId = POST_NECLACE_LV100_EVOLVE[eqA.id];
+    if (nextNeckId && Math.max(levelA, levelB) >= 100) {
+        const evolved = createEquipmentInstance(nextNeckId);
+        return evolved || null;
+    }
+
+    const nextRingId = POST_RING_LV100_EVOLVE[eqA.id];
+    if (nextRingId && Math.max(levelA, levelB) >= 100) {
+        const evolved = createEquipmentInstance(nextRingId);
         return evolved || null;
     }
 

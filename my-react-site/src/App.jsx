@@ -9638,7 +9638,7 @@ function stepBossCombat(state) {
                 }
 
                 if (sourcePlayer.char.stats.atonement) {
-                    triggerAtonementHeal(sourcePlayer, damage);
+                    triggerAtonementHeal(sourcePlayer, dmg);
                 }
             }
 

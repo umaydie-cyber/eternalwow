@@ -673,6 +673,29 @@ const TALENTS = {
                     description: '消耗星的技能每消耗1颗星，最终伤害提高5%。'
                 }
             ]
+        },
+        {
+            tier: 30,
+            options: [
+                {
+                    id: 'juggling_strikes',
+                    type: TALENT_TYPES.ON_HIT,
+                    name: '杂耍打击',
+                    description: '普通攻击和影袭使你在本场战斗中获得【杂耍】：全能+2，可叠加，最多25层。'
+                },
+                {
+                    id: 'hidden_edge_time',
+                    type: TALENT_TYPES.ON_HIT,
+                    name: '藏锋寻时',
+                    description: '伏击有80%概率再次发动（每个技能格仅判定一次）。'
+                },
+                {
+                    id: 'blade_dash',
+                    type: TALENT_TYPES.ON_HIT,
+                    name: '刀锋冲刺',
+                    description: '伏击使你获得【刀锋冲刺】：暴击伤害+50%，持续4回合。'
+                }
+            ]
         }
     ]
 
@@ -8366,6 +8389,10 @@ function stepBossCombat(state) {
                 if (Number.isFinite(Number(b.critRateBonus)) && Number(b.critRateBonus) !== 0) {
                     calcStats.critRate = (calcStats.critRate || 0) + (Number(b.critRateBonus) || 0);
                 }
+                // ✅ 暴击伤害加成（例如：狂徒盗贼30级天赋【刀锋冲刺】）
+                if (Number.isFinite(Number(b.critDamageBonus)) && Number(b.critDamageBonus) !== 0) {
+                    calcStats.critDamage = (calcStats.critDamage || 2.0) + (Number(b.critDamageBonus) || 0);
+                }
                 if (Number.isFinite(Number(b.masteryBonus)) && Number(b.masteryBonus) !== 0) {
                     calcStats.mastery = (calcStats.mastery || 0) + (Number(b.masteryBonus) || 0);
                 }
@@ -8488,6 +8515,46 @@ function stepBossCombat(state) {
             }
         };
 
+        // ==================== 狂徒盗贼30级天赋：杂耍打击 ====================
+        // 效果：普通攻击/影袭 叠加【杂耍】（全能+2，最多25层，本场战斗）
+        const procJugglingStrikes = (triggerSkillId) => {
+            if (p.char?.classId !== 'outlaw_rogue') return;
+            if (p.char?.talents?.[30] !== 'juggling_strikes') return;
+            if (!['basic_attack', 'shadowstrike', 'sinister_strike'].includes(triggerSkillId)) return;
+
+            p.buffs = Array.isArray(p.buffs) ? p.buffs : [];
+            const maxStacks = 25;
+            const perStack = 2;
+
+            const idx = p.buffs.findIndex(b => b?.type === 'juggling');
+            if (idx === -1) {
+                p.buffs.push({
+                    type: 'juggling',
+                    name: '杂耍',
+                    stacks: 1,
+                    versatilityBonus: perStack,
+                    duration: 999,
+                    justApplied: true,
+                });
+                addLog(`【杂耍打击】${p.char.name} 获得1层【杂耍】（1/${maxStacks}，全能+${perStack}）`);
+                return;
+            }
+
+            const old = p.buffs[idx];
+            const curStacks = Math.max(0, Math.floor(Number(old.stacks) || 0));
+            if (curStacks >= maxStacks) return;
+
+            const nextStacks = Math.min(maxStacks, curStacks + 1);
+            p.buffs[idx] = {
+                ...old,
+                stacks: nextStacks,
+                versatilityBonus: nextStacks * perStack,
+                duration: 999,
+                justApplied: true,
+            };
+            addLog(`【杂耍打击】${p.char.name} 获得1层【杂耍】（${nextStacks}/${maxStacks}，全能+${nextStacks * perStack}）`);
+        };
+
         // 普通攻击执行函数
         const executeBasicAttackDamage = (isRepeat = false) => {
             const basicSkill = SKILLS['basic_attack'];
@@ -8527,6 +8594,9 @@ function stepBossCombat(state) {
 
                 // 剑刃乱舞：复制伤害（普通攻击也触发）
                 applyBladeFlurryCleave(Math.floor(damage), `普通攻击${repeatText}`);
+
+                // ✅ 狂徒盗贼30级天赋：杂耍打击（重复普攻同样叠层）
+                procJugglingStrikes('basic_attack');
 
                 return actualDamage;
             }
@@ -8711,6 +8781,92 @@ function stepBossCombat(state) {
                         addLog(`【鞭笞者苏萨斯】触发：再次发动普通攻击！`);
                         executeBasicAttackDamage(true);
                     }
+                }
+            }
+        }
+
+        // ==================== 狂徒盗贼30级天赋：藏锋寻时 ====================
+        // 效果：伏击有80%概率再次发动，每个技能格仅判定一次。
+        if (skillId === 'ambush' && p.char?.classId === 'outlaw_rogue' && p.char?.talents?.[30] === 'hidden_edge_time') {
+            p.talentFlags = p.talentFlags || {};
+            p.talentFlags.hiddenEdgeTime = p.talentFlags.hiddenEdgeTime || { checkedSlots: {} };
+            const checkedSlots = p.talentFlags.hiddenEdgeTime.checkedSlots || {};
+            p.talentFlags.hiddenEdgeTime.checkedSlots = checkedSlots;
+
+            // 每个技能格仅判定一次（无论成败）
+            if (!checkedSlots[slotIndex]) {
+                checkedSlots[slotIndex] = true;
+
+                if (Math.random() < 0.8) {
+                    addLog(`【藏锋寻时】触发：${p.char.name} 的【伏击】再次发动！`);
+
+                    const extraSkill = SKILLS['ambush'];
+                    const extraResult = extraSkill.calculate(charForCalc, combatContext);
+
+                    if (extraResult?.damage) {
+                        let extraDamage = extraResult.damage;
+
+                        // 与单体伤害通用逻辑保持一致（buff/易伤/消耗星加成等）
+                        if (p.char?.classId === 'outlaw_rogue' && p.char?.talents?.[20] === 'fatal_empowerment' && extraResult.consumeComboPoints) {
+                            const spent = (extraResult.consumeComboPoints === 'all')
+                                ? (p.comboPoints || 0)
+                                : Math.min((p.comboPoints || 0), Math.max(0, Math.floor(Number(extraResult.consumeComboPoints) || 0)));
+                            if (spent > 0) {
+                                extraDamage *= (1 + spent * 0.05);
+                                addLog(`【索命强能】${p.char.name} 消耗${spent}星，本次【伏击(藏锋寻时)】伤害提高${spent * 5}%`);
+                            }
+                        }
+
+                        if (p.char.talents?.[10] === 'shadow_amp' && extraResult.school === 'shadow') {
+                            extraDamage *= 1.2;
+                        }
+                        extraDamage *= buffDamageDealtMult;
+
+                        const isSpellSchoolExtra = (extraResult.school === 'holy' || extraResult.school === 'shadow');
+                        let takenMultExtra = 1;
+                        if (isSpellSchoolExtra) {
+                            const vuln = combat.bossDebuffs?.spell_vuln;
+                            if (vuln) takenMultExtra *= (vuln.mult ?? 1);
+                        }
+                        extraDamage = Math.floor(extraDamage * takenMultExtra);
+
+                        const targetDef = targetType === 'boss'
+                            ? (boss.defense || 0)
+                            : (boss.minion?.defense || boss.cannoneer?.defense || 0);
+
+                        if (targetType === 'minion' && combat.minions[targetIndex]?.immune) {
+                            addLog(`→ 额外伏击被【登上甲板】免疫！`);
+                        } else {
+                            const extraActual = Math.max(1, extraDamage - targetDef);
+                            if (targetType === 'boss') {
+                                combat.bossHp -= extraActual;
+                            } else {
+                                combat.minions[targetIndex].hp -= extraActual;
+                            }
+
+                            const minionName = boss.minion?.name || boss.cannoneer?.name || '小弟';
+                            addLog(`→ ${p.char.name} 的伏击(藏锋寻时)对 ${targetType === 'boss' ? boss.name : minionName} 造成 ${extraActual} 伤害${extraResult.isCrit ? '（暴击）' : ''}`);
+
+                            // 剑刃乱舞：复制伤害（伏击同样触发）
+                            applyBladeFlurryCleave(extraDamage, `${skill.name}(藏锋寻时)`);
+                        }
+                    }
+
+                    // ✅ 额外伏击也产生连击点（星）
+                    if (extraResult?.generateComboPoints) {
+                        const gain = Math.max(0, Math.floor(Number(extraResult.generateComboPoints) || 0));
+                        if (gain > 0) {
+                            const maxCombo = getMaxComboPointsForChar(p.char);
+                            const before = p.comboPoints;
+                            p.comboPoints = Math.min(maxCombo, p.comboPoints + gain);
+                            const realGain = p.comboPoints - before;
+                            if (realGain > 0) {
+                                addLog(`【连击点】${p.char.name} 因【藏锋寻时】额外获得 ${realGain} 星（当前${p.comboPoints}星）`);
+                            }
+                        }
+                    }
+                } else {
+                    addLog(`【藏锋寻时】未触发：${p.char.name} 的【伏击】没有再次发动`);
                 }
             }
         }
@@ -8944,6 +9100,35 @@ function stepBossCombat(state) {
         if (skillId === 'basic_attack' && p.char.talents?.[10] === 'plain') {
             p.talentBuffs.attackFlat = (p.talentBuffs.attackFlat || 0) + 5;
             addLog(`【质朴】触发：攻击+5`);
+        }
+
+        // ==================== 狂徒盗贼30级天赋 ====================
+        // 杂耍打击：普通攻击/影袭叠层全能（本场战斗）
+        procJugglingStrikes(skillId);
+
+        // 刀锋冲刺：伏击后获得暴击伤害+50%（持续4回合）
+        if (skillId === 'ambush' && p.char?.classId === 'outlaw_rogue' && p.char?.talents?.[30] === 'blade_dash') {
+            const duration = 4;
+            const bonus = 0.5;
+            p.buffs = Array.isArray(p.buffs) ? p.buffs : [];
+            const idx = p.buffs.findIndex(b => b?.type === 'blade_dash');
+            if (idx === -1) {
+                p.buffs.push({
+                    type: 'blade_dash',
+                    name: '刀锋冲刺',
+                    duration,
+                    critDamageBonus: bonus,
+                    justApplied: true,
+                });
+            } else {
+                p.buffs[idx] = {
+                    ...p.buffs[idx],
+                    duration,
+                    critDamageBonus: bonus,
+                    justApplied: true,
+                };
+            }
+            addLog(`【刀锋冲刺】触发：${p.char.name} 暴击伤害+50%，持续${duration}回合`);
         }
 
         if ((skillId === 'smite' || skillId === 'mind_blast') && p.char.talents?.[40] === 'fortune_misfortune') {
@@ -10851,6 +11036,8 @@ function createCombatState(character, enemy, skillSlots) {
         fortuneMisfortuneStacks: 0, // 祸福相依层数
         fantasiaStacks: 0,          // 幻想曲层数（戒律牧师50级天赋，仅本场战斗）
         fingersOfFrost: 0,          // 寒冰指层数
+        // ✅ 天赋/战斗内触发状态（每场战斗重置）
+        talentFlags: {},
         logs: [],
         startedAt: Date.now(),
     };
@@ -10887,6 +11074,11 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
     // 寒冰指层数
     let fingersOfFrost = combatState.fingersOfFrost || 0;
 
+    // ✅ 天赋/战斗内触发状态（仅本场战斗有效）
+    let talentFlags = (combatState.talentFlags && typeof combatState.talentFlags === 'object')
+        ? { ...combatState.talentFlags }
+        : {};
+
     // 盗贼连击点（星）
     let comboPoints = combatState.comboPoints || 0;
 
@@ -10921,6 +11113,55 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
         enemyDebuffs = enemyDebuffs
             .map(d => ({ ...d, duration: (d.duration ?? 0) - 1 }))
             .filter(d => (d.duration ?? 0) > 0);
+    };
+
+    // ==================== 狂徒盗贼30级天赋：杂耍打击 ====================
+    // 效果：普通攻击/影袭 叠加【杂耍】（全能+2，最多25层，本场战斗）
+    const procJugglingStrikes = (triggerSkillId) => {
+        if (character?.classId !== 'outlaw_rogue') return;
+        if (character?.talents?.[30] !== 'juggling_strikes') return;
+        if (!['basic_attack', 'shadowstrike', 'sinister_strike'].includes(triggerSkillId)) return;
+
+        const maxStacks = 25;
+        const perStack = 2;
+
+        const idx = buffs.findIndex(b => b?.type === 'juggling');
+        if (idx === -1) {
+            buffs.push({
+                type: 'juggling',
+                name: '杂耍',
+                stacks: 1,
+                versatilityBonus: perStack,
+                duration: 999,
+            });
+            logs.push({
+                round,
+                kind: 'proc',
+                actor: character.name,
+                proc: '杂耍打击',
+                text: `【杂耍打击】获得1层【杂耍】（1/${maxStacks}，全能+${perStack}）`
+            });
+            return;
+        }
+
+        const old = buffs[idx];
+        const curStacks = Math.max(0, Math.floor(Number(old.stacks) || 0));
+        if (curStacks >= maxStacks) return;
+
+        const nextStacks = Math.min(maxStacks, curStacks + 1);
+        buffs[idx] = {
+            ...old,
+            stacks: nextStacks,
+            versatilityBonus: nextStacks * perStack,
+            duration: 999,
+        };
+        logs.push({
+            round,
+            kind: 'proc',
+            actor: character.name,
+            proc: '杂耍打击',
+            text: `【杂耍打击】获得1层【杂耍】（${nextStacks}/${maxStacks}，全能+${nextStacks * perStack}）`
+        });
     };
 
     const maxRounds = 200;
@@ -11096,6 +11337,10 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
                 }
                 if (Number.isFinite(Number(b.critRateBonus)) && Number(b.critRateBonus) !== 0) {
                     calcStats.critRate = (calcStats.critRate || 0) + (Number(b.critRateBonus) || 0);
+                }
+                // ✅ 暴击伤害加成（例如：狂徒盗贼30级天赋【刀锋冲刺】）
+                if (Number.isFinite(Number(b.critDamageBonus)) && Number(b.critDamageBonus) !== 0) {
+                    calcStats.critDamage = (calcStats.critDamage || 2.0) + (Number(b.critDamageBonus) || 0);
                 }
                 if (Number.isFinite(Number(b.masteryBonus)) && Number(b.masteryBonus) !== 0) {
                     calcStats.mastery = (calcStats.mastery || 0) + (Number(b.masteryBonus) || 0);
@@ -11437,6 +11682,130 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
                             text: `【圣剑】触发：额外造成 ${holySwordActualDamage} 点真实伤害（无视防御）`
                         });
                     }
+
+                    // ✅ 狂徒盗贼30级天赋：杂耍打击（重复普攻同样叠层）
+                    procJugglingStrikes('basic_attack');
+                }
+            }
+
+            // ==================== 狂徒盗贼30级天赋：藏锋寻时 ====================
+            // 效果：伏击有80%概率再次发动，每个技能格仅判定一次。
+            if (currentSkillId === 'ambush' && character?.classId === 'outlaw_rogue' && character?.talents?.[30] === 'hidden_edge_time') {
+                talentFlags.hiddenEdgeTime = talentFlags.hiddenEdgeTime || { checkedSlots: {} };
+                const checkedSlots = talentFlags.hiddenEdgeTime.checkedSlots || {};
+                talentFlags.hiddenEdgeTime.checkedSlots = checkedSlots;
+
+                // 每个技能格仅判定一次（无论成败）
+                if (!checkedSlots[slotIndex]) {
+                    checkedSlots[slotIndex] = true;
+
+                    if (Math.random() < 0.8 && enemyHp > 0) {
+                        logs.push({
+                            round,
+                            kind: 'proc',
+                            actor: character.name,
+                            proc: '藏锋寻时',
+                            text: '【藏锋寻时】触发：伏击再次发动！'
+                        });
+
+                        const extraSkill = SKILLS['ambush'];
+                        const extraResult = extraSkill.calculate(charForCalc, combatContext);
+
+                        if (extraResult?.damage) {
+                            let extraDamage = extraResult.damage;
+
+                            // 与普通伤害逻辑保持一致（buff/易伤/种族/地图屠戮等）
+                            if (character?.classId === 'outlaw_rogue' && character?.talents?.[20] === 'fatal_empowerment' && extraResult.consumeComboPoints) {
+                                const spent = (extraResult.consumeComboPoints === 'all')
+                                    ? (comboPoints || 0)
+                                    : Math.min((comboPoints || 0), Math.max(0, Math.floor(Number(extraResult.consumeComboPoints) || 0)));
+                                if (spent > 0) {
+                                    extraDamage *= (1 + spent * 0.05);
+                                    logs.push({
+                                        round,
+                                        kind: 'proc',
+                                        actor: character.name,
+                                        proc: '索命强能',
+                                        text: `【索命强能】消耗${spent}星，本次【伏击(藏锋寻时)】伤害提高${spent * 5}%`
+                                    });
+                                }
+                            }
+
+                            if (character.talents?.[10] === 'shadow_amp' && extraResult.school === 'shadow') {
+                                extraDamage *= 1.2;
+                            }
+
+                            extraDamage *= buffDamageDealtMultForDamage;
+                            extraDamage *= racialSlotDamageMult;
+                            extraDamage *= mapDamageDealtMult;
+
+                            const isSpellSchoolExtra = (extraResult.school === 'holy' || extraResult.school === 'shadow');
+                            let takenMultExtra = 1;
+                            if (isSpellSchoolExtra) {
+                                const vuln = enemyDebuffs.find(d => d.type === 'spell_vuln');
+                                if (vuln) takenMultExtra *= (vuln.mult ?? 1);
+                            }
+
+                            extraDamage = Math.floor(extraDamage * takenMultExtra);
+                            const extraActual = Math.max(1, extraDamage - (combatState.enemy?.defense ?? 0));
+                            enemyHp -= extraActual;
+
+                            logs.push({
+                                round,
+                                actor: character.name,
+                                action: `${skill.name}(藏锋寻时)`,
+                                target: combatState.enemy?.name,
+                                value: extraActual,
+                                type: 'damage',
+                                isCrit: extraResult.isCrit
+                            });
+
+                            // 救赎机制（通用，不影响盗贼，但保持一致）
+                            if (character.stats.atonement) {
+                                const healFromAtonement = Math.floor(extraActual * character.stats.atonement.healingRate);
+                                const maxHp = character.stats.maxHp ?? character.stats.hp ?? 0;
+                                const actualHeal = Math.min(healFromAtonement, maxHp - charHp);
+                                charHp += actualHeal;
+                                logs.push({
+                                    round,
+                                    actor: character.name,
+                                    action: '救赎',
+                                    target: character.name,
+                                    value: actualHeal,
+                                    type: 'heal',
+                                    text: `因为救赎恢复 ${actualHeal} 点生命`
+                                });
+                            }
+                        }
+
+                        // ✅ 额外伏击也产生连击点（星）
+                        if (extraResult?.generateComboPoints) {
+                            const gain = Math.max(0, Math.floor(Number(extraResult.generateComboPoints) || 0));
+                            if (gain > 0) {
+                                const maxCombo = getMaxComboPointsForChar(character);
+                                const before = comboPoints;
+                                comboPoints = Math.min(maxCombo, comboPoints + gain);
+                                const realGain = comboPoints - before;
+                                if (realGain > 0) {
+                                    logs.push({
+                                        round,
+                                        kind: 'proc',
+                                        actor: character.name,
+                                        proc: '连击点',
+                                        text: `【连击点】因【藏锋寻时】额外获得 ${realGain} 星（当前${comboPoints}星）`
+                                    });
+                                }
+                            }
+                        }
+                    } else {
+                        logs.push({
+                            round,
+                            kind: 'proc',
+                            actor: character.name,
+                            proc: '藏锋寻时',
+                            text: '【藏锋寻时】未触发：伏击没有再次发动'
+                        });
+                    }
                 }
             }
         }
@@ -11690,6 +12059,38 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
                 proc: '质朴',
                 value: 5,
                 text: '【质朴】触发，攻击强度 +5（本场战斗）'
+            });
+        }
+
+        // ==================== 狂徒盗贼30级天赋 ====================
+        // 杂耍打击：普通攻击/影袭叠层全能（本场战斗）
+        procJugglingStrikes(currentSkillId);
+
+        // 刀锋冲刺：伏击后获得暴击伤害+50%（持续4回合）
+        if (currentSkillId === 'ambush' && character?.classId === 'outlaw_rogue' && character?.talents?.[30] === 'blade_dash') {
+            const duration = 4;
+            const bonus = 0.5;
+            const idx = buffs.findIndex(b => b?.type === 'blade_dash');
+            if (idx === -1) {
+                buffs.push({
+                    type: 'blade_dash',
+                    name: '刀锋冲刺',
+                    duration,
+                    critDamageBonus: bonus,
+                });
+            } else {
+                buffs[idx] = {
+                    ...buffs[idx],
+                    duration,
+                    critDamageBonus: bonus,
+                };
+            }
+            logs.push({
+                round,
+                kind: 'proc',
+                actor: character.name,
+                proc: '刀锋冲刺',
+                text: `【刀锋冲刺】触发：暴击伤害+50%，持续${duration}回合`
             });
         }
 
@@ -12051,6 +12452,7 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
             fortuneMisfortuneStacks,
             fantasiaStacks,
             fingersOfFrost, // 把最新层数存回去
+            talentFlags,
         }
     };
 }
@@ -13977,6 +14379,8 @@ function gameReducer(state, action) {
                     stoneformCurseUsed: false,
                     stoneformPoisonUsed: false,
                 },
+                // ✅ 天赋/战斗内触发状态（每场Boss战重置）
+                talentFlags: {},
                 validSkills: Array.from({ length: 8 }, (_, i) => {
                     const sid = char.skillSlots?.[i] || '';
                     return sid && SKILLS[sid] ? sid : 'rest';

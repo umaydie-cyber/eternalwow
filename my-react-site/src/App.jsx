@@ -20291,7 +20291,7 @@ const CodexPage = ({ state, dispatch }) => {
                                 >
                                     <div style={{
                                         width: '100%',
-                                        height: 84,
+                                        height: 114,
                                         borderRadius: 8,
                                         background: 'rgba(0,0,0,0.25)',
                                         display: 'flex',

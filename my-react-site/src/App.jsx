@@ -11928,9 +11928,10 @@ function gameReducer(state, action) {
 
                 const allowDrop = (id) => state.dropFilters?.[id] !== false;
                 rewards.items.forEach(item => {
-                    if (item && (item.type === 'junk' || item.type === 'equipment')) {
-                        if (!allowDrop(item.id)) return; // ✅ 禁用掉落 => 直接跳过
-                    }
+                    const itemId = (typeof item === 'string') ? null : item?.id;
+                    // ✅ 掉落开关：对所有“有 id 的物品”生效（包含 Boss 徽章等 consumable）
+                    if (itemId && !allowDrop(itemId)) return;
+
                     if (newState.inventory.length < newState.inventorySize) {
                         if (typeof item === 'string') {
                             newState.inventory.push({
@@ -11944,10 +11945,9 @@ function gameReducer(state, action) {
 
                         if (item && item.type === 'equipment') {
                             newState = addEquipmentIdToCodex(newState, item.id);
-                        }
-
-                        if (item && item.type === 'junk') {
-                            newState = addJunkIdToCodex(newState, item.id);
+                        } else if (itemId) {
+                            // ✅ 非装备类掉落（junk / consumable / 其它）：统一记录到物品图鉴集合
+                            newState = addJunkIdToCodex(newState, itemId);
                         }
                     }
                 });
@@ -15763,8 +15763,8 @@ const ItemDetailsModal = ({ item, onClose, onEquip, characters, state , dispatch
                             isMatA
                                 ? state.inventory.some(i => i?.type === 'equipment' && i.id === 'EQ_042' && getLevel(i) >= 100)
                                 : isMatB
-                                    ? state.inventory.some(i => i?.type === 'equipment' && i.id === 'EQ_041' && getLevel(i) >= 100)
-                                    : false;
+                                ? state.inventory.some(i => i?.type === 'equipment' && i.id === 'EQ_041' && getLevel(i) >= 100)
+                                : false;
 
                         if (!(hasOther && (isMatA || isMatB))) return null;
 
@@ -18669,6 +18669,11 @@ const CodexPage = ({ state, dispatch }) => {
     const allJunkTemplates = Object.values(ITEMS).filter(it => it?.type === 'junk');
     const junkCodexSet = new Set(state.codexJunk || []);
 
+    // ===== Boss 徽章（可在图鉴里开关掉落） =====
+    const badgeTemplates = Object.keys(BADGE_UPGRADE_RULES || {})
+        .map(id => ITEMS?.[id])
+        .filter(Boolean);
+
     const TabButton = ({ id, children }) => (
         <button
             onClick={() => setTab(id)}
@@ -18947,6 +18952,7 @@ const CodexPage = ({ state, dispatch }) => {
                 <div style={{ display: 'flex', gap: 8 }}>
                     <TabButton id="effects">⚡ 集齐效果</TabButton>
                     <TabButton id="equipment">🛡️ 装备</TabButton>
+                    <TabButton id="badges">🏅 徽章</TabButton>
                     <TabButton id="junk">🧺 垃圾</TabButton>
                 </div>
             }
@@ -19028,6 +19034,75 @@ const CodexPage = ({ state, dispatch }) => {
                                 </div>
                             );
                         })}
+                    </div>
+                </>
+            )}
+
+
+            {/* ===== 徽章图鉴（Boss 掉落） ===== */}
+            {tab === 'badges' && (
+                <>
+                    <div style={{ fontSize: 12, color: '#888', marginBottom: 12 }}>
+                        ✅ 点亮：曾获得过该徽章　|　点击切换掉落开关（影响世界首领 / 自动击杀 / 其它掉落来源）
+                    </div>
+
+                    <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(auto-fill, minmax(110px, 1fr))',
+                        gap: 10
+                    }}>
+                        {badgeTemplates.map((tpl) => {
+                            const unlocked = junkCodexSet.has(tpl.id) || (state.inventory || []).some(i => i?.id === tpl.id);
+                            const dropEnabled = allowDrop(tpl.id);
+                            const disabledDrop = !dropEnabled;
+
+                            return (
+                                <div
+                                    key={tpl.id}
+                                    title={`${tpl.name}（点击开关掉落）`}
+                                    style={{
+                                        background: unlocked ? 'rgba(0,0,0,0.35)' : 'rgba(0,0,0,0.18)',
+                                        borderRadius: 8,
+                                        border: `1px solid ${unlocked ? '#4a3c2a' : '#333'}`,
+                                    }}
+                                >
+                                    <CardShell
+                                        onClick={() => toggleDrop(tpl.id)}
+                                        disabledDrop={disabledDrop}
+                                    >
+                                        <div style={{ fontSize: 26, marginBottom: 6 }}>
+                                            <ItemIcon item={tpl} size={28} />
+                                        </div>
+
+                                        <div style={{
+                                            fontSize: 10,
+                                            color: unlocked ? '#ffd700' : '#555',
+                                            lineHeight: 1.2,
+                                            minHeight: 30,
+                                            opacity: unlocked ? 1 : 0.7
+                                        }}>
+                                            {tpl.name}
+                                        </div>
+
+                                        <div style={{
+                                            marginTop: 6,
+                                            fontSize: 9,
+                                            color: unlocked ? '#aaa' : '#444'
+                                        }}>
+                                            {unlocked ? '已获取' : '未获取'}
+                                        </div>
+
+                                        <DropTag enabled={dropEnabled} />
+                                    </CardShell>
+                                </div>
+                            );
+                        })}
+
+                        {badgeTemplates.length === 0 && (
+                            <div style={{ color: '#666', fontSize: 12 }}>
+                                当前没有定义 Boss 徽章
+                            </div>
+                        )}
                     </div>
                 </>
             )}
@@ -20146,13 +20221,13 @@ const QuestPage = ({ state, dispatch }) => {
                             }}>
                                 {requirementMet ? '✓' : '✗'}
                                 {currentStep.requirement.type === 'character_level' &&
-                                    `需要角色等级 ${currentStep.requirement.level}`}
+                                `需要角色等级 ${currentStep.requirement.level}`}
                                 {currentStep.requirement.type === 'zone_battles' &&
-                                    `需要在${ZONES[currentStep.requirement.zoneId]?.name}战斗${currentStep.requirement.count}次`}
+                                `需要在${ZONES[currentStep.requirement.zoneId]?.name}战斗${currentStep.requirement.count}次`}
                                 {currentStep.requirement.type === 'boss_defeated' &&
-                                    `需要击败${BOSS_DATA[currentStep.requirement.bossId]?.name}`}
+                                `需要击败${BOSS_DATA[currentStep.requirement.bossId]?.name}`}
                                 {currentStep.requirement.type === 'have_gold' &&
-                                    `需要${currentStep.requirement.amount}金币`}
+                                `需要${currentStep.requirement.amount}金币`}
                             </div>
                         </div>
                     )}
@@ -21529,8 +21604,8 @@ const BossPrepareModal = ({ state, dispatch }) => {
                                                     isMapFighting
                                                         ? `地图战斗中：${zoneName || zoneId}`
                                                         : isGathering
-                                                            ? `采集中：${buildingName || gatherBuildingId}`
-                                                            : '待命'
+                                                        ? `采集中：${buildingName || gatherBuildingId}`
+                                                        : '待命'
                                                 }
                                             >
                                                 <div style={{ fontSize: 24 }}>

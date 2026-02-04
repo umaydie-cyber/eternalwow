@@ -9454,6 +9454,73 @@ function stepBossCombat(state) {
         }
     }
 
+    // ==================== 戒律牧师30级天赋：暗影魔 ====================
+    // 效果：每回合造成 0.3 倍法术强度的暗影伤害
+    // 说明：作为被动回合伤害，在玩家阶段结束后统一结算一次（即使被恐惧也会生效）。
+    if (Array.isArray(combat.playerStates) && combat.playerStates.length > 0) {
+        combat.playerStates.forEach((p, pIdx) => {
+            if (!p || p.currentHp <= 0) return;
+            if (p.char?.classId !== 'discipline_priest') return;
+            if (p.char?.talents?.[30] !== 'shadowfiend') return;
+
+            // 选择目标：默认打 Boss；若策略不优先Boss，则打血量最低且未免疫的小弟
+            let targetType = 'boss';
+            let targetIndex = -1;
+
+            const attackableMinions = (combat.minions || [])
+                .map((m, idx) => ({ idx, hp: Number(m?.hp) || 0, immune: !!m?.immune }))
+                .filter(x => x.hp > 0 && !x.immune);
+
+            if (!combat.strategy?.priorityBoss && attackableMinions.length > 0 && (combat.bossHp ?? 0) > 0) {
+                attackableMinions.sort((a, b) => a.hp - b.hp);
+                targetType = 'minion';
+                targetIndex = attackableMinions[0].idx;
+            }
+
+            // 计算伤害：0.3 * 法强
+            let dmg = ((p.char?.stats?.spellPower || 0) + (p.talentBuffs?.spellPowerFlat || 0)) * 0.3;
+
+            // 10级天赋：暗影增幅（暗影伤害 +20%）
+            if (p.char?.talents?.[10] === 'shadow_amp') {
+                dmg *= 1.2;
+            }
+
+            // （目前 boss 战未广泛施加 spell_vuln，但这里仍支持）
+            const vuln = combat.bossDebuffs?.spell_vuln;
+            if (vuln?.mult) {
+                dmg *= vuln.mult;
+            }
+
+            dmg = Math.floor(dmg);
+
+            if (targetType === 'boss') {
+                if ((combat.bossHp ?? 0) <= 0) return;
+                const def = Number(boss?.defense) || 0;
+                const actual = Math.max(1, dmg - def);
+                combat.bossHp -= actual;
+                addLog(`【暗影魔】位置${pIdx + 1} ${p.char.name} 对 ${boss.name} 造成 ${actual} 暗影伤害`);
+
+                // 救赎（由该戒律牧师的伤害触发）
+                if (p.char?.stats?.atonement) {
+                    triggerAtonementHeal(p, actual);
+                }
+            } else if (targetType === 'minion' && targetIndex >= 0 && combat.minions?.[targetIndex]) {
+                const m = combat.minions[targetIndex];
+                if ((m?.hp ?? 0) <= 0 || m?.immune) return;
+                const def = Number(m?.defense) || Number(boss?.minion?.defense) || Number(boss?.cannoneer?.defense) || 0;
+                const actual = Math.max(1, dmg - def);
+                m.hp -= actual;
+
+                const minionName = boss?.minion?.name || boss?.cannoneer?.name || '小弟';
+                addLog(`【暗影魔】位置${pIdx + 1} ${p.char.name} 对 ${minionName}${targetIndex + 1} 造成 ${actual} 暗影伤害`);
+
+                if (p.char?.stats?.atonement) {
+                    triggerAtonementHeal(p, actual);
+                }
+            }
+        });
+    }
+
     // DOT 结算
     if (combat.bossDots) {
         combat.bossDots = combat.bossDots.filter(dot => {
@@ -12545,6 +12612,63 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
         const hasteFromBuffsForDot = Array.isArray(buffs)
             ? buffs.reduce((sum, b) => sum + (Number(b?.hasteBonus) || 0), 0)
             : 0;
+
+        // ==================== 戒律牧师30级天赋：暗影魔 ====================
+        // 效果：每回合造成 0.3 倍法术强度的暗影伤害
+        // 说明：作为被动“DOT类回合伤害”，在 DOT 结算阶段触发一次。
+        if (character?.classId === 'discipline_priest' && character?.talents?.[30] === 'shadowfiend') {
+            // 基础：0.3 *（当前面板法强 + 本场战斗叠加法强）
+            let sfDamage = ((character?.stats?.spellPower || 0) + (talentBuffs?.spellPowerFlat || 0)) * 0.3;
+
+            // 10级天赋：暗影增幅（暗影伤害 +20%）
+            if (character.talents?.[10] === 'shadow_amp') {
+                sfDamage *= 1.2;
+            }
+
+            // 法术易伤（如：圣光易伤）
+            const sfVuln = enemyDebuffs.find(x => x.type === 'spell_vuln');
+            if (sfVuln?.mult) {
+                sfDamage *= sfVuln.mult;
+            }
+
+            // 急速：作为 DOT 类回合伤害，同样享受“急速*2%”的伤害加成
+            sfDamage *= (1 + (((character.stats.haste || 0) + hasteFromBuffsForDot) * 0.02));
+
+            // ✅ 装备特效：地图屠戮（地图战斗伤害加成）
+            sfDamage *= mapDamageDealtMult;
+
+            sfDamage = Math.floor(sfDamage);
+            const actualSf = Math.max(1, sfDamage - (combatState.enemy?.defense ?? 0));
+
+            // 救赎机制（保持与其它 DOT 一致：按实际伤害触发）
+            if (character.stats.atonement) {
+                const healFromAtonement = Math.floor(actualSf * character.stats.atonement.healingRate);
+                const maxHp = character.stats.maxHp ?? character.stats.hp ?? 0;
+                const actualHeal = Math.min(healFromAtonement, maxHp - charHp);
+                charHp += actualHeal;
+                logs.push({
+                    round,
+                    actor: character.name,
+                    action: '救赎',
+                    target: character.name,
+                    value: actualHeal,
+                    type: 'heal',
+                    text: `因为救赎恢复 ${actualHeal} 点生命`
+                });
+            }
+
+            enemyHp -= actualSf;
+            logs.push({
+                round,
+                actor: character.name,
+                action: '暗影魔',
+                target: combatState.enemy?.name,
+                value: actualSf,
+                type: 'damage',
+                text: `【暗影魔】造成 ${actualSf} 暗影伤害`
+            });
+        }
+
         const dots = enemyDebuffs.filter(d => d.type === 'dot');
         if (dots.length > 0) {
             for (const d of dots) {

@@ -382,7 +382,30 @@ const TALENTS = {
                 },
             ]
         },
-        ...[60, 70].map(tier => ({
+        {
+            tier: 60,
+            options: [
+                {
+                    id: 'titan_bulwark',
+                    type: TALENT_TYPES.AURA,
+                    name: '泰坦壁垒',
+                    description: '【盾墙】持续时间+2回合（2→4）。盾墙期间额外获得：精通+20，全能+10。'
+                },
+                {
+                    id: 'shield_spikes',
+                    type: TALENT_TYPES.ON_BLOCK,
+                    name: '盾刺反击',
+                    description: '每次成功格挡后，对攻击者造成等同于本次被格挡掉的伤害值的真实伤害（Boss战默认反击Boss；地图战反击当前怪物）。'
+                },
+                {
+                    id: 'blood_and_thunder',
+                    type: TALENT_TYPES.AURA,
+                    name: '雷霆沸血',
+                    description: '【雷霆一击】暴击施加的【重伤】持续时间+2（4→6），每回合伤害+10%（0.5×攻击强度→0.55×攻击强度）。'
+                },
+            ]
+        },
+        ...[70].map(tier => ({
             tier,
             options: [
                 { id: `t${tier}_a`, name: '（预留）天赋A', description: '待实现' },
@@ -1059,9 +1082,11 @@ const SKILLS = {
             const damage = Math.floor(baseDamage);
 
             // 暴击时生成的DOT（每目标独立）
+            // 60级天赋：雷霆沸血 - 强化暴击重伤
+            const hasBloodAndThunder = char.talents?.[60] === 'blood_and_thunder';
             const dot = isCrit ? {
-                damagePerTurn: Math.floor(char.stats.attack * 0.5),
-                duration: 4,
+                damagePerTurn: Math.floor(char.stats.attack * (hasBloodAndThunder ? 0.55 : 0.5)),
+                duration: hasBloodAndThunder ? 6 : 4,
                 name: '重伤'
             } : null;
 
@@ -1080,19 +1105,24 @@ const SKILLS = {
         iconUrl : 'icons/wow/vanilla/abilities/Ability_Warrior_ShieldWall.png',
         type: 'buff',
         limit: 1, // 基础1次，护卫神盾天赋可提升到2次
-        description: '受到的所有伤害降低50%，持续3回合',
-        duration: 3,
+        description: '受到的所有伤害降低50%，持续2回合',
+        duration: 2,
         calculate: (char) => {
             // 40级天赋：坚毅长城 - 减伤提高到75%
             const damageTakenMult = char.talents?.[40] === 'fortified_wall' ? 0.25 : 0.5;
             // 40级天赋：无坚不摧之力 - 造成伤害提高50%
             const damageDealtMult = char.talents?.[40] === 'indomitable_might' ? 1.5 : 1;
 
+            // 60级天赋：泰坦壁垒 - 盾墙延长并提供面板属性
+            const hasTitanBulwark = char.talents?.[60] === 'titan_bulwark';
+            const duration = hasTitanBulwark ? 5 : 3;
+
             return {
                 buff: {
                     damageTakenMult,
                     damageDealtMult,
-                    duration: 3
+                    duration,
+                    ...(hasTitanBulwark ? { masteryBonus: 20, versatilityBonus: 10 } : {})
                 }
             };
         }
@@ -9451,6 +9481,15 @@ function stepBossCombat(state) {
                     const damageIncrease = Math.round((result.buff.damageDealtMult - 1) * 100);
                     buffText += `，造成伤害提高${damageIncrease}%`;
                 }
+
+                // 60级天赋：泰坦壁垒 - 盾墙期间面板属性加成
+                if (Number.isFinite(Number(result.buff.masteryBonus)) && Number(result.buff.masteryBonus) !== 0) {
+                    buffText += `，精通+${result.buff.masteryBonus}`;
+                }
+                if (Number.isFinite(Number(result.buff.versatilityBonus)) && Number(result.buff.versatilityBonus) !== 0) {
+                    buffText += `，全能+${result.buff.versatilityBonus}`;
+                }
+
                 addLog(buffText);
             }
 
@@ -9852,10 +9891,31 @@ function stepBossCombat(state) {
         let blockedAmount = 0;
         if (Math.random() < blockChance) {
             const blockValue = Math.floor(
-                (playerState?.char?.stats?.blockValue || 0) + (playerState?.talentBuffs?.blockValueFlat || 0)
+                (playerState?.char?.stats?.blockValue || 0) +
+                (playerState?.talentBuffs?.blockValueFlat || 0) +
+                blockBreakthroughBonusValue
             );
             blockedAmount = Math.min(Math.max(0, dmg - 1), Math.max(0, blockValue));
             dmg = Math.max(1, dmg - blockedAmount);
+        }
+
+        // ===== ON_BLOCK 天赋触发（BOSS战） =====
+        if (blockedAmount > 0) {
+            // 10级天赋：格挡大师 - 本场战斗格挡值 +10
+            if (playerState?.char?.talents?.[10] === 'block_master') {
+                playerState.talentBuffs = playerState.talentBuffs || {};
+                playerState.talentBuffs.blockValueFlat = (playerState.talentBuffs.blockValueFlat || 0) + 10;
+                addLog(`【格挡大师】触发：${playerState.char.name} 格挡值 +10（本场战斗）`);
+            }
+
+            // 60级天赋：盾刺反击 - 反击BOSS
+            if (playerState?.char?.talents?.[60] === 'shield_spikes') {
+                const spikeDmg = Math.floor(blockedAmount);
+                if (spikeDmg > 0 && (combat.bossHp ?? 0) > 0) {
+                    combat.bossHp -= spikeDmg;
+                    addLog(`【盾刺反击】触发：${playerState.char.name} 反击 ${boss.name} 造成 ${spikeDmg} 点真实伤害`);
+                }
+            }
         }
 
         const takenMult = playerState?.char?.stats?.damageTakenMult ?? 1;
@@ -12463,6 +12523,14 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
                     const damageIncrease = Math.round((result.buff.damageDealtMult - 1) * 100);
                     buffText += `，造成伤害提高${damageIncrease}%`;
                 }
+
+                // 60级天赋：泰坦壁垒 - 盾墙期间面板属性加成
+                if (Number.isFinite(Number(result.buff.masteryBonus)) && Number(result.buff.masteryBonus) !== 0) {
+                    buffText += `，精通+${result.buff.masteryBonus}`;
+                }
+                if (Number.isFinite(Number(result.buff.versatilityBonus)) && Number(result.buff.versatilityBonus) !== 0) {
+                    buffText += `，全能+${result.buff.versatilityBonus}`;
+                }
             }
 
             // 冰冷血脉 / 盗贼增益等
@@ -13046,6 +13114,23 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
                 value: 10,
                 text: '【格挡大师】触发，格挡值 +10（本场战斗）'
             });
+        }
+
+        // ===== 60级天赋：盾刺反击 =====
+        // 每次成功格挡后，对当前敌人造成等同于本次被格挡掉的伤害值的真实伤害
+        if (blockedAmount > 0 && character.talents?.[60] === 'shield_spikes') {
+            const spikeDmg = Math.floor(blockedAmount);
+            if (spikeDmg > 0) {
+                enemyHp -= spikeDmg;
+                logs.push({
+                    round,
+                    kind: 'proc',
+                    actor: character.name,
+                    proc: '盾刺反击',
+                    value: spikeDmg,
+                    text: `【盾刺反击】触发：对 ${combatState.enemy?.name || '敌人'} 造成 ${spikeDmg} 点真实伤害`
+                });
+            }
         }
 
         // ===== 新增：buff减伤乘区（盾墙等）=====

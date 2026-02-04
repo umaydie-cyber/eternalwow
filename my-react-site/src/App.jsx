@@ -5942,6 +5942,22 @@ const CODEX_SET_EFFECTS = [
     },
 ];
 
+// ==================== 坐骑图鉴（不占背包） ====================
+// 说明：坐骑通过掉落“点亮图鉴”，不会进入道具栏/背包。
+// 图片 URL 预留：imageUrl 先留空，后续填入即可。
+const MOUNT_CODEX = [
+    {
+        id: 'MOUNT_DEATHCHARGER',
+        name: '死亡军马',
+        icon: '🐴',
+        imageUrl: '', // TODO: 预留图片URL
+        source: '击杀【瑞文戴尔男爵】',
+        bossId: 'baron_rivendare',
+        dropChance: 0.01, // 1%
+        bonus: { expBonus: 0.10 }, // 全局：10%经验加成
+    },
+];
+
 // ==================== RARITY COLORS ====================
 const RARITY_COLORS = {
     white: '#d9d9d9',
@@ -7563,6 +7579,56 @@ function addJunkIdToCodex(state, junkId) {
     return { ...state, codexJunk: [...current, junkId] };
 }
 
+function addMountIdToCodex(state, mountId) {
+    if (!mountId) return state;
+    const current = Array.isArray(state.codexMounts) ? state.codexMounts : [];
+    if (current.includes(mountId)) return state;
+    return { ...state, codexMounts: [...current, mountId] };
+}
+
+/**
+ * 尝试从某个世界首领解锁坐骑（不进背包，只点亮图鉴）
+ * @param {object} state
+ * @param {string} bossId
+ * @param {(text: string) => void} onLog
+ * @returns {{ state: object, unlocked: object|null }}
+ */
+function tryUnlockMountFromBoss(state, bossId, onLog) {
+    try {
+        if (!bossId) return { state, unlocked: null };
+
+        const mounts = Array.isArray(MOUNT_CODEX) ? MOUNT_CODEX : [];
+        const mount = mounts.find(m => m?.bossId === bossId);
+        if (!mount?.id) return { state, unlocked: null };
+
+        const cur = Array.isArray(state?.codexMounts) ? state.codexMounts : [];
+        if (cur.includes(mount.id)) return { state, unlocked: null };
+
+        const chance = Number(mount.dropChance) || 0;
+        if (chance <= 0) return { state, unlocked: null };
+
+        if (Math.random() >= chance) return { state, unlocked: null };
+
+        let next = addMountIdToCodex(state, mount.id);
+
+        // ✅ 立即重算全队属性，让全局加成立刻生效
+        if (next && next.characters) {
+            next = { ...next, characters: recalcPartyStats(next, next.characters) };
+        }
+
+        if (typeof onLog === 'function') {
+            const bonusText = mount?.bonus ? formatBonusText(mount.bonus) : '';
+            const bonusTip = bonusText ? `（全局加成：${bonusText}）` : '';
+            onLog(`🎉 获得坐骑【${mount.name}】！已点亮坐骑图鉴${bonusTip}`);
+        }
+
+        return { state: next, unlocked: mount };
+    } catch (e) {
+        console.error('tryUnlockMountFromBoss error:', e);
+        return { state, unlocked: null };
+    }
+}
+
 function learnNewSkills(character) {
     const classData = CLASSES[character.classId];
     const learned = new Set(character.skills || []);
@@ -7692,6 +7758,21 @@ function calculateTotalStats(character, partyAuras = { hpMul: 1, spellPowerMul: 
     const achExpBonus = getAchievementExpBonus(gameState);
     if (Number.isFinite(achExpBonus) && achExpBonus !== 0) {
         totalStats.expBonus = (totalStats.expBonus || 0) + achExpBonus;
+    }
+
+    // ==================== 坐骑图鉴加成（全队永久） ====================
+    // 规则：已点亮的坐骑会提供全局加成（例如：10%经验加成）。
+    const codexMounts = Array.isArray(gameState?.codexMounts) ? gameState.codexMounts : [];
+    if (codexMounts.length > 0) {
+        const mountSet = new Set(codexMounts);
+        (Array.isArray(MOUNT_CODEX) ? MOUNT_CODEX : []).forEach(m => {
+            if (!m || !m.id) return;
+            if (!mountSet.has(m.id)) return;
+            const bonus = m.bonus || {};
+            for (const [k, v] of Object.entries(bonus)) {
+                totalStats[k] = (totalStats[k] || 0) + (Number(v) || 0);
+            }
+        });
     }
 
     // ==================== 图鉴 Lv.100 集齐加成（全队永久） ====================
@@ -10960,6 +11041,12 @@ function stepBossCombat(state) {
                 });
             });
 
+            // ===== 坐骑掉落（不进背包，只点亮图鉴） =====
+            {
+                const res = tryUnlockMountFromBoss(newState, combat.bossId, (t) => addLog(t, 'loot'));
+                newState = res.state;
+            }
+
         } else {
             addLog('××× 失败，全队阵亡 ×××');
 
@@ -11056,6 +11143,7 @@ const initialState = {
     achievements: {},
     codex: [],
     codexJunk: [],
+    codexMounts: [],
     zones: JSON.parse(JSON.stringify(ZONES)),
     assignments: {},
     combatLogs: [],
@@ -13287,7 +13375,14 @@ function gameReducer(state, action) {
                         });
                     });
 
-                    // 7) 记录战斗日志（用于可追溯）
+                    // 7) 坐骑掉落（不进背包，只点亮图鉴）
+                    const extraAutoLogs = [];
+                    {
+                        const res = tryUnlockMountFromBoss(newState, bossId, (t) => extraAutoLogs.push(t));
+                        newState = res.state;
+                    }
+
+                    // 8) 记录战斗日志（用于可追溯）
                     const bossLogEntry = {
                         id: `bosslog_${Date.now()}_${Math.random()}`,
                         timestamp: Date.now(),
@@ -13295,7 +13390,7 @@ function gameReducer(state, action) {
                         zoneName: '世界首领',
                         enemyName: bossData.name || bossId,
                         result: 'victory',
-                        logs: [`【自动击杀】${bossData.name || bossId} 已被自动击杀，获得金币与掉落。`],
+                        logs: [`【自动击杀】${bossData.name || bossId} 已被自动击杀，获得金币与掉落。`, ...extraAutoLogs],
                         rewards: { gold: bossData.rewards.gold || 0, exp: 0 },
                     };
                     newState.combatLogs = [bossLogEntry, ...(newState.combatLogs || [])].slice(0, 50);
@@ -16884,8 +16979,8 @@ const ItemDetailsModal = ({ item, onClose, onEquip, characters, state , dispatch
                             isMatA
                                 ? state.inventory.some(i => i?.type === 'equipment' && i.id === 'EQ_042' && getLevel(i) >= 100)
                                 : isMatB
-                                ? state.inventory.some(i => i?.type === 'equipment' && i.id === 'EQ_041' && getLevel(i) >= 100)
-                                : false;
+                                    ? state.inventory.some(i => i?.type === 'equipment' && i.id === 'EQ_041' && getLevel(i) >= 100)
+                                    : false;
 
                         if (!(hasOther && (isMatA || isMatB))) return null;
 
@@ -19790,6 +19885,10 @@ const CodexPage = ({ state, dispatch }) => {
     const allJunkTemplates = Object.values(ITEMS).filter(it => it?.type === 'junk');
     const junkCodexSet = new Set(state.codexJunk || []);
 
+    // ===== 坐骑图鉴 =====
+    const mountTemplates = Array.isArray(MOUNT_CODEX) ? MOUNT_CODEX : [];
+    const mountCodexSet = new Set(state.codexMounts || []);
+
     // ===== Boss 徽章（可在图鉴里开关掉落） =====
     const badgeTemplates = Object.keys(BADGE_UPGRADE_RULES || {})
         .map(id => ITEMS?.[id])
@@ -20074,6 +20173,7 @@ const CodexPage = ({ state, dispatch }) => {
                     <TabButton id="effects">⚡ 集齐效果</TabButton>
                     <TabButton id="equipment">🛡️ 装备</TabButton>
                     <TabButton id="badges">🏅 徽章</TabButton>
+                    <TabButton id="mounts">🐴 坐骑</TabButton>
                     <TabButton id="junk">🧺 垃圾</TabButton>
                 </div>
             }
@@ -20159,6 +20259,108 @@ const CodexPage = ({ state, dispatch }) => {
                 </>
             )}
 
+
+            {/* ===== 坐骑图鉴 ===== */}
+            {tab === 'mounts' && (
+                <>
+                    <div style={{ fontSize: 12, color: '#888', marginBottom: 12 }}>
+                        ✅ 点亮：已获得坐骑（不进背包）　|　击杀世界首领有概率获得坐骑并点亮图鉴
+                    </div>
+
+                    <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
+                        gap: 10
+                    }}>
+                        {mountTemplates.map((m) => {
+                            const unlocked = mountCodexSet.has(m.id);
+                            const bonusText = m.bonus ? formatBonusText(m.bonus) : '';
+
+                            return (
+                                <div
+                                    key={m.id}
+                                    title={`${m.name}${m.dropChance ? `（掉落率 ${Math.round(m.dropChance * 100)}%）` : ''}`}
+                                    style={{
+                                        background: unlocked ? 'rgba(0,0,0,0.35)' : 'rgba(0,0,0,0.18)',
+                                        borderRadius: 10,
+                                        border: unlocked ? '2px solid rgba(255, 215, 0, 0.85)' : '1px solid #333',
+                                        boxShadow: unlocked ? '0 0 12px rgba(255,215,0,0.18)' : 'none',
+                                        padding: 12,
+                                        textAlign: 'center'
+                                    }}
+                                >
+                                    <div style={{
+                                        width: '100%',
+                                        height: 64,
+                                        borderRadius: 8,
+                                        background: 'rgba(0,0,0,0.25)',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        border: '1px solid rgba(255,255,255,0.08)',
+                                        marginBottom: 8,
+                                        overflow: 'hidden'
+                                    }}>
+                                        {m.imageUrl
+                                            ? (
+                                                <img
+                                                    src={m.imageUrl}
+                                                    alt={m.name}
+                                                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                                />
+                                            )
+                                            : (
+                                                <div style={{ fontSize: 36, opacity: unlocked ? 1 : 0.35 }}>
+                                                    {m.icon || '🐴'}
+                                                </div>
+                                            )
+                                        }
+                                    </div>
+
+                                    <div style={{
+                                        fontSize: 12,
+                                        fontWeight: 800,
+                                        color: unlocked ? '#ffd700' : '#555',
+                                        lineHeight: 1.2,
+                                        minHeight: 28
+                                    }}>
+                                        {m.name}
+                                    </div>
+
+                                    <div style={{ marginTop: 4, fontSize: 10, color: '#777' }}>
+                                        {m.source}{m.dropChance ? `（${Math.round(m.dropChance * 100)}%）` : ''}
+                                    </div>
+
+                                    {!!bonusText && (
+                                        <div style={{
+                                            marginTop: 8,
+                                            fontSize: 10,
+                                            fontWeight: 800,
+                                            color: unlocked ? 'rgba(120,220,120,0.95)' : '#666',
+                                            background: unlocked ? 'rgba(120,220,120,0.10)' : 'rgba(255,255,255,0.04)',
+                                            border: unlocked ? '1px solid rgba(120,220,120,0.25)' : '1px solid rgba(255,255,255,0.08)',
+                                            borderRadius: 6,
+                                            padding: '6px 8px',
+                                        }}>
+                                            {bonusText}
+                                        </div>
+                                    )}
+
+                                    <div style={{ marginTop: 8, fontSize: 9, color: unlocked ? '#aaa' : '#444' }}>
+                                        {unlocked ? '已获得' : '未获得'}
+                                    </div>
+                                </div>
+                            );
+                        })}
+
+                        {mountTemplates.length === 0 && (
+                            <div style={{ color: '#666', fontSize: 12 }}>
+                                当前没有定义坐骑
+                            </div>
+                        )}
+                    </div>
+                </>
+            )}
 
             {/* ===== 徽章图鉴（Boss 掉落） ===== */}
             {tab === 'badges' && (
@@ -21342,13 +21544,13 @@ const QuestPage = ({ state, dispatch }) => {
                             }}>
                                 {requirementMet ? '✓' : '✗'}
                                 {currentStep.requirement.type === 'character_level' &&
-                                `需要角色等级 ${currentStep.requirement.level}`}
+                                    `需要角色等级 ${currentStep.requirement.level}`}
                                 {currentStep.requirement.type === 'zone_battles' &&
-                                `需要在${ZONES[currentStep.requirement.zoneId]?.name}战斗${currentStep.requirement.count}次`}
+                                    `需要在${ZONES[currentStep.requirement.zoneId]?.name}战斗${currentStep.requirement.count}次`}
                                 {currentStep.requirement.type === 'boss_defeated' &&
-                                `需要击败${BOSS_DATA[currentStep.requirement.bossId]?.name}`}
+                                    `需要击败${BOSS_DATA[currentStep.requirement.bossId]?.name}`}
                                 {currentStep.requirement.type === 'have_gold' &&
-                                `需要${currentStep.requirement.amount}金币`}
+                                    `需要${currentStep.requirement.amount}金币`}
                             </div>
                         </div>
                     )}
@@ -22725,8 +22927,8 @@ const BossPrepareModal = ({ state, dispatch }) => {
                                                     isMapFighting
                                                         ? `地图战斗中：${zoneName || zoneId}`
                                                         : isGathering
-                                                        ? `采集中：${buildingName || gatherBuildingId}`
-                                                        : '待命'
+                                                            ? `采集中：${buildingName || gatherBuildingId}`
+                                                            : '待命'
                                                 }
                                             >
                                                 <div style={{ fontSize: 24 }}>

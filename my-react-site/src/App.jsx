@@ -720,6 +720,31 @@ const TALENTS = {
                     description: '切割额外使你获得基于切割消耗星数*10的全能。'
                 }
             ]
+        },
+
+        // ==================== 狂徒盗贼（50级天赋） ====================
+        {
+            tier: 50,
+            options: [
+                {
+                    id: 'crit_breakthrough',
+                    type: TALENT_TYPES.AURA,
+                    name: '爆发突破',
+                    description: '超过100%的暴击率会直接转化为对暴击伤害的加成（与战士该天赋完全一致）。'
+                },
+                {
+                    id: 'potent_vial',
+                    type: TALENT_TYPES.AURA,
+                    name: '强效瓶剂',
+                    description: '【猩红之瓶】持续回合延长至6回合。'
+                },
+                {
+                    id: 'erratic',
+                    type: TALENT_TYPES.AURA,
+                    name: '飘忽不定',
+                    description: '使你受到的所有伤害降低20%。'
+                }
+            ]
         }
     ]
 
@@ -1714,14 +1739,15 @@ const SKILLS = {
         iconUrl: 'icons/wow/vanilla/abilities/xinghongzhiping.png',
         type: 'buff',
         limit: 1,
-        description: '每回合回复15%生命值，持续3回合。',
-        calculate: () => {
+        description: '每回合回复15%生命值，持续3回合（若点出50级天赋【强效瓶剂】则持续6回合）。',
+        calculate: (char) => {
+            const duration = (char?.classId === 'outlaw_rogue' && char?.talents?.[50] === 'potent_vial') ? 6 : 3;
             return {
                 buff: {
                     type: 'crimson_vial',
                     name: '猩红之瓶',
                     healPctPerTurn: 0.15,
-                    duration: 3
+                    duration
                 }
             };
         }
@@ -7709,6 +7735,14 @@ function calculateTotalStats(character, partyAuras = { hpMul: 1, spellPowerMul: 
         } else if (t[20] === 'berserk_stance') {
             totalStats.critRate = (totalStats.critRate || 0) + 8;      // 暴击 +8%
             totalStats.critDamage = (totalStats.critDamage || 2.0) + 0.20; // 暴击伤害 +20%（以倍率加成）
+        }
+    }
+
+    // ==================== 狂徒盗贼：常驻被动天赋 ====================
+    if (character.classId === 'outlaw_rogue') {
+        // 50级：飘忽不定 - 受到伤害降低20%
+        if (t[50] === 'erratic') {
+            totalStats.damageTakenMult = (totalStats.damageTakenMult || 1) * 0.8;
         }
     }
 
@@ -16888,7 +16922,7 @@ const TalentPage = ({ state, dispatch }) => {
                                             if (tier >= 80) return;
                                             chooseTalent(tier, opt.id);
                                         }}
-                                        title={locked ? '未解锁' : (tier >= 50 ? '预留天赋，待实现' : '点击选择')}
+                                        title={locked ? '未解锁' : (tier >= 80 ? '预留天赋，待实现' : '点击选择')}
                                     >
                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                                             <div style={{ fontWeight: 700, color: '#fff' }}>{opt.name}</div>

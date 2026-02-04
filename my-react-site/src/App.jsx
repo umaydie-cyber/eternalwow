@@ -401,7 +401,7 @@ const TALENTS = {
                     id: 'blood_and_thunder',
                     type: TALENT_TYPES.AURA,
                     name: '雷霆沸血',
-                    description: '【雷霆一击】暴击施加的【重伤】持续时间+2（4→6），每回合伤害+10%（0.5×攻击强度→0.55×攻击强度）。'
+                    description: '【雷霆一击】暴击施加的【重伤】持续时间+2（3→5），每回合伤害+20%（0.5×攻击强度→0.6×攻击强度）。'
                 },
             ]
         },
@@ -1066,7 +1066,7 @@ const SKILLS = {
         iconUrl : 'icons/wow/vanilla/abilities/Ability_ThunderClap.png',
         type: 'aoe_damage',
         limit: 2,
-        description: '对所有敌人造成0.8倍攻击强度的伤害，暴击时对每个目标施加重伤（DOT 0.5倍攻击强度，持续4回合）',
+        description: '对所有敌人造成0.8倍攻击强度的伤害，暴击时对每个目标施加重伤（DOT 0.5倍攻击强度，持续3回合）',
         calculate: (char) => {
             let baseDamage = char.stats.attack * 0.8;
 
@@ -1085,8 +1085,8 @@ const SKILLS = {
             // 60级天赋：雷霆沸血 - 强化暴击重伤
             const hasBloodAndThunder = char.talents?.[60] === 'blood_and_thunder';
             const dot = isCrit ? {
-                damagePerTurn: Math.floor(char.stats.attack * (hasBloodAndThunder ? 0.55 : 0.5)),
-                duration: hasBloodAndThunder ? 6 : 4,
+                damagePerTurn: Math.floor(char.stats.attack * (hasBloodAndThunder ? 0.6 : 0.5)),
+                duration: hasBloodAndThunder ? 5 : 3,
                 name: '重伤'
             } : null;
 

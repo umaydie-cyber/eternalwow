@@ -456,7 +456,7 @@ const TALENTS = {
                 {
                     id: 'shadowfiend',
                     name: '暗影魔',
-                    description: '每回合造成0.6倍法术强度的暗影伤害',
+                    description: '每回合造成0.3倍法术强度的暗影伤害',
                     type: 'dot'
                 }
             ]
@@ -986,7 +986,7 @@ const SKILLS = {
         icon: '🎯',
         iconUrl : 'icons/wow/vanilla/abilities/Ability_Warrior_DefensiveStance.png',
         type: 'passive',
-        description: '被动：格挡值提高(10 + 精通/4)%。该提升基于原始格挡数值。'
+        description: '被动：格挡值提高(10 + 精通/2)%。该提升基于原始格挡数值。'
     },
     shield_bash: {
         limit: 3,
@@ -7779,7 +7779,8 @@ function calculateTotalStats(character, partyAuras = { hpMul: 1, spellPowerMul: 
     if (character.classId === 'protection_warrior') {
         const mastery = totalStats.mastery || 0;
 
-        const masteryBonusPct = (10 + mastery / 4) / 100;
+        // (12 + mastery / 2)%
+        const masteryBonusPct = (12 + mastery / 2) / 100;
 
         // 只放大“原始格挡率 / 原始格挡值”
         //totalStats.blockRate += totalStats.blockRate * masteryBonusPct;
@@ -9477,25 +9478,17 @@ function stepBossCombat(state) {
             }
 
             // 计算伤害：0.3 * 法强
-            let dmg = ((p.char?.stats?.spellPower || 0) + (p.talentBuffs?.spellPowerFlat || 0)) * 0.6;
+            let dmg = ((p.char?.stats?.spellPower || 0) + (p.talentBuffs?.spellPowerFlat || 0)) * 0.3;
 
             // 10级天赋：暗影增幅（暗影伤害 +20%）
             if (p.char?.talents?.[10] === 'shadow_amp') {
                 dmg *= 1.2;
             }
 
-            // 急速：作为 DOT 类回合伤害，同样享受“急速*2%”的伤害加成
-            dmg *= (1 + ((p.stats.haste || 0) * 0.02));
-
             // （目前 boss 战未广泛施加 spell_vuln，但这里仍支持）
             const vuln = combat.bossDebuffs?.spell_vuln;
             if (vuln?.mult) {
                 dmg *= vuln.mult;
-            }
-
-            const isCrit = Math.random() < (p.stats.critRate||0) / 100;
-            if (isCrit) {
-                dmg *= p.stats.critDamage;
             }
 
             dmg = Math.floor(dmg);
@@ -9519,7 +9512,7 @@ function stepBossCombat(state) {
                 m.hp -= actual;
 
                 const minionName = boss?.minion?.name || boss?.cannoneer?.name || '小弟';
-                addLog(`【暗影魔】位置${pIdx + 1} ${p.char.name} 对 ${minionName}${targetIndex + 1} 造成 ${actual} 暗影伤害`+isCrit?`【爆击】`:``);
+                addLog(`【暗影魔】位置${pIdx + 1} ${p.char.name} 对 ${minionName}${targetIndex + 1} 造成 ${actual} 暗影伤害`);
 
                 if (p.char?.stats?.atonement) {
                     triggerAtonementHeal(p, actual);
@@ -12629,7 +12622,7 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
         // 说明：作为被动“DOT类回合伤害”，在 DOT 结算阶段触发一次。
         if (character?.classId === 'discipline_priest' && character?.talents?.[30] === 'shadowfiend') {
             // 基础：0.3 *（当前面板法强 + 本场战斗叠加法强）
-            let sfDamage = ((character?.stats?.spellPower || 0) + (talentBuffs?.spellPowerFlat || 0)) * 0.6;
+            let sfDamage = ((character?.stats?.spellPower || 0) + (talentBuffs?.spellPowerFlat || 0)) * 0.3;
 
             // 10级天赋：暗影增幅（暗影伤害 +20%）
             if (character.talents?.[10] === 'shadow_amp') {
@@ -12647,11 +12640,6 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
 
             // ✅ 装备特效：地图屠戮（地图战斗伤害加成）
             sfDamage *= mapDamageDealtMult;
-
-            const isCrit = Math.random() < (character.stats.critRate||0) / 100;
-            if (isCrit) {
-                sfDamage *= character.stats.critDamage;
-            }
 
             sfDamage = Math.floor(sfDamage);
             const actualSf = Math.max(1, sfDamage - (combatState.enemy?.defense ?? 0));
@@ -12681,7 +12669,7 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
                 target: combatState.enemy?.name,
                 value: actualSf,
                 type: 'damage',
-                text: `【暗影魔】造成 ${actualSf} 暗影伤害`+isCrit?`【爆击】`:``,
+                text: `【暗影魔】造成 ${actualSf} 暗影伤害`
             });
         }
 

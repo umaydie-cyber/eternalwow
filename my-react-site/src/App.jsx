@@ -650,6 +650,29 @@ const TALENTS = {
                     description: '影袭额外获得1颗星。'
                 }
             ]
+        },
+        {
+            tier: 20,
+            options: [
+                {
+                    id: 'agile_movement',
+                    type: TALENT_TYPES.AURA,
+                    name: '矫健灵动',
+                    description: '剑刃乱舞的初始伤害提高100%，并且每击中一个目标产生1颗星。'
+                },
+                {
+                    id: 'ruthless',
+                    type: TALENT_TYPES.AURA,
+                    name: '无情',
+                    description: '消耗星的技能每消耗1颗星，就有20%概率获得1颗星。'
+                },
+                {
+                    id: 'fatal_empowerment',
+                    type: TALENT_TYPES.AURA,
+                    name: '索命强能',
+                    description: '消耗星的技能每消耗1颗星，最终伤害提高5%。'
+                }
+            ]
         }
     ]
 
@@ -1520,8 +1543,19 @@ const SKILLS = {
         type: 'aoe_damage',
         limit: 1,
         description: '对所有目标造成1倍攻击强度的伤害。本场战斗中你的普通攻击、刺骨、伏击、正中眉心会对主目标外的所有敌人造成本次伤害*50%的复制伤害（精通提高比例）。',
-        calculate: (char) => {
+        calculate: (char, combatContext = {}) => {
+            const enemyCountRaw = Number(combatContext?.enemyCount);
+            const enemyCount = (Number.isFinite(enemyCountRaw) && enemyCountRaw > 0)
+                ? Math.floor(enemyCountRaw)
+                : 1;
+
             let damage = (char.stats.attack || 0) * 1.0;
+
+            // 20级天赋：矫健灵动 - 剑刃乱舞初始伤害+100%，并且每命中一个目标获得1星
+            const hasAgileMovement = (char?.classId === 'outlaw_rogue' && char?.talents?.[20] === 'agile_movement');
+            if (hasAgileMovement) {
+                damage *= 2;
+            }
 
             const critRate = Number(char.stats.critRate) || 0;
             const isCrit = Math.random() < critRate / 100;
@@ -1532,7 +1566,7 @@ const SKILLS = {
             // 全能：通用乘区
             damage *= (1 + (Number(char.stats.versatility) || 0) / 100);
 
-            return {
+            const result = {
                 aoeDamage: Math.floor(damage),
                 isCrit,
                 buff: {
@@ -1541,8 +1575,15 @@ const SKILLS = {
                     duration: 999
                 }
             };
+
+            if (hasAgileMovement) {
+                result.generateComboPoints = enemyCount;
+            }
+
+            return result;
         }
     },
+
     shadowstrike: {
         id: 'shadowstrike',
         name: '影袭',
@@ -8350,13 +8391,27 @@ function stepBossCombat(state) {
         const blizzardActive = combat.bossDots?.some(d => d.name === '冰风暴' && d.sourcePlayerId === p.char.id) ||
             combat.minions?.some(m => m.dots?.some(d => d.name === '冰风暴' && d.sourcePlayerId === p.char.id));
 
+        // 可被AOE命中的敌人数（用于狂徒盗贼20级天赋等）
+        const enemyCount = (() => {
+            let cnt = 0;
+            if ((combat.bossHp ?? 0) > 0) cnt += 1;
+            if (Array.isArray(combat.minions) && combat.minions.length > 0) {
+                combat.minions.forEach(m => {
+                    if (!m) return;
+                    if ((m.hp ?? 0) > 0 && !m.immune) cnt += 1;
+                });
+            }
+            return cnt;
+        })();
+
         const combatContext = {
             fortuneMisfortuneStacks: p.fortuneMisfortuneStacks || 0,
             fantasiaStacks: p.fantasiaStacks || 0,
             icyVeinsBuff,
             blizzardActive,
             fingersOfFrost: p.fingersOfFrost || 0,
-            comboPoints: p.comboPoints || 0
+            comboPoints: p.comboPoints || 0,
+            enemyCount
         };
         const result = skill.calculate(charForCalc, combatContext);
 
@@ -8481,6 +8536,18 @@ function stepBossCombat(state) {
         // AOE伤害处理
         if (result.aoeDamage) {
             let damage = result.aoeDamage * buffDamageDealtMult;
+
+            // 狂徒盗贼20级天赋：索命强能 - 消耗星的技能每消耗1星，最终伤害+5%
+            if (p.char?.classId === 'outlaw_rogue' && p.char?.talents?.[20] === 'fatal_empowerment' && result.consumeComboPoints) {
+                const spent = (result.consumeComboPoints === 'all')
+                    ? (p.comboPoints || 0)
+                    : Math.min((p.comboPoints || 0), Math.max(0, Math.floor(Number(result.consumeComboPoints) || 0)));
+                if (spent > 0) {
+                    damage *= (1 + spent * 0.05);
+                    addLog(`【索命强能】${p.char.name} 消耗${spent}星，本次【${skill.name}】伤害提高${spent * 5}%`);
+                }
+            }
+
             const skillName = skill.name || '技能';
 
             // 对 Boss 造成伤害
@@ -8580,6 +8647,17 @@ function stepBossCombat(state) {
         // 单体伤害处理
         else if (result.damage) {
             let damage = result.damage;
+
+            // 狂徒盗贼20级天赋：索命强能 - 消耗星的技能每消耗1星，最终伤害+5%
+            if (p.char?.classId === 'outlaw_rogue' && p.char?.talents?.[20] === 'fatal_empowerment' && result.consumeComboPoints) {
+                const spent = (result.consumeComboPoints === 'all')
+                    ? (p.comboPoints || 0)
+                    : Math.min((p.comboPoints || 0), Math.max(0, Math.floor(Number(result.consumeComboPoints) || 0)));
+                if (spent > 0) {
+                    damage *= (1 + spent * 0.05);
+                    addLog(`【索命强能】${p.char.name} 消耗${spent}星，本次【${skill.name}】伤害提高${spent * 5}%`);
+                }
+            }
 
             // 天赋加成
             if (p.char.talents?.[10] === 'shadow_amp' && result.school === 'shadow') {
@@ -8929,6 +9007,23 @@ function stepBossCombat(state) {
             if (spent > 0) {
                 p.comboPoints = Math.max(0, p.comboPoints - spent);
                 addLog(`【连击点】${p.char.name} 消耗 ${spent} 星（当前${p.comboPoints}星）`);
+
+                // 狂徒盗贼20级天赋：无情 - 每消耗1星，20%概率返还1星
+                if (p.char?.classId === 'outlaw_rogue' && p.char?.talents?.[20] === 'ruthless') {
+                    let refunded = 0;
+                    for (let k = 0; k < spent; k++) {
+                        if (Math.random() < 0.2) refunded += 1;
+                    }
+                    if (refunded > 0) {
+                        const maxCombo = getMaxComboPointsForChar(p.char);
+                        const beforeRefund = p.comboPoints;
+                        p.comboPoints = Math.min(maxCombo, p.comboPoints + refunded);
+                        const realRefund = p.comboPoints - beforeRefund;
+                        if (realRefund > 0) {
+                            addLog(`【无情】${p.char.name} 返还 ${realRefund} 星（当前${p.comboPoints}星）`);
+                        }
+                    }
+                }
             }
         }
         if (result.generateComboPoints) {
@@ -11039,7 +11134,8 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
             fingersOfFrost,
             icyVeinsBuff,
             blizzardActive,
-            comboPoints
+            comboPoints,
+            enemyCount: enemyHp > 0 ? 1 : 0
         };
 
         const result = skill.calculate(charForCalc, combatContext);
@@ -11047,6 +11143,23 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
         // ===== 新增：雷霆一击（单体高伤 + 暴击时施加重伤DOT）=====
         if (result.aoeDamage) {
             let damage = result.aoeDamage;
+
+            // 狂徒盗贼20级天赋：索命强能 - 消耗星的技能每消耗1星，最终伤害+5%
+            if (character?.classId === 'outlaw_rogue' && character?.talents?.[20] === 'fatal_empowerment' && result.consumeComboPoints) {
+                const spent = (result.consumeComboPoints === 'all')
+                    ? (comboPoints || 0)
+                    : Math.min((comboPoints || 0), Math.max(0, Math.floor(Number(result.consumeComboPoints) || 0)));
+                if (spent > 0) {
+                    damage *= (1 + spent * 0.05);
+                    logs.push({
+                        round,
+                        kind: 'proc',
+                        actor: character.name,
+                        proc: '索命强能',
+                        text: `【索命强能】消耗${spent}星，本次【${skill.name}】伤害提高${spent * 5}%`
+                    });
+                }
+            }
 
             // 40级天赋：无坚不摧之力 - 盾墙期间伤害提高50%
             let buffDamageDealtMult = 1;
@@ -11185,6 +11298,23 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
         // ===== 原有普通伤害逻辑（保持不变）=====
         else if (result.damage) {
             let damage = result.damage;
+
+            // 狂徒盗贼20级天赋：索命强能 - 消耗星的技能每消耗1星，最终伤害+5%
+            if (character?.classId === 'outlaw_rogue' && character?.talents?.[20] === 'fatal_empowerment' && result.consumeComboPoints) {
+                const spent = (result.consumeComboPoints === 'all')
+                    ? (comboPoints || 0)
+                    : Math.min((comboPoints || 0), Math.max(0, Math.floor(Number(result.consumeComboPoints) || 0)));
+                if (spent > 0) {
+                    damage *= (1 + spent * 0.05);
+                    logs.push({
+                        round,
+                        kind: 'proc',
+                        actor: character.name,
+                        proc: '索命强能',
+                        text: `【索命强能】消耗${spent}星，本次【${skill.name}】伤害提高${spent * 5}%`
+                    });
+                }
+            }
 
             // ===== 10级天赋：暗影增幅（暗影伤害 +20%）=====
             if (character.talents?.[10] === 'shadow_amp' && result.school === 'shadow') {
@@ -11619,6 +11749,29 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
                     proc: '连击点',
                     text: `【连击点】消耗 ${spent} 星（当前${comboPoints}星）`
                 });
+
+                // 狂徒盗贼20级天赋：无情 - 每消耗1星，20%概率返还1星
+                if (character?.classId === 'outlaw_rogue' && character?.talents?.[20] === 'ruthless') {
+                    let refunded = 0;
+                    for (let k = 0; k < spent; k++) {
+                        if (Math.random() < 0.2) refunded += 1;
+                    }
+                    if (refunded > 0) {
+                        const maxCombo = getMaxComboPointsForChar(character);
+                        const beforeRefund = comboPoints;
+                        comboPoints = Math.min(maxCombo, comboPoints + refunded);
+                        const realRefund = comboPoints - beforeRefund;
+                        if (realRefund > 0) {
+                            logs.push({
+                                round,
+                                kind: 'proc',
+                                actor: character.name,
+                                proc: '无情',
+                                text: `【无情】触发：返还 ${realRefund} 星（当前${comboPoints}星）`
+                            });
+                        }
+                    }
+                }
             }
         }
         if (result.generateComboPoints) {

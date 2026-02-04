@@ -624,9 +624,48 @@ const TALENTS = {
                 }
             ]
         },
+    ],
+
+    // ==================== 狂徒盗贼（10级天赋） ====================
+    outlaw_rogue: [
+        {
+            tier: 10,
+            options: [
+                {
+                    id: 'swift_hands',
+                    type: TALENT_TYPES.AURA,
+                    name: '迅捷之手',
+                    description: '普通攻击基础伤害从1.2提高至1.4。'
+                },
+                {
+                    id: 'cunning_plan',
+                    type: TALENT_TYPES.AURA,
+                    name: '狡诈计谋',
+                    description: '连击点（星）上限额外提高2点（5→7）。'
+                },
+                {
+                    id: 'opportunity',
+                    type: TALENT_TYPES.AURA,
+                    name: '可乘之机',
+                    description: '影袭额外获得1颗星。'
+                }
+            ]
+        }
     ]
 
 };
+
+// ==================== 盗贼：连击点（星）上限 ====================
+// 默认上限为 5；狂徒盗贼 10级天赋【狡诈计谋】可提升至 7。
+const BASE_MAX_COMBO_POINTS = 5;
+function getMaxComboPointsForChar(char) {
+    const base = BASE_MAX_COMBO_POINTS;
+    if (!char) return base;
+    if (char.classId === 'outlaw_rogue' && char.talents?.[10] === 'cunning_plan') {
+        return base + 2;
+    }
+    return base;
+}
 
 const SKILLS = {
     basic_attack: {
@@ -639,7 +678,11 @@ const SKILLS = {
         calculate: (char) => {
             // 急速：普通攻击伤害提高（急速 * 2%）
             const hasteMult = 1 + ((char.stats.haste || 0) * 0.02);
-            let damage = char.stats.attack * 1.2 * (char.stats.basicAttackMultiplier || 1) * hasteMult;
+
+            // 盗贼10级天赋：迅捷之手 - 普攻基础倍率 1.2 -> 1.4
+            const baseMult = (char?.classId === 'outlaw_rogue' && char?.talents?.[10] === 'swift_hands') ? 1.4 : 1.2;
+
+            let damage = char.stats.attack * baseMult * (char.stats.basicAttackMultiplier || 1) * hasteMult;
 
             // ===== 50级天赋：爆发突破 - 超过100%的暴击率转化为伤害加成 =====
             let effectiveCritRate = char.stats.critRate || 0;
@@ -1467,7 +1510,7 @@ const SKILLS = {
         icon: '🗡️',
         iconUrl: 'icons/wow/vanilla/abilities/Ability_Warrior_Challange.png',
         type: 'passive',
-        description: '被动：剑刃乱舞复制伤害的比例提高（精通/10）%。你可以积攒“星”（连击点）来加强【刺骨】【切割】【正中眉心】，最高5星。'
+        description: '被动：剑刃乱舞复制伤害的比例提高（精通/10）%。你可以积攒“星”（连击点）来加强【刺骨】【切割】【正中眉心】，最高5星（10级天赋【狡诈计谋】可提高至7星）。'
     },
     blade_flurry: {
         id: 'blade_flurry',
@@ -1507,17 +1550,20 @@ const SKILLS = {
         iconUrl: 'icons/wow/vanilla/abilities/yingxi.png',
         type: 'damage',
         limit: 8,
-        description: '造成1.2倍攻击强度的伤害，获得1颗星。',
+        description: '造成1.2倍攻击强度的伤害，获得1颗星（10级天赋【可乘之机】可额外+1）。',
         calculate: (char) => {
             let damage = (char.stats.attack || 0) * 1.2;
             const critRate = Number(char.stats.critRate) || 0;
             const isCrit = Math.random() < critRate / 100;
             if (isCrit) damage *= (Number(char.stats.critDamage) || 2.0);
             damage *= (1 + (Number(char.stats.versatility) || 0) / 100);
+
+            // 盗贼10级天赋：可乘之机 - 影袭额外获得 1 星
+            const extraCombo = (char?.classId === 'outlaw_rogue' && char?.talents?.[10] === 'opportunity') ? 1 : 0;
             return {
                 damage: Math.floor(damage),
                 isCrit,
-                generateComboPoints: 1
+                generateComboPoints: 1 + extraCombo
             };
         }
     },
@@ -1530,7 +1576,8 @@ const SKILLS = {
         limit: 8,
         description: '造成1.5 +（当前星数*0.5）倍攻击强度的伤害，消耗所有星。',
         calculate: (char, combatContext) => {
-            const combo = Math.max(0, Math.min(5, Math.floor(Number(combatContext?.comboPoints) || 0)));
+            const maxCombo = getMaxComboPointsForChar(char);
+            const combo = Math.max(0, Math.min(maxCombo, Math.floor(Number(combatContext?.comboPoints) || 0)));
             const mult = 1.5 + combo * 0.5;
 
             let damage = (char.stats.attack || 0) * mult;
@@ -1595,7 +1642,8 @@ const SKILLS = {
         limit: 1,
         description: '急速提高20 +（当前星数*20），持续8回合，消耗所有星。',
         calculate: (char, combatContext) => {
-            const combo = Math.max(0, Math.min(5, Math.floor(Number(combatContext?.comboPoints) || 0)));
+            const maxCombo = getMaxComboPointsForChar(char);
+            const combo = Math.max(0, Math.min(maxCombo, Math.floor(Number(combatContext?.comboPoints) || 0)));
             const hasteBonus = 20 + combo * 20;
             return {
                 buff: {
@@ -1617,7 +1665,8 @@ const SKILLS = {
         limit: 1,
         description: '造成2 +（当前星数*0.5）倍攻击强度的伤害，提高10 +（当前星数*5）的暴击率，持续4回合，消耗所有星。',
         calculate: (char, combatContext) => {
-            const combo = Math.max(0, Math.min(5, Math.floor(Number(combatContext?.comboPoints) || 0)));
+            const maxCombo = getMaxComboPointsForChar(char);
+            const combo = Math.max(0, Math.min(maxCombo, Math.floor(Number(combatContext?.comboPoints) || 0)));
             const mult = 2 + combo * 0.5;
             const critRateBonus = 10 + combo * 5;
 
@@ -8171,8 +8220,9 @@ function stepBossCombat(state) {
                 if (b && Number.isFinite(Number(b.comboPerTurn)) && Number(b.comboPerTurn) > 0) {
                     const gain = Math.max(0, Math.floor(Number(b.comboPerTurn)));
                     if (gain > 0) {
+                        const maxCombo = getMaxComboPointsForChar(p.char);
                         const before = p.comboPoints;
-                        p.comboPoints = Math.min(5, p.comboPoints + gain);
+                        p.comboPoints = Math.min(maxCombo, p.comboPoints + gain);
                         const realGain = p.comboPoints - before;
                         if (realGain > 0) {
                             addLog(`【${b.name || '增益'}】位置${i + 1} ${p.char.name} 获得 ${realGain} 星（当前${p.comboPoints}星）`);
@@ -8884,8 +8934,9 @@ function stepBossCombat(state) {
         if (result.generateComboPoints) {
             const gain = Math.max(0, Math.floor(Number(result.generateComboPoints) || 0));
             if (gain > 0) {
+                const maxCombo = getMaxComboPointsForChar(p.char);
                 const before = p.comboPoints;
-                p.comboPoints = Math.min(5, p.comboPoints + gain);
+                p.comboPoints = Math.min(maxCombo, p.comboPoints + gain);
                 const realGain = p.comboPoints - before;
                 if (realGain > 0) {
                     addLog(`【连击点】${p.char.name} 获得 ${realGain} 星（当前${p.comboPoints}星）`);
@@ -10828,8 +10879,9 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
                 if (Number.isFinite(Number(b.comboPerTurn)) && Number(b.comboPerTurn) > 0) {
                     const gain = Math.max(0, Math.floor(Number(b.comboPerTurn)));
                     if (gain > 0) {
+                        const maxCombo = getMaxComboPointsForChar(character);
                         const before = comboPoints;
-                        comboPoints = Math.min(5, comboPoints + gain);
+                        comboPoints = Math.min(maxCombo, comboPoints + gain);
                         const realGain = comboPoints - before;
                         if (realGain > 0) {
                             logs.push({
@@ -11572,8 +11624,9 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
         if (result.generateComboPoints) {
             const gain = Math.max(0, Math.floor(Number(result.generateComboPoints) || 0));
             if (gain > 0) {
+                const maxCombo = getMaxComboPointsForChar(character);
                 const before = comboPoints;
-                comboPoints = Math.min(5, comboPoints + gain);
+                comboPoints = Math.min(maxCombo, comboPoints + gain);
                 const realGain = comboPoints - before;
                 if (realGain > 0) {
                     logs.push({

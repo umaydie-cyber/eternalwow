@@ -22849,7 +22849,6 @@ const BossPrepareModal = ({ state, dispatch }) => {
                                     display: 'grid',
                                     gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
                                     gap: 10,
-                                    maxHeight: 240,
                                     overflowY: 'auto',
                                     padding: 4
                                 }}>

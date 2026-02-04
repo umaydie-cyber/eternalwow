@@ -10210,11 +10210,32 @@ function stepBossCombat(state) {
                 extraText = `（魔抗减伤${Math.round(resistReduction * 100)}%）`;
             }
 
-            const dmg = Math.max(1, Math.floor(base * versTakenMult));
-            ps.currentHp -= dmg;
+            // ✅ 把“受伤乘区”补齐：角色常驻 + buff(盾墙等) + 挫志怒吼 + 全能
+            const takenMult = ps.char?.stats?.damageTakenMult ?? 1;
 
+            let buffTakenMult = 1;
+            if (ps.buffs) {
+                ps.buffs.forEach(b => {
+                    if (b.damageTakenMult) buffTakenMult *= b.damageTakenMult; // 盾墙等
+                });
+            }
+
+            // 挫志怒吼（bossDebuffs.demoralizingShout）已有在别处用，这里也补上
+            const demoralizingShoutMult = combat.bossDebuffs?.demoralizingShout?.damageMult ?? 1;
+
+            // 最终 DOT 伤害
+            let dmg = Math.max(1, Math.floor(base * takenMult * buffTakenMult * demoralizingShoutMult * versTakenMult));
+
+            // （可选但推荐）DOT 也经过护盾吸收，和其它伤害统一
+            const shieldResult = applyShieldAbsorb(ps, dmg, logs, currentRound);
+            ps.currentHp -= shieldResult.finalDamage;
+
+            const shieldText = shieldResult.absorbed > 0 ? `，护盾吸收 ${shieldResult.absorbed}` : '';
             const stackText = dot.stacks ? `（${dot.stacks}层）` : '';
-            addLog(`【${dot.name}】${stackText}对 位置${pIdx + 1} ${ps.char.name} 造成 ${dmg} 点${dot.school === 'physical' ? '流血' : ''}伤害${extraText}（剩余${dot.duration - 1}回合）`);
+            addLog(
+                `【${dot.name}】${stackText}对 位置${pIdx + 1} ${ps.char.name} 造成 ${shieldResult.finalDamage} 点${dot.school === 'physical' ? '流血' : ''}伤害${extraText}${shieldText}（剩余${dot.duration - 1}回合）`
+            );
+            ps.currentHp -= dmg;
 
             // 永久DOT不减少持续时间
             if (!dot.isPermanent) {

@@ -5950,7 +5950,7 @@ const MOUNT_CODEX = [
         id: 'MOUNT_DEATHCHARGER',
         name: '死亡军马',
         icon: '🐴',
-        imageUrl: '', // TODO: 预留图片URL
+        imageUrl: '"icons/wow/vanilla/rider/siwangjunma.png",', // TODO: 预留图片URL
         source: '击杀【瑞文戴尔男爵】',
         bossId: 'baron_rivendare',
         dropChance: 0.01, // 1%

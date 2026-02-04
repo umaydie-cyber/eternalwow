@@ -696,21 +696,50 @@ const TALENTS = {
                     description: '伏击使你获得【刀锋冲刺】：暴击伤害+50%，持续4回合。'
                 }
             ]
+        },
+
+        {
+            tier: 40,
+            options: [
+                {
+                    id: 'cold_blood',
+                    type: TALENT_TYPES.AURA,
+                    name: '冷血',
+                    description: '你的第一格技能暴击率提高100%，暴击伤害提高50%。'
+                },
+                {
+                    id: 'deep_stratagem',
+                    type: TALENT_TYPES.AURA,
+                    name: '深邃诡计',
+                    description: '连击点（星）上限额外提高1点，普通攻击暴击有50%概率获得1颗星。'
+                },
+                {
+                    id: 'swift_slashes',
+                    type: TALENT_TYPES.AURA,
+                    name: '迅猛挥砍',
+                    description: '切割额外使你获得基于切割消耗星数*10的全能。'
+                }
+            ]
         }
     ]
 
 };
 
 // ==================== 盗贼：连击点（星）上限 ====================
-// 默认上限为 5；狂徒盗贼 10级天赋【狡诈计谋】可提升至 7。
+// 默认上限为 5；狂徒盗贼 10级天赋【狡诈计谋】可提升至 7；40级天赋【深邃诡计】额外 +1。
 const BASE_MAX_COMBO_POINTS = 5;
 function getMaxComboPointsForChar(char) {
-    const base = BASE_MAX_COMBO_POINTS;
-    if (!char) return base;
-    if (char.classId === 'outlaw_rogue' && char.talents?.[10] === 'cunning_plan') {
-        return base + 2;
+    let max = BASE_MAX_COMBO_POINTS;
+    if (!char) return max;
+
+    if (char.classId === 'outlaw_rogue') {
+        // 10级天赋：狡诈计谋（+2）
+        if (char.talents?.[10] === 'cunning_plan') max += 2;
+        // 40级天赋：深邃诡计（+1）
+        if (char.talents?.[40] === 'deep_stratagem') max += 1;
     }
-    return base;
+
+    return max;
 }
 
 const SKILLS = {
@@ -1556,7 +1585,7 @@ const SKILLS = {
         icon: '🗡️',
         iconUrl: 'icons/wow/vanilla/abilities/Ability_Warrior_Challange.png',
         type: 'passive',
-        description: '被动：剑刃乱舞复制伤害的比例提高（精通/10）%。你可以积攒“星”（连击点）来加强【刺骨】【切割】【正中眉心】，最高5星（10级天赋【狡诈计谋】可提高至7星）。'
+        description: '被动：剑刃乱舞复制伤害的比例提高（精通/10）%。你可以积攒“星”（连击点）来加强【刺骨】【切割】【正中眉心】，最高5星（10级天赋【狡诈计谋】可提高至7星；40级天赋【深邃诡计】额外+1）。'
     },
     blade_flurry: {
         id: 'blade_flurry',
@@ -1709,11 +1738,17 @@ const SKILLS = {
             const maxCombo = getMaxComboPointsForChar(char);
             const combo = Math.max(0, Math.min(maxCombo, Math.floor(Number(combatContext?.comboPoints) || 0)));
             const hasteBonus = 20 + combo * 20;
+
+            // 40级天赋：迅猛挥砍 - 切割额外提供全能（每消耗1星 +10全能）
+            const hasSwiftSlashes = (char?.classId === 'outlaw_rogue' && char?.talents?.[40] === 'swift_slashes');
+            const versatilityBonus = hasSwiftSlashes ? combo * 10 : 0;
+
             return {
                 buff: {
                     type: 'slice_and_dice',
                     name: '切割',
                     hasteBonus,
+                    versatilityBonus,
                     duration: 8
                 },
                 consumeComboPoints: 'all'
@@ -8408,6 +8443,13 @@ function stepBossCombat(state) {
             });
         }
 
+        // ==================== 狂徒盗贼40级天赋：冷血 ====================
+        // 效果：第1格技能暴击率+100%，暴击伤害+50%
+        if (p.char?.classId === 'outlaw_rogue' && p.char?.talents?.[40] === 'cold_blood' && slotIndex === 0) {
+            calcStats.critRate = (Number(calcStats.critRate) || 0) + 100;
+            calcStats.critDamage = (Number(calcStats.critDamage) || 2.0) + 0.5;
+        }
+
         const charForCalc = {
             ...p.char,
             stats: calcStats
@@ -8579,6 +8621,21 @@ function stepBossCombat(state) {
                 const repeatText = isRepeat ? '(鞭笞者苏萨斯)' : '';
                 const minionName = boss.minion?.name || boss.cannoneer?.name || '小弟';
                 addLog(`位置${i + 1} ${p.char.name} 使用 普通攻击${repeatText} 对 ${targetType === 'boss' ? boss.name : minionName} 造成 ${actualDamage} 伤害${basicResult.isCrit ? '（暴击）' : ''}`);
+
+                // ==================== 狂徒盗贼40级天赋：深邃诡计 ====================
+                // 效果：普通攻击暴击有50%概率获得1颗星
+                if (p.char?.classId === 'outlaw_rogue' && p.char?.talents?.[40] === 'deep_stratagem' && basicResult.isCrit) {
+                    if (Math.random() < 0.5) {
+                        const maxCombo = getMaxComboPointsForChar(p.char);
+                        const before = p.comboPoints;
+                        p.comboPoints = Math.min(maxCombo, (Number(p.comboPoints) || 0) + 1);
+                        const realGain = p.comboPoints - before;
+                        if (realGain > 0) {
+                            addLog(`【深邃诡计】触发：${p.char.name} 普通攻击${repeatText}暴击获得1星（当前${p.comboPoints}星）`);
+                        }
+                    }
+                }
+
 
                 if (basicResult.holySwordDamage && basicResult.holySwordDamage > 0) {
                     const holySwordActualDamage = Math.max(1, Math.floor(basicResult.holySwordDamage));
@@ -8776,6 +8833,20 @@ function stepBossCombat(state) {
 
                 // 鞭笞者苏萨斯特效
                 if (skillId === 'basic_attack') {
+                    // ==================== 狂徒盗贼40级天赋：深邃诡计 ====================
+                    // 效果：普通攻击暴击有50%概率获得1颗星
+                    if (p.char?.classId === 'outlaw_rogue' && p.char?.talents?.[40] === 'deep_stratagem' && result.isCrit) {
+                        if (Math.random() < 0.5) {
+                            const maxCombo = getMaxComboPointsForChar(p.char);
+                            const before = p.comboPoints;
+                            p.comboPoints = Math.min(maxCombo, (Number(p.comboPoints) || 0) + 1);
+                            const realGain = p.comboPoints - before;
+                            if (realGain > 0) {
+                                addLog(`【深邃诡计】触发：${p.char.name} 普通攻击暴击获得1星（当前${p.comboPoints}星）`);
+                            }
+                        }
+                    }
+
                     const repeatChance = getBasicAttackRepeatChance(p.char);
                     if (repeatChance > 0 && Math.random() < repeatChance) {
                         addLog(`【鞭笞者苏萨斯】触发：再次发动普通攻击！`);
@@ -9058,7 +9129,8 @@ function stepBossCombat(state) {
                 addLog(`位置${i + 1} ${p.char.name} 开启【剑刃乱舞】：后续普攻/刺骨/伏击/正中眉心将触发复制伤害（持续本场战斗）`);
             }
             if (result.buff.type === 'slice_and_dice') {
-                addLog(`位置${i + 1} ${p.char.name} 开启【切割】：急速+${result.buff.hasteBonus || 0}，持续${result.buff.duration}回合`);
+                const vBonus = result.buff.versatilityBonus || 0;
+                addLog(`位置${i + 1} ${p.char.name} 开启【切割】：急速+${result.buff.hasteBonus || 0}` + (vBonus ? `，全能+${vBonus}` : '') + `，持续${result.buff.duration}回合`);
             }
             if (result.buff.type === 'between_the_eyes') {
                 addLog(`位置${i + 1} ${p.char.name} 获得【正中眉心】：暴击率+${result.buff.critRateBonus || 0}%，持续${result.buff.duration}回合`);
@@ -11357,6 +11429,13 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
             });
         }
 
+        // ==================== 狂徒盗贼40级天赋：冷血 ====================
+        // 效果：第1格技能暴击率+100%，暴击伤害+50%
+        if (character?.classId === 'outlaw_rogue' && character?.talents?.[40] === 'cold_blood' && slotIndex === 0) {
+            calcStats.critRate = (Number(calcStats.critRate) || 0) + 100;
+            calcStats.critDamage = (Number(calcStats.critDamage) || 2.0) + 0.5;
+        }
+
         const charForCalc = {
             ...character,
             stats: calcStats
@@ -11637,6 +11716,26 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
 
             // ==================== 新增：鞭笞者苏萨斯特效 - 普攻后50%概率再次普攻 ====================
             if (currentSkillId === 'basic_attack') {
+                // ==================== 狂徒盗贼40级天赋：深邃诡计 ====================
+                // 效果：普通攻击暴击有50%概率获得1颗星
+                if (character?.classId === 'outlaw_rogue' && character?.talents?.[40] === 'deep_stratagem' && result.isCrit) {
+                    if (Math.random() < 0.5) {
+                        const maxCombo = getMaxComboPointsForChar(character);
+                        const before = comboPoints;
+                        comboPoints = Math.min(maxCombo, comboPoints + 1);
+                        const realGain = comboPoints - before;
+                        if (realGain > 0) {
+                            logs.push({
+                                round,
+                                kind: 'proc',
+                                actor: character.name,
+                                proc: '深邃诡计',
+                                text: `【深邃诡计】触发：普通攻击暴击获得1星（当前${comboPoints}星）`
+                            });
+                        }
+                    }
+                }
+
                 const repeatChance = getBasicAttackRepeatChance(character);
                 if (repeatChance > 0 && Math.random() < repeatChance) {
                     logs.push({
@@ -11685,6 +11784,25 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
 
                     // ✅ 狂徒盗贼30级天赋：杂耍打击（重复普攻同样叠层）
                     procJugglingStrikes('basic_attack');
+
+                    // 40级天赋：深邃诡计（重复普攻同样判定）
+                    if (character?.classId === 'outlaw_rogue' && character?.talents?.[40] === 'deep_stratagem' && result.isCrit) {
+                        if (Math.random() < 0.5) {
+                            const maxCombo = getMaxComboPointsForChar(character);
+                            const before = comboPoints;
+                            comboPoints = Math.min(maxCombo, comboPoints + 1);
+                            const realGain = comboPoints - before;
+                            if (realGain > 0) {
+                                logs.push({
+                                    round,
+                                    kind: 'proc',
+                                    actor: character.name,
+                                    proc: '深邃诡计',
+                                    text: `【深邃诡计】触发：重复普攻暴击获得1星（当前${comboPoints}星）`
+                                });
+                            }
+                        }
+                    }
                 }
             }
 
@@ -11843,7 +11961,8 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
                 buffText = '【剑刃乱舞】普攻/刺骨/伏击/正中眉心将触发复制伤害';
             }
             if (!buffText && result.buff.type === 'slice_and_dice') {
-                buffText = `【切割】急速+${result.buff.hasteBonus || 0}`;
+                const vBonus = result.buff.versatilityBonus || 0;
+                buffText = `【切割】急速+${result.buff.hasteBonus || 0}` + (vBonus ? `，全能+${vBonus}` : '');
             }
             if (!buffText && result.buff.type === 'between_the_eyes') {
                 buffText = `【正中眉心】暴击率+${result.buff.critRateBonus || 0}%`;

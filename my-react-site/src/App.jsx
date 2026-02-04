@@ -1795,7 +1795,7 @@ const SKILLS = {
         iconUrl: 'icons/wow/vanilla/abilities/chongdong.png',
         type: 'buff',
         limit: 1,
-        description: '获得20急速，每回合获取1颗星，持续8回合。',
+        description: '获得20急速，每回合获取1颗星，持续5回合。',
         calculate: () => {
             return {
                 buff: {
@@ -1803,7 +1803,7 @@ const SKILLS = {
                     name: '冲动',
                     hasteBonus: 20,
                     comboPerTurn: 1,
-                    duration: 8
+                    duration: 5
                 }
             };
         }

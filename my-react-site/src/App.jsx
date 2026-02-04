@@ -9548,6 +9548,10 @@ function stepBossCombat(state) {
                         addLog(`【宝珠精通】触发：${sourcePlayer.char.name} 获得1层寒冰指，当前${sourcePlayer.fingersOfFrost}层`);
                     }
                 }
+
+                if (sourcePlayer.char.stats.atonement) {
+                    triggerAtonementHeal(sourcePlayer, damage);
+                }
             }
 
             dot.duration -= 1;

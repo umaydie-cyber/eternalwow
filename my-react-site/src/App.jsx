@@ -456,7 +456,7 @@ const TALENTS = {
                 {
                     id: 'shadowfiend',
                     name: '暗影魔',
-                    description: '每回合造成0.3倍法术强度的暗影伤害',
+                    description: '每回合造成0.6倍法术强度的暗影伤害',
                     type: 'dot'
                 }
             ]
@@ -9478,12 +9478,15 @@ function stepBossCombat(state) {
             }
 
             // 计算伤害：0.3 * 法强
-            let dmg = ((p.char?.stats?.spellPower || 0) + (p.talentBuffs?.spellPowerFlat || 0)) * 0.3;
+            let dmg = ((p.char?.stats?.spellPower || 0) + (p.talentBuffs?.spellPowerFlat || 0)) * 0.6;
 
             // 10级天赋：暗影增幅（暗影伤害 +20%）
             if (p.char?.talents?.[10] === 'shadow_amp') {
                 dmg *= 1.2;
             }
+
+            // 急速：作为 DOT 类回合伤害，同样享受“急速*2%”的伤害加成
+            dmg *= (1 + ((p.stats.haste || 0) * 0.02));
 
             // （目前 boss 战未广泛施加 spell_vuln，但这里仍支持）
             const vuln = combat.bossDebuffs?.spell_vuln;
@@ -12627,7 +12630,7 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
         // 说明：作为被动“DOT类回合伤害”，在 DOT 结算阶段触发一次。
         if (character?.classId === 'discipline_priest' && character?.talents?.[30] === 'shadowfiend') {
             // 基础：0.3 *（当前面板法强 + 本场战斗叠加法强）
-            let sfDamage = ((character?.stats?.spellPower || 0) + (talentBuffs?.spellPowerFlat || 0)) * 0.3;
+            let sfDamage = ((character?.stats?.spellPower || 0) + (talentBuffs?.spellPowerFlat || 0)) * 0.6;
 
             // 10级天赋：暗影增幅（暗影伤害 +20%）
             if (character.talents?.[10] === 'shadow_amp') {

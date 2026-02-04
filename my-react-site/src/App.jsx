@@ -6957,7 +6957,7 @@ const WORLD_BOSSES = {
         id: 'rend_blackhand',
         name: '雷德·黑手',
         icon: 'icons/wow/vanilla/boss/rend_blackhand.png', // 需要添加对应图标
-        hp: 3000000,
+        hp: 4000000,
         attack: 4000,
         defense: 1400,
         rewards: { gold: 580000, exp: 350000 },
@@ -7315,22 +7315,22 @@ const BOSS_DATA = {
     rend_blackhand: {
         id: 'rend_blackhand',
         name: '雷德·黑手',
-        maxHp: 3000000,
+        maxHp: 4000000,
         attack: 4000,
         defense: 1400,
 
         // 技能循环：烈焰吐息 → 顺劈斩 → 烈焰吐息 → 跳跃斩击
         cycle: ['flame_breath', 'cleave', 'flame_breath', 'leap_slash'],
 
-        // 烈焰吐息：对坦克 4×攻击 物理伤害（护甲/格挡）
+        // 烈焰吐息：对坦克 5×攻击 物理伤害（护甲/格挡）
         // 并对全队追加一次“坦克实际承伤”的火焰伤害（计算各自魔抗）
-        flameBreathMultiplier: 4,
+        flameBreathMultiplier: 5,
 
-        // 顺劈斩：分散=打坦克；集中=打全体（2×攻击，物理，可格挡/护甲）
-        cleaveMultiplier: 2,
+        // 顺劈斩：分散=打坦克；集中=打全体（2.5×攻击，物理，可格挡/护甲）
+        cleaveMultiplier: 2.5,
 
-        // 跳跃斩击：集中=打坦克；分散=随机非坦克（4×攻击，物理，可格挡/护甲）
-        leapSlashMultiplier: 4,
+        // 跳跃斩击：集中=打坦克；分散=随机非坦克（5×攻击，物理，可格挡/护甲）
+        leapSlashMultiplier: 5,
 
         rewards: {
             gold: 580000,

@@ -8068,7 +8068,10 @@ function stepBossCombat(state) {
         if (p.buffs && p.buffs.length > 0) {
             p.buffs = p.buffs
                 .map(b => {
-                    if (b.duration !== undefined) {
+                    if (b.justApplied) {
+                        // 刚加上的 buff，本次不扣时间，只清标记
+                        delete b.justApplied;
+                    } else if (b.duration !== undefined) {
                         b.duration -= 1;
                     }
                     return b;
@@ -8687,7 +8690,7 @@ function stepBossCombat(state) {
                         type: 'haste',
                         hasteBonus: result.applyHasteBuff.hasteBonus,
                         duration: result.applyHasteBuff.duration
-                    });
+                        ,justApplied:true});
                     addLog(`【争分夺秒】触发：${p.char.name} 急速+${result.applyHasteBuff.hasteBonus}%，持续${result.applyHasteBuff.duration}回合`);
                 }
 
@@ -8746,7 +8749,7 @@ function stepBossCombat(state) {
         // buff处理
         if (result.buff) {
             p.buffs = p.buffs || [];
-            p.buffs.push({ ...result.buff });
+            p.buffs.push({ ...result.buff, justApplied: true });
 
             if (result.buff.damageTakenMult) {
                 const damageReduction = Math.round((1 - result.buff.damageTakenMult) * 100);

@@ -979,6 +979,10 @@ const SKILLS = {
         description: '造成高额暗影伤害',
         calculate: (char) => {
             let damage = char.stats.spellPower * 2.0;
+            const isCrit = Math.random() < (char.stats.critRate||0) / 100;
+            if (isCrit) {
+                damage *= char.stats.critDamage;
+            }
             return {
                 damage: Math.floor(damage),
                 school: 'shadow'

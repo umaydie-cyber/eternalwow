@@ -8690,7 +8690,7 @@ function stepBossCombat(state) {
                         type: 'haste',
                         hasteBonus: result.applyHasteBuff.hasteBonus,
                         duration: result.applyHasteBuff.duration
-                    },justApplied: true);
+                        ,justApplied:true});
                     addLog(`【争分夺秒】触发：${p.char.name} 急速+${result.applyHasteBuff.hasteBonus}%，持续${result.applyHasteBuff.duration}回合`);
                 }
 

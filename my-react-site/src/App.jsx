@@ -745,6 +745,31 @@ const TALENTS = {
                     description: '使你受到的所有伤害降低20%。'
                 }
             ]
+        },
+
+        // ==================== 狂徒盗贼（60级天赋） ====================
+        {
+            tier: 60,
+            options: [
+                {
+                    id: 'delayed_power',
+                    type: TALENT_TYPES.AURA,
+                    name: '延时之力',
+                    description: '【冲动】持续8回合。'
+                },
+                {
+                    id: 'impatient',
+                    type: TALENT_TYPES.AURA,
+                    name: '急不可耐',
+                    description: '【冲动】效果内提升（当前星数*3%）的总伤害。'
+                },
+                {
+                    id: 'reckless_bravery',
+                    type: TALENT_TYPES.ON_HIT,
+                    name: '胆大妄为',
+                    description: '普通攻击触发连击的概率提高10%，当普通攻击触发连击时，你获得20精通，可叠加，持续到战斗结束。'
+                }
+            ]
         }
     ]
 
@@ -1822,14 +1847,18 @@ const SKILLS = {
         type: 'buff',
         limit: 1,
         description: '获得20急速，每回合获取1颗星，持续5回合。',
-        calculate: () => {
+        calculate: (char) => {
+            // 60级天赋：延时之力 - 冲动持续时间延长至8回合
+            const duration = (char?.classId === 'outlaw_rogue' && char?.talents?.[60] === 'delayed_power')
+                ? 8
+                : 5;
             return {
                 buff: {
                     type: 'adrenaline_rush',
                     name: '冲动',
                     hasteBonus: 20,
                     comboPerTurn: 1,
-                    duration: 5
+                    duration
                 }
             };
         }
@@ -8543,6 +8572,22 @@ function stepBossCombat(state) {
             });
         }
 
+        // ==================== 狂徒盗贼60级天赋：急不可耐 ====================
+        // 冲动期间：根据当前连击点(星)提高总伤害（每星+3%）
+        let impatientBonusPct = 0;
+        let impatientCombo = 0;
+        if (p.char?.classId === 'outlaw_rogue' && p.char?.talents?.[60] === 'impatient') {
+            const hasAR = Array.isArray(p.buffs) && p.buffs.some(b => b?.type === 'adrenaline_rush' && (b.duration ?? 0) > 0);
+            if (hasAR) {
+                const cp = Math.max(0, Math.floor(Number(p.comboPoints) || 0));
+                if (cp > 0) {
+                    impatientCombo = cp;
+                    impatientBonusPct = cp * 3;
+                    buffDamageDealtMult *= (1 + cp * 0.03);
+                }
+            }
+        }
+
         // ==================== 盗贼：剑刃乱舞（复制伤害） ====================
         const hasBladeFlurry = Array.isArray(p.buffs) && p.buffs.some(b => b?.type === 'blade_flurry' && (b.duration ?? 1) > 0);
         const getBladeFlurryCopyRatio = () => {
@@ -8632,7 +8677,7 @@ function stepBossCombat(state) {
         };
 
         // 普通攻击执行函数
-        const executeBasicAttackDamage = (isRepeat = false) => {
+        const executeBasicAttackDamage = (isRepeat = false, repeatSource = '') => {
             const basicSkill = SKILLS['basic_attack'];
             const basicResult = basicSkill.calculate(charForCalc, combatContext);
 
@@ -8652,7 +8697,7 @@ function stepBossCombat(state) {
                     combat.minions[targetIndex].hp -= actualDamage;
                 }
 
-                const repeatText = isRepeat ? '(鞭笞者苏萨斯)' : '';
+                const repeatText = isRepeat ? `(${repeatSource || '连击'})` : '';
                 const minionName = boss.minion?.name || boss.cannoneer?.name || '小弟';
                 addLog(`位置${i + 1} ${p.char.name} 使用 普通攻击${repeatText} 对 ${targetType === 'boss' ? boss.name : minionName} 造成 ${actualDamage} 伤害${basicResult.isCrit ? '（暴击）' : ''}`);
 
@@ -8696,6 +8741,9 @@ function stepBossCombat(state) {
 
         // AOE伤害处理
         if (result.aoeDamage) {
+            if (impatientBonusPct > 0) {
+                addLog(`【急不可耐】冲动期间当前${impatientCombo}星，本次【${skill.name}】伤害提高${impatientBonusPct}%`);
+            }
             let damage = result.aoeDamage * buffDamageDealtMult;
 
             // 狂徒盗贼20级天赋：索命强能 - 消耗星的技能每消耗1星，最终伤害+5%
@@ -8807,6 +8855,9 @@ function stepBossCombat(state) {
         }
         // 单体伤害处理
         else if (result.damage) {
+            if (impatientBonusPct > 0) {
+                addLog(`【急不可耐】冲动期间当前${impatientCombo}星，本次【${skill.name}】伤害提高${impatientBonusPct}%`);
+            }
             let damage = result.damage;
 
             // 狂徒盗贼20级天赋：索命强能 - 消耗星的技能每消耗1星，最终伤害+5%
@@ -8881,10 +8932,57 @@ function stepBossCombat(state) {
                         }
                     }
 
-                    const repeatChance = getBasicAttackRepeatChance(p.char);
-                    if (repeatChance > 0 && Math.random() < repeatChance) {
-                        addLog(`【鞭笞者苏萨斯】触发：再次发动普通攻击！`);
-                        executeBasicAttackDamage(true);
+                    // ==================== 狂徒盗贼60级天赋：胆大妄为 ====================
+                    // 普攻连击概率 +10%；连击触发时获得精通（可叠加，持续到战斗结束）
+                    const equipRepeatChance = getBasicAttackRepeatChance(p.char);
+                    const talentRepeatBonus =
+                        (p.char?.classId === 'outlaw_rogue' && p.char?.talents?.[60] === 'reckless_bravery')
+                            ? 0.10
+                            : 0;
+
+                    const repeatChance = Math.min(1, Math.max(0, (Number(equipRepeatChance) || 0) + talentRepeatBonus));
+                    if (repeatChance > 0) {
+                        const roll = Math.random();
+                        if (roll < repeatChance) {
+                            const procLabel = (talentRepeatBonus > 0 && roll >= (Number(equipRepeatChance) || 0))
+                                ? '胆大妄为'
+                                : '鞭笞者苏萨斯';
+                            addLog(`【${procLabel}】触发：再次发动普通攻击！`);
+
+                            // 连击触发：获得精通（仅当点了胆大妄为）
+                            if (talentRepeatBonus > 0) {
+                                const perStack = 20;
+                                const maxDuration = 999;
+
+                                p.buffs = Array.isArray(p.buffs) ? p.buffs : [];
+                                const idx = p.buffs.findIndex(b => b?.type === 'reckless_bravery_mastery');
+                                if (idx === -1) {
+                                    p.buffs.push({
+                                        type: 'reckless_bravery_mastery',
+                                        name: '胆大妄为',
+                                        stacks: 1,
+                                        masteryBonus: perStack,
+                                        duration: maxDuration,
+                                        justApplied: true,
+                                    });
+                                    addLog(`【胆大妄为】${p.char.name} 获得${perStack}精通（1层，总精通+${perStack}）`);
+                                } else {
+                                    const old = p.buffs[idx];
+                                    const curStacks = Math.max(0, Math.floor(Number(old.stacks) || 0));
+                                    const nextStacks = curStacks + 1;
+                                    p.buffs[idx] = {
+                                        ...old,
+                                        stacks: nextStacks,
+                                        masteryBonus: nextStacks * perStack,
+                                        duration: maxDuration,
+                                        justApplied: true,
+                                    };
+                                    addLog(`【胆大妄为】${p.char.name} 获得${perStack}精通（${nextStacks}层，总精通+${nextStacks * perStack}）`);
+                                }
+                            }
+
+                            executeBasicAttackDamage(true, procLabel);
+                        }
                     }
                 }
             }
@@ -11526,6 +11624,25 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
                     buffDamageDealtMult *= b.damageDealtMult;
                 }
             });
+
+            // ==================== 狂徒盗贼60级天赋：急不可耐 ====================
+            // 冲动期间：根据当前连击点(星)提高总伤害（每星+3%）
+            if (character?.classId === 'outlaw_rogue' && character?.talents?.[60] === 'impatient') {
+                const hasAR = Array.isArray(buffs) && buffs.some(b => b?.type === 'adrenaline_rush' && (b.duration ?? 0) > 0);
+                if (hasAR) {
+                    const cp = Math.max(0, Math.floor(Number(comboPoints) || 0));
+                    if (cp > 0) {
+                        buffDamageDealtMult *= (1 + cp * 0.03);
+                        logs.push({
+                            round,
+                            kind: 'proc',
+                            actor: character.name,
+                            proc: '急不可耐',
+                            text: `【急不可耐】冲动期间当前${cp}星，本次【${skill.name}】伤害提高${cp * 3}%`
+                        });
+                    }
+                }
+            }
             damage *= buffDamageDealtMult;
 
             // ✅ 种族：暗夜精灵【隐遁】（地图战斗第1格技能伤害+20%，乘算）
@@ -11691,6 +11808,25 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
                     buffDamageDealtMultForDamage *= b.damageDealtMult;
                 }
             });
+
+            // ==================== 狂徒盗贼60级天赋：急不可耐 ====================
+            // 冲动期间：根据当前连击点(星)提高总伤害（每星+3%）
+            if (character?.classId === 'outlaw_rogue' && character?.talents?.[60] === 'impatient') {
+                const hasAR = Array.isArray(buffs) && buffs.some(b => b?.type === 'adrenaline_rush' && (b.duration ?? 0) > 0);
+                if (hasAR) {
+                    const cp = Math.max(0, Math.floor(Number(comboPoints) || 0));
+                    if (cp > 0) {
+                        buffDamageDealtMultForDamage *= (1 + cp * 0.03);
+                        logs.push({
+                            round,
+                            kind: 'proc',
+                            actor: character.name,
+                            proc: '急不可耐',
+                            text: `【急不可耐】冲动期间当前${cp}星，本次【${skill.name}】伤害提高${cp * 3}%`
+                        });
+                    }
+                }
+            }
             damage *= buffDamageDealtMultForDamage;
 
             // ✅ 种族：暗夜精灵【隐遁】（地图战斗第1格技能伤害+20%，乘算）
@@ -11770,15 +11906,69 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
                     }
                 }
 
-                const repeatChance = getBasicAttackRepeatChance(character);
-                if (repeatChance > 0 && Math.random() < repeatChance) {
+                // ==================== 狂徒盗贼60级天赋：胆大妄为 ====================
+                // 普攻连击概率 +10%；连击触发时获得精通（可叠加，持续到战斗结束）
+                const equipRepeatChance = getBasicAttackRepeatChance(character);
+                const talentRepeatBonus =
+                    (character?.classId === 'outlaw_rogue' && character?.talents?.[60] === 'reckless_bravery')
+                        ? 0.10
+                        : 0;
+
+                const repeatChance = Math.min(1, Math.max(0, (Number(equipRepeatChance) || 0) + talentRepeatBonus));
+                const roll = Math.random();
+                if (repeatChance > 0 && roll < repeatChance) {
+                    const procLabel = (talentRepeatBonus > 0 && roll >= (Number(equipRepeatChance) || 0))
+                        ? '胆大妄为'
+                        : '鞭笞者苏萨斯';
+
                     logs.push({
                         round,
                         kind: 'proc',
                         actor: character.name,
-                        proc: '鞭笞者苏萨斯',
-                        text: '【鞭笞者苏萨斯】触发：再次发动普通攻击！'
+                        proc: procLabel,
+                        text: `【${procLabel}】触发：再次发动普通攻击！`
                     });
+
+                    // 连击触发：获得精通（仅当点了胆大妄为）
+                    if (talentRepeatBonus > 0) {
+                        const perStack = 20;
+                        const maxDuration = 999;
+
+                        const idx = buffs.findIndex(b => b?.type === 'reckless_bravery_mastery');
+                        if (idx === -1) {
+                            buffs.push({
+                                type: 'reckless_bravery_mastery',
+                                name: '胆大妄为',
+                                stacks: 1,
+                                masteryBonus: perStack,
+                                duration: maxDuration,
+                            });
+                            logs.push({
+                                round,
+                                kind: 'proc',
+                                actor: character.name,
+                                proc: '胆大妄为',
+                                text: `【胆大妄为】获得${perStack}精通（1层，总精通+${perStack}）`
+                            });
+                        } else {
+                            const old = buffs[idx];
+                            const curStacks = Math.max(0, Math.floor(Number(old.stacks) || 0));
+                            const nextStacks = curStacks + 1;
+                            buffs[idx] = {
+                                ...old,
+                                stacks: nextStacks,
+                                masteryBonus: nextStacks * perStack,
+                                duration: maxDuration,
+                            };
+                            logs.push({
+                                round,
+                                kind: 'proc',
+                                actor: character.name,
+                                proc: '胆大妄为',
+                                text: `【胆大妄为】获得${perStack}精通（${nextStacks}层，总精通+${nextStacks * perStack}）`
+                            });
+                        }
+                    }
                     // ===== 天赋触发（保持不变）=====
                     if (currentSkillId === 'basic_attack' && character.talents?.[10] === 'plain') {
                         talentBuffs.attackFlat = (talentBuffs.attackFlat || 0) + 5;

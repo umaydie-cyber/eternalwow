@@ -7259,7 +7259,29 @@ function formatItemStatValue(stat, valueRaw) {
 function mergeEquipments(eqA, eqB) {
     if (eqA.id !== eqB.id) return null;
 
-    const newLevel = Math.min(100, (eqA.currentLevel || 0) + (eqB.currentLevel || 0) + 1);
+    const getLevel = (eq) => (eq?.currentLevel ?? eq?.level ?? 0);
+
+    const levelA = getLevel(eqA);
+    const levelB = getLevel(eqB);
+
+    // ✅ Lv100 进阶合成（拖动合成）
+    // 规则：
+    // - EQ_003 神秘森林吊坠 Lv100 + 任意等级 EQ_003 → EQ_125 神秘琥珀吊坠
+    // - EQ_125 神秘琥珀吊坠 Lv100 + 任意等级 EQ_125 → EQ_126 神秘蓝宝石吊坠
+    // - EQ_126 神秘蓝宝石吊坠 Lv100 + 任意等级 EQ_126 → EQ_127 神秘红宝石吊坠
+    const POST_LV100_EVOLVE = {
+        EQ_003: 'EQ_125',
+        EQ_125: 'EQ_126',
+        EQ_126: 'EQ_127',
+    };
+
+    const nextId = POST_LV100_EVOLVE[eqA.id];
+    if (nextId && Math.max(levelA, levelB) >= 100) {
+        const evolved = createEquipmentInstance(nextId);
+        return evolved || null;
+    }
+
+    const newLevel = Math.min(100, levelA + levelB + 1);
 
     return {
         ...eqA,
@@ -7267,6 +7289,7 @@ function mergeEquipments(eqA, eqB) {
         stats: scaleStats(eqA.baseStats, eqA.growth, newLevel)
     };
 }
+
 
 
 function getEquipmentTemplate(templateId) {

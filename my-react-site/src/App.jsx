@@ -848,7 +848,7 @@ const SKILLS = {
         type: 'damage',
         calculate: (char) => {
             // 急速：普通攻击伤害提高（急速 * 2%）
-            const hasteMult = 1 + ((char.stats.haste || 0) * 0.02);
+            const hasteMult = 1 + (((char?.stats?.haste) || 0) * 0.02);
 
             // 盗贼10级天赋：迅捷之手 - 普攻基础倍率 1.2 -> 1.4
             const baseMult = (char?.classId === 'outlaw_rogue' && char?.talents?.[10] === 'swift_hands') ? 1.4 : 1.2;
@@ -2345,6 +2345,22 @@ const ZONES = {
 
 
 
+    zul_gurub: {
+        id: 'zul_gurub',
+        name: '祖尔格拉布',
+        level: 60,
+        type: 'explore',
+        enemies: [
+            { name: '古拉巴什狂暴者', hp: 520000, attack: 8500, defense: 4100, exp: 17500, gold: 14000 },
+            { name: '觅血蝙蝠', hp: 420000, attack: 7800, defense: 3500, exp: 16000, gold: 12500 },
+            { name: '哈卡莱血祭祀', hp: 460000, attack: 8200, defense: 3700, exp: 16500, gold: 13000 },
+            { name: '暗影黑豹', hp: 390000, attack: 9000, defense: 3300, exp: 17000, gold: 13500 },
+        ],
+        resources: ['草药', '毛皮', '魔法精华'],
+        unlocked: false,
+        unlockLevel: 60
+    },
+
 };
 
 const DROP_TABLES = {
@@ -2554,6 +2570,19 @@ const DROP_TABLES = {
     },
 
 
+
+    zul_gurub: {
+        equipment: [
+            { id: 'EQ_137', chance: 0.001 },  // 吞噬披风
+            { id: 'EQ_138', chance: 0.001 },  // 曼多基尔的徽记
+            { id: 'EQ_135', chance: 0.0015 }, // 金度的厄运袋
+            { id: 'EQ_136', chance: 0.0015 }, // 哈卡莱战刃
+            { id: 'EQ_132', chance: 0.0008 }, // 血领主庇护者
+            { id: 'EQ_133', chance: 0.0008 }, // 娅尔罗的意志
+            { id: 'EQ_134', chance: 0.0008 }, // 金度的妖器
+            { id: 'EQ_131', chance: 0.0005 }  // 辛洛斯诸界的毁灭者
+        ]
+    },
 
 };
 
@@ -5970,6 +5999,219 @@ const FIXED_EQUIPMENTS = {
             perception: 2,
         }
     },
+    // ==================== 祖尔格拉布（60级）装备 ====================
+    EQ_131: {
+        id: 'EQ_131',
+        name: '辛洛斯诸界的毁灭者',
+        icon: "icons/wow/vanilla/weapons/INV_Sword_40.png",
+        type: 'equipment',
+        slot: 'mainHand',
+        rarity: 'purple',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            attack: 1500,
+            critRate: 25,
+            critDamage: 0.7,
+            haste: 25,
+            mastery: 20,
+            versatility: 20
+        },
+        growth: {
+            attack: 2,
+            critRate: 2,
+            critDamage: 2,
+            haste: 2,
+            mastery: 2,
+            versatility: 2
+        },
+        specialEffect: {
+            type: 'basic_attack_repeat',
+            chance: 0.35
+        }
+    },
+    EQ_132: {
+        id: 'EQ_132',
+        name: '血领主庇护者',
+        icon: "icons/wow/vanilla/weapons/INV_Mace_14.png",
+        type: 'equipment',
+        slot: 'mainHand',
+        rarity: 'purple',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            attack: 900,
+            hp: 1800,
+            armor: 250,
+            mastery: 25,
+            blockRate: 10,
+            blockValue: 500,
+            versatility: 20
+        },
+        growth: {
+            attack: 2,
+            hp: 2,
+            armor: 2,
+            mastery: 2,
+            blockRate: 2,
+            blockValue: 2,
+            versatility: 2
+        }
+    },
+    EQ_133: {
+        id: 'EQ_133',
+        name: '娅尔罗的意志',
+        icon: "icons/wow/vanilla/weapons/INV_Staff_13.png",
+        type: 'equipment',
+        slot: 'mainHand',
+        rarity: 'purple',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            spellPower: 1100,
+            hp: 1200,
+            mastery: 25,
+            haste: 25,
+            versatility: 20
+        },
+        growth: {
+            spellPower: 2,
+            hp: 2,
+            mastery: 2,
+            haste: 2,
+            versatility: 2
+        },
+        specialEffect: {
+            type: 'skill_slot_buff',
+            slots: [2, 3],
+            spellPowerBonus: 900
+        }
+    },
+    EQ_134: {
+        id: 'EQ_134',
+        name: '金度的妖器',
+        icon: "icons/wow/vanilla/weapons/INV_Wand_07.png",
+        type: 'equipment',
+        slot: 'mainHand',
+        rarity: 'purple',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            spellPower: 1050,
+            critRate: 25,
+            mastery: 25,
+            haste: 25,
+            versatility: 20
+        },
+        growth: {
+            spellPower: 2,
+            critRate: 2,
+            mastery: 2,
+            haste: 2,
+            versatility: 2
+        }
+    },
+    EQ_135: {
+        id: 'EQ_135',
+        name: '金度的厄运袋',
+        icon: "icons/wow/vanilla/items/INV_Misc_Book_05.png",
+        type: 'equipment',
+        slot: 'offHand',
+        rarity: 'blue',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            spellPower: 650,
+            haste: 25,
+            mastery: 25,
+            critRate: 10,
+            versatility: 20
+        },
+        growth: {
+            spellPower: 2,
+            haste: 2,
+            mastery: 2,
+            critRate: 2,
+            versatility: 2
+        }
+    },
+    EQ_136: {
+        id: 'EQ_136',
+        name: '哈卡莱战刃',
+        icon: "icons/wow/vanilla/weapons/INV_Weapon_ShortBlade_25.png",
+        type: 'equipment',
+        slot: 'offHand',
+        rarity: 'blue',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            attack: 850,
+            critRate: 20,
+            mastery: 20,
+            haste: 20,
+            versatility: 15
+        },
+        growth: {
+            attack: 2,
+            critRate: 2,
+            mastery: 2,
+            haste: 2,
+            versatility: 2
+        }
+    },
+    EQ_137: {
+        id: 'EQ_137',
+        name: '吞噬披风',
+        icon: "icons/wow/vanilla/armor/INV_Misc_Cape_20.png",
+        type: 'equipment',
+        slot: 'cloak',
+        rarity: 'purple',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            attack: 320,
+            hp: 1200,
+            armor: 150,
+            critRate: 15,
+            haste: 20,
+            mastery: 20,
+            versatility: 20
+        },
+        growth: {
+            attack: 2,
+            hp: 2,
+            armor: 2,
+            critRate: 2,
+            haste: 2,
+            mastery: 2,
+            versatility: 2
+        }
+    },
+    EQ_138: {
+        id: 'EQ_138',
+        name: '曼多基尔的徽记',
+        icon: "icons/wow/vanilla/armor/INV_Jewelry_Ring_16.png",
+        type: 'equipment',
+        slot: 'ring1',
+        rarity: 'blue',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            attack: 350,
+            hp: 900,
+            critRate: 15,
+            mastery: 20,
+            haste: 20
+        },
+        growth: {
+            attack: 2,
+            hp: 2,
+            critRate: 2,
+            mastery: 2,
+            haste: 2
+        }
+    },
+
 };
 
 //赤脊山5件图鉴100级点亮效果
@@ -6001,6 +6243,9 @@ const STRATHOLME_lv100_SET = ['EQ_095', 'EQ_096', 'EQ_097', 'EQ_098', 'EQ_099', 
 
 // 黑石塔上10件 500攻击强度/法术强度
 const UPPER_BLACKROCK_SPIRE_LV100_SET = ['EQ_103', 'EQ_104', 'EQ_105', 'EQ_106', 'EQ_107', 'EQ_108', 'EQ_109', 'EQ_110', 'EQ_111', 'EQ_112'];
+
+// 祖尔格拉布 8 件装备全部达到过 Lv.100 → 全队暴击率 +10%，暴击伤害 +30%
+const ZUL_GURUB_LV100_SET = ['EQ_131', 'EQ_132', 'EQ_133', 'EQ_134', 'EQ_135', 'EQ_136', 'EQ_137', 'EQ_138'];
 
 // ==================== 图鉴集齐效果配置 ====================
 const CODEX_SET_EFFECTS = [
@@ -6080,6 +6325,13 @@ const CODEX_SET_EFFECTS = [
         equipIds: UPPER_BLACKROCK_SPIRE_LV100_SET,
         effect: '全队攻击 +500，法强 +500',
         color: '#f44336'
+    },
+    {
+        id: 'zul_gurub',
+        name: '祖尔格拉布',
+        equipIds: ZUL_GURUB_LV100_SET,
+        effect: '全队暴击率 +10%，暴击伤害 +30%',
+        color: '#8bc34a'
     },
 ];
 
@@ -7973,6 +8225,7 @@ function calculateTotalStats(character, partyAuras = { hpMul: 1, spellPowerMul: 
             { ids: SCHOLOMANCE_LV100_SET, bonus: { mastery: 10 } }, // 通灵学院：全队精通 +10
             { ids: STRATHOLME_lv100_SET, bonus: { haste: 10 } }, // 斯坦索姆：全队急速 +10
             { ids: UPPER_BLACKROCK_SPIRE_LV100_SET, bonus: { attack: 500, spellPower: 500 } }, // 黑石塔上：全队攻击 +500，法强 +500
+            { ids: ZUL_GURUB_LV100_SET, bonus: { critDamage: 0.20 } }, // 祖尔格拉布：暴击伤害 +20%
         ];
 
         for (const rule of codexBonusRules) {
@@ -9799,7 +10052,7 @@ function stepBossCombat(state) {
             }
 
             // 急速：作为 DOT 类回合伤害，同样享受“急速*2%”的伤害加成
-            dmg *= (1 + ((p.stats.haste || 0) * 0.02));
+            dmg *= (1 + (((p?.stats?.haste) || 0) * 0.02));
 
             // （目前 boss 战未广泛施加 spell_vuln，但这里仍支持）
             const vuln = combat.bossDebuffs?.spell_vuln;
@@ -13040,7 +13293,7 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
             }
 
             // 急速：作为 DOT 类回合伤害，同样享受“急速*2%”的伤害加成
-            sfDamage *= (1 + (((character.stats.haste || 0) + hasteFromBuffsForDot) * 0.02));
+            sfDamage *= (1 + ((((character?.stats?.haste) || 0) + hasteFromBuffsForDot) * 0.02));
 
             // ✅ 装备特效：地图屠戮（地图战斗伤害加成）
             sfDamage *= mapDamageDealtMult;
@@ -13098,7 +13351,7 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
                 }
 
                 // 急速：DOT 伤害提高（急速 * 2%）
-                dotDamage *= (1 + (((character.stats.haste || 0) + hasteFromBuffsForDot) * 0.02));
+                dotDamage *= (1 + ((((character?.stats?.haste) || 0) + hasteFromBuffsForDot) * 0.02));
 
                 // ✅ 装备特效：地图屠戮（地图战斗伤害加成）
                 dotDamage *= mapDamageDealtMult;

@@ -7448,10 +7448,10 @@ const WORLD_BOSSES = {
         id: 'hakkar',
         name: '血神哈卡',
         icon: 'icons/wow/vanilla/boss/hakkar.png', // 需要添加对应图标
-        hp: 5200000,
-        attack: 4300,
-        defense: 1500,
-        rewards: { gold: 700000, exp: 420000 },
+        hp: 10000000,
+        attack: 8000,
+        defense: 3500,
+        rewards: { gold: 1400000, exp: 900000 },
         unlockLevel: 60
     },
 
@@ -7834,14 +7834,13 @@ const BOSS_DATA = {
             ]
         }
     },
-
     // ✅ 新增：60级世界首领 - 血神哈卡（祖尔格拉布）
     hakkar: {
         id: 'hakkar',
         name: '血神哈卡',
-        maxHp: 5200000,
-        attack: 4300,
-        defense: 1500,
+        maxHp: 10000000,
+        attack: 8000,
+        defense: 3500,
 
         // 技能循环：召唤哈卡之子 → 血液虹吸 → 堕落之血 → 血液虹吸
         cycle: ['summon_hakkar_sons', 'blood_siphon', 'corrupted_blood', 'blood_siphon'],
@@ -7851,7 +7850,7 @@ const BOSS_DATA = {
         minion: {
             name: '哈卡之子',
             maxHp: 800000,
-            attack: 4300,
+            attack: 8000,
             defense: 1200
         },
         acidMultiplier: 1.2,
@@ -7870,8 +7869,8 @@ const BOSS_DATA = {
         corruptedBloodDotMultiplier: 0.5,
 
         rewards: {
-            gold: 700000,
-            exp: 420000,
+            gold: 1400000,
+            exp: 900000,
             items: [
                 { id: 'IT_HAKKAR_BADGE', chance: 0.8 }
             ]

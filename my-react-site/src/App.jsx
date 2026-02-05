@@ -2361,6 +2361,28 @@ const ZONES = {
         unlockLevel: 60
     },
 
+    // ==================== 安琪拉废墟（60级） ====================
+    // 数值参考祖尔格拉布：攻击/防御/收益约 +10%，生命值允许略微超标
+    ruins_of_ahnqiraj: {
+        id: 'ruins_of_ahnqiraj',
+        name: '安琪拉废墟',
+        level: 60,
+        type: 'explore',
+        enemies: [
+            // 偏输出
+            { name: '安琪拉杀手', hp: 2300000, attack: 13200, defense: 6930, exp: 29700, gold: 20350 },
+            // 偏坦克
+            { name: '佐拉巨像', hp: 2350000, attack: 11220, defense: 7370, exp: 29150, gold: 18700 },
+            // 均衡偏高伤
+            { name: '黑曜石毁灭者', hp: 2150000, attack: 12650, defense: 6710, exp: 30250, gold: 16500 },
+            // 均衡偏防
+            { name: '阿努比斯守护者', hp: 2120000, attack: 11880, defense: 7150, exp: 27500, gold: 17050 },
+        ],
+        resources: ['铁矿', '魔法精华'],
+        unlocked: false,
+        unlockLevel: 60
+    },
+
 };
 
 const DROP_TABLES = {
@@ -2581,6 +2603,19 @@ const DROP_TABLES = {
             { id: 'EQ_133', chance: 0.0008 }, // 娅尔罗的意志
             { id: 'EQ_134', chance: 0.0008 }, // 金度的妖器
             { id: 'EQ_131', chance: 0.0005 }  // 辛洛斯诸界的毁灭者
+        ]
+    },
+
+    // ==================== 安琪拉废墟（60级）掉落 ====================
+    ruins_of_ahnqiraj: {
+        equipment: [
+            { id: 'EQ_142', chance: 0.001 },  // 沙漠风暴披风（坦克披风）
+            { id: 'EQ_145', chance: 0.001 },  // 其拉帝王披风（法强披风）
+            { id: 'EQ_140', chance: 0.001 },  // 拉贾克斯的徽记（坦克戒指1）
+            { id: 'EQ_144', chance: 0.001 },  // 流沙坠饰（项链）
+            { id: 'EQ_141', chance: 0.0015 }, // 狂暴专注之爪（副手）
+            { id: 'EQ_139', chance: 0.0008 }, // 沙尘护符（饰品2）
+            { id: 'EQ_143', chance: 0.0008 }, // 废墟法杖（武器）
         ]
     },
 
@@ -6003,7 +6038,7 @@ const FIXED_EQUIPMENTS = {
     EQ_131: {
         id: 'EQ_131',
         name: '辛洛斯诸界的毁灭者',
-        icon: "icons/wow/vanilla/weapons/INV_Sword_40.png",
+        icon: "icons/wow/vanilla/weapons/xinluosi.png",
         type: 'equipment',
         slot: 'mainHand',
         rarity: 'purple',
@@ -6202,6 +6237,189 @@ const FIXED_EQUIPMENTS = {
             critRate: 2,
             mastery: 2,
             haste: 2
+        }
+    },
+
+    // ==================== 安琪拉废墟（60级）装备 ====================
+    EQ_139: {
+        id: 'EQ_139',
+        name: '沙尘护符',
+        icon: "icons/wow/vanilla/armor/INV_Jewelry_Talisman_08.png",
+        type: 'equipment',
+        slot: 'trinket2',
+        rarity: 'purple',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            hp: 3200,
+            armor: 220,
+            mastery: 25,
+            versatility: 25
+        },
+        growth: {
+            hp: 2,
+            armor: 2,
+            mastery: 2,
+            versatility: 2
+        },
+        specialEffect: {
+            name: '沙尘护盾',
+            type: 'proc_stat',
+            trigger: 'turn_start',
+            chance: 0.20,
+            stats: { armor: 1500 },
+            scaleWithLevel: true
+        }
+    },
+    EQ_140: {
+        id: 'EQ_140',
+        name: '拉贾克斯的徽记',
+        icon: "icons/wow/vanilla/armor/INV_Jewelry_Ring_16.png",
+        type: 'equipment',
+        slot: 'ring1',
+        rarity: 'blue',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            hp: 2400,
+            armor: 150,
+            mastery: 25,
+            blockValue: 400,
+            versatility: 25
+        },
+        growth: {
+            hp: 2,
+            armor: 2,
+            mastery: 2,
+            blockValue: 2,
+            versatility: 2
+        }
+    },
+    EQ_141: {
+        id: 'EQ_141',
+        name: '狂暴专注之爪',
+        icon: "icons/wow/vanilla/weapons/INV_Weapon_ShortBlade_25.png",
+        type: 'equipment',
+        slot: 'offHand',
+        rarity: 'blue',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            attack: 950,
+            hp: 2800,
+            critRate: 22,
+            mastery: 22,
+            versatility: 18
+        },
+        growth: {
+            attack: 2,
+            hp: 2,
+            critRate: 2,
+            mastery: 2,
+            versatility: 2
+        }
+    },
+    EQ_142: {
+        id: 'EQ_142',
+        name: '沙漠风暴披风',
+        icon: "icons/wow/vanilla/armor/INV_Misc_Cape_20.png",
+        type: 'equipment',
+        slot: 'cloak',
+        rarity: 'purple',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            attack: 360,
+            hp: 3700,
+            armor: 180,
+            mastery: 22,
+            versatility: 35
+        },
+        growth: {
+            attack: 2,
+            hp: 2,
+            armor: 2,
+            mastery: 2,
+            versatility: 2
+        }
+    },
+    EQ_143: {
+        id: 'EQ_143',
+        name: '废墟法杖',
+        icon: "icons/wow/vanilla/weapons/INV_Staff_13.png",
+        type: 'equipment',
+        slot: 'mainHand',
+        rarity: 'purple',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            spellPower: 1350,
+            hp: 3300,
+            mastery: 28,
+            haste: 28,
+            versatility: 22
+        },
+        growth: {
+            spellPower: 2,
+            hp: 2,
+            mastery: 2,
+            haste: 2,
+            versatility: 2
+        },
+        specialEffect: {
+            type: 'skill_slot_buff',
+            slots: [2, 3],
+            spellPowerBonus: 1000
+        }
+    },
+    EQ_144: {
+        id: 'EQ_144',
+        name: '流沙坠饰',
+        icon: "icons/wow/vanilla/armor/INV_Jewelry_Necklace_11.png",
+        type: 'equipment',
+        slot: 'neck',
+        rarity: 'blue',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            hp: 3000,
+            attack: 450,
+            spellPower: 450,
+            haste: 25,
+            versatility: 25
+        },
+        growth: {
+            hp: 2,
+            attack: 2,
+            spellPower: 2,
+            haste: 2,
+            versatility: 2
+        }
+    },
+    EQ_145: {
+        id: 'EQ_145',
+        name: '其拉帝王披风',
+        icon: "icons/wow/vanilla/armor/INV_Misc_Cape_20.png",
+        type: 'equipment',
+        slot: 'cloak',
+        rarity: 'purple',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            spellPower: 420,
+            hp: 3200,
+            critRate: 15,
+            haste: 25,
+            mastery: 25,
+            versatility: 20
+        },
+        growth: {
+            spellPower: 2,
+            hp: 2,
+            critRate: 2,
+            haste: 2,
+            mastery: 2,
+            versatility: 2
         }
     },
 

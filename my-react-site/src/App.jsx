@@ -2351,10 +2351,10 @@ const ZONES = {
         level: 60,
         type: 'explore',
         enemies: [
-            { name: '古拉巴什狂暴者', hp: 520000, attack: 8500, defense: 4100, exp: 17500, gold: 14000 },
-            { name: '觅血蝙蝠', hp: 420000, attack: 7800, defense: 3500, exp: 16000, gold: 12500 },
-            { name: '哈卡莱血祭祀', hp: 460000, attack: 8200, defense: 3700, exp: 16500, gold: 13000 },
-            { name: '暗影黑豹', hp: 390000, attack: 9000, defense: 3300, exp: 17000, gold: 13500 },
+            { name: '古拉巴什狂暴者', hp: 1820000, attack: 11500, defense: 6100, exp: 27500, gold: 15000 },
+            { name: '觅血蝙蝠', hp: 1820000, attack: 10800, defense: 6500, exp: 25000, gold: 15500 },
+            { name: '哈卡莱血祭祀', hp: 1860000, attack: 10200, defense: 6700, exp: 26500, gold: 17000 },
+            { name: '暗影黑豹', hp: 1990000, attack: 12000, defense: 6300, exp: 27000, gold: 18500 },
         ],
         resources: ['草药', '毛皮', '魔法精华'],
         unlocked: false,
@@ -6237,7 +6237,7 @@ const STRATHOLME_lv100_SET = ['EQ_095', 'EQ_096', 'EQ_097', 'EQ_098', 'EQ_099', 
 // 黑石塔上10件 500攻击强度/法术强度
 const UPPER_BLACKROCK_SPIRE_LV100_SET = ['EQ_103', 'EQ_104', 'EQ_105', 'EQ_106', 'EQ_107', 'EQ_108', 'EQ_109', 'EQ_110', 'EQ_111', 'EQ_112'];
 
-// 祖尔格拉布 8 件装备全部达到过 Lv.100 → 全队暴击率 +10%，暴击伤害 +30%
+// 祖尔格拉布 8 件装备全部达到过 Lv.100 → 暴击伤害 +20%
 const ZUL_GURUB_LV100_SET = ['EQ_131', 'EQ_132', 'EQ_133', 'EQ_134', 'EQ_135', 'EQ_136', 'EQ_137', 'EQ_138'];
 
 // ==================== 图鉴集齐效果配置 ====================
@@ -6323,7 +6323,7 @@ const CODEX_SET_EFFECTS = [
         id: 'zul_gurub',
         name: '祖尔格拉布',
         equipIds: ZUL_GURUB_LV100_SET,
-        effect: '全队暴击率 +10%，暴击伤害 +30%',
+        effect: '全队暴击伤害 +20%',
         color: '#8bc34a'
     },
 ];

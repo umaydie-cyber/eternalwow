@@ -6095,7 +6095,7 @@ const FIXED_EQUIPMENTS = {
     EQ_133: {
         id: 'EQ_133',
         name: '娅尔罗的意志',
-        icon: "icons/wow/vanilla/weapons/INV_Staff_13.png",
+        icon: "icons/wow/vanilla/weapons/yaerluodeyizhi.png",
         type: 'equipment',
         slot: 'mainHand',
         rarity: 'purple',
@@ -6124,7 +6124,7 @@ const FIXED_EQUIPMENTS = {
     EQ_134: {
         id: 'EQ_134',
         name: '金度的妖器',
-        icon: "icons/wow/vanilla/weapons/INV_Wand_07.png",
+        icon: "icons/wow/vanilla/weapons/jindudeyaoqi.png",
         type: 'equipment',
         slot: 'mainHand',
         rarity: 'purple',
@@ -6148,7 +6148,7 @@ const FIXED_EQUIPMENTS = {
     EQ_135: {
         id: 'EQ_135',
         name: '金度的厄运袋',
-        icon: "icons/wow/vanilla/items/INV_Misc_Book_05.png",
+        icon: "icons/wow/vanilla/items/INV_Misc_Bag_10_Black.png",
         type: 'equipment',
         slot: 'offHand',
         rarity: 'blue',
@@ -6170,7 +6170,7 @@ const FIXED_EQUIPMENTS = {
     EQ_136: {
         id: 'EQ_136',
         name: '哈卡莱战刃',
-        icon: "icons/wow/vanilla/weapons/INV_Weapon_ShortBlade_25.png",
+        icon: "icons/wow/vanilla/weapons/xinluosi.png",
         type: 'equipment',
         slot: 'offHand',
         rarity: 'blue',

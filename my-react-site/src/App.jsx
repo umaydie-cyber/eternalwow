@@ -6069,7 +6069,7 @@ const FIXED_EQUIPMENTS = {
     EQ_132: {
         id: 'EQ_132',
         name: '血领主庇护者',
-        icon: "icons/wow/vanilla/weapons/INV_Mace_14.png",
+        icon: "icons/wow/vanilla/weapons/xuelingzhu.png",
         type: 'equipment',
         slot: 'mainHand',
         rarity: 'purple',

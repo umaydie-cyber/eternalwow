@@ -10052,7 +10052,7 @@ function stepBossCombat(state) {
             }
 
             // 急速：作为 DOT 类回合伤害，同样享受“急速*2%”的伤害加成
-            dmg *= (1 + (((p?.stats?.haste) || 0) * 0.02));
+            dmg *= (1 + (((p.char?.stats?.haste) || 0) * 0.02));
 
             // （目前 boss 战未广泛施加 spell_vuln，但这里仍支持）
             const vuln = combat.bossDebuffs?.spell_vuln;
@@ -10060,9 +10060,9 @@ function stepBossCombat(state) {
                 dmg *= vuln.mult;
             }
 
-            const isCrit = Math.random() < (p.stats.critRate||0) / 100;
+            const isCrit = Math.random() < ((p.char?.stats?.critRate || 0) / 100);
             if (isCrit) {
-                dmg *= p.stats.critDamage;
+                dmg *= (p.char?.stats?.critDamage || 2);
             }
 
             dmg = Math.floor(dmg);
@@ -10072,7 +10072,7 @@ function stepBossCombat(state) {
                 const def = Number(boss?.defense) || 0;
                 const actual = Math.max(1, dmg - def);
                 combat.bossHp -= actual;
-                addLog(`【暗影魔】位置${pIdx + 1} ${p.char.name} 对 ${boss.name} 造成 ${actual} 暗影伤害`);
+                addLog(`【暗影魔】位置${pIdx + 1} ${p.char.name} 对 ${boss.name} 造成 ${actual} 暗影伤害${isCrit ? '【暴击】' : ''}`);
 
                 // 救赎（由该戒律牧师的伤害触发）
                 if (p.char?.stats?.atonement) {
@@ -10086,7 +10086,7 @@ function stepBossCombat(state) {
                 m.hp -= actual;
 
                 const minionName = boss?.minion?.name || boss?.cannoneer?.name || '小弟';
-                addLog(`【暗影魔】位置${pIdx + 1} ${p.char.name} 对 ${minionName}${targetIndex + 1} 造成 ${actual} 暗影伤害`+isCrit?`【爆击】`:``);
+                addLog(`【暗影魔】位置${pIdx + 1} ${p.char.name} 对 ${minionName}${targetIndex + 1} 造成 ${actual} 暗影伤害${isCrit ? '【暴击】' : ''}`);
 
                 if (p.char?.stats?.atonement) {
                     triggerAtonementHeal(p, actual);
@@ -13298,9 +13298,9 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
             // ✅ 装备特效：地图屠戮（地图战斗伤害加成）
             sfDamage *= mapDamageDealtMult;
 
-            const isCrit = Math.random() < (character.stats.critRate||0) / 100;
+            const isCrit = Math.random() < ((character?.stats?.critRate || 0) / 100);
             if (isCrit) {
-                sfDamage *= character.stats.critDamage;
+                sfDamage *= (character?.stats?.critDamage || 2);
             }
 
             sfDamage = Math.floor(sfDamage);

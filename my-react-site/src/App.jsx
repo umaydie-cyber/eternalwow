@@ -6251,7 +6251,7 @@ const FIXED_EQUIPMENTS = {
         level: 0,
         maxLevel: 100,
         baseStats: {
-            hp: 3200,
+            hp: 4200,
             armor: 220,
             mastery: 25,
             versatility: 25
@@ -6281,9 +6281,9 @@ const FIXED_EQUIPMENTS = {
         level: 0,
         maxLevel: 100,
         baseStats: {
-            hp: 2400,
+            hp: 3400,
             armor: 150,
-            mastery: 25,
+            mastery: 20,
             blockValue: 400,
             versatility: 25
         },
@@ -6305,17 +6305,17 @@ const FIXED_EQUIPMENTS = {
         level: 0,
         maxLevel: 100,
         baseStats: {
-            attack: 950,
+            spellPower: 700,
             hp: 2800,
-            critRate: 22,
-            mastery: 22,
-            versatility: 18
+            mastery: 20,
+            critRate: 20,
+            versatility: 15,
         },
         growth: {
-            attack: 2,
+            spellPower: 2,
             hp: 2,
+            mastery:2,
             critRate: 2,
-            mastery: 2,
             versatility: 2
         }
     },
@@ -6355,15 +6355,15 @@ const FIXED_EQUIPMENTS = {
         baseStats: {
             spellPower: 1350,
             hp: 3300,
-            mastery: 28,
-            haste: 28,
-            versatility: 22
+            critRate: 25,
+            mastery: 30,
+            versatility: 20
         },
         growth: {
             spellPower: 2,
             hp: 2,
+            critRate: 2,
             mastery: 2,
-            haste: 2,
             versatility: 2
         },
         specialEffect: {
@@ -6407,11 +6407,10 @@ const FIXED_EQUIPMENTS = {
         maxLevel: 100,
         baseStats: {
             spellPower: 420,
-            hp: 3200,
+            hp: 3800,
             critRate: 15,
             haste: 25,
             mastery: 25,
-            versatility: 20
         },
         growth: {
             spellPower: 2,
@@ -6419,7 +6418,6 @@ const FIXED_EQUIPMENTS = {
             critRate: 2,
             haste: 2,
             mastery: 2,
-            versatility: 2
         }
     },
 

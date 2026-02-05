@@ -15859,8 +15859,11 @@ function gameReducer(state, action) {
             const keptInventorySizeExtra = newState.inventorySizeExtra || 0;
 
             // 重置游戏进度
+            // ✅ 保留：时空币（跨世货币，不应随重生清零）
+            const keptSpacetimeCoin = Math.floor(Number(newState.resources?.spacetimeCoin) || 0);
+
             newState.characters = [];
-            newState.resources = { ...initialState.resources, gold: 500 };
+            newState.resources = { ...initialState.resources, gold: 500, spacetimeCoin: keptSpacetimeCoin };
             newState.buildings = {};
             // ✅ 保留所有功能建筑
             newState.functionalBuildings = keptFunctionalBuildings;
@@ -17271,6 +17274,8 @@ const CharacterDetailsModal = ({ characterId, state, onClose, onUnequip, onEditS
     };
 
     const setBonuses = getSetBonusesForCharacter(character);
+    // ✅ 采集属性（含等级/装备/种族加成），用于属性栏展示
+    const gatherStats = calculateGatherStats(character);
 
     return (
         <div style={{
@@ -17361,12 +17366,20 @@ const CharacterDetailsModal = ({ characterId, state, onClose, onUnequip, onEditS
                                 }}>
                                     <span style={{ color: '#aaa' }}>{name}</span>
                                     <span style={{ color: '#ffd700', fontWeight: 600 }}>
-                                        {stat === 'critRate' || stat === 'blockRate'
-                                            ? `${(character.stats[stat] || 0).toFixed(1)}%`
-                                            : stat === 'critDamage'
-                                                ? `${Math.round((character.stats[stat] || 0) * 100)}%`
-                                                : Math.floor(character.stats[stat] || 0)
-                                        }
+                                        {(() => {
+                                            const isGatherStat = stat === 'proficiency' || stat === 'precision' || stat === 'perception';
+                                            const rawValue = isGatherStat
+                                                ? (gatherStats?.[stat] ?? 0)
+                                                : (character.stats?.[stat] ?? 0);
+
+                                            if (stat === 'critRate' || stat === 'blockRate') {
+                                                return `${Number(rawValue || 0).toFixed(1)}%`;
+                                            }
+                                            if (stat === 'critDamage') {
+                                                return `${Math.round((Number(rawValue) || 0) * 100)}%`;
+                                            }
+                                            return Math.floor(Number(rawValue) || 0);
+                                        })()}
                                     </span>
                                 </div>
                             ))}
@@ -17762,8 +17775,8 @@ const ItemDetailsModal = ({ item, onClose, onEquip, characters, state , dispatch
                             isMatA
                                 ? state.inventory.some(i => i?.type === 'equipment' && i.id === 'EQ_042' && getLevel(i) >= 100)
                                 : isMatB
-                                ? state.inventory.some(i => i?.type === 'equipment' && i.id === 'EQ_041' && getLevel(i) >= 100)
-                                : false;
+                                    ? state.inventory.some(i => i?.type === 'equipment' && i.id === 'EQ_041' && getLevel(i) >= 100)
+                                    : false;
 
                         if (!(hasOther && (isMatA || isMatB))) return null;
 
@@ -22327,13 +22340,13 @@ const QuestPage = ({ state, dispatch }) => {
                             }}>
                                 {requirementMet ? '✓' : '✗'}
                                 {currentStep.requirement.type === 'character_level' &&
-                                `需要角色等级 ${currentStep.requirement.level}`}
+                                    `需要角色等级 ${currentStep.requirement.level}`}
                                 {currentStep.requirement.type === 'zone_battles' &&
-                                `需要在${ZONES[currentStep.requirement.zoneId]?.name}战斗${currentStep.requirement.count}次`}
+                                    `需要在${ZONES[currentStep.requirement.zoneId]?.name}战斗${currentStep.requirement.count}次`}
                                 {currentStep.requirement.type === 'boss_defeated' &&
-                                `需要击败${BOSS_DATA[currentStep.requirement.bossId]?.name}`}
+                                    `需要击败${BOSS_DATA[currentStep.requirement.bossId]?.name}`}
                                 {currentStep.requirement.type === 'have_gold' &&
-                                `需要${currentStep.requirement.amount}金币`}
+                                    `需要${currentStep.requirement.amount}金币`}
                             </div>
                         </div>
                     )}
@@ -23709,8 +23722,8 @@ const BossPrepareModal = ({ state, dispatch }) => {
                                                     isMapFighting
                                                         ? `地图战斗中：${zoneName || zoneId}`
                                                         : isGathering
-                                                        ? `采集中：${buildingName || gatherBuildingId}`
-                                                        : '待命'
+                                                            ? `采集中：${buildingName || gatherBuildingId}`
+                                                            : '待命'
                                                 }
                                             >
                                                 <div style={{ fontSize: 24 }}>

@@ -2342,9 +2342,6 @@ const ZONES = {
         unlocked: false,
         unlockLevel: 60
     },
-
-
-
     zul_gurub: {
         id: 'zul_gurub',
         name: '祖尔格拉布',
@@ -2369,14 +2366,10 @@ const ZONES = {
         level: 60,
         type: 'explore',
         enemies: [
-            // 偏输出
             { name: '安琪拉杀手', hp: 2300000, attack: 13200, defense: 6930, exp: 29700, gold: 20350 },
-            // 偏坦克
             { name: '佐拉巨像', hp: 2350000, attack: 11220, defense: 7370, exp: 29150, gold: 18700 },
-            // 均衡偏高伤
-            { name: '黑曜石毁灭者', hp: 2150000, attack: 12650, defense: 6710, exp: 30250, gold: 16500 },
-            // 均衡偏防
-            { name: '阿努比斯守护者', hp: 2120000, attack: 11880, defense: 7150, exp: 27500, gold: 17050 },
+            { name: '黑曜石毁灭者', hp: 2150000, attack: 12650, defense: 6710, exp: 30250, gold: 18500 },
+            { name: '阿努比斯守护者', hp: 2520000, attack: 13880, defense: 7150, exp: 31500, gold: 24050 },
         ],
         resources: ['铁矿', '魔法精华'],
         unlocked: false,

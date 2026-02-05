@@ -7443,6 +7443,18 @@ const WORLD_BOSSES = {
 
 
 
+    // ✅ 新增：60级世界首领 - 血神哈卡（祖尔格拉布）
+    hakkar: {
+        id: 'hakkar',
+        name: '血神哈卡',
+        icon: 'icons/wow/vanilla/boss/hakkar.png', // 需要添加对应图标
+        hp: 5200000,
+        attack: 4300,
+        defense: 1500,
+        rewards: { gold: 700000, exp: 420000 },
+        unlockLevel: 60
+    },
+
 };
 
 // 装备槽位定义
@@ -7819,6 +7831,49 @@ const BOSS_DATA = {
                 { id: 'EQ_123', chance: 0.2 },  // 虔诚裹腕
                 { id: 'EQ_124', chance: 0.2 },  // 博学者裹腕
                 { id: 'IT_REND_BADGE', chance: 0.8 }
+            ]
+        }
+    },
+
+    // ✅ 新增：60级世界首领 - 血神哈卡（祖尔格拉布）
+    hakkar: {
+        id: 'hakkar',
+        name: '血神哈卡',
+        maxHp: 5200000,
+        attack: 4300,
+        defense: 1500,
+
+        // 技能循环：召唤哈卡之子 → 血液虹吸 → 堕落之血 → 血液虹吸
+        cycle: ['summon_hakkar_sons', 'blood_siphon', 'corrupted_blood', 'blood_siphon'],
+
+        // 技能1：召唤哈卡之子
+        summonCount: 2,
+        minion: {
+            name: '哈卡之子',
+            maxHp: 800000,
+            attack: 4300,
+            defense: 1200
+        },
+        acidMultiplier: 1.2,
+
+        // 哈卡之子死亡：毒性之血（中毒DOT）
+        // 说明：按“目标自身法术强度”结算（0.4×SP），持续3回合，可叠层
+        toxicBloodDotSpCoeff: 0.4,
+        toxicBloodDuration: 3,
+
+        // 技能2：血液虹吸
+        bloodSiphonMultiplier: 3,
+        bloodSiphonHealPctPerNonToxic: 0.05, // 未中毒性之血：每人回复哈卡 5% 最大生命
+        bloodSiphonSelfDmgPctPerToxic: 0.01, // 中毒性之血：每人反噬哈卡 1% 最大生命
+
+        // 技能3：堕落之血（中毒DOT，暗影伤害，可叠层到战斗结束）
+        corruptedBloodDotMultiplier: 0.5,
+
+        rewards: {
+            gold: 700000,
+            exp: 420000,
+            items: [
+                { id: 'IT_HAKKAR_BADGE', chance: 0.8 }
             ]
         }
     }
@@ -10467,6 +10522,63 @@ function stepBossCombat(state) {
     // Boss 行动
     const bossAction = boss.cycle[(combat.round - 1) % boss.cycle.length];
 
+
+    // ==================== 哈卡：哈卡之子死亡触发【毒性之血】 ====================
+    // 放在Boss行动前结算，确保本回合【血液虹吸】能正确读取“是否中毒性之血”
+    if (combat.bossId === 'hakkar') {
+        const deadSons = (combat.minions || []).filter(m => (m?.hp ?? 0) <= 0 && m.isHakkarSon && !m.deathProcessed);
+        if (deadSons.length > 0) {
+            // 标记已处理，避免重复触发
+            deadSons.forEach(m => { m.deathProcessed = true; });
+
+            const stacksGained = deadSons.length;
+            addLog(`【${boss.name}】的【哈卡之子】死亡（${stacksGained}个），所有角色获得【毒性之血】！`);
+
+            combat.playerStates.forEach((ps, pIdx) => {
+                if (!ps || ps.currentHp <= 0) return;
+
+                // ✅ 矮人：石像形态 - 首次中毒免疫（这里必须提前判定，否则会影响【血液虹吸】计数）
+                if (tryFirstDebuffImmunity(ps, 'poison', pIdx, '毒性之血')) {
+                    addLog(`→ 位置${pIdx + 1} ${ps.char.name} 免疫了【毒性之血】`, 'debuff');
+                    return;
+                }
+
+                ps.dots = ps.dots || [];
+                const coeff = boss.toxicBloodDotSpCoeff ?? 0.4;
+                const duration = boss.toxicBloodDuration ?? 3;
+
+                // 按“目标自身法术强度”结算（更贴近设计：高法强更痛）
+                const basePerStack = Math.floor((ps.char?.stats?.spellPower || 0) * coeff);
+
+                const existing = ps.dots.find(d => d && d.name === '毒性之血');
+                if (existing) {
+                    existing.stacks = (existing.stacks || 1) + stacksGained;
+                    existing.duration = duration; // 刷新持续时间
+                    existing.type = 'poison';
+                    existing.isPoison = true;
+                    existing.school = 'nature';
+
+                    const perTurn = Math.max(1, Math.floor(basePerStack * (existing.stacks || 1)));
+                    existing.damagePerTurn = perTurn;
+
+                    addLog(`→ 位置${pIdx + 1} ${ps.char.name} 的【毒性之血】变为${existing.stacks}层（每回合${perTurn}自然伤害，持续${duration}回合）`, 'debuff');
+                } else {
+                    const perTurn = Math.max(1, Math.floor(basePerStack * stacksGained));
+                    ps.dots.push({
+                        name: '毒性之血',
+                        type: 'poison',
+                        isPoison: true,
+                        school: 'nature',
+                        stacks: stacksGained,
+                        damagePerTurn: perTurn,
+                        duration: duration
+                    });
+                    addLog(`→ 位置${pIdx + 1} ${ps.char.name} 获得【毒性之血】${stacksGained}层（每回合${perTurn}自然伤害，持续${duration}回合）`, 'debuff');
+                }
+            });
+        }
+    }
+
     // ==================== 范克里夫特殊技能处理 ====================
     if (combat.bossId === 'vancleef') {
         // 致死打击
@@ -11458,6 +11570,173 @@ function stepBossCombat(state) {
         }
     }
 
+    // ==================== 血神哈卡技能处理 ====================
+    else if (combat.bossId === 'hakkar') {
+        // 自然伤害：计算魔抗（并套用伤害减免/全能/挫志怒吼）
+        const calcNatureDamage = (playerState, rawDamage) => {
+            const magicResist = playerState?.char?.stats?.magicResist || 0;
+            const resistReduction = getMagicResistDamageReduction(magicResist);
+            let damage = Math.floor((rawDamage || 0) * (1 - resistReduction));
+
+            const takenMult = playerState?.char?.stats?.damageTakenMult ?? 1;
+            let buffTakenMult = 1;
+            if (playerState?.buffs) {
+                playerState.buffs.forEach(b => {
+                    if (b.damageTakenMult) buffTakenMult *= b.damageTakenMult;
+                });
+            }
+
+            const demoralizingShoutMult = combat.bossDebuffs?.demoralizingShout?.damageMult ?? 1;
+            const versTakenMult = getVersatilityDamageTakenMult(playerState?.char?.stats?.versatility);
+            const atonementTakenMult = getAtonementDamageTakenMult(playerState);
+            damage = Math.max(1, Math.floor(damage * takenMult * buffTakenMult * atonementTakenMult * demoralizingShoutMult * versTakenMult));
+
+            return { damage, resistReduction, magicResist };
+        };
+
+        // 是否拥有【毒性之血】（用于【血液虹吸】的治疗/反噬判定）
+        const hasToxicBlood = (ps) => Array.isArray(ps?.dots) && ps.dots.some(d =>
+            d && d.name === '毒性之血' && (d.isPermanent || (d.duration ?? 0) > 0)
+        );
+
+        // 施加【堕落之血】（永久叠层中毒DOT：0.5×Boss攻击/层/回合，暗影伤害）
+        const applyCorruptedBlood = (ps, pIdx) => {
+            if (!ps || ps.currentHp <= 0) return;
+
+            // ✅ 矮人：首次中毒免疫
+            if (tryFirstDebuffImmunity(ps, 'poison', pIdx, '堕落之血')) {
+                addLog(`→ 位置${pIdx + 1} ${ps.char.name} 免疫了【堕落之血】`, 'debuff');
+                return;
+            }
+
+            ps.dots = ps.dots || [];
+            const mult = boss.corruptedBloodDotMultiplier ?? 0.5;
+            const base = Math.floor((boss.attack || 0) * mult);
+
+            const existing = ps.dots.find(d => d && d.name === '堕落之血');
+            if (existing) {
+                existing.stacks = (existing.stacks || 1) + 1;
+                existing.type = 'poison';
+                existing.isPoison = true;
+                existing.school = 'shadow';
+                existing.isPermanent = true;
+                existing.duration = existing.duration ?? 999;
+
+                const perTurn = Math.max(1, Math.floor(base * (existing.stacks || 1)));
+                existing.damagePerTurn = perTurn;
+
+                addLog(`→ 位置${pIdx + 1} ${ps.char.name} 的【堕落之血】叠加到${existing.stacks}层（每回合${perTurn}点暗影伤害，持续到战斗结束）`, 'debuff');
+            } else {
+                const perTurn = Math.max(1, base);
+                ps.dots.push({
+                    name: '堕落之血',
+                    type: 'poison',
+                    isPoison: true,
+                    school: 'shadow',
+                    stacks: 1,
+                    damagePerTurn: perTurn,
+                    duration: 999,
+                    isPermanent: true
+                });
+                addLog(`→ 位置${pIdx + 1} ${ps.char.name} 获得【堕落之血】（每回合${perTurn}点暗影伤害，可叠层到战斗结束）`, 'debuff');
+            }
+        };
+
+        // 技能1：召唤哈卡之子（最多2个，HP80万）
+        if (bossAction === 'summon_hakkar_sons') {
+            const aliveSons = (combat.minions || []).filter(m => (m?.hp ?? 0) > 0 && m.isHakkarSon).length;
+            const need = Math.max(0, (boss.summonCount || 2) - aliveSons);
+
+            for (let i = 0; i < need; i++) {
+                combat.minions.push({
+                    hp: boss.minion.maxHp,
+                    maxHp: boss.minion.maxHp,
+                    attack: boss.attack,
+                    defense: boss.minion.defense,
+                    isHakkarSon: true,
+                    deathProcessed: false,
+                    dots: []
+                });
+            }
+
+            if (need > 0) {
+                addLog(`【${boss.name}】使用【召唤哈卡之子】召唤了 ${need} 个${boss.minion.name}！`);
+                addLog(`→ ${boss.minion.name}：HP ${boss.minion.maxHp}，每回合对坦克喷吐【酸液】造成 ${(boss.acidMultiplier || 1.2)}×Boss攻击 的自然伤害（计算魔抗）`);
+                addLog(`→ ${boss.minion.name}死亡：全队获得【毒性之血】（${boss.toxicBloodDotSpCoeff || 0.4}×自身法强/回合，持续 ${boss.toxicBloodDuration || 3} 回合，可叠层）`);
+            } else {
+                addLog(`【${boss.name}】尝试召唤哈卡之子，但场上哈卡之子已满`);
+            }
+        }
+
+        // 技能2：血液虹吸（AOE自然伤害，并根据是否中毒性之血决定治疗/反噬）
+        else if (bossAction === 'blood_siphon') {
+            const raw = Math.floor((boss.attack || 0) * (boss.bloodSiphonMultiplier || 3));
+            addLog(`【${boss.name}】施放【血液虹吸】！`);
+
+            let toxicCount = 0;
+            let nonToxicCount = 0;
+
+            combat.playerStates.forEach((ps, pIdx) => {
+                if (!ps || ps.currentHp <= 0) return;
+
+                if (hasToxicBlood(ps)) toxicCount += 1;
+                else nonToxicCount += 1;
+
+                const nat = calcNatureDamage(ps, raw);
+                const shieldResult = applyShieldAbsorb(ps, nat.damage, logs, currentRound);
+                ps.currentHp -= shieldResult.finalDamage;
+
+                const resPct = Math.round(nat.resistReduction * 100);
+                const mrText = Number(nat.magicResist) < 0 ? `（魔抗 ${Math.floor(nat.magicResist)}）` : '';
+                const shieldText = shieldResult.absorbed > 0 ? `，护盾吸收 ${shieldResult.absorbed}` : '';
+                addLog(`→ 位置${pIdx + 1} ${ps.char.name} 受到 ${shieldResult.finalDamage} 点自然伤害（魔抗减伤${resPct}%${mrText}${shieldText}）`);
+            });
+
+            const bossMax = boss.maxHp || 0;
+            const healPct = boss.bloodSiphonHealPctPerNonToxic ?? 0.05;
+            const dmgPct = boss.bloodSiphonSelfDmgPctPerToxic ?? 0.01;
+
+            const heal = Math.floor(bossMax * healPct * nonToxicCount);
+            const selfDmg = Math.floor(bossMax * dmgPct * toxicCount);
+
+            if (nonToxicCount > 0) {
+                addLog(`→ 虹吸到 ${nonToxicCount} 个【未中毒性之血】目标，哈卡回复 ${heal} 点生命`);
+            }
+            if (toxicCount > 0) {
+                addLog(`→ 虹吸到 ${toxicCount} 个【中毒性之血】目标，哈卡受到 ${selfDmg} 点反噬伤害`);
+            }
+
+            const beforeHp = combat.bossHp || 0;
+            combat.bossHp = Math.max(0, Math.min(bossMax, Math.floor(beforeHp + heal - selfDmg)));
+            const delta = combat.bossHp - beforeHp;
+            if (delta !== 0) {
+                addLog(`【${boss.name}】生命值变化：${delta > 0 ? '+' : ''}${delta}（${beforeHp} → ${combat.bossHp}）`);
+            }
+        }
+
+        // 技能3：堕落之血（中毒DOT，暗影伤害，可叠层到战斗结束）
+        else if (bossAction === 'corrupted_blood') {
+            if (combat.strategy.stance === 'concentrated') {
+                addLog(`【${boss.name}】施放【堕落之血】（集中站位），所有角色获得1层【堕落之血】！`);
+                combat.playerStates.forEach((ps, pIdx) => applyCorruptedBlood(ps, pIdx));
+            } else {
+                const candidates = combat.playerStates
+                    .map((ps, idx) => ({ ps, idx }))
+                    .filter(o => (o.ps?.currentHp ?? 0) > 0)
+                    .map(o => o.idx);
+
+                if (candidates.length <= 0) {
+                    addLog(`【${boss.name}】施放【堕落之血】，但没有存活目标`);
+                } else {
+                    const tIdx = candidates[Math.floor(Math.random() * candidates.length)];
+                    addLog(`【${boss.name}】施放【堕落之血】命中 位置${tIdx + 1} ${combat.playerStates[tIdx].char.name}！`);
+                    applyCorruptedBlood(combat.playerStates[tIdx], tIdx);
+                }
+            }
+        }
+    }
+
+
 // ==================== 小弟行动 ====================
     for (let i = 0; i < (combat.minions || []).length; i++) {
         const m = combat.minions[i];
@@ -11560,6 +11839,44 @@ function stepBossCombat(state) {
             const minionName = boss.minion?.name || '骷髅战士';
             addLog(`【${minionName}${i + 1}】挥砍 位置${tIdx + 1} ${target.char.name}，造成 ${shieldResult.finalDamage} 点伤害（护甲减伤${drPct}%${blockText}${shieldText}）`);
         }
+
+        // 哈卡之子：酸液（自然伤害，计算魔抗），命中当前坦克
+        else if (combat.bossId === 'hakkar' && m.isHakkarSon) {
+            const tIdx = pickAlivePlayerIndex();
+            if (tIdx < 0) break;
+
+            const target = combat.playerStates[tIdx];
+
+            const raw = Math.floor((boss.attack || 0) * (boss.acidMultiplier || 1.2));
+            const magicResist = target.char?.stats?.magicResist || 0;
+            const resistReduction = getMagicResistDamageReduction(magicResist);
+
+            let damage = Math.floor(raw * (1 - resistReduction));
+
+            // 应用受伤减免
+            const takenMult = target?.char?.stats?.damageTakenMult ?? 1;
+            let buffTakenMult = 1;
+            if (target?.buffs) {
+                target.buffs.forEach(b => {
+                    if (b.damageTakenMult) buffTakenMult *= b.damageTakenMult;
+                });
+            }
+            const demoralizingShoutMult = combat.bossDebuffs?.demoralizingShout?.damageMult ?? 1;
+            const versTakenMult = getVersatilityDamageTakenMult(target?.char?.stats?.versatility);
+            const atonementTakenMult = getAtonementDamageTakenMult(target);
+            damage = Math.max(1, Math.floor(damage * takenMult * buffTakenMult * atonementTakenMult * demoralizingShoutMult * versTakenMult));
+
+            // 护盾吸收
+            const shieldResult = applyShieldAbsorb(target, damage, logs, currentRound);
+            target.currentHp -= shieldResult.finalDamage;
+
+            const resPct = Math.round(resistReduction * 100);
+            const mrText = Number(magicResist) < 0 ? `（魔抗 ${Math.floor(magicResist)}）` : '';
+            const shieldText = shieldResult.absorbed > 0 ? `，护盾吸收 ${shieldResult.absorbed}` : '';
+            const minionName = boss.minion?.name || '哈卡之子';
+            addLog(`【${minionName}${i + 1}】喷吐【酸液】命中 位置${tIdx + 1} ${target.char.name}，造成 ${shieldResult.finalDamage} 点自然伤害（魔抗减伤${resPct}%${mrText}${shieldText}）`);
+        }
+
 // 霍格的小弟：普通攻击
         else {
             const tIdx = pickAlivePlayerIndex();
@@ -22716,6 +23033,11 @@ const BossPrepareModal = ({ state, dispatch }) => {
         // ✅ 雷德·黑手
         flame_breath: '烈焰吐息',
         leap_slash: '跳跃斩击',
+
+        // ✅ 血神哈卡
+        summon_hakkar_sons: '召唤哈卡之子',
+        blood_siphon: '血液虹吸',
+        corrupted_blood: '堕落之血',
     };
 
     const formatBossCycle = (boss) =>
@@ -23391,6 +23713,65 @@ const BossPrepareModal = ({ state, dispatch }) => {
                                                 <span style={{ color: '#ff9800' }}>集中站位：</span>对坦克造成 <span style={{ color: '#ffd700' }}>{boss.leapSlashMultiplier}倍</span> Boss攻击 的物理伤害
                                                 <br/>
                                                 <span style={{ color: '#ff9800' }}>分散站位：</span>对<span style={{ color: '#ffd700' }}>除坦克外</span>的随机目标造成 <span style={{ color: '#ffd700' }}>{boss.leapSlashMultiplier}倍</span> Boss攻击 的物理伤害
+                                            </div>
+                                        </div>
+                                    </>
+                                )}
+
+
+                                {bossId === 'hakkar' && (
+                                    <>
+                                        <div style={{
+                                            padding: 10,
+                                            background: 'rgba(76,175,80,0.10)',
+                                            borderRadius: 6,
+                                            borderLeft: '3px solid #4caf50'
+                                        }}>
+                                            <div style={{ fontSize: 12, color: '#81c784', fontWeight: 600, marginBottom: 4 }}>
+                                                👥 召唤哈卡之子
+                                            </div>
+                                            <div style={{ fontSize: 11, color: '#aaa', lineHeight: 1.5 }}>
+                                                召唤 <span style={{ color: '#ffd700' }}>{boss.summonCount}个</span>【{boss.minion?.name}】（每个生命 {boss.minion?.maxHp?.toLocaleString()}）
+                                                <br/>
+                                                {boss.minion?.name} 会对当前坦克喷吐<span style={{ color: '#8bc34a' }}>酸液</span>，造成 <span style={{ color: '#ffd700' }}>{boss.acidMultiplier}倍</span> Boss攻击 的<span style={{ color: '#8bc34a' }}>自然伤害</span>（计算魔抗）
+                                                <br/>
+                                                {boss.minion?.name} 死亡会使全队获得 <span style={{ color: '#8bc34a' }}>毒性之血</span>：每回合造成 <span style={{ color: '#ffd700' }}>{boss.toxicBloodDotSpCoeff}倍</span> 目标法术强度 的自然伤害，持续 {boss.toxicBloodDuration} 回合（可叠层）
+                                            </div>
+                                        </div>
+
+                                        <div style={{
+                                            padding: 10,
+                                            background: 'rgba(33,150,243,0.10)',
+                                            borderRadius: 6,
+                                            borderLeft: '3px solid #2196F3'
+                                        }}>
+                                            <div style={{ fontSize: 12, color: '#64b5f6', fontWeight: 600, marginBottom: 4 }}>
+                                                🩸 血液虹吸
+                                            </div>
+                                            <div style={{ fontSize: 11, color: '#aaa', lineHeight: 1.5 }}>
+                                                对<span style={{ color: '#ff9800' }}>所有角色</span>造成 <span style={{ color: '#ffd700' }}>{boss.bloodSiphonMultiplier}倍</span> Boss攻击 的自然伤害
+                                                <br/>
+                                                每个<span style={{ color: '#e57373' }}>未拥有毒性之血</span>的角色：为哈卡回复 <span style={{ color: '#ffd700' }}>{Math.round((boss.bloodSiphonHealPctPerNonToxic || 0) * 100)}%</span> 最大生命
+                                                <br/>
+                                                每个<span style={{ color: '#81c784' }}>拥有毒性之血</span>的角色：对哈卡造成 <span style={{ color: '#ffd700' }}>{Math.round((boss.bloodSiphonSelfDmgPctPerToxic || 0) * 100)}%</span> 最大生命 的反噬伤害
+                                            </div>
+                                        </div>
+
+                                        <div style={{
+                                            padding: 10,
+                                            background: 'rgba(156,39,176,0.10)',
+                                            borderRadius: 6,
+                                            borderLeft: '3px solid #9c27b0'
+                                        }}>
+                                            <div style={{ fontSize: 12, color: '#ce93d8', fontWeight: 600, marginBottom: 4 }}>
+                                                ☠️ 堕落之血
+                                            </div>
+                                            <div style={{ fontSize: 11, color: '#aaa', lineHeight: 1.5 }}>
+                                                <span style={{ color: '#ffd700' }}>分散站位</span>：随机1名角色获得1层【堕落之血】
+                                                <br/>
+                                                <span style={{ color: '#ffd700' }}>集中站位</span>：所有角色获得1层【堕落之血】
+                                                <br/>
+                                                【堕落之血】为<span style={{ color: '#81c784' }}>中毒DOT</span>，每层每回合造成 <span style={{ color: '#ffd700' }}>{boss.corruptedBloodDotMultiplier}倍</span> Boss攻击 的<span style={{ color: '#9c27b0' }}>暗影伤害</span>，可叠层至战斗结束
                                             </div>
                                         </div>
                                     </>

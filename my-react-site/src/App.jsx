@@ -529,6 +529,29 @@ const TALENTS = {
                     type: 'aura'
                 }
             ]
+        },
+        {
+            tier: 60,
+            options: [
+                {
+                    id: 'pain_suppression',
+                    name: '痛苦压制',
+                    description: '苦修使当前目标获得30%减伤（乘算），持续2回合',
+                    type: 'on_cast'
+                },
+                {
+                    id: 'benevolence',
+                    name: '仁慈',
+                    description: '【救赎】额外获得5%减伤效果（乘算）',
+                    type: 'aura'
+                },
+                {
+                    id: 'mindbender',
+                    name: '催心魔',
+                    description: '若已点30级【暗影魔】，则暗影魔造成的伤害系数提升至1.2倍法术强度',
+                    type: 'aura'
+                }
+            ]
         }
     ],
     frost_mage: [
@@ -8376,6 +8399,13 @@ function stepBossCombat(state) {
         logs.push({ round: currentRound, text, type });
     };
 
+    // 救赎（buff）可能带来的额外减伤（例如：戒律牧60级天赋【仁慈】）
+    // 约定：在 stats.atonement 上挂 damageTakenMult（如 0.95），并在一切承伤结算时乘入。
+    const getAtonementDamageTakenMult = (playerState) => {
+        const v = playerState?.char?.stats?.atonement?.damageTakenMult;
+        return (typeof v === 'number' && Number.isFinite(v) && v > 0) ? v : 1;
+    };
+
     const triggerAtonementHeal = (source, damageDone) => {
         if (!source || damageDone <= 0) return;
 
@@ -9341,16 +9371,23 @@ function stepBossCombat(state) {
                 ? casterExistingRate
                 : (0.20 + (casterMastery / 10) / 100);
 
+            // ✅ 60级天赋：仁慈 - 救赎额外提供5%减伤（乘算）
+            const benevolence = (p.char?.classId === 'discipline_priest' && p.char?.talents?.[60] === 'benevolence');
+
             combat.playerStates.forEach(ps => {
                 if (ps.currentHp > 0) {
                     ps.char.stats.atonement = {
                         healingRate: casterHealingRate,
-                        duration: dur
+                        duration: dur,
+                        ...(benevolence ? { damageTakenMult: 0.95 } : {})
                     };
                 }
             });
 
-            addLog(`位置${i + 1} ${p.char.name} 为全队施加【救赎】，持续 ${dur} 回合`);
+            addLog(
+                `位置${i + 1} ${p.char.name} 为全队施加【救赎】，持续 ${dur} 回合` +
+                (benevolence ? '（仁慈：额外5%减伤）' : '')
+            );
         }
 
         // 苦修技能处理 - 需要考虑减疗debuff
@@ -9379,6 +9416,40 @@ function stepBossCombat(state) {
                     healText += `（受到致死打击减疗${Math.round((1 - healingMult) * 100)}%）`;
                 }
                 addLog(healText);
+
+                // ==================== 戒律牧师60级天赋：痛苦压制 ====================
+                // 苦修使当前目标获得30%减伤（buff乘算），持续2回合
+                if (p.char?.classId === 'discipline_priest' && p.char?.talents?.[60] === 'pain_suppression') {
+                    const duration = 2;
+                    const damageTakenMult = 0.7; // -30% 承伤（乘算）
+
+                    frontPlayer.buffs = Array.isArray(frontPlayer.buffs) ? frontPlayer.buffs : [];
+                    const idx = frontPlayer.buffs.findIndex(b => b?.type === 'pain_suppression');
+
+                    // 仅当目标就是施法者本人时，才需要 justApplied（否则会白赚1回合）
+                    const extra = (frontPlayer === p) ? { justApplied: true } : {};
+
+                    if (idx === -1) {
+                        frontPlayer.buffs.push({
+                            type: 'pain_suppression',
+                            name: '痛苦压制',
+                            damageTakenMult,
+                            duration,
+                            ...extra,
+                        });
+                    } else {
+                        frontPlayer.buffs[idx] = {
+                            ...frontPlayer.buffs[idx],
+                            type: 'pain_suppression',
+                            name: '痛苦压制',
+                            damageTakenMult,
+                            duration,
+                            ...extra,
+                        };
+                    }
+
+                    addLog(`【痛苦压制】${p.char.name} 的苦修使 ${frontPlayer.char.name} 受到伤害降低30%，持续${duration}回合`);
+                }
 
                 // 终极苦修伤害
                 if (result.penanceDamage) {
@@ -9718,8 +9789,9 @@ function stepBossCombat(state) {
                 targetIndex = attackableMinions[0].idx;
             }
 
-            // 计算伤害：0.3 * 法强
-            let dmg = ((p.char?.stats?.spellPower || 0) + (p.talentBuffs?.spellPowerFlat || 0)) * 0.6;
+            // 计算伤害：默认 0.6 * 法强；60级天赋【催心魔】= 1.2 * 法强（点了30级暗影魔才会进到这里）
+            const sfCoeff = (p.char?.talents?.[60] === 'mindbender') ? 1.2 : 0.6;
+            let dmg = ((p.char?.stats?.spellPower || 0) + (p.talentBuffs?.spellPowerFlat || 0)) * sfCoeff;
 
             // 10级天赋：暗影增幅（暗影伤害 +20%）
             if (p.char?.talents?.[10] === 'shadow_amp') {
@@ -9929,7 +10001,7 @@ function stepBossCombat(state) {
             playerState.buffs = playerState.buffs.filter(b => (b.duration ?? 999) > 0);
         }
 
-        const finalTakenMult = takenMult * buffTakenMult;
+        const finalTakenMult = takenMult * buffTakenMult * getAtonementDamageTakenMult(playerState);
         const demoralizingShoutMult = combat.bossDebuffs?.demoralizingShout?.damageMult ?? 1;
         const versTakenMult = getVersatilityDamageTakenMult(playerState?.char?.stats?.versatility);
         dmg = Math.max(1, Math.floor(dmg * finalTakenMult * demoralizingShoutMult * versTakenMult));
@@ -10036,8 +10108,9 @@ function stepBossCombat(state) {
                         });
                     }
                     const versTakenMult = getVersatilityDamageTakenMult(target.char?.stats?.versatility);
+                    const atonementTakenMult = getAtonementDamageTakenMult(target);
 
-                    damage = Math.max(1, Math.floor(damage * takenMult * buffTakenMult * versTakenMult));
+                    damage = Math.max(1, Math.floor(damage * takenMult * buffTakenMult * atonementTakenMult * versTakenMult));
 
                     // 谍报也要经过护盾
                     const shieldResult = applyShieldAbsorb(target, damage, logs, currentRound);
@@ -10067,8 +10140,9 @@ function stepBossCombat(state) {
                         });
                     }
                     const versTakenMult = getVersatilityDamageTakenMult(ps.char?.stats?.versatility);
+                    const atonementTakenMult = getAtonementDamageTakenMult(ps);
 
-                    damage = Math.max(1, Math.floor(damage * takenMult * buffTakenMult * versTakenMult));
+                    damage = Math.max(1, Math.floor(damage * takenMult * buffTakenMult * atonementTakenMult * versTakenMult));
 
                     // 谍报也要经过护盾
                     const shieldResult = applyShieldAbsorb(ps, damage, logs, currentRound);
@@ -10352,8 +10426,9 @@ function stepBossCombat(state) {
                     });
                 }
                 const versTakenMult = getVersatilityDamageTakenMult(ps.char?.stats?.versatility);
+                const atonementTakenMult = getAtonementDamageTakenMult(ps);
 
-                damage = Math.max(1, Math.floor(damage * takenMult * buffTakenMult * versTakenMult));
+                damage = Math.max(1, Math.floor(damage * takenMult * buffTakenMult * atonementTakenMult * versTakenMult));
 
                 // 护盾吸收
                 const shieldResult = applyShieldAbsorb(ps, damage, logs, currentRound);
@@ -10393,7 +10468,8 @@ function stepBossCombat(state) {
                 });
             }
             const versTakenMult = getVersatilityDamageTakenMult(playerState?.char?.stats?.versatility);
-            damage = Math.max(1, Math.floor(damage * takenMult * buffTakenMult * versTakenMult));
+            const atonementTakenMult = getAtonementDamageTakenMult(playerState);
+            damage = Math.max(1, Math.floor(damage * takenMult * buffTakenMult * atonementTakenMult * versTakenMult));
 
             return { damage, resistReduction };
         };
@@ -10515,7 +10591,8 @@ function stepBossCombat(state) {
                 });
             }
             const versTakenMult = getVersatilityDamageTakenMult(playerState?.char?.stats?.versatility);
-            damage = Math.max(1, Math.floor(damage * takenMult * buffTakenMult * versTakenMult));
+            const atonementTakenMult = getAtonementDamageTakenMult(playerState);
+            damage = Math.max(1, Math.floor(damage * takenMult * buffTakenMult * atonementTakenMult * versTakenMult));
 
             return { damage, resistReduction, magicResist };
         };
@@ -10654,7 +10731,8 @@ function stepBossCombat(state) {
                 });
             }
             const versTakenMult = getVersatilityDamageTakenMult(playerState?.char?.stats?.versatility);
-            damage = Math.max(1, Math.floor(damage * takenMult * buffTakenMult * versTakenMult));
+            const atonementTakenMult = getAtonementDamageTakenMult(playerState);
+            damage = Math.max(1, Math.floor(damage * takenMult * buffTakenMult * atonementTakenMult * versTakenMult));
 
             return { damage, resistReduction, magicResist };
         };
@@ -10805,7 +10883,8 @@ function stepBossCombat(state) {
                 });
             }
             const versTakenMult = getVersatilityDamageTakenMult(playerState?.char?.stats?.versatility);
-            damage = Math.max(1, Math.floor(damage * takenMult * buffTakenMult * versTakenMult));
+            const atonementTakenMult = getAtonementDamageTakenMult(playerState);
+            damage = Math.max(1, Math.floor(damage * takenMult * buffTakenMult * atonementTakenMult * versTakenMult));
 
             return { damage, resistReduction, magicResist };
         };
@@ -10952,7 +11031,7 @@ function stepBossCombat(state) {
                 }
                 const demoralizingShoutMult = combat.bossDebuffs?.demoralizingShout?.damageMult ?? 1;
                 const versTakenMult = getVersatilityDamageTakenMult(ps.char?.stats?.versatility);
-                dmg = Math.max(1, Math.floor(dmg * takenMult * buffTakenMult * demoralizingShoutMult * versTakenMult));
+                dmg = Math.max(1, Math.floor(dmg * takenMult * buffTakenMult * getAtonementDamageTakenMult(ps) * demoralizingShoutMult * versTakenMult));
 
                 // 护盾吸收
                 const shieldResult = applyShieldAbsorb(ps, dmg, logs, currentRound);
@@ -10994,7 +11073,8 @@ function stepBossCombat(state) {
                 });
             }
             const versTakenMult = getVersatilityDamageTakenMult(target?.char?.stats?.versatility);
-            damage = Math.max(1, Math.floor(damage * takenMult * buffTakenMult * versTakenMult));
+            const atonementTakenMult = getAtonementDamageTakenMult(target);
+            damage = Math.max(1, Math.floor(damage * takenMult * buffTakenMult * atonementTakenMult * versTakenMult));
 
             // 护盾吸收
             const shieldResult = applyShieldAbsorb(target, damage, logs, currentRound);
@@ -11107,7 +11187,7 @@ function stepBossCombat(state) {
             const demoralizingShoutMult = combat.bossDebuffs?.demoralizingShout?.damageMult ?? 1;
 
             // 最终 DOT 伤害
-            let dmg = Math.max(1, Math.floor(base * takenMult * buffTakenMult * demoralizingShoutMult * versTakenMult));
+            let dmg = Math.max(1, Math.floor(base * takenMult * buffTakenMult * getAtonementDamageTakenMult(ps) * demoralizingShoutMult * versTakenMult));
 
             // （可选但推荐）DOT 也经过护盾吸收，和其它伤害统一
             const shieldResult = applyShieldAbsorb(ps, dmg, logs, currentRound);
@@ -12655,6 +12735,39 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
                 text: healText
             });
 
+            // ==================== 戒律牧师60级天赋：痛苦压制 ====================
+            // 苦修使当前目标获得30%减伤（buff乘算），持续2回合（地图战斗中“目标=自己”）
+            if (character?.classId === 'discipline_priest' && character?.talents?.[60] === 'pain_suppression') {
+                const duration = 2;
+                const damageTakenMult = 0.7;
+
+                const idx = buffs.findIndex(b => b?.type === 'pain_suppression');
+                if (idx === -1) {
+                    buffs.push({
+                        type: 'pain_suppression',
+                        name: '痛苦压制',
+                        damageTakenMult,
+                        duration
+                    });
+                } else {
+                    buffs[idx] = {
+                        ...buffs[idx],
+                        type: 'pain_suppression',
+                        name: '痛苦压制',
+                        damageTakenMult,
+                        duration
+                    };
+                }
+
+                logs.push({
+                    round,
+                    kind: 'proc',
+                    actor: character.name,
+                    proc: '痛苦压制',
+                    text: `【痛苦压制】触发：受到伤害降低30%，持续${duration}回合`
+                });
+            }
+
             // 40级天赋：终极苦修 - 造成伤害
             if (result.penanceDamage) {
                 const actualDamage = Math.max(
@@ -12721,16 +12834,20 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
                 ? existingRate
                 : (0.20 + (mastery / 10) / 100);
             const atonementDuration = result.applyAtonement.duration || 2;
+            // ✅ 60级天赋：仁慈 - 救赎额外提供5%减伤（乘算）
+            const benevolence = (character?.classId === 'discipline_priest' && character?.talents?.[60] === 'benevolence');
+
             character.stats.atonement = {
                 healingRate: actualHeal,
-                duration: atonementDuration
+                duration: atonementDuration,
+                ...(benevolence ? { damageTakenMult: 0.95 } : {})
             };
             logs.push({
                 round,
                 actor: character.name,
                 action: skill.name,
                 target: character.name,
-                value: `救赎生效，持续 ${atonementDuration} 回合，治疗量：${actualHeal}倍伤害`,
+                value: `救赎生效，持续 ${atonementDuration} 回合，治疗量：${actualHeal}倍伤害${benevolence ? '（仁慈：额外5%减伤）' : ''}`,
                 type: 'buff'
             });
         }
@@ -12907,7 +13024,9 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
         // 说明：作为被动“DOT类回合伤害”，在 DOT 结算阶段触发一次。
         if (character?.classId === 'discipline_priest' && character?.talents?.[30] === 'shadowfiend') {
             // 基础：0.3 *（当前面板法强 + 本场战斗叠加法强）
-            let sfDamage = ((character?.stats?.spellPower || 0) + (talentBuffs?.spellPowerFlat || 0)) * 0.6;
+            // 默认 0.6 * 法强；60级天赋【催心魔】= 1.2 * 法强（需要已点30级暗影魔才会进入本段）
+            const sfCoeff = (character?.talents?.[60] === 'mindbender') ? 1.2 : 0.6;
+            let sfDamage = ((character?.stats?.spellPower || 0) + (talentBuffs?.spellPowerFlat || 0)) * sfCoeff;
 
             // 10级天赋：暗影增幅（暗影伤害 +20%）
             if (character.talents?.[10] === 'shadow_amp') {
@@ -13149,7 +13268,9 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
         const demoralizingShout = enemyDebuffs.find(d => d.type === 'demoralizing_shout');
         const enemyDamageMult = demoralizingShout ? demoralizingShout.damageMult : 1;
 
-        finalDamage = Math.max(1, Math.floor(finalDamage * (character.stats.damageTakenMult || 1) * buffDamageTakenMult * enemyDamageMult * getVersatilityDamageTakenMult(character.stats.versatility)));
+        const atonementTakenMult = character.stats.atonement?.damageTakenMult ?? 1;
+
+        finalDamage = Math.max(1, Math.floor(finalDamage * (character.stats.damageTakenMult || 1) * buffDamageTakenMult * atonementTakenMult * enemyDamageMult * getVersatilityDamageTakenMult(character.stats.versatility)));
 
         // ===== 新增：护盾吸收伤害 =====
         let shieldAbsorbed = 0;
@@ -17186,8 +17307,8 @@ const ItemDetailsModal = ({ item, onClose, onEquip, characters, state , dispatch
                             isMatA
                                 ? state.inventory.some(i => i?.type === 'equipment' && i.id === 'EQ_042' && getLevel(i) >= 100)
                                 : isMatB
-                                    ? state.inventory.some(i => i?.type === 'equipment' && i.id === 'EQ_041' && getLevel(i) >= 100)
-                                    : false;
+                                ? state.inventory.some(i => i?.type === 'equipment' && i.id === 'EQ_041' && getLevel(i) >= 100)
+                                : false;
 
                         if (!(hasOther && (isMatA || isMatB))) return null;
 
@@ -21751,13 +21872,13 @@ const QuestPage = ({ state, dispatch }) => {
                             }}>
                                 {requirementMet ? '✓' : '✗'}
                                 {currentStep.requirement.type === 'character_level' &&
-                                    `需要角色等级 ${currentStep.requirement.level}`}
+                                `需要角色等级 ${currentStep.requirement.level}`}
                                 {currentStep.requirement.type === 'zone_battles' &&
-                                    `需要在${ZONES[currentStep.requirement.zoneId]?.name}战斗${currentStep.requirement.count}次`}
+                                `需要在${ZONES[currentStep.requirement.zoneId]?.name}战斗${currentStep.requirement.count}次`}
                                 {currentStep.requirement.type === 'boss_defeated' &&
-                                    `需要击败${BOSS_DATA[currentStep.requirement.bossId]?.name}`}
+                                `需要击败${BOSS_DATA[currentStep.requirement.bossId]?.name}`}
                                 {currentStep.requirement.type === 'have_gold' &&
-                                    `需要${currentStep.requirement.amount}金币`}
+                                `需要${currentStep.requirement.amount}金币`}
                             </div>
                         </div>
                     )}
@@ -23133,8 +23254,8 @@ const BossPrepareModal = ({ state, dispatch }) => {
                                                     isMapFighting
                                                         ? `地图战斗中：${zoneName || zoneId}`
                                                         : isGathering
-                                                            ? `采集中：${buildingName || gatherBuildingId}`
-                                                            : '待命'
+                                                        ? `采集中：${buildingName || gatherBuildingId}`
+                                                        : '待命'
                                                 }
                                             >
                                                 <div style={{ fontSize: 24 }}>

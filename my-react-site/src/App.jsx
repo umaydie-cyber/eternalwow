@@ -8001,7 +8001,9 @@ function mergeEquipments(eqA, eqB) {
     }
 
     const nextRingId = POST_RING_LV100_EVOLVE[eqA.id];
+    console.log(nextRingId);
     if (nextRingId && Math.max(levelA, levelB) >= 100) {
+        console.log(nextRingId);
         const evolved = createEquipmentInstance(nextRingId);
         return evolved || null;
     }

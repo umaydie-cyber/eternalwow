@@ -6613,7 +6613,7 @@ const SPACETIME_SHOP_ITEMS = [
         type: 'mount',
         name: '泰瑞尔的战马',
         icon: '🐎',
-        imageUrl: 'tairuier.png',
+        imageUrl: 'icons/wow/vanilla/rider/tairuier.png',
         price: 5000,
         currencyKey: 'spacetimeCoin',
         currencyIcon: '🌀',

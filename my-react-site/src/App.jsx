@@ -2459,7 +2459,9 @@ const DROP_TABLES = {
             { id: 'EQ_029', chance: 0.01 },
             { id: 'EQ_030', chance: 0.001 },
             { id: 'EQ_031', chance: 0.003 },
-            { id: 'EQ_032', chance: 0.003 }
+            { id: 'EQ_032', chance: 0.003 },
+            { id: 'EQ_003', chance: 0.005 },
+            { id: 'EQ_004', chance: 0.005 },
         ],
         items: [
             { id: 'IT_STV_001', chance: 0.005 },
@@ -2496,7 +2498,9 @@ const DROP_TABLES = {
             { id: 'EQ_045', chance: 0.003 }, // 0.3%
             { id: 'EQ_046', chance: 0.003 }, // 0.3%
             { id: 'EQ_047', chance: 0.003 }, // 0.3%
-            { id: 'EQ_048', chance: 0.01  }  // 1%
+            { id: 'EQ_048', chance: 0.01  },  // 1%
+            { id: 'EQ_003', chance: 0.01 },
+            { id: 'EQ_004', chance: 0.01 },
         ]
     },
     scarlet_monastery: {
@@ -2519,7 +2523,9 @@ const DROP_TABLES = {
     blackrock_depths: {
         equipment: [
             { id: 'EQ_062', chance: 0.003 }, // 0.3%
-            { id: 'EQ_063', chance: 0.003 }  // 0.3%
+            { id: 'EQ_063', chance: 0.003 },  // 0.3%
+            { id: 'EQ_003', chance: 0.01 },
+            { id: 'EQ_004', chance: 0.01 },
         ]
     },
     sunken_temple: {
@@ -2564,7 +2570,9 @@ const DROP_TABLES = {
             { id: 'EQ_087', chance: 0.001 },  // 上古骨弓
             { id: 'EQ_088', chance: 0.0008 }, // 院长之杖
             { id: 'EQ_089', chance: 0.0015 }, // 噬骨铁针
-            { id: 'EQ_094', chance: 0.0008 }  // 莫里西奥的统御指环
+            { id: 'EQ_094', chance: 0.0008 },  // 莫里西奥的统御指环
+            { id: 'EQ_003', chance: 0.02 },
+            { id: 'EQ_004', chance: 0.02 },
         ]
     },
     stratholme: {
@@ -2576,7 +2584,9 @@ const DROP_TABLES = {
             { id: 'EQ_096', chance: 0.0015 }, // 知识宝典
             { id: 'EQ_097', chance: 0.0015 }, // 秘术之星
             { id: 'EQ_098', chance: 0.001 },  // 黑爵士斗篷
-            { id: 'EQ_095', chance: 0.0005 }  // 瑞文戴尔之剑
+            { id: 'EQ_095', chance: 0.0005 },  // 瑞文戴尔之剑
+            { id: 'EQ_003', chance: 0.02 },
+            { id: 'EQ_004', chance: 0.02 },
         ]
     },
     upper_blackrock_spire: {
@@ -2590,7 +2600,9 @@ const DROP_TABLES = {
             { id: 'EQ_107', chance: 0.0015 }, // 龙人之盾
             { id: 'EQ_108', chance: 0.001 },  // 雷德之眼
             { id: 'EQ_103', chance: 0.0005 }, // 恶魔之击
-            { id: 'EQ_104', chance: 0.0005 }  // 雷德双刃
+            { id: 'EQ_104', chance: 0.0005 },  // 雷德双刃
+            { id: 'EQ_003', chance: 0.05 },
+            { id: 'EQ_004', chance: 0.05 },
         ]
     },
 
@@ -2605,7 +2617,9 @@ const DROP_TABLES = {
             { id: 'EQ_132', chance: 0.0008 }, // 血领主庇护者
             { id: 'EQ_133', chance: 0.0008 }, // 娅尔罗的意志
             { id: 'EQ_134', chance: 0.0008 }, // 金度的妖器
-            { id: 'EQ_131', chance: 0.0005 }  // 辛洛斯诸界的毁灭者
+            { id: 'EQ_131', chance: 0.0005 },  // 辛洛斯诸界的毁灭者
+            { id: 'EQ_003', chance: 0.1 },
+            { id: 'EQ_004', chance: 0.1 },
         ]
     },
 
@@ -2619,6 +2633,8 @@ const DROP_TABLES = {
             { id: 'EQ_141', chance: 0.0015 }, // 狂暴专注之爪（副手）
             { id: 'EQ_139', chance: 0.0008 }, // 沙尘护符（饰品2）
             { id: 'EQ_143', chance: 0.0005 }, // 废墟法杖（武器）
+            { id: 'EQ_003', chance: 0.2 },
+            { id: 'EQ_004', chance: 0.2 },
         ]
     },
 

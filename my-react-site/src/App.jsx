@@ -2630,6 +2630,11 @@ const DROP_TABLES = {
             { id: 'EQ_131', chance: 0.0005 },  // 辛洛斯诸界的毁灭者
             { id: 'EQ_125', chance: 0.001 },
             { id: 'EQ_128', chance: 0.001 },
+        ],
+        // ✅ 新增：祖尔格拉布坐骑（不进背包，只点亮坐骑图鉴）
+        mounts: [
+            { id: 'MOUNT_RAZZASHI_RAPTOR', chance: 0.0005 }, // 0.05%
+            { id: 'MOUNT_SWIFT_ZULIAN_TIGER', chance: 0.0005 }, // 0.05%
         ]
     },
 
@@ -6566,7 +6571,28 @@ const MOUNT_CODEX = [
         source: '击杀【瑞文戴尔男爵】',
         bossId: 'baron_rivendare',
         dropChance: 0.01, // 1%
-        bonus: { expBonus: 0.10 }, // 全局：10%经验加成
+        // ✅ 坐骑加成使用“乘算倍率”（与其它来源的加成乘算叠加）
+        bonus: { expMult: 1.10 }, // 全局：经验获取 x1.10
+    },
+    {
+        id: 'MOUNT_RAZZASHI_RAPTOR',
+        name: '拉扎什迅猛龙',
+        icon: '🦖',
+        imageUrl: 'icons/wow/vanilla/rider/lazashi_raptor.png',
+        source: '祖尔格拉布掉落',
+        zoneId: 'zul_gurub',
+        dropChance: 0.0005, // 0.05%
+        bonus: { goldMult: 1.10 }, // 金币掉落 x1.10
+    },
+    {
+        id: 'MOUNT_SWIFT_ZULIAN_TIGER',
+        name: '迅捷祖利安猛虎',
+        icon: '🐅',
+        imageUrl: 'icons/wow/vanilla/rider/swift_zulian_tiger.png',
+        source: '祖尔格拉布掉落',
+        zoneId: 'zul_gurub',
+        dropChance: 0.0005, // 0.05%
+        bonus: { resourceMult: 1.10 }, // 资源生产速度 x1.10
     },
 ];
 
@@ -6680,7 +6706,8 @@ function calculateBuildingProduction(building, workers, gameState) {
 
     // ✅ 成就：所有建筑产量加成（建设者系列等）
     const achResourceBonus = getAchievementResourceBonus(gameState);
-    return totalProduction * (1 + achResourceBonus);
+    const { resourceMult } = getMountMultipliers(gameState);
+    return totalProduction * (1 + achResourceBonus) * (resourceMult || 1);
 }
 
 const ITEMS = {
@@ -8136,14 +8163,25 @@ function formatBonusText(bonusObj) {
         resourceBonus: '所有建筑产量',
         mapDamageBonus: '地图战斗伤害',
         versatility: '全能',
+        expMult: '经验获取',
+        goldMult: '金币掉落',
+        resourceMult: '资源生产速度',
     };
 
     return entries.map(([k, v]) => {
         if (typeof v === 'number') {
+            // ✅ “乘算倍率”字段：显示为 +X%
+            if (k.endsWith('Mult')) {
+                const pct = Math.round((v - 1) * 100);
+                const sign = pct >= 0 ? '+' : '';
+                return `${nameMap[k] || k} ${sign}${pct}%`;
+            }
+
             // 明确按百分比展示的字段
             if (k.endsWith('Pct') || k === 'expBonus' || k === 'goldBonus' || k === 'dropBonus' || k === 'resourceBonus' || k === 'mapDamageBonus') {
                 return `${nameMap[k] || k} +${Math.round(v * 100)}%`;
             }
+
             return `${nameMap[k] || k} +${v}`;
         }
         return `${nameMap[k] || k} +${String(v)}`;
@@ -8248,13 +8286,37 @@ function getTotalGoldBonus(state) {
     return Math.max(0, ach + rebirth);
 }
 
+// ==================== 坐骑图鉴：乘算倍率 ====================
+// 规则：已点亮坐骑提供倍率加成，多个坐骑之间相互乘算。
+// 与原有“加法”的成就/轮回/训练等不冲突：最终 = base * (1 + additiveBonus) * mountMult
+function getMountMultipliers(state) {
+    const codexMounts = Array.isArray(state?.codexMounts) ? state.codexMounts : [];
+    const mountSet = new Set(codexMounts);
+
+    let expMult = 1;
+    let goldMult = 1;
+    let resourceMult = 1;
+
+    (Array.isArray(MOUNT_CODEX) ? MOUNT_CODEX : []).forEach(m => {
+        if (!m?.id) return;
+        if (!mountSet.has(m.id)) return;
+        const b = m.bonus || {};
+        if (typeof b.expMult === 'number' && b.expMult > 0) expMult *= b.expMult;
+        if (typeof b.goldMult === 'number' && b.goldMult > 0) goldMult *= b.goldMult;
+        if (typeof b.resourceMult === 'number' && b.resourceMult > 0) resourceMult *= b.resourceMult;
+    });
+
+    return { expMult, goldMult, resourceMult };
+}
+
 // 基础金币 baseGold，应用金币获取加成：effective = floor(baseGold * (1 + bonus))
 function getEffectiveGoldGain(baseGold, state) {
     const base = Number(baseGold) || 0;
     if (base <= 0) return 0;
     const bonus = getTotalGoldBonus(state);
-    if (!Number.isFinite(bonus) || bonus <= 0) return Math.floor(base);
-    return Math.floor(base * (1 + bonus));
+    const { goldMult } = getMountMultipliers(state);
+    const additive = (!Number.isFinite(bonus) || bonus <= 0) ? 1 : (1 + bonus);
+    return Math.floor(base * additive * (goldMult || 1));
 }
 
 
@@ -8549,6 +8611,8 @@ function calculateTotalStats(character, partyAuras = { hpMul: 1, spellPowerMul: 
             if (!mountSet.has(m.id)) return;
             const bonus = m.bonus || {};
             for (const [k, v] of Object.entries(bonus)) {
+                // ✅ 坐骑“乘算倍率”由 getMountMultipliers 统一处理，不写进面板加法统计
+                if (k.endsWith('Mult')) continue;
                 totalStats[k] = (totalStats[k] || 0) + (Number(v) || 0);
             }
         });
@@ -12703,6 +12767,7 @@ function calculateOfflineRewards(state, offlineSeconds) {
         gold: 0,
         exp: {},
         items: [],
+        mounts: [], // ✅ 离线期间解锁的坐骑（不进背包）
         kingdomResources: {},   // ✅ 新增：主城资源
         researchProgress: 0,
         combats: 0,
@@ -12729,7 +12794,8 @@ function calculateOfflineRewards(state, offlineSeconds) {
                 if (!rewards.exp[charId]) {
                     rewards.exp[charId] = 0;
                 }
-                rewards.exp[charId] += enemy.exp * (1 + (character.stats?.expBonus || 0));
+                const { expMult } = getMountMultipliers(state);
+                rewards.exp[charId] += enemy.exp * (1 + (character.stats?.expBonus || 0)) * (expMult || 1);
 
                 if (Math.random() < 0.1 && zone.resources) {
                     const resourceName = zone.resources[Math.floor(Math.random() * zone.resources.length)];
@@ -12748,6 +12814,20 @@ function calculateOfflineRewards(state, offlineSeconds) {
                         }
                     });
 
+                }
+
+                // ✅ 离线坐骑掉落：不进背包，只记录到 rewards.mounts，领取时点亮图鉴
+                if (dropTable?.mounts) {
+                    const already = new Set([...(Array.isArray(state.codexMounts) ? state.codexMounts : []), ...(rewards.mounts || [])]);
+                    (Array.isArray(dropTable.mounts) ? dropTable.mounts : []).forEach(drop => {
+                        const mountId = drop?.id;
+                        if (!mountId || already.has(mountId)) return;
+                        const baseChance = Number(drop.chance) || 0;
+                        if (baseChance > 0 && Math.random() < baseChance) {
+                            rewards.mounts.push(mountId);
+                            already.add(mountId);
+                        }
+                    });
                 }
             }
         }
@@ -14671,6 +14751,13 @@ function gameReducer(state, action) {
                 });
             }
 
+            // ✅ 离线期间解锁的坐骑：直接点亮坐骑图鉴（不进背包）
+            if (Array.isArray(rewards.mounts) && rewards.mounts.length > 0) {
+                rewards.mounts.forEach(mid => {
+                    newState = addMountIdToCodex(newState, mid);
+                });
+            }
+
             if (rewards.researchProgress > 0 && newState.currentResearch) {
                 newState.researchProgress = Math.min(
                     100,
@@ -14995,7 +15082,8 @@ function gameReducer(state, action) {
                     const building = BUILDINGS[buildingId];
                     Object.entries(building.production || {}).forEach(([resource, amount]) => {
                         const bonus = researchBonus[resource] || 0;
-                        const production = amount * count * (1 + bonus) * (1 + achResourceBonus);
+                        const { resourceMult } = getMountMultipliers(newState);
+                        const production = amount * count * (1 + bonus) * (1 + achResourceBonus) * (resourceMult || 1);
                         newResources[resource] = (newResources[resource] || 0) + production;
                     });
                     Object.entries(building.consumption || {}).forEach(([resource, amount]) => {
@@ -15198,8 +15286,9 @@ function gameReducer(state, action) {
                             // 胜利结算
                             newState.resources.gold += getEffectiveGoldGain(enemy.gold, newState);
 
+                            const { expMult } = getMountMultipliers(newState);
                             let expGained = (1 + (char.stats.expBonus || 0));
-                            char.exp += enemy.exp * expGained;
+                            char.exp += enemy.exp * expGained * (expMult || 1);
 
                             while (char.exp >= char.expToNext && char.level < 200) {
                                 char.exp -= char.expToNext;
@@ -15297,6 +15386,33 @@ function gameReducer(state, action) {
                                                 baseChance: baseChance * 100   // 转换为百分比（基础）
                                             });
                                         }
+                                    }
+                                });
+                            }
+
+                            // ✅ 坐骑掉落（不进背包，只点亮坐骑图鉴）
+                            if (dropTable?.mounts) {
+                                const mountSet = new Set(Array.isArray(newState.codexMounts) ? newState.codexMounts : []);
+                                (Array.isArray(dropTable.mounts) ? dropTable.mounts : []).forEach(drop => {
+                                    const mountId = drop?.id;
+                                    if (!mountId) return;
+                                    // 已点亮则不再Roll，避免刷屏
+                                    if (mountSet.has(mountId)) return;
+
+                                    const baseChance = Number(drop.chance) || 0;
+                                    if (baseChance <= 0) return;
+                                    if (Math.random() < baseChance) {
+                                        newState = addMountIdToCodex(newState, mountId);
+                                        const mount = (Array.isArray(MOUNT_CODEX) ? MOUNT_CODEX : []).find(m => m?.id === mountId);
+                                        const bonusText = mount?.bonus ? formatBonusText(mount.bonus) : '';
+                                        finalLogs.push({
+                                            round: '结算',
+                                            kind: 'mount',
+                                            itemName: mount?.name || mountId,
+                                            rarity: 'gold',
+                                            chance: baseChance * 100,
+                                            text: `🎉 获得坐骑【${mount?.name || mountId}】！已点亮坐骑图鉴${bonusText ? `（${bonusText}）` : ''}`
+                                        });
                                     }
                                 });
                             }
@@ -18683,6 +18799,20 @@ const OfflineRewardsModal = ({ rewards, actualSeconds, maxSeconds, onClaim, onDi
                                 +{rewards.items.length}
                             </div>
                         </div>
+
+                        {Array.isArray(rewards.mounts) && (
+                            <div style={{
+                                background: 'rgba(201,162,39,0.1)',
+                                padding: 12,
+                                borderRadius: 6,
+                                border: '1px solid rgba(201,162,39,0.3)'
+                            }}>
+                                <div style={{ fontSize: 11, color: '#888', marginBottom: 4 }}>坐骑</div>
+                                <div style={{ fontSize: 20, color: '#ffd700', fontWeight: 600 }}>
+                                    +{rewards.mounts.length}
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                     {rewards.researchProgress > 0 && (

@@ -6575,6 +6575,15 @@ const MOUNT_CODEX = [
         bonus: { expMult: 1.10 }, // 全局：经验获取 x1.10
     },
     {
+        id: 'MOUNT_TYRAELS_CHARGER',
+        name: '泰瑞尔的战马',
+        icon: '🐎',
+        imageUrl: 'tairuier.png',
+        source: '时空商城',
+        // 商城坐骑：购买后直接点亮图鉴（不进背包），无掉落率
+        bonus: { goldMult: 1.20 }, // 全局：金币掉落 x1.20
+    },
+    {
         id: 'MOUNT_RAZZASHI_RAPTOR',
         name: '拉扎什迅猛龙',
         icon: '🦖',
@@ -6593,6 +6602,26 @@ const MOUNT_CODEX = [
         zoneId: 'zul_gurub',
         dropChance: 0.0005, // 0.05%
         bonus: { resourceMult: 1.10 }, // 资源生产速度 x1.10
+    },
+];
+
+// ==================== 时空商城（使用时空币） ====================
+// 说明：商城物品通常不会进入背包；例如“坐骑”会直接点亮图鉴，并提供全局加成。
+const SPACETIME_SHOP_ITEMS = [
+    {
+        id: 'SHOP_MOUNT_TYRAELS_CHARGER',
+        type: 'mount',
+        name: '泰瑞尔的战马',
+        icon: '🐎',
+        imageUrl: 'tairuier.png',
+        price: 5000,
+        currencyKey: 'spacetimeCoin',
+        currencyIcon: '🌀',
+        mountId: 'MOUNT_TYRAELS_CHARGER',
+        bonus: { goldMult: 1.20 }, // 全局：金币掉落 +20%
+        description: '圣光穿越时空而来。购买后将直接点亮【坐骑图鉴】，并永久获得金币掉落加成。',
+        flavor: '“即便世界破碎，圣光亦将照耀前路。”',
+        rarity: 'legendary'
     },
 ];
 
@@ -16381,6 +16410,47 @@ function gameReducer(state, action) {
             };
         }
 
+
+        case 'BUY_SPACETIME_SHOP_ITEM': {
+            const { shopItemId } = action.payload || {};
+            if (!shopItemId) return state;
+
+            const catalog = Array.isArray(SPACETIME_SHOP_ITEMS) ? SPACETIME_SHOP_ITEMS : [];
+            const item = catalog.find(i => i?.id === shopItemId);
+            if (!item) return state;
+
+            const price = Math.max(0, Math.floor(Number(item.price) || 0));
+            if (price <= 0) return state;
+
+            const curCoin = Math.max(0, Math.floor(Number(state.resources?.spacetimeCoin) || 0));
+            if (curCoin < price) return state;
+
+            // ✅ 坐骑：直接点亮图鉴（不进背包）
+            if (item.type === 'mount' && item.mountId) {
+                const cur = Array.isArray(state.codexMounts) ? state.codexMounts : [];
+                if (cur.includes(item.mountId)) return state;
+
+                let newState = {
+                    ...state,
+                    resources: {
+                        ...(state.resources || {}),
+                        spacetimeCoin: curCoin - price,
+                    }
+                };
+
+                newState = addMountIdToCodex(newState, item.mountId);
+
+                // ✅ 立即重算全队属性，让全局加成立刻生效（保持与掉落坐骑一致）
+                if (newState?.characters) {
+                    newState = { ...newState, characters: recalcPartyStats(newState, newState.characters) };
+                }
+
+                return newState;
+            }
+
+            return state;
+        }
+
         case 'IMPORT_SAVE': {
             try {
                 const decoded = JSON.parse(decodeBase64(action.payload));
@@ -18902,6 +18972,557 @@ const SpacetimeCoinRewardModal = ({ amount = 1000, total, onClose }) => {
         </div>
     );
 };
+
+
+// 时空商城（使用时空币）
+const SpacetimeShopModal = ({ state, dispatch, onClose }) => {
+    const [toast, setToast] = useState(null);
+    const [brokenImages, setBrokenImages] = useState({});
+
+    const items = Array.isArray(SPACETIME_SHOP_ITEMS) ? SPACETIME_SHOP_ITEMS : [];
+    const coin = Math.max(0, Math.floor(Number(state?.resources?.spacetimeCoin) || 0));
+
+    const codexMounts = Array.isArray(state?.codexMounts) ? state.codexMounts : [];
+    const mountSet = new Set(codexMounts);
+
+    const isOwned = (item) => {
+        if (!item) return false;
+        if (item.type === 'mount' && item.mountId) return mountSet.has(item.mountId);
+        return false;
+    };
+
+    useEffect(() => {
+        if (!toast) return;
+        const t = setTimeout(() => setToast(null), 2200);
+        return () => clearTimeout(t);
+    }, [toast]);
+
+    const onBuy = (item) => {
+        if (!item?.id) return;
+
+        if (isOwned(item)) {
+            setToast({ type: 'info', text: '你已经拥有该物品（图鉴已点亮）。' });
+            return;
+        }
+
+        const price = Math.max(0, Math.floor(Number(item.price) || 0));
+        if (coin < price) {
+            setToast({ type: 'error', text: '时空币不足。' });
+            return;
+        }
+
+        dispatch({ type: 'BUY_SPACETIME_SHOP_ITEM', payload: { shopItemId: item.id } });
+
+        const bonusText = item.bonus ? formatBonusText(item.bonus) : '';
+        setToast({ type: 'success', text: `购买成功！【${item.name}】已点亮（${bonusText || '已生效'}）` });
+    };
+
+    const rarityMeta = (rarity) => {
+        if (rarity === 'legendary') return { name: '传说', color: '#ffd700' };
+        if (rarity === 'epic') return { name: '史诗', color: '#b06cff' };
+        if (rarity === 'rare') return { name: '精良', color: '#4aa3ff' };
+        return { name: '普通', color: '#d9d9d9' };
+    };
+
+    return (
+        <div
+            style={{
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                background: 'radial-gradient(circle at 30% 18%, rgba(123,220,255,0.20) 0%, rgba(40,12,60,0.20) 26%, rgba(0,0,0,0.92) 58%, rgba(0,0,0,0.96) 100%)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 1200,
+                padding: 20
+            }}
+            onMouseDown={(e) => {
+                // 点击遮罩关闭
+                if (e.target === e.currentTarget) onClose?.();
+            }}
+        >
+            <style>{`
+                @keyframes stShopSpin { 
+                    from { transform: rotate(0deg); } 
+                    to { transform: rotate(360deg); } 
+                }
+                @keyframes stShopFloat {
+                    0% { transform: translateY(0px); opacity: 0.75; }
+                    50% { transform: translateY(-8px); opacity: 1; }
+                    100% { transform: translateY(0px); opacity: 0.75; }
+                }
+                @keyframes stShopShimmer {
+                    0% { background-position: 0% 50%; }
+                    50% { background-position: 100% 50%; }
+                    100% { background-position: 0% 50%; }
+                }
+            `}</style>
+
+            <div style={{
+                position: 'relative',
+                width: 'min(980px, 96vw)',
+                maxHeight: '90vh',
+                borderRadius: 16,
+                overflow: 'hidden',
+                border: '2px solid rgba(123,220,255,0.40)',
+                boxShadow: '0 22px 80px rgba(0,0,0,0.75), 0 0 60px rgba(123,220,255,0.18)',
+                background: 'linear-gradient(135deg, rgba(18,10,28,0.98) 0%, rgba(10,14,22,0.98) 45%, rgba(12,8,18,0.99) 100%)',
+                backdropFilter: 'blur(8px)',
+            }}>
+                {/* 背景装饰：星云/符文 */}
+                <div style={{
+                    position: 'absolute',
+                    inset: 0,
+                    backgroundImage: `
+                        radial-gradient(circle at 18% 22%, rgba(255,215,0,0.12) 0%, transparent 35%),
+                        radial-gradient(circle at 82% 18%, rgba(123,220,255,0.18) 0%, transparent 40%),
+                        radial-gradient(circle at 50% 80%, rgba(176,108,255,0.12) 0%, transparent 45%),
+                        repeating-linear-gradient(135deg, rgba(255,255,255,0.03) 0px, rgba(255,255,255,0.03) 1px, transparent 1px, transparent 10px)
+                    `,
+                    opacity: 0.55,
+                    pointerEvents: 'none'
+                }} />
+
+                {/* 旋转星门 */}
+                <div style={{
+                    position: 'absolute',
+                    top: -140,
+                    right: -140,
+                    width: 360,
+                    height: 360,
+                    borderRadius: '50%',
+                    background: 'conic-gradient(from 90deg, rgba(123,220,255,0.0), rgba(123,220,255,0.35), rgba(255,215,0,0.12), rgba(176,108,255,0.18), rgba(123,220,255,0.0))',
+                    filter: 'blur(1px)',
+                    opacity: 0.65,
+                    animation: 'stShopSpin 18s linear infinite',
+                    pointerEvents: 'none'
+                }} />
+                <div style={{
+                    position: 'absolute',
+                    bottom: -180,
+                    left: -180,
+                    width: 420,
+                    height: 420,
+                    borderRadius: '50%',
+                    background: 'conic-gradient(from 180deg, rgba(255,215,0,0.0), rgba(255,215,0,0.18), rgba(123,220,255,0.18), rgba(255,215,0,0.0))',
+                    filter: 'blur(2px)',
+                    opacity: 0.55,
+                    animation: 'stShopSpin 26s linear infinite reverse',
+                    pointerEvents: 'none'
+                }} />
+
+                {/* 顶部栏 */}
+                <div style={{
+                    position: 'relative',
+                    padding: '18px 18px 12px 18px',
+                    borderBottom: '1px solid rgba(123,220,255,0.18)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: 12
+                }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                        <div style={{
+                            width: 46,
+                            height: 46,
+                            borderRadius: '50%',
+                            position: 'relative',
+                            overflow: 'hidden',
+                            border: '1px solid rgba(123,220,255,0.45)',
+                            boxShadow: '0 0 18px rgba(123,220,255,0.20), inset 0 1px 0 rgba(255,255,255,0.10)',
+                            background: 'radial-gradient(circle at 30% 30%, rgba(255,255,255,0.20), rgba(123,220,255,0.12) 45%, rgba(0,0,0,0) 72%)'
+                        }}>
+                            <div style={{
+                                position: 'absolute',
+                                inset: -18,
+                                background: 'conic-gradient(from 90deg, rgba(123,220,255,0.0), rgba(123,220,255,0.35), rgba(255,215,0,0.12), rgba(123,220,255,0.0))',
+                                animation: 'stShopSpin 4s linear infinite'
+                            }} />
+                            <div style={{
+                                position: 'absolute',
+                                inset: 5,
+                                borderRadius: '50%',
+                                background: 'radial-gradient(circle at 35% 35%, rgba(255,255,255,0.18), rgba(123,220,255,0.06) 55%, rgba(0,0,0,0) 72%)'
+                            }} />
+                        </div>
+
+                        <div>
+                            <div style={{
+                                fontSize: 20,
+                                fontWeight: 900,
+                                letterSpacing: 1,
+                                lineHeight: 1,
+                                backgroundImage: 'linear-gradient(90deg, #b9f3ff, #ffd700, #b06cff, #b9f3ff)',
+                                backgroundSize: '200% 200%',
+                                animation: 'stShopShimmer 6s ease infinite',
+                                WebkitBackgroundClip: 'text',
+                                color: 'transparent',
+                                filter: 'drop-shadow(0 0 12px rgba(123,220,255,0.22))'
+                            }}>
+                                🌀 时空商城
+                            </div>
+                            <div style={{ marginTop: 4, fontSize: 12, color: '#9ad7e8' }}>
+                                用时空币换取跨世珍藏 · 购买后永久生效
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <div style={{ textAlign: 'right' }}>
+                            <div style={{ fontSize: 10, color: '#88b7c8' }}>当前时空币</div>
+                            <div style={{
+                                fontSize: 18,
+                                fontWeight: 900,
+                                color: '#ffffff',
+                                textShadow: '0 0 12px rgba(123,220,255,0.25)'
+                            }}>
+                                🌀 {coin.toLocaleString()}
+                            </div>
+                        </div>
+
+                        <button
+                            onClick={onClose}
+                            title="关闭"
+                            style={{
+                                width: 38,
+                                height: 38,
+                                borderRadius: 12,
+                                border: '1px solid rgba(255,255,255,0.14)',
+                                background: 'rgba(0,0,0,0.35)',
+                                color: '#fff',
+                                cursor: 'pointer',
+                                fontWeight: 900,
+                                boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.08)'
+                            }}
+                        >
+                            ✕
+                        </button>
+                    </div>
+                </div>
+
+                {/* 内容 */}
+                <div style={{
+                    position: 'relative',
+                    padding: 18,
+                    maxHeight: 'calc(90vh - 84px)',
+                    overflow: 'auto'
+                }}>
+                    <div style={{
+                        display: 'grid',
+                        gap: 14
+                    }}>
+                        {items.map((item) => {
+                            const owned = isOwned(item);
+                            const price = Math.max(0, Math.floor(Number(item.price) || 0));
+                            const canAfford = coin >= price;
+                            const bonusText = item.bonus ? formatBonusText(item.bonus) : '';
+                            const rarity = rarityMeta(item.rarity);
+                            const imgBroken = !!brokenImages?.[item.id];
+
+                            return (
+                                <div
+                                    key={item.id}
+                                    style={{
+                                        position: 'relative',
+                                        borderRadius: 14,
+                                        overflow: 'hidden',
+                                        border: owned
+                                            ? '2px solid rgba(76,175,80,0.45)'
+                                            : (item.rarity === 'legendary'
+                                                ? '2px solid rgba(255,215,0,0.55)'
+                                                : '1px solid rgba(123,220,255,0.22)'),
+                                        background: owned
+                                            ? 'linear-gradient(135deg, rgba(20,35,22,0.55) 0%, rgba(10,16,12,0.55) 100%)'
+                                            : 'linear-gradient(135deg, rgba(123,220,255,0.12) 0%, rgba(0,0,0,0.20) 38%, rgba(255,215,0,0.06) 100%)',
+                                        boxShadow: owned
+                                            ? '0 0 18px rgba(76,175,80,0.12)'
+                                            : '0 0 22px rgba(123,220,255,0.10)',
+                                    }}
+                                >
+                                    {/* 顶部飘带 */}
+                                    <div style={{
+                                        position: 'absolute',
+                                        top: 12,
+                                        left: -42,
+                                        transform: 'rotate(-12deg)',
+                                        padding: '6px 54px',
+                                        fontSize: 11,
+                                        fontWeight: 900,
+                                        letterSpacing: 1,
+                                        color: '#111',
+                                        background: owned
+                                            ? 'linear-gradient(90deg, rgba(76,175,80,0.95), rgba(120,220,120,0.75))'
+                                            : 'linear-gradient(90deg, rgba(255,215,0,0.95), rgba(123,220,255,0.75))',
+                                        boxShadow: '0 10px 24px rgba(0,0,0,0.35)',
+                                        opacity: 0.95
+                                    }}>
+                                        {owned ? '已拥有' : `${rarity.name} · 限定`}
+                                    </div>
+
+                                    <div style={{
+                                        display: 'grid',
+                                        gridTemplateColumns: '240px 1fr',
+                                        gap: 14,
+                                        padding: 14
+                                    }}>
+                                        {/* 左侧：展示图 */}
+                                        <div style={{
+                                            position: 'relative',
+                                            height: 160,
+                                            borderRadius: 12,
+                                            overflow: 'hidden',
+                                            border: '1px solid rgba(255,255,255,0.10)',
+                                            background: 'rgba(0,0,0,0.30)',
+                                            boxShadow: 'inset 0 0 0 1px rgba(0,0,0,0.35)'
+                                        }}>
+                                            {/* 发光边 */}
+                                            <div style={{
+                                                position: 'absolute',
+                                                inset: -40,
+                                                background: owned
+                                                    ? 'radial-gradient(circle at 30% 30%, rgba(76,175,80,0.18), transparent 55%)'
+                                                    : 'radial-gradient(circle at 30% 30%, rgba(255,215,0,0.18), transparent 55%)',
+                                                animation: 'stShopFloat 4.8s ease-in-out infinite',
+                                                pointerEvents: 'none'
+                                            }} />
+                                            {item.imageUrl && !imgBroken ? (
+                                                <img
+                                                    src={item.imageUrl}
+                                                    alt={item.name}
+                                                    style={{
+                                                        width: '100%',
+                                                        height: '100%',
+                                                        objectFit: 'cover',
+                                                        filter: owned ? 'none' : 'saturate(1.05) contrast(1.05)',
+                                                    }}
+                                                    onError={() => {
+                                                        // 图片缺失时降级为 icon
+                                                        setBrokenImages(prev => ({ ...(prev || {}), [item.id]: true }));
+                                                    }}
+                                                />
+                                            ) : null}
+                                            <div style={{
+                                                position: 'absolute',
+                                                inset: 0,
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                pointerEvents: 'none'
+                                            }}>
+                                                <div style={{
+                                                    fontSize: 44,
+                                                    opacity: (item.imageUrl && !imgBroken) ? 0 : 0.9,
+                                                    filter: owned ? 'none' : 'drop-shadow(0 0 14px rgba(255,215,0,0.18))'
+                                                }}>
+                                                    {item.icon || '✨'}
+                                                </div>
+                                            </div>
+
+                                            <div style={{
+                                                position: 'absolute',
+                                                left: 0,
+                                                right: 0,
+                                                bottom: 0,
+                                                padding: '8px 10px',
+                                                background: 'linear-gradient(0deg, rgba(0,0,0,0.85), transparent)',
+                                                display: 'flex',
+                                                justifyContent: 'space-between',
+                                                alignItems: 'baseline'
+                                            }}>
+                                                <div style={{ fontSize: 12, fontWeight: 900, color: '#fff' }}>
+                                                    {item.name}
+                                                </div>
+                                                <div style={{ fontSize: 11, fontWeight: 900, color: rarity.color }}>
+                                                    {rarity.name}
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* 右侧：信息 */}
+                                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                            <div style={{
+                                                display: 'flex',
+                                                alignItems: 'baseline',
+                                                justifyContent: 'space-between',
+                                                gap: 10
+                                            }}>
+                                                <div style={{ fontSize: 16, fontWeight: 900, color: '#ffd700' }}>
+                                                    {item.name}
+                                                </div>
+
+                                                <div style={{
+                                                    fontSize: 11,
+                                                    color: owned ? 'rgba(120,220,120,0.95)' : '#b9f3ff',
+                                                    fontWeight: 900,
+                                                    padding: '4px 10px',
+                                                    borderRadius: 999,
+                                                    border: owned
+                                                        ? '1px solid rgba(120,220,120,0.25)'
+                                                        : '1px solid rgba(123,220,255,0.22)',
+                                                    background: owned
+                                                        ? 'rgba(76,175,80,0.10)'
+                                                        : 'rgba(123,220,255,0.08)',
+                                                }}>
+                                                    {owned ? '永久生效' : '跨世永久'}
+                                                </div>
+                                            </div>
+
+                                            <div style={{
+                                                marginTop: 8,
+                                                fontSize: 12,
+                                                color: '#d7e8ee',
+                                                lineHeight: 1.6,
+                                                background: 'rgba(0,0,0,0.22)',
+                                                border: '1px solid rgba(255,255,255,0.06)',
+                                                borderRadius: 10,
+                                                padding: 10
+                                            }}>
+                                                {item.description || '一件穿越时空的神秘收藏。'}
+                                                {item.flavor && (
+                                                    <div style={{ marginTop: 8, fontSize: 11, color: '#9ad7e8', fontStyle: 'italic' }}>
+                                                        {item.flavor}
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            <div style={{
+                                                marginTop: 10,
+                                                display: 'grid',
+                                                gridTemplateColumns: '1fr 1fr',
+                                                gap: 10
+                                            }}>
+                                                <div style={{
+                                                    padding: 10,
+                                                    borderRadius: 10,
+                                                    border: '1px solid rgba(255,255,255,0.08)',
+                                                    background: 'rgba(0,0,0,0.22)'
+                                                }}>
+                                                    <div style={{ fontSize: 10, color: '#88b7c8', marginBottom: 4 }}>效果</div>
+                                                    <div style={{
+                                                        fontSize: 12,
+                                                        fontWeight: 900,
+                                                        color: owned ? 'rgba(120,220,120,0.95)' : '#ffd700'
+                                                    }}>
+                                                        {bonusText || '—'}
+                                                    </div>
+                                                </div>
+
+                                                <div style={{
+                                                    padding: 10,
+                                                    borderRadius: 10,
+                                                    border: '1px solid rgba(255,255,255,0.08)',
+                                                    background: 'rgba(0,0,0,0.22)'
+                                                }}>
+                                                    <div style={{ fontSize: 10, color: '#88b7c8', marginBottom: 4 }}>获取</div>
+                                                    <div style={{ fontSize: 12, fontWeight: 900, color: '#fff' }}>
+                                                        {item.type === 'mount' ? '点亮坐骑图鉴' : '直接获取'}
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div style={{
+                                                marginTop: 'auto',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'space-between',
+                                                gap: 10,
+                                                paddingTop: 12
+                                            }}>
+                                                <div>
+                                                    <div style={{ fontSize: 10, color: '#88b7c8' }}>价格</div>
+                                                    <div style={{
+                                                        fontSize: 18,
+                                                        fontWeight: 900,
+                                                        color: canAfford ? '#ffffff' : '#ffb1b1',
+                                                        textShadow: '0 0 12px rgba(123,220,255,0.18)'
+                                                    }}>
+                                                        🌀 {price.toLocaleString()}
+                                                    </div>
+                                                </div>
+
+                                                <Button
+                                                    onClick={() => onBuy(item)}
+                                                    disabled={owned || !canAfford}
+                                                    style={{
+                                                        minWidth: 170,
+                                                        padding: '10px 14px',
+                                                        borderRadius: 12,
+                                                        fontSize: 13,
+                                                        fontWeight: 900,
+                                                        background: owned
+                                                            ? 'linear-gradient(180deg, rgba(60,60,60,0.45), rgba(30,30,30,0.45))'
+                                                            : (canAfford
+                                                                ? 'linear-gradient(180deg, rgba(255,215,0,0.90), rgba(123,220,255,0.35))'
+                                                                : 'linear-gradient(180deg, rgba(180,80,80,0.55), rgba(120,30,30,0.55))'),
+                                                        border: owned
+                                                            ? '1px solid rgba(255,255,255,0.10)'
+                                                            : (canAfford
+                                                                ? '1px solid rgba(255,215,0,0.60)'
+                                                                : '1px solid rgba(255,120,120,0.35)'),
+                                                        color: owned ? '#aaa' : '#111',
+                                                        boxShadow: owned
+                                                            ? 'none'
+                                                            : (canAfford
+                                                                ? '0 0 22px rgba(255,215,0,0.15), 0 0 22px rgba(123,220,255,0.12)'
+                                                                : 'none'),
+                                                        textShadow: owned ? 'none' : '0 1px 0 rgba(255,255,255,0.25)'
+                                                    }}
+                                                >
+                                                    {owned ? '✓ 已拥有' : (canAfford ? '✨ 购买' : '⛔ 时空币不足')}
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })}
+
+                        {items.length === 0 && (
+                            <div style={{ color: '#888', textAlign: 'center', padding: 20 }}>
+                                时空裂隙正在重连…稍后再来看看。
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* Toast */}
+                {toast && (
+                    <div style={{
+                        position: 'absolute',
+                        left: '50%',
+                        bottom: 16,
+                        transform: 'translateX(-50%)',
+                        padding: '10px 14px',
+                        borderRadius: 999,
+                        background: toast.type === 'success'
+                            ? 'rgba(76,175,80,0.18)'
+                            : (toast.type === 'error'
+                                ? 'rgba(220,80,80,0.18)'
+                                : 'rgba(255,255,255,0.08)'),
+                        border: toast.type === 'success'
+                            ? '1px solid rgba(76,175,80,0.35)'
+                            : (toast.type === 'error'
+                                ? '1px solid rgba(220,80,80,0.35)'
+                                : '1px solid rgba(123,220,255,0.22)'),
+                        color: '#fff',
+                        fontSize: 12,
+                        fontWeight: 800,
+                        boxShadow: '0 10px 30px rgba(0,0,0,0.35)',
+                        backdropFilter: 'blur(6px)',
+                        textShadow: '0 1px 2px rgba(0,0,0,0.6)'
+                    }}>
+                        {toast.text}
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+};
+
+
 
 // ==================== PAGE: MAP (with Drag & Drop) ====================
 const TalentPage = ({ state, dispatch }) => {
@@ -21943,7 +22564,7 @@ const CodexPage = ({ state, dispatch }) => {
             {tab === 'mounts' && (
                 <>
                     <div style={{ fontSize: 12, color: '#888', marginBottom: 12 }}>
-                        ✅ 点亮：击杀世界首领有概率获得坐骑
+                        ✅ 点亮：击杀世界首领有概率获得坐骑，或在时空商城购买
                     </div>
 
                     <div style={{
@@ -26997,6 +27618,7 @@ export default function WoWIdleGame() {
     const [importData, setImportData] = useState('');
     const [showRebirthBonus, setShowRebirthBonus] = useState(false);
     const [spacetimeRewardInfo, setSpacetimeRewardInfo] = useState(null);
+    const [showSpacetimeShop, setShowSpacetimeShop] = useState(false);
     const intervalRef = useRef(null);
     const saveIntervalRef = useRef(null);
     const spacetimeRewardDayKeyRef = useRef('');
@@ -27472,6 +28094,14 @@ export default function WoWIdleGame() {
                 />
             )}
 
+            {showSpacetimeShop && (
+                <SpacetimeShopModal
+                    state={state}
+                    dispatch={dispatch}
+                    onClose={() => setShowSpacetimeShop(false)}
+                />
+            )}
+
             {/* ===== 添加两个Boss模态 ===== */}
             {state.prepareBoss && <BossPrepareModal state={state} dispatch={dispatch} />}
             {state.bossCombat && <BossCombatModal combat={state.bossCombat} state={state} />}
@@ -27519,6 +28149,22 @@ export default function WoWIdleGame() {
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                         <span style={{ fontSize: 12, color: '#888' }}>🪙 {Math.floor(state.resources.gold)}</span>
                         <span style={{ fontSize: 12, color: '#888' }}>🌀 {Math.floor(state.resources.spacetimeCoin || 0)}</span>
+                        <Button
+                            onClick={() => setShowSpacetimeShop(true)}
+                            variant="secondary"
+                            style={{
+                                padding: '4px 10px',
+                                fontSize: 11,
+                                borderRadius: 999,
+                                background: 'linear-gradient(180deg, rgba(123,220,255,0.22), rgba(60,120,180,0.12))',
+                                border: '1px solid rgba(123,220,255,0.55)',
+                                color: '#b9f3ff',
+                                boxShadow: '0 0 14px rgba(123,220,255,0.18), inset 0 1px 0 rgba(255,255,255,0.08)',
+                                textShadow: '0 0 10px rgba(123,220,255,0.35)',
+                            }}
+                        >
+                            🌀 时空商城
+                        </Button>
                     </div>
 
                     <Button onClick={() => setShowRebirthBonus(true)} variant="secondary" style={{ padding: '6px 10px', fontSize: 11 }}>

@@ -2618,8 +2618,8 @@ const DROP_TABLES = {
             { id: 'EQ_133', chance: 0.0008 }, // 娅尔罗的意志
             { id: 'EQ_134', chance: 0.0008 }, // 金度的妖器
             { id: 'EQ_131', chance: 0.0005 },  // 辛洛斯诸界的毁灭者
-            { id: 'EQ_003', chance: 0.1 },
-            { id: 'EQ_004', chance: 0.1 },
+            { id: 'EQ_125', chance: 0.001 },
+            { id: 'EQ_128', chance: 0.001 },
         ]
     },
 
@@ -2633,8 +2633,8 @@ const DROP_TABLES = {
             { id: 'EQ_141', chance: 0.0015 }, // 狂暴专注之爪（副手）
             { id: 'EQ_139', chance: 0.0008 }, // 沙尘护符（饰品2）
             { id: 'EQ_143', chance: 0.0005 }, // 废墟法杖（武器）
-            { id: 'EQ_003', chance: 0.2 },
-            { id: 'EQ_004', chance: 0.2 },
+            { id: 'EQ_125', chance: 0.001 },
+            { id: 'EQ_128', chance: 0.001 },
         ]
     },
 

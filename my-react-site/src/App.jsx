@@ -6578,7 +6578,7 @@ const MOUNT_CODEX = [
         id: 'MOUNT_TYRAELS_CHARGER',
         name: '泰瑞尔的战马',
         icon: '🐎',
-        imageUrl: 'tairuier.png',
+        imageUrl: 'icons/wow/vanilla/rider/tairuier.png',
         source: '时空商城',
         // 商城坐骑：购买后直接点亮图鉴（不进背包），无掉落率
         bonus: { goldMult: 1.20 }, // 全局：金币掉落 x1.20

@@ -7520,6 +7520,19 @@ const WORLD_BOSSES = {
         unlockLevel: 60
     },
 
+    // ✅ 新增：60级世界首领 - 无疤者奥斯里安（安其拉）
+    // 说明：本体防御极高（需要击杀【汲能水晶】触发短暂“破甲窗口”）
+    ossirian: {
+        id: 'ossirian',
+        name: '无疤者奥斯里安',
+        icon: 'icons/wow/vanilla/boss/ossirian.png', // 需要添加对应图标
+        hp: 12000000,
+        attack: 8500,
+        defense: 800000,
+        rewards: { gold: 1800000, exp: 1100000 },
+        unlockLevel: 60
+    },
+
 };
 
 // 装备槽位定义
@@ -7938,6 +7951,55 @@ const BOSS_DATA = {
             exp: 900000,
             items: [
                 { id: 'IT_HAKKAR_BADGE', chance: 0.8 }
+            ]
+        }
+    },
+
+    // ✅ 新增：60级世界首领 - 无疤者奥斯里安（安其拉）
+    ossirian: {
+        id: 'ossirian',
+        name: '无疤者奥斯里安',
+        maxHp: 12000000,
+        attack: 8500,
+        defense: 800000,
+
+        // 被动：每4回合生成汲能水晶（上限1）
+        energyCrystalEvery: 4,
+        defenseDownDefense: 8000,
+        defenseDownDuration: 4,
+
+        // 技能循环：奥斯里安之力 → 践踏 → 堕落之血 → 结舌诅咒 → 包围之风
+        cycle: ['ossirian_strength', 'trample', 'corrupted_blood', 'tongue_curse', 'surrounding_winds'],
+
+        // 技能1：奥斯里安之力（10×攻击，物理）
+        ossirianStrengthMultiplier: 10,
+
+        // 技能2：践踏（3×攻击，自然；分散站位额外击飞1回合）
+        trampleMultiplier: 3,
+        knockupDuration: 1,
+
+        // 技能3：堕落之血（沿用哈卡同款 DOT：0.5×攻击/层/回合，暗影）
+        corruptedBloodDotMultiplier: 0.5,
+
+        // 技能4：结舌诅咒（急速/暴击归零，持续3回合）
+        tongueCurseDuration: 3,
+
+        // 技能5：包围之风（3×攻击，自然；集中站位改为全体）
+        surroundingWindsMultiplier: 3,
+
+        // 汲能水晶（不攻击）
+        minion: {
+            name: '汲能水晶',
+            maxHp: 1000000,
+            attack: 0,
+            defense: 4000
+        },
+
+        rewards: {
+            gold: 1800000,
+            exp: 1100000,
+            items: [
+                { id: 'IT_OSSIRIAN_BADGE', chance: 0.8 }
             ]
         }
     }
@@ -8963,8 +9025,11 @@ function stepBossCombat(state) {
     combat.logs = combat.logs || [];
     let logs = [...combat.logs];
 
-    const boss = BOSS_DATA[combat.bossId];
-    if (!boss) return state;
+    const bossBase = BOSS_DATA[combat.bossId];
+    if (!bossBase) return state;
+
+    // 本回合开始时的"防御覆盖"持续时间，用于回合末递减（避免刚触发就被扣1回合）
+    const bossDefenseOverrideRemainingStart = Number(combat.bossDefenseOverrideRemaining || 0);
 
     combat.round += 1;
     // ✅ 添加辅助函数，创建带回合数的日志对象
@@ -8972,6 +9037,14 @@ function stepBossCombat(state) {
     const addLog = (text, type = 'normal') => {
         logs.push({ round: currentRound, text, type });
     };
+
+    // 以战斗内状态为准，计算本回合有效Boss数据（避免直接修改 BOSS_DATA 全局对象）
+    let boss = { ...bossBase };
+
+    // 防御覆盖：例如无疤者奥斯里安的“破甲窗口”
+    if (Number.isFinite(combat.bossDefenseOverride) && (combat.bossDefenseOverrideRemaining || 0) > 0) {
+        boss.defense = combat.bossDefenseOverride;
+    }
 
     // 救赎（buff）可能带来的额外减伤（例如：戒律牧60级天赋【仁慈】）
     // 约定：在 stats.atonement 上挂 damageTakenMult（如 0.95），并在一切承伤结算时乘入。
@@ -9153,8 +9226,12 @@ function stepBossCombat(state) {
                             addLog(`位置${i + 1} ${p.char.name} 的【致死打击】减疗效果消失`);
                         } else if (key === 'fear') {
                             addLog(`位置${i + 1} ${p.char.name} 的【恐惧】效果消失`);
+                        } else if (key === 'knockup') {
+                            addLog(`位置${i + 1} ${p.char.name} 的【击飞】效果消失`);
                         } else if (key === 'shadowCurse') {
                             addLog(`位置${i + 1} ${p.char.name} 的【暗影诅咒】效果消失`);
+                        } else if (key === 'tongueCurse') {
+                            addLog(`位置${i + 1} ${p.char.name} 的【结舌诅咒】效果消失`);
                         } else {
                             addLog(`位置${i + 1} ${p.char.name} 的【${key}】效果消失`);
                         }
@@ -9172,6 +9249,62 @@ function stepBossCombat(state) {
         }
 
     };
+
+    // ==================== 无疤者奥斯里安：被动（水晶生成 / 击毁触发破甲窗口） ====================
+    // 设计：每 4 回合生成 1 个【汲能水晶】（上限 1）
+    //      水晶被击毁后，Boss 防御降为 8000，持续 4 回合
+    const maybeSummonOssirianCrystal = () => {
+        if (combat.bossId !== 'ossirian') return;
+
+        combat.minions = Array.isArray(combat.minions) ? combat.minions : [];
+
+        const every = Math.max(1, Math.floor(Number(boss.energyCrystalEvery || 4)));
+        const hasAliveCrystal = combat.minions.some(m => (m?.hp ?? 0) > 0 && m.isEnergyCrystal);
+
+        if (!hasAliveCrystal && (combat.round % every === 0)) {
+            const hp = Math.floor(Number(boss.minion?.maxHp || 1000000));
+            const def = Math.floor(Number(boss.minion?.defense || 4000));
+
+            combat.minions.push({
+                hp,
+                maxHp: hp,
+                attack: Math.floor(Number(boss.minion?.attack || 0)),
+                defense: def,
+                isEnergyCrystal: true,
+                deathProcessed: false,
+                immune: false,
+                dots: []
+            });
+
+            addLog(`【${boss.name}】生成了【${boss.minion?.name || '汲能水晶'}】：HP ${hp.toLocaleString()}，防御 ${def.toLocaleString()}`);
+        }
+    };
+
+    const processOssirianCrystalDeaths = () => {
+        if (combat.bossId !== 'ossirian') return;
+        combat.minions = Array.isArray(combat.minions) ? combat.minions : [];
+
+        const deadCrystals = combat.minions.filter(m => (m?.hp ?? 0) <= 0 && m.isEnergyCrystal && !m.deathProcessed);
+        if (deadCrystals.length <= 0) return;
+
+        deadCrystals.forEach(m => { m.deathProcessed = true; });
+
+        const newDef = Math.floor(Number(boss.defenseDownDefense || 8000));
+        const dur = Math.max(1, Math.floor(Number(boss.defenseDownDuration || 4)));
+
+        combat.bossDefenseOverride = newDef;
+        combat.bossDefenseOverrideRemaining = dur;
+        boss.defense = newDef; // ✅ 让同回合后续角色也能立刻享受到破甲窗口
+
+        addLog(`【${boss.name}】的【${boss.minion?.name || '汲能水晶'}】被击毁！防御降为 ${newDef.toLocaleString()}，持续 ${dur} 回合`);
+    };
+
+    // 回合开始：先生成水晶（若到回合数），让玩家本回合就能打到
+    if (combat.bossId === 'ossirian') {
+        maybeSummonOssirianCrystal();
+        // 兜底：如果上回合末水晶刚死但还没处理（例如DOT），这里先处理一次
+        processOssirianCrystalDeaths();
+    }
 
     for (let i = 0; i < combat.playerStates.length; i++) {
         const p = combat.playerStates[i];
@@ -9240,6 +9373,19 @@ function stepBossCombat(state) {
             }
 
             addLog(`位置${i + 1} ${p.char.name} 因【恐惧】无法行动（剩余${p.debuffs.fear.duration}回合）`, 'debuff');
+            tickPlayerDurations(p, i);
+            continue;
+        }
+
+        // ==================== 击飞：跳过本回合行动 ====================
+        // 说明：与恐惧类似，但不走亡灵意志等"恐惧免疫"逻辑。
+        if (p.debuffs?.knockup?.duration > 0) {
+            // 仍然推进技能轮转（表示这一回合被浪费）
+            if (Array.isArray(p.validSkills) && p.validSkills.length > 0) {
+                p.skillIndex = (p.skillIndex || 0) + 1;
+            }
+
+            addLog(`位置${i + 1} ${p.char.name} 因【击飞】无法行动（剩余${p.debuffs.knockup.duration}回合）`, 'debuff');
             tickPlayerDurations(p, i);
             continue;
         }
@@ -9340,6 +9486,12 @@ function stepBossCombat(state) {
                     calcStats.spellPower = (calcStats.spellPower || 0) + (Number(b.spellPowerBonus) || 0);
                 }
             });
+        }
+
+        // ==================== Boss Debuff：结舌诅咒（急速/暴击归零） ====================
+        if (p.debuffs?.tongueCurse?.duration > 0) {
+            calcStats.haste = 0;
+            calcStats.critRate = 0;
         }
 
         // ==================== 狂徒盗贼40级天赋：冷血 ====================
@@ -10316,6 +10468,9 @@ function stepBossCombat(state) {
 
         // 本角色行动结束：结算持续时间
         tickPlayerDurations(p, i);
+
+        // 无疤者奥斯里安：若本回合击毁【汲能水晶】，立刻触发破甲窗口（让后续角色同回合受益）
+        processOssirianCrystalDeaths();
     }
 
     // 羁绊效果
@@ -11800,11 +11955,211 @@ function stepBossCombat(state) {
         }
     }
 
+    // ==================== 无疤者奥斯里安技能处理 ====================
+    else if (combat.bossId === 'ossirian') {
+        // 自然伤害：计算魔抗（并套用伤害减免/全能/挫志怒吼）
+        const calcNatureDamage = (playerState, rawDamage) => {
+            const magicResist = playerState?.char?.stats?.magicResist || 0;
+            const resistReduction = getMagicResistDamageReduction(magicResist);
+            let damage = Math.floor((rawDamage || 0) * (1 - resistReduction));
+
+            const takenMult = playerState?.char?.stats?.damageTakenMult ?? 1;
+            let buffTakenMult = 1;
+            if (playerState?.buffs) {
+                playerState.buffs.forEach(b => {
+                    if (b.damageTakenMult) buffTakenMult *= b.damageTakenMult;
+                });
+            }
+
+            const demoralizingShoutMult = combat.bossDebuffs?.demoralizingShout?.damageMult ?? 1;
+            const versTakenMult = getVersatilityDamageTakenMult(playerState?.char?.stats?.versatility);
+            const atonementTakenMult = getAtonementDamageTakenMult(playerState);
+            damage = Math.max(1, Math.floor(damage * takenMult * buffTakenMult * atonementTakenMult * demoralizingShoutMult * versTakenMult));
+
+            return { damage, resistReduction, magicResist };
+        };
+
+        // 施加【堕落之血】（永久叠层中毒DOT：0.5×Boss攻击/层/回合，暗影伤害）
+        const applyCorruptedBlood = (ps, pIdx) => {
+            if (!ps || ps.currentHp <= 0) return;
+
+            // ✅ 矮人：首次中毒免疫
+            if (tryFirstDebuffImmunity(ps, 'poison', pIdx, '堕落之血')) {
+                addLog(`→ 位置${pIdx + 1} ${ps.char.name} 免疫了【堕落之血】`, 'debuff');
+                return;
+            }
+
+            ps.dots = ps.dots || [];
+            const mult = boss.corruptedBloodDotMultiplier ?? 0.5;
+            const base = Math.floor((boss.attack || 0) * mult);
+
+            const existing = ps.dots.find(d => d && d.name === '堕落之血');
+            if (existing) {
+                existing.stacks = (existing.stacks || 1) + 1;
+                existing.type = 'poison';
+                existing.isPoison = true;
+                existing.school = 'shadow';
+                existing.isPermanent = true;
+                existing.duration = existing.duration ?? 999;
+
+                const perTurn = Math.max(1, Math.floor(base * (existing.stacks || 1)));
+                existing.damagePerTurn = perTurn;
+
+                addLog(`→ 位置${pIdx + 1} ${ps.char.name} 的【堕落之血】叠加到${existing.stacks}层（每回合${perTurn}点暗影伤害，持续到战斗结束）`, 'debuff');
+            } else {
+                const perTurn = Math.max(1, base);
+                ps.dots.push({
+                    name: '堕落之血',
+                    type: 'poison',
+                    isPoison: true,
+                    school: 'shadow',
+                    stacks: 1,
+                    damagePerTurn: perTurn,
+                    duration: 999,
+                    isPermanent: true
+                });
+                addLog(`→ 位置${pIdx + 1} ${ps.char.name} 获得【堕落之血】（每回合${perTurn}点暗影伤害，可叠层到战斗结束）`, 'debuff');
+            }
+        };
+
+        // 兜底：如果水晶死于DOT等，在Boss出手前也处理一次
+        processOssirianCrystalDeaths();
+
+        // 技能1：奥斯里安之力（10×攻击，物理伤害，打当前坦克）
+        if (bossAction === 'ossirian_strength') {
+            const tIdx = pickAlivePlayerIndex();
+            if (tIdx >= 0) {
+                const target = combat.playerStates[tIdx];
+                const raw = Math.floor((boss.attack || 0) * (boss.ossirianStrengthMultiplier || 10));
+                const { damage, dr, blockedAmount } = calcMitigatedAndBlockedDamage(target, raw, true);
+                const shieldResult = applyShieldAbsorb(target, damage, logs, currentRound);
+                target.currentHp -= shieldResult.finalDamage;
+
+                const drPct = Math.round(dr * 100);
+                const blockText = blockedAmount > 0 ? `，格挡 ${blockedAmount}` : '';
+                const shieldText = shieldResult.absorbed > 0 ? `，护盾吸收 ${shieldResult.absorbed}` : '';
+                addLog(`【${boss.name}】施放【奥斯里安之力】命中 位置${tIdx + 1} ${target.char.name}，造成 ${shieldResult.finalDamage} 点物理伤害（护甲减伤${drPct}%${blockText}${shieldText}）`);
+            } else {
+                addLog(`【${boss.name}】施放【奥斯里安之力】，但没有存活目标`);
+            }
+        }
+
+        // 技能2：践踏（3×攻击，自然；分散站位额外击飞1回合）
+        else if (bossAction === 'trample') {
+            const raw = Math.floor((boss.attack || 0) * (boss.trampleMultiplier || 3));
+            const isDispersed = combat.strategy.stance === 'dispersed';
+
+            addLog(`【${boss.name}】施放【践踏】${isDispersed ? '（分散站位：附带击飞）' : ''}！`);
+
+            combat.playerStates.forEach((ps, pIdx) => {
+                if (!ps || ps.currentHp <= 0) return;
+
+                const nat = calcNatureDamage(ps, raw);
+                const shieldResult = applyShieldAbsorb(ps, nat.damage, logs, currentRound);
+                ps.currentHp -= shieldResult.finalDamage;
+
+                const resPct = Math.round(nat.resistReduction * 100);
+                const mrText = Number(nat.magicResist) < 0 ? `（魔抗 ${Math.floor(nat.magicResist)}）` : '';
+                const shieldText = shieldResult.absorbed > 0 ? `，护盾吸收 ${shieldResult.absorbed}` : '';
+                addLog(`→ 位置${pIdx + 1} ${ps.char.name} 受到 ${shieldResult.finalDamage} 点自然伤害（魔抗减伤${resPct}%${mrText}${shieldText}）`);
+
+                if (isDispersed && ps.currentHp > 0) {
+                    ps.debuffs = ps.debuffs || {};
+                    ps.debuffs.knockup = { duration: Math.max(1, Math.floor(Number(boss.knockupDuration || 1))) };
+                }
+            });
+
+            if (isDispersed) {
+                addLog(`→ 分散站位触发【击飞】：全体下一回合无法行动`, 'debuff');
+            }
+        }
+
+        // 技能3：堕落之血（沿用哈卡同款）
+        else if (bossAction === 'corrupted_blood') {
+            if (combat.strategy.stance === 'concentrated') {
+                addLog(`【${boss.name}】施放【堕落之血】（集中站位），所有角色获得1层【堕落之血】！`);
+                combat.playerStates.forEach((ps, pIdx) => applyCorruptedBlood(ps, pIdx));
+            } else {
+                const candidates = combat.playerStates
+                    .map((ps, idx) => ({ ps, idx }))
+                    .filter(o => (o.ps?.currentHp ?? 0) > 0)
+                    .map(o => o.idx);
+
+                if (candidates.length <= 0) {
+                    addLog(`【${boss.name}】施放【堕落之血】，但没有存活目标`);
+                } else {
+                    const tIdx = candidates[Math.floor(Math.random() * candidates.length)];
+                    addLog(`【${boss.name}】施放【堕落之血】命中 位置${tIdx + 1} ${combat.playerStates[tIdx].char.name}！`);
+                    applyCorruptedBlood(combat.playerStates[tIdx], tIdx);
+                }
+            }
+        }
+
+        // 技能4：结舌诅咒（所有角色急速/暴击降为0，持续3回合）
+        else if (bossAction === 'tongue_curse') {
+            const dur = Math.max(1, Math.floor(Number(boss.tongueCurseDuration || 3)));
+            addLog(`【${boss.name}】施放【结舌诅咒】！所有角色急速与暴击降为0（持续${dur}回合）`, 'debuff');
+
+            combat.playerStates.forEach((ps) => {
+                if (!ps || ps.currentHp <= 0) return;
+                ps.debuffs = ps.debuffs || {};
+                ps.debuffs.tongueCurse = { duration: dur };
+            });
+        }
+
+        // 技能5：包围之风（默认随机；集中站位改为全体）
+        else if (bossAction === 'surrounding_winds') {
+            const raw = Math.floor((boss.attack || 0) * (boss.surroundingWindsMultiplier || 3));
+
+            if (combat.strategy.stance === 'concentrated') {
+                addLog(`【${boss.name}】施放【包围之风】（集中站位：全体）！`);
+                combat.playerStates.forEach((ps, pIdx) => {
+                    if (!ps || ps.currentHp <= 0) return;
+
+                    const nat = calcNatureDamage(ps, raw);
+                    const shieldResult = applyShieldAbsorb(ps, nat.damage, logs, currentRound);
+                    ps.currentHp -= shieldResult.finalDamage;
+
+                    const resPct = Math.round(nat.resistReduction * 100);
+                    const mrText = Number(nat.magicResist) < 0 ? `（魔抗 ${Math.floor(nat.magicResist)}）` : '';
+                    const shieldText = shieldResult.absorbed > 0 ? `，护盾吸收 ${shieldResult.absorbed}` : '';
+                    addLog(`→ 位置${pIdx + 1} ${ps.char.name} 受到 ${shieldResult.finalDamage} 点自然伤害（魔抗减伤${resPct}%${mrText}${shieldText}）`);
+                });
+            } else {
+                const candidates = combat.playerStates
+                    .map((ps, idx) => ({ ps, idx }))
+                    .filter(o => (o.ps?.currentHp ?? 0) > 0)
+                    .map(o => o.idx);
+
+                if (candidates.length <= 0) {
+                    addLog(`【${boss.name}】施放【包围之风】，但没有存活目标`);
+                } else {
+                    const tIdx = candidates[Math.floor(Math.random() * candidates.length)];
+                    const target = combat.playerStates[tIdx];
+
+                    const nat = calcNatureDamage(target, raw);
+                    const shieldResult = applyShieldAbsorb(target, nat.damage, logs, currentRound);
+                    target.currentHp -= shieldResult.finalDamage;
+
+                    const resPct = Math.round(nat.resistReduction * 100);
+                    const mrText = Number(nat.magicResist) < 0 ? `（魔抗 ${Math.floor(nat.magicResist)}）` : '';
+                    const shieldText = shieldResult.absorbed > 0 ? `，护盾吸收 ${shieldResult.absorbed}` : '';
+                    addLog(`【${boss.name}】施放【包围之风】命中 位置${tIdx + 1} ${target.char.name}，造成 ${shieldResult.finalDamage} 点自然伤害（魔抗减伤${resPct}%${mrText}${shieldText}）`);
+                }
+            }
+        }
+    }
+
 
 // ==================== 小弟行动 ====================
     for (let i = 0; i < (combat.minions || []).length; i++) {
         const m = combat.minions[i];
         if ((m.hp ?? 0) <= 0) continue;
+
+        // 无疤者奥斯里安：汲能水晶不进行攻击行动
+        if (combat.bossId === 'ossirian' && m.isEnergyCrystal) {
+            continue;
+        }
 
         // 范克里夫的火炮手：对全队造成AOE伤害
         if (combat.bossId === 'vancleef' && m.isCannoneer) {
@@ -12043,6 +12398,21 @@ function stepBossCombat(state) {
             return dot.duration > 0 || dot.isPermanent;
         });
     });
+
+    // ==================== 无疤者奥斯里安：破甲窗口倒计时 ====================
+    if (combat.bossId === 'ossirian') {
+        // 如果本回合开始时就处于“防御降低”状态，则回合结束减 1
+        if (bossDefenseOverrideRemainingStart > 0) {
+            combat.bossDefenseOverrideRemaining = Math.max(0, Math.floor(Number(combat.bossDefenseOverrideRemaining || 0)) - 1);
+
+            if (combat.bossDefenseOverrideRemaining <= 0) {
+                combat.bossDefenseOverrideRemaining = 0;
+                delete combat.bossDefenseOverride;
+                boss.defense = bossBase.defense;
+                addLog(`【${boss.name}】的防御恢复（${bossBase.defense.toLocaleString()}）`);
+            }
+        }
+    }
 
     // ==================== 胜负判定 ====================
     const allPlayersDead = combat.playerStates.every(p => p.currentHp <= 0);
@@ -23157,6 +23527,12 @@ const BossPrepareModal = ({ state, dispatch }) => {
         summon_hakkar_sons: '召唤哈卡之子',
         blood_siphon: '血液虹吸',
         corrupted_blood: '堕落之血',
+
+        // ✅ 无疤者奥斯里安
+        ossirian_strength: '奥斯里安之力',
+        trample: '践踏',
+        tongue_curse: '结舌诅咒',
+        surrounding_winds: '包围之风',
     };
 
     const formatBossCycle = (boss) =>
@@ -23891,6 +24267,105 @@ const BossPrepareModal = ({ state, dispatch }) => {
                                                 <span style={{ color: '#ffd700' }}>集中站位</span>：所有角色获得1层【堕落之血】
                                                 <br/>
                                                 【堕落之血】为<span style={{ color: '#81c784' }}>中毒DOT</span>，每层每回合造成 <span style={{ color: '#ffd700' }}>{boss.corruptedBloodDotMultiplier}倍</span> Boss攻击 的<span style={{ color: '#9c27b0' }}>暗影伤害</span>，可叠层至战斗结束
+                                            </div>
+                                        </div>
+                                    </>
+                                )}
+
+                                {bossId === 'ossirian' && (
+                                    <>
+                                        <div style={{
+                                            padding: 10,
+                                            background: 'rgba(255,193,7,0.10)',
+                                            borderRadius: 6,
+                                            borderLeft: '3px solid #ffc107'
+                                        }}>
+                                            <div style={{ fontSize: 12, color: '#ffd54f', fontWeight: 600, marginBottom: 4 }}>
+                                                💠 被动：汲能水晶
+                                            </div>
+                                            <div style={{ fontSize: 11, color: '#aaa', lineHeight: 1.5 }}>
+                                                每 <span style={{ color: '#ffd700' }}>{boss.energyCrystalEvery || 4}</span> 回合生成 1 个【{boss.minion?.name || '汲能水晶'}】
+                                                （HP:{boss.minion?.maxHp?.toLocaleString()} / 防御:{boss.minion?.defense?.toLocaleString()}），上限1个。
+                                                <br/>
+                                                水晶被击毁后：Boss 防御降为 <span style={{ color: '#ffd700' }}>{boss.defenseDownDefense?.toLocaleString()}</span>，持续 <span style={{ color: '#ffd700' }}>{boss.defenseDownDuration}</span> 回合。
+                                            </div>
+                                        </div>
+
+                                        <div style={{
+                                            padding: 10,
+                                            background: 'rgba(244,67,54,0.10)',
+                                            borderRadius: 6,
+                                            borderLeft: '3px solid #f44336'
+                                        }}>
+                                            <div style={{ fontSize: 12, color: '#ff6b6b', fontWeight: 600, marginBottom: 4 }}>
+                                                💪 奥斯里安之力
+                                            </div>
+                                            <div style={{ fontSize: 11, color: '#aaa', lineHeight: 1.5 }}>
+                                                汲取水晶之力，对当前坦克造成 <span style={{ color: '#ffd700' }}>{boss.ossirianStrengthMultiplier}倍</span> Boss攻击 的物理伤害（护甲/格挡可减免）
+                                            </div>
+                                        </div>
+
+                                        <div style={{
+                                            padding: 10,
+                                            background: 'rgba(76,175,80,0.10)',
+                                            borderRadius: 6,
+                                            borderLeft: '3px solid #4caf50'
+                                        }}>
+                                            <div style={{ fontSize: 12, color: '#81c784', fontWeight: 600, marginBottom: 4 }}>
+                                                🐾 践踏
+                                            </div>
+                                            <div style={{ fontSize: 11, color: '#aaa', lineHeight: 1.5 }}>
+                                                对所有角色造成 <span style={{ color: '#ffd700' }}>{boss.trampleMultiplier}倍</span> Boss攻击 的自然伤害（计算魔抗）
+                                                <br/>
+                                                <span style={{ color: '#ffd700' }}>分散站位</span>：额外附带【击飞】，全体下一回合无法行动
+                                            </div>
+                                        </div>
+
+                                        <div style={{
+                                            padding: 10,
+                                            background: 'rgba(156,39,176,0.10)',
+                                            borderRadius: 6,
+                                            borderLeft: '3px solid #9c27b0'
+                                        }}>
+                                            <div style={{ fontSize: 12, color: '#ce93d8', fontWeight: 600, marginBottom: 4 }}>
+                                                ☠️ 堕落之血
+                                            </div>
+                                            <div style={{ fontSize: 11, color: '#aaa', lineHeight: 1.5 }}>
+                                                <span style={{ color: '#ffd700' }}>分散站位</span>：随机1名角色获得1层【堕落之血】
+                                                <br/>
+                                                <span style={{ color: '#ffd700' }}>集中站位</span>：所有角色获得1层【堕落之血】
+                                                <br/>
+                                                【堕落之血】为<span style={{ color: '#81c784' }}>中毒DOT</span>，每层每回合造成 <span style={{ color: '#ffd700' }}>{boss.corruptedBloodDotMultiplier}倍</span> Boss攻击 的<span style={{ color: '#9c27b0' }}>暗影伤害</span>，可叠层至战斗结束
+                                            </div>
+                                        </div>
+
+                                        <div style={{
+                                            padding: 10,
+                                            background: 'rgba(33,150,243,0.10)',
+                                            borderRadius: 6,
+                                            borderLeft: '3px solid #2196F3'
+                                        }}>
+                                            <div style={{ fontSize: 12, color: '#64b5f6', fontWeight: 600, marginBottom: 4 }}>
+                                                🗣️ 结舌诅咒
+                                            </div>
+                                            <div style={{ fontSize: 11, color: '#aaa', lineHeight: 1.5 }}>
+                                                所有角色<span style={{ color: '#ff9800' }}>急速与暴击</span>属性降为0，持续 <span style={{ color: '#ffd700' }}>{boss.tongueCurseDuration}</span> 回合
+                                            </div>
+                                        </div>
+
+                                        <div style={{
+                                            padding: 10,
+                                            background: 'rgba(0,188,212,0.10)',
+                                            borderRadius: 6,
+                                            borderLeft: '3px solid #00bcd4'
+                                        }}>
+                                            <div style={{ fontSize: 12, color: '#4dd0e1', fontWeight: 600, marginBottom: 4 }}>
+                                                🌪️ 包围之风
+                                            </div>
+                                            <div style={{ fontSize: 11, color: '#aaa', lineHeight: 1.5 }}>
+                                                默认对随机角色造成 <span style={{ color: '#ffd700' }}>{boss.surroundingWindsMultiplier}倍</span> Boss攻击 的自然伤害（计算魔抗）
+                                                <br/>
+                                                <span style={{ color: '#ffd700' }}>集中站位</span>：改为对所有角色造成相同伤害
                                             </div>
                                         </div>
                                     </>
@@ -24767,6 +25242,34 @@ const BossCombatModal = ({ combat, state }) => {
                                                         border: '1px solid rgba(180,120,255,0.28)'
                                                     }}>
                                                         😱 恐惧 ({p.debuffs.fear.duration}回合)
+                                                    </span>
+                                                )}
+
+                                                {/* 击飞debuff */}
+                                                {p.debuffs?.knockup && (
+                                                    <span style={{
+                                                        padding: '3px 8px',
+                                                        background: 'rgba(255,152,0,0.16)',
+                                                        borderRadius: 4,
+                                                        fontSize: 10,
+                                                        color: '#ffb74d',
+                                                        border: '1px solid rgba(255,152,0,0.26)'
+                                                    }}>
+                                                        🦘 击飞 ({p.debuffs.knockup.duration}回合)
+                                                    </span>
+                                                )}
+
+                                                {/* 结舌诅咒debuff */}
+                                                {p.debuffs?.tongueCurse && (
+                                                    <span style={{
+                                                        padding: '3px 8px',
+                                                        background: 'rgba(33,150,243,0.16)',
+                                                        borderRadius: 4,
+                                                        fontSize: 10,
+                                                        color: '#64b5f6',
+                                                        border: '1px solid rgba(33,150,243,0.26)'
+                                                    }}>
+                                                        🗣️ 结舌 ({p.debuffs.tongueCurse.duration}回合)
                                                     </span>
                                                 )}
 

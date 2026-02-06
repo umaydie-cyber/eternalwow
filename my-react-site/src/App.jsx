@@ -6578,7 +6578,7 @@ const MOUNT_CODEX = [
         id: 'MOUNT_RAZZASHI_RAPTOR',
         name: '拉扎什迅猛龙',
         icon: '🦖',
-        imageUrl: 'icons/wow/vanilla/rider/lazashi_raptor.png',
+        imageUrl: 'icons/wow/vanilla/rider/lazhashixunmenglong.png',
         source: '祖尔格拉布掉落',
         zoneId: 'zul_gurub',
         dropChance: 0.0005, // 0.05%
@@ -6588,7 +6588,7 @@ const MOUNT_CODEX = [
         id: 'MOUNT_SWIFT_ZULIAN_TIGER',
         name: '迅捷祖利安猛虎',
         icon: '🐅',
-        imageUrl: 'icons/wow/vanilla/rider/swift_zulian_tiger.png',
+        imageUrl: 'icons/wow/vanilla/rider/zulianmenghu.png',
         source: '祖尔格拉布掉落',
         zoneId: 'zul_gurub',
         dropChance: 0.0005, // 0.05%

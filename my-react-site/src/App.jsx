@@ -6313,7 +6313,7 @@ const FIXED_EQUIPMENTS = {
     EQ_141: {
         id: 'EQ_141',
         name: '狂暴专注之爪',
-        icon: "icons/wow/vanilla/weapons/kuangbaozhuanzhu.png",
+        icon: "icons/wow/vanilla/armor/kuangbaozhuanzhu.png",
         type: 'equipment',
         slot: 'offHand',
         rarity: 'blue',
@@ -6361,7 +6361,7 @@ const FIXED_EQUIPMENTS = {
     EQ_143: {
         id: 'EQ_143',
         name: '废墟法杖',
-        icon: "icons/wow/vanilla/weapons/feixufazhang.png",
+        icon: "icons/wow/vanilla/armor/feixufazhang.png",
         type: 'equipment',
         slot: 'mainHand',
         rarity: 'purple',

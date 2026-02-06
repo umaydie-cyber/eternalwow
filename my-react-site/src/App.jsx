@@ -2798,8 +2798,20 @@ function isZulGurubBadgeEquipment(eq) {
     return ZUL_GURUB_BADGE_EQUIP_IDS.has(eq.id);
 }
 
+// ==================== 安琪拉废墟装备池（用于奥斯里安徽章判定） ====================
+// 说明：当前安琪拉废墟在本游戏中的掉落装备模板为 EQ_139 ~ EQ_145。
+// 如未来扩展安琪拉废墟掉落装备，只需要把新模板ID加入该集合即可。
+const RUINS_OF_AHNQIRAJ_EQUIP_IDS = new Set([
+    'EQ_139', 'EQ_140', 'EQ_141', 'EQ_142', 'EQ_143', 'EQ_144', 'EQ_145'
+]);
 
-
+function isRuinsOfAhnQirajEquipment(eq) {
+    if (!eq || eq.type !== 'equipment') return false;
+    const tpl = FIXED_EQUIPMENTS?.[eq.id];
+    // 未来如果你给安琪拉废墟装备加了 setId=ruins_of_ahnqiraj，也会自动识别
+    if (tpl?.setId === 'ruins_of_ahnqiraj') return true;
+    return RUINS_OF_AHNQIRAJ_EQUIP_IDS.has(eq.id);
+}
 
 // ==================== 徽章升级规则（复用“血色十字军徽章”的通用模式） ====================
 // 以后新增 Boss 徽章：只需要在这里加一条规则 + 在 USE_ITEM 里让该徽章走同一套入口即可。
@@ -2887,6 +2899,16 @@ const BADGE_UPGRADE_RULES = {
         isEligible: isZulGurubBadgeEquipment,
         theme: { border: '#4a148c', title: '#4CAF50', shadow: 'rgba(78,52,46,0.25)' }
     },
+    IT_OSSIRIAN_BADGE: {
+        badgeId: 'IT_OSSIRIAN_BADGE',
+        title: '无疤者的徽章',
+        zoneLabel: '安琪拉废墟',
+        inc: 2,
+        cap: 100,
+        isEligible: isRuinsOfAhnQirajEquipment,
+        theme: { border: '#b08900', title: '#ffd54f', shadow: 'rgba(176,137,0,0.25)' }
+    },
+
 };
 
 const FIXED_EQUIPMENTS = {
@@ -6874,7 +6896,18 @@ const ITEMS = {
         sellPrice: 0,  // 不可出售
         icon: 'icons/wow/vanilla/items/INV_Misc_Idol_03.png',
         description: '使用后选择一件【祖尔格拉布】装备，使其等级提升 +2（最高100级）'
+    },
+    IT_OSSIRIAN_BADGE: {
+        id: 'IT_OSSIRIAN_BADGE',
+        name: '无疤者的徽章',
+        type: 'consumable',
+        rarity: 'purple',
+        canUse: true,
+        sellPrice: 0,  // 不可出售
+        icon: 'icons/wow/vanilla/items/INV_Misc_StoneTablet_08.png',
+        description: '使用后选择一件【安琪拉废墟】装备，使其等级提升 +2（最高100级）'
     }
+
 
 };
 

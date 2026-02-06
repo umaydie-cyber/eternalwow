@@ -1248,9 +1248,18 @@ const SKILLS = {
                 clearFortuneStacks: char.talents?.[40] === 'fortune_misfortune'
             };
 
-            // 40级天赋：终极苦修 - 还会造成2倍法强伤害
+            // 40级天赋：终极苦修 - 还会造成2倍法强伤害（✅ 可暴击）
             if (char.talents?.[40] === 'ultimate_penance') {
-                result.penanceDamage = Math.floor(char.stats.spellPower * 2);
+                let damage = (Number(char.stats.spellPower) || 0) * 2;
+                const critRate = (Number(char.stats.critRate) || 0) / 100;
+                const isCrit = Math.random() < critRate;
+
+                if (isCrit) {
+                    damage *= (Number(char.stats.critDamage) || 2.0);
+                }
+
+                result.penanceDamage = Math.floor(damage);
+                result.penanceDamageIsCrit = isCrit;
             }
 
             // 40级天赋：争分夺秒 - 释放后急速+30%持续4回合
@@ -10007,7 +10016,7 @@ function stepBossCombat(state) {
                             combat.bossHp -= actualDamage;
                         }
 
-                        addLog(`位置${i + 1} ${p.char.name}【终极苦修】造成 ${actualDamage} 伤害`);
+                        addLog(`位置${i + 1} ${p.char.name}【终极苦修】造成 ${actualDamage} 伤害${result.penanceDamageIsCrit ? '（暴击）' : ''}`);
 
                         // 救赎机制
                         if (p.char.stats.atonement) {
@@ -13598,6 +13607,7 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
                     target: combatState.enemy?.name,
                     value: actualDamage,
                     type: 'damage',
+                    isCrit: result.penanceDamageIsCrit,
                     text: '【终极苦修】造成伤害'
                 });
 
@@ -18121,8 +18131,8 @@ const ItemDetailsModal = ({ item, onClose, onEquip, characters, state , dispatch
                             isMatA
                                 ? state.inventory.some(i => i?.type === 'equipment' && i.id === 'EQ_042' && getLevel(i) >= 100)
                                 : isMatB
-                                    ? state.inventory.some(i => i?.type === 'equipment' && i.id === 'EQ_041' && getLevel(i) >= 100)
-                                    : false;
+                                ? state.inventory.some(i => i?.type === 'equipment' && i.id === 'EQ_041' && getLevel(i) >= 100)
+                                : false;
 
                         if (!(hasOther && (isMatA || isMatB))) return null;
 
@@ -22686,13 +22696,13 @@ const QuestPage = ({ state, dispatch }) => {
                             }}>
                                 {requirementMet ? '✓' : '✗'}
                                 {currentStep.requirement.type === 'character_level' &&
-                                    `需要角色等级 ${currentStep.requirement.level}`}
+                                `需要角色等级 ${currentStep.requirement.level}`}
                                 {currentStep.requirement.type === 'zone_battles' &&
-                                    `需要在${ZONES[currentStep.requirement.zoneId]?.name}战斗${currentStep.requirement.count}次`}
+                                `需要在${ZONES[currentStep.requirement.zoneId]?.name}战斗${currentStep.requirement.count}次`}
                                 {currentStep.requirement.type === 'boss_defeated' &&
-                                    `需要击败${BOSS_DATA[currentStep.requirement.bossId]?.name}`}
+                                `需要击败${BOSS_DATA[currentStep.requirement.bossId]?.name}`}
                                 {currentStep.requirement.type === 'have_gold' &&
-                                    `需要${currentStep.requirement.amount}金币`}
+                                `需要${currentStep.requirement.amount}金币`}
                             </div>
                         </div>
                     )}
@@ -24132,8 +24142,8 @@ const BossPrepareModal = ({ state, dispatch }) => {
                                                     isMapFighting
                                                         ? `地图战斗中：${zoneName || zoneId}`
                                                         : isGathering
-                                                            ? `采集中：${buildingName || gatherBuildingId}`
-                                                            : '待命'
+                                                        ? `采集中：${buildingName || gatherBuildingId}`
+                                                        : '待命'
                                                 }
                                             >
                                                 <div style={{ fontSize: 24 }}>
@@ -26583,8 +26593,8 @@ export default function WoWIdleGame() {
                 dispatch({ type: 'CHEAT_SET_REBIRTH_BONUS', payload: { exp, gold, drop, researchSpeed } });
                 setConsoleLogs(prev => [...prev, `✓ 已设置轮回加成：exp=${exp}, gold=${gold}, drop=${drop}, research=${researchSpeed}`]);
             }
-            // ===== 新增：add set =====
-            // 用法：add set <setId>[,<level>]
+                // ===== 新增：add set =====
+                // 用法：add set <setId>[,<level>]
             // 示例：add set valor_set
             else if (subCmd === 'set' && parts[2]) {
                 const setArg = parts[2];

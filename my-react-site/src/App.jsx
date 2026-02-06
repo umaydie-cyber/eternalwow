@@ -95,6 +95,7 @@ const CLASSES = {
             { level: 10, skillId: 'revenge' },
             { level: 20, skillId: 'thunder_strike' },
             { level: 30, skillId: 'shield_wall' },
+            { level: 50, skillId: 'victory_rush' },
         ]
     },
     discipline_priest: {
@@ -1034,6 +1035,15 @@ const SKILLS = {
         type: 'passive',
         description: '被动：格挡值提高(10 + 精通/4)%。该提升基于原始格挡数值。'
     },
+
+    victory_rush: {
+        id: 'victory_rush',
+        name: '乘胜追击',
+        icon: '🏆',
+        type: 'passive',
+        description: '战斗胜利后恢复最大生命值的20%。'
+    },
+
     shield_bash: {
         limit: 3,
         id: 'shield_bash',
@@ -6282,8 +6292,8 @@ const FIXED_EQUIPMENTS = {
     // ==================== 安琪拉废墟（60级）装备 ====================
     EQ_139: {
         id: 'EQ_139',
-        name: '沙尘护符',
-        icon: "icons/wow/vanilla/armor/INV_Jewelry_Talisman_08.png",
+        name: '流沙护符',
+        icon: "icons/wow/vanilla/armor/liushahufu.png",
         type: 'equipment',
         slot: 'trinket2',
         rarity: 'purple',
@@ -6313,7 +6323,7 @@ const FIXED_EQUIPMENTS = {
     EQ_140: {
         id: 'EQ_140',
         name: '拉贾克斯的徽记',
-        icon: "icons/wow/vanilla/armor/INV_Jewelry_Ring_16.png",
+        icon: "icons/wow/vanilla/armor/INV_Jewelry_Talisman_13.png",
         type: 'equipment',
         slot: 'ring1',
         rarity: 'blue',
@@ -6337,7 +6347,7 @@ const FIXED_EQUIPMENTS = {
     EQ_141: {
         id: 'EQ_141',
         name: '狂暴专注之爪',
-        icon: "icons/wow/vanilla/weapons/INV_Weapon_ShortBlade_25.png",
+        icon: "icons/wow/vanilla/weapons/kuangbaozhuanzhu.png",
         type: 'equipment',
         slot: 'offHand',
         rarity: 'blue',
@@ -6361,7 +6371,7 @@ const FIXED_EQUIPMENTS = {
     EQ_142: {
         id: 'EQ_142',
         name: '沙漠风暴披风',
-        icon: "icons/wow/vanilla/armor/INV_Misc_Cape_20.png",
+        icon: "icons/wow/vanilla/armor/INV_Misc_Cape_06.png",
         type: 'equipment',
         slot: 'cloak',
         rarity: 'purple',
@@ -6385,7 +6395,7 @@ const FIXED_EQUIPMENTS = {
     EQ_143: {
         id: 'EQ_143',
         name: '废墟法杖',
-        icon: "icons/wow/vanilla/weapons/INV_Staff_13.png",
+        icon: "icons/wow/vanilla/weapons/feixufazhang.png",
         type: 'equipment',
         slot: 'mainHand',
         rarity: 'purple',
@@ -12078,8 +12088,37 @@ function stepBossCombat(state) {
                 const p = combat.playerStates.find(ps => ps.char.id === char.id);
                 if (!p) return char;
 
+                // ✅ 同步：把本回合最终血量写回主存档角色（避免结算时血量停留在上一回合）
+                const worldMaxHp = Number(char.stats?.maxHp ?? char.stats?.hp) || 0;
+                const combatHp = Number(p.currentHp) || 0;
+                const baseHp = worldMaxHp > 0
+                    ? Math.min(worldMaxHp, Math.max(0, Math.floor(combatHp)))
+                    : Math.max(0, Math.floor(combatHp));
+
                 let gainedExp = boss.rewards.exp * (1 + (char.stats.expBonus || 0));
                 let newChar = { ...char, exp: char.exp + gainedExp };
+
+                // 写入结算前血量（用于 calculateTotalStats 保留 currentHp）
+                newChar.stats = { ...newChar.stats, currentHp: baseHp };
+
+                // ✅ 战士：乘胜追击（50级）- Boss战胜利后回复最大生命值的 20%
+                if ((newChar.skills || []).includes('victory_rush')) {
+                    const maxHp = Number(newChar.stats?.maxHp ?? worldMaxHp) || worldMaxHp;
+                    const curHp = Number(newChar.stats?.currentHp ?? baseHp) || 0;
+
+                    // 死亡（<=0）不触发，避免"复活"；满血不触发
+                    if (maxHp > 0 && curHp > 0 && curHp < maxHp) {
+                        const heal = Math.floor(maxHp * 0.20);
+                        if (heal > 0) {
+                            const nextHp = Math.min(maxHp, curHp + heal);
+                            const realHeal = nextHp - curHp;
+                            if (realHeal > 0) {
+                                newChar.stats = { ...newChar.stats, currentHp: nextHp };
+                                addLog(`【乘胜追击】${newChar.name} 回复 ${realHeal} 点生命`, 'proc');
+                            }
+                        }
+                    }
+                }
 
                 while (newChar.exp >= newChar.expToNext && newChar.level < 200) {
                     newChar.level += 1;
@@ -14784,6 +14823,31 @@ function gameReducer(state, action) {
                                             kind: 'proc',
                                             proc: '宾至如归',
                                             text: `【宾至如归】触发：回复 ${nextHp - curHp} 点生命`
+                                        });
+                                    }
+                                }
+                            }
+                        }
+
+
+                        // ✅ 战士：乘胜追击（50级）- 战斗胜利后回复最大生命值的 20%
+                        if (step.won && (char.skills || []).includes('victory_rush')) {
+                            const maxHp = Number(char.stats?.maxHp ?? char.stats?.hp) || 0;
+                            const curHp = Number(char.stats?.currentHp ?? maxHp) || 0;
+
+                            // 死亡（<=0）不触发，避免"复活"；满血不触发
+                            if (maxHp > 0 && curHp > 0 && curHp < maxHp) {
+                                const heal = Math.floor(maxHp * 0.20);
+                                if (heal > 0) {
+                                    const nextHp = Math.min(maxHp, curHp + heal);
+                                    if (nextHp !== curHp) {
+                                        char.stats = { ...char.stats, currentHp: nextHp };
+
+                                        // 写入战斗日志（橙色：被动触发）
+                                        finalLogs.push({
+                                            kind: 'proc',
+                                            proc: '乘胜追击',
+                                            text: `【乘胜追击】触发：回复 ${nextHp - curHp} 点生命`
                                         });
                                     }
                                 }

@@ -2750,6 +2750,18 @@ function isUpperBlackrockSpireEquipment(eq) {
     return UPPER_BLACKROCK_SPIRE_EQUIP_IDS.has(eq.id);
 }
 
+const ZUL_GURUB_BADGE_EQUIP_IDS = new Set([
+    'EQ_131', 'EQ_132', 'EQ_133', 'EQ_134', 'EQ_135', 'EQ_136',
+    'EQ_137', 'EQ_138',
+]);
+
+function isZulGurubBadgeEquipment(eq) {
+    if (!eq || eq.type !== 'equipment') return false;
+    const tpl = FIXED_EQUIPMENTS?.[eq.id];
+    if (tpl?.setId === 'zul_gurub') return true;
+    return ZUL_GURUB_BADGE_EQUIP_IDS.has(eq.id);
+}
+
 
 
 
@@ -2821,7 +2833,6 @@ const BADGE_UPGRADE_RULES = {
         isEligible: isStratholmeEquipment,
         theme: { border: '#263238', title: '#b388ff', shadow: 'rgba(38,50,56,0.25)' }
     },
-
     IT_REND_BADGE: {
         badgeId: 'IT_REND_BADGE',
         title: '雷德黑手的徽章',
@@ -2830,6 +2841,15 @@ const BADGE_UPGRADE_RULES = {
         cap: 100,
         isEligible: isUpperBlackrockSpireEquipment,
         theme: { border: '#4e342e', title: '#ffab91', shadow: 'rgba(78,52,46,0.25)' }
+    },
+    IT_HAKKAR_BADGE: {
+        badgeId: 'IT_HAKKAR_BADGE',
+        title: '夺灵者的徽章',
+        zoneLabel: '祖尔格拉布',
+        inc: 2,
+        cap: 100,
+        isEligible: isZulGurubBadgeEquipment,
+        theme: { border: '#4a148c', title: '#4CAF50', shadow: 'rgba(78,52,46,0.25)' }
     },
 };
 
@@ -6798,7 +6818,6 @@ const ITEMS = {
         icon: 'icons/wow/vanilla/items/INV_Misc_Rune_07.png',
         description: '使用后选择一件【斯坦索姆】装备，使其等级提升 +2（最高100级）'
     },
-
     // 雷德黑手的徽章（雷德黑手掉落）
     IT_REND_BADGE: {
         id: 'IT_REND_BADGE',
@@ -6807,8 +6826,18 @@ const ITEMS = {
         rarity: 'purple',
         canUse: true,
         sellPrice: 0,  // 不可出售
-        icon: 'icons/wow/vanilla/items/INV_Misc_Rune_02.png', // 需要添加对应图标
+        icon: 'icons/wow/vanilla/items/INV_Misc_Rune_02.png',
         description: '使用后选择一件【黑石塔上】装备，使其等级提升 +2（最高100级）'
+    },
+    IT_HAKKAR_BADGE: {
+        id: 'IT_HAKKAR_BADGE',
+        name: '夺灵者的徽章',
+        type: 'consumable',
+        rarity: 'purple',
+        canUse: true,
+        sellPrice: 0,  // 不可出售
+        icon: 'icons/wow/vanilla/items/INV_Misc_Idol_03.png',
+        description: '使用后选择一件【祖尔格拉布】装备，使其等级提升 +2（最高100级）'
     }
 
 };

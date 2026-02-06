@@ -5995,7 +5995,7 @@ const FIXED_EQUIPMENTS = {
             perception: 2,
         }
     },
-    EQ_0128: {
+    EQ_128: {
         id: 'EQ_0128',
         name: '神秘琥珀戒指',
         icon: "icons/wow/vanilla/armor/INV_Jewelry_Ring_12.png",
@@ -6023,7 +6023,7 @@ const FIXED_EQUIPMENTS = {
             perception: 2,
         }
     },
-    EQ_0129: {
+    EQ_129: {
         id: 'EQ_0129',
         name: '神秘蓝宝石戒指',
         icon: "icons/wow/vanilla/armor/INV_Jewelry_Ring_12.png",
@@ -6053,7 +6053,7 @@ const FIXED_EQUIPMENTS = {
             perception: 2,
         }
     },
-    EQ_0130: {
+    EQ_130: {
         id: 'EQ_0130',
         name: '神秘红宝石戒指',
         icon: "icons/wow/vanilla/armor/INV_Jewelry_Ring_12.png",
@@ -8001,9 +8001,7 @@ function mergeEquipments(eqA, eqB) {
     }
 
     const nextRingId = POST_RING_LV100_EVOLVE[eqA.id];
-    console.log(nextRingId);
     if (nextRingId && Math.max(levelA, levelB) >= 100) {
-        console.log(nextRingId);
         const evolved = createEquipmentInstance(nextRingId);
         return evolved || null;
     }

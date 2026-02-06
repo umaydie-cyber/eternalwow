@@ -22564,7 +22564,7 @@ const CodexPage = ({ state, dispatch }) => {
             {tab === 'mounts' && (
                 <>
                     <div style={{ fontSize: 12, color: '#888', marginBottom: 12 }}>
-                        ✅ 点亮：击杀世界首领有概率获得坐骑，或在时空商城购买
+                        ✅ 点亮：击杀世界首领/地区战斗胜利有概率获得坐骑，或在时空商城购买
                     </div>
 
                     <div style={{

@@ -2650,266 +2650,205 @@ const DROP_TABLES = {
 
 };
 
-// ==================== 血色修道院装备池（用于道具判定） ====================
-// 说明：目前血色修道院在本游戏中的掉落装备模板为 EQ_049 ~ EQ_061。
-// 如未来扩展血色修道院装备，只需要把新模板ID加入该集合即可。
-const SCARLET_MONASTERY_EQUIP_IDS = new Set([
-    'EQ_049', 'EQ_050', 'EQ_051', 'EQ_052', 'EQ_053', 'EQ_054',
-    'EQ_055', 'EQ_056', 'EQ_057', 'EQ_058', 'EQ_059', 'EQ_060', 'EQ_061'
-]);
+// ==================== 徽章 / 装备池判定（配置化 + 免枚举） ====================
+// 目标：抽象 BADGE_EQUIP_IDS + is******Equipment 的重复逻辑，保持现有逻辑不变：
+// 1) 仍然只允许 type === 'equipment' 的道具
+// 2) 仍然优先用装备模板 tpl.setId 命中（未来扩展更省事）
+// 3) 当未设置 setId 时，用 EQ_### 的数值范围来判定（避免枚举一堆 EQ_xxx）
+//
+// 如未来新增徽章/地图：只需要加配置，不需要再写 Set / isXXX() 函数。
 
-function isScarletMonasteryEquipment(eq) {
-    if (!eq || eq.type !== 'equipment') return false;
-    const tpl = FIXED_EQUIPMENTS?.[eq.id];
-    // 未来如果你给血色装备加了 setId=scarlet_crusader，也会自动识别
-    if (tpl?.setId === 'scarlet_crusader') return true;
-    return SCARLET_MONASTERY_EQUIP_IDS.has(eq.id);
+// 装备池配置（可单独抽到 json 文件）
+// - setIds:   允许通过装备模板的 setId 命中（可填多个，方便复用/兼容）
+// - eqIdRanges: 允许通过 EQ_### 的区间命中（支持多个区间）
+const BADGE_EQUIP_POOLS = {
+    scarlet_monastery: {
+        setIds: ['scarlet_crusader'],
+        eqIdRanges: [[49, 61]],
+    },
+    elwynn_westfall_redridge: {
+        setIds: ['elwynn_westfall_redridge'],
+        eqIdRanges: [[1, 18]],
+    },
+    barrens: {
+        setIds: ['barrens'],
+        eqIdRanges: [[19, 26]],
+    },
+    stranglethorn_tanaris: {
+        setIds: ['stranglethorn_tanaris'],
+        eqIdRanges: [[27, 32], [41, 48]], // ✅ 覆盖 EQ_044（鞭笞者苏萨斯）
+    },
+    // 索瑞森大帝徽章：沉没的神庙 / 黑石深渊
+    // 兼容旧逻辑（曾使用 setId==='blackrock_depths'）：这里允许未来把沉没神庙装备也标成 sunken_temple
+    sunken_temple_blackrock_depths: {
+        setIds: ['blackrock_depths', 'sunken_temple'],
+        eqIdRanges: [[62, 73]],
+    },
+    scholomance: {
+        setIds: ['scholomance'],
+        eqIdRanges: [[87, 94], [113, 116]],
+    },
+    stratholme: {
+        setIds: ['stratholme'],
+        eqIdRanges: [[95, 102], [117, 120]],
+    },
+    upper_blackrock_spire: {
+        setIds: ['upper_blackrock_spire'],
+        eqIdRanges: [[103, 112], [121, 124]],
+    },
+    zul_gurub: {
+        setIds: ['zul_gurub'],
+        eqIdRanges: [[131, 138]],
+    },
+    ruins_of_ahnqiraj: {
+        setIds: ['ruins_of_ahnqiraj'],
+        eqIdRanges: [[139, 145]],
+    },
+};
+
+// 把 'EQ_001' -> 1；不符合格式返回 null
+function parseEqTemplateNumber(eqId) {
+    if (typeof eqId !== 'string') return null;
+    const m = /^EQ_(\d+)$/.exec(eqId);
+    if (!m) return null;
+    const n = Number(m[1]);
+    return Number.isFinite(n) ? n : null;
 }
 
-
-// ==================== 艾尔文/西部荒野/赤脊山装备池（用于霍格徽章判定） ====================
-// 说明：当前三张地图在本游戏中的掉落装备模板为 EQ_001 ~ EQ_018。
-// 如未来扩展这三张地图的掉落装备，只需要把新模板ID加入该集合即可。
-const HOGGER_BADGE_EQUIP_IDS = new Set([
-    'EQ_001','EQ_002','EQ_003','EQ_004','EQ_005',                 // 艾尔文森林
-    'EQ_006','EQ_007','EQ_008','EQ_009','EQ_010','EQ_011','EQ_012','EQ_013', // 西部荒野
-    'EQ_014','EQ_015','EQ_016','EQ_017','EQ_018'                  // 赤脊山
-]);
-
-function isHoggerBadgeEquipment(eq) {
-    if (!eq || eq.type !== 'equipment') return false;
-    const tpl = FIXED_EQUIPMENTS?.[eq.id];
-    // 未来如果你给三图装备加了 setId=elwynn_westfall_redridge，也会自动识别
-    if (tpl?.setId === 'elwynn_westfall_redridge') return true;
-    return HOGGER_BADGE_EQUIP_IDS.has(eq.id);
+function normalizeRanges(ranges) {
+    if (!Array.isArray(ranges)) return [];
+    return ranges
+        .filter(r => Array.isArray(r) && r.length >= 2)
+        .map(([a, b]) => {
+            const min = Number(a);
+            const max = Number(b);
+            if (!Number.isFinite(min) || !Number.isFinite(max)) return null;
+            return min <= max ? [min, max] : [max, min];
+        })
+        .filter(Boolean);
 }
 
+/**
+ * 生成“装备是否属于某个装备池”的判定函数。
+ * 注意：这里不会在创建时读取 FIXED_EQUIPMENTS（避免初始化顺序问题），只会在真正判定时读取。
+ */
+function makeBadgeEquipPredicate(poolKey) {
+    const pool = BADGE_EQUIP_POOLS?.[poolKey] || {};
+    const setIdSet = new Set((pool.setIds || []).filter(Boolean));
+    const ranges = normalizeRanges(pool.eqIdRanges);
 
-// ==================== 贫瘠之地装备池（用于迪菲亚徽章判定） ====================
-// 说明：当前贫瘠之地在本游戏中的掉落装备模板为 EQ_019 ~ EQ_026。
-// 如未来扩展贫瘠之地掉落装备，只需要把新模板ID加入该集合即可。
-const VANCLEEF_BADGE_EQUIP_IDS = new Set([
-    'EQ_019','EQ_020','EQ_021','EQ_022','EQ_023','EQ_024','EQ_025','EQ_026'
-]);
+    return (eq) => {
+        if (!eq || eq.type !== 'equipment') return false;
 
-function isVancleefBadgeEquipment(eq) {
-    if (!eq || eq.type !== 'equipment') return false;
-    const tpl = FIXED_EQUIPMENTS?.[eq.id];
-    // 未来如果你给贫瘠之地装备加了 setId=barrens，也会自动识别
-    if (tpl?.setId === 'barrens') return true;
-    return VANCLEEF_BADGE_EQUIP_IDS.has(eq.id);
+        const tpl = FIXED_EQUIPMENTS?.[eq.id];
+        if (tpl?.setId && setIdSet.has(tpl.setId)) return true;
+
+        const n = parseEqTemplateNumber(eq.id);
+        if (n == null) return false;
+
+        for (const [min, max] of ranges) {
+            if (n >= min && n <= max) return true;
+        }
+        return false;
+    };
 }
 
-// ==================== 荆棘谷/塔纳利斯装备池（用于黑龙化身徽章判定） ====================
-// 说明：当前两张地图在本游戏中的掉落装备模板为：
-// - 荆棘谷：EQ_027 ~ EQ_032
-// - 塔纳利斯：EQ_041, EQ_042, EQ_043, EQ_045, EQ_046, EQ_047, EQ_048
-// 如未来扩展两张地图的掉落装备，只需要把新模板ID加入该集合即可。
-const PRESTOR_BADGE_EQUIP_IDS = new Set([
-    // 荆棘谷
-    'EQ_027', 'EQ_028', 'EQ_029', 'EQ_030', 'EQ_031', 'EQ_032',
-    // 塔纳利斯
-    'EQ_041', 'EQ_042', 'EQ_043','EQ_044', 'EQ_045', 'EQ_046', 'EQ_047', 'EQ_048'
-]);
-
-function isPrestorBadgeEquipment(eq) {
-    if (!eq || eq.type !== 'equipment') return false;
-    const tpl = FIXED_EQUIPMENTS?.[eq.id];
-    // 未来如果你给两图装备加了 setId=stranglethorn_tanaris，也会自动识别
-    if (tpl?.setId === 'stranglethorn_tanaris') return true;
-    return PRESTOR_BADGE_EQUIP_IDS.has(eq.id);
-}
-
-const BLACKROCK_DEPTHS_EQUIP_IDS = new Set([
-    'EQ_062', 'EQ_063', 'EQ_064', 'EQ_065', 'EQ_066', 'EQ_067',
-    'EQ_068', 'EQ_069', 'EQ_070', 'EQ_071', 'EQ_072', 'EQ_073'
-]);
-
-function isBlackrockDepthsEquipment(eq) {
-    if (!eq || eq.type !== 'equipment') return false;
-    const tpl = FIXED_EQUIPMENTS?.[eq.id];
-    if (tpl?.setId === 'blackrock_depths') return true;
-    return BLACKROCK_DEPTHS_EQUIP_IDS.has(eq.id);
-}
-
-// ==================== 通灵学院装备池（用于加丁徽章判定） ====================
-// 说明：当前通灵学院在本游戏中的掉落装备模板为 EQ_087 ~ EQ_094。
-// 如未来扩展通灵学院掉落装备，只需要把新模板ID加入该集合即可。
-const SCHOLOMANCE_EQUIP_IDS = new Set([
-    'EQ_087', 'EQ_088', 'EQ_089', 'EQ_090', 'EQ_091', 'EQ_092', 'EQ_093', 'EQ_094',
-    // ✅ 黑暗院长加丁新增掉落（T0 护肩）
-    'EQ_113', 'EQ_114', 'EQ_115', 'EQ_116'
-]);
-
-function isScholomanceEquipment(eq) {
-    if (!eq || eq.type !== 'equipment') return false;
-    const tpl = FIXED_EQUIPMENTS?.[eq.id];
-    // 未来如果你给通灵学院装备加了 setId=scholomance，也会自动识别
-    if (tpl?.setId === 'scholomance') return true;
-    return SCHOLOMANCE_EQUIP_IDS.has(eq.id);
-}
-
-// ==================== 斯坦索姆装备池（用于瑞文戴尔徽章判定） ====================
-// 说明：当前斯坦索姆在本游戏中的掉落装备模板为 EQ_095 ~ EQ_102。
-// 如未来扩展斯坦索姆掉落装备，只需要把新模板ID加入该集合即可。
-const STRATHOLME_EQUIP_IDS = new Set([
-    'EQ_095', 'EQ_096', 'EQ_097', 'EQ_098',
-    'EQ_099', 'EQ_100', 'EQ_101', 'EQ_102',
-    // ✅ 瑞文戴尔男爵新增掉落（T0 战靴/便鞋）
-    'EQ_117', 'EQ_118', 'EQ_119', 'EQ_120'
-]);
-
-function isStratholmeEquipment(eq) {
-    if (!eq || eq.type !== 'equipment') return false;
-    const tpl = FIXED_EQUIPMENTS?.[eq.id];
-    // 未来如果你给斯坦索姆装备加了 setId=stratholme，也会自动识别
-    if (tpl?.setId === 'stratholme') return true;
-    return STRATHOLME_EQUIP_IDS.has(eq.id);
-}
-
-
-// ==================== 黑石塔上装备池（用于雷德黑手徽章判定） ====================
-// 说明：当前黑石塔上在本游戏中的掉落装备模板为 EQ_103 ~ EQ_112。
-// 如未来扩展黑石塔上掉落装备，只需要把新模板ID加入该集合即可。
-const UPPER_BLACKROCK_SPIRE_EQUIP_IDS = new Set([
-    'EQ_103', 'EQ_104', 'EQ_105', 'EQ_106', 'EQ_107', 'EQ_108',
-    'EQ_109', 'EQ_110', 'EQ_111', 'EQ_112',
-    // ✅ 雷德黑手新增掉落（T0 护腕/裹腕）
-    'EQ_121', 'EQ_122', 'EQ_123', 'EQ_124'
-]);
-
-function isUpperBlackrockSpireEquipment(eq) {
-    if (!eq || eq.type !== 'equipment') return false;
-    const tpl = FIXED_EQUIPMENTS?.[eq.id];
-    // 未来如果你给黑石塔上装备加了 setId=upper_blackrock_spire，也会自动识别
-    if (tpl?.setId === 'upper_blackrock_spire') return true;
-    return UPPER_BLACKROCK_SPIRE_EQUIP_IDS.has(eq.id);
-}
-
-const ZUL_GURUB_BADGE_EQUIP_IDS = new Set([
-    'EQ_131', 'EQ_132', 'EQ_133', 'EQ_134', 'EQ_135', 'EQ_136',
-    'EQ_137', 'EQ_138',
-]);
-
-function isZulGurubBadgeEquipment(eq) {
-    if (!eq || eq.type !== 'equipment') return false;
-    const tpl = FIXED_EQUIPMENTS?.[eq.id];
-    if (tpl?.setId === 'zul_gurub') return true;
-    return ZUL_GURUB_BADGE_EQUIP_IDS.has(eq.id);
-}
-
-// ==================== 安琪拉废墟装备池（用于奥斯里安徽章判定） ====================
-// 说明：当前安琪拉废墟在本游戏中的掉落装备模板为 EQ_139 ~ EQ_145。
-// 如未来扩展安琪拉废墟掉落装备，只需要把新模板ID加入该集合即可。
-const RUINS_OF_AHNQIRAJ_EQUIP_IDS = new Set([
-    'EQ_139', 'EQ_140', 'EQ_141', 'EQ_142', 'EQ_143', 'EQ_144', 'EQ_145'
-]);
-
-function isRuinsOfAhnQirajEquipment(eq) {
-    if (!eq || eq.type !== 'equipment') return false;
-    const tpl = FIXED_EQUIPMENTS?.[eq.id];
-    // 未来如果你给安琪拉废墟装备加了 setId=ruins_of_ahnqiraj，也会自动识别
-    if (tpl?.setId === 'ruins_of_ahnqiraj') return true;
-    return RUINS_OF_AHNQIRAJ_EQUIP_IDS.has(eq.id);
-}
-
-// ==================== 徽章升级规则（复用“血色十字军徽章”的通用模式） ====================
-// 以后新增 Boss 徽章：只需要在这里加一条规则 + 在 USE_ITEM 里让该徽章走同一套入口即可。
-const BADGE_UPGRADE_RULES = {
+// ==================== 徽章升级规则（配置驱动） ====================
+// 以后新增 Boss 徽章：只需要在 BADGE_UPGRADE_RULES_CONFIG 里加一条配置；无需新增 isXXX() 函数。
+const BADGE_UPGRADE_RULES_CONFIG = {
     IT_SCARLET_CRUSADER_BADGE: {
-        badgeId: 'IT_SCARLET_CRUSADER_BADGE',
         title: '血色十字军的徽章',
         zoneLabel: '血色修道院',
         inc: 2,
         cap: 100,
-        isEligible: isScarletMonasteryEquipment,
+        equipPool: 'scarlet_monastery',
         theme: { border: '#c62828', title: '#ff6b6b', shadow: 'rgba(198,40,40,0.25)' }
     },
     IT_HOGGER_BADGE: {
-        badgeId: 'IT_HOGGER_BADGE',
         title: '霍格的沾血徽章',
         zoneLabel: '艾尔文森林 / 西部荒野 / 赤脊山',
         inc: 2,
         cap: 100,
-        isEligible: isHoggerBadgeEquipment,
+        equipPool: 'elwynn_westfall_redridge',
         theme: { border: '#8d6e63', title: '#ffd700', shadow: 'rgba(141,110,99,0.25)' }
     },
     IT_VANCLEEF_BADGE: {
-        badgeId: 'IT_VANCLEEF_BADGE',
         title: '迪菲亚徽章',
         zoneLabel: '贫瘠之地',
         inc: 2,
         cap: 100,
-        isEligible: isVancleefBadgeEquipment,
+        equipPool: 'barrens',
         theme: { border: '#263238', title: '#90caf9', shadow: 'rgba(38,50,56,0.25)' }
     },
     IT_PRESTOR_BADGE: {
-        badgeId: 'IT_PRESTOR_BADGE',
         title: '黑龙化身徽章',
         zoneLabel: '荆棘谷 / 塔纳利斯',
         inc: 2,
         cap: 100,
-        isEligible: isPrestorBadgeEquipment,
+        equipPool: 'stranglethorn_tanaris',
         theme: { border: '#2b2d42', title: '#b388ff', shadow: 'rgba(179,136,255,0.22)' }
     },
     IT_THAURISSAN_BADGE: {
-        badgeId: 'IT_THAURISSAN_BADGE',
         title: '索瑞森大帝的徽章',
         zoneLabel: '沉没的神庙 / 黑石深渊',
         inc: 2,
         cap: 100,
-        isEligible: isBlackrockDepthsEquipment,
+        equipPool: 'sunken_temple_blackrock_depths',
         theme: { border: '#c62828', title: '#ff6b6b', shadow: 'rgba(198,40,40,0.25)' }
     },
-
     IT_GANDLING_BADGE: {
-        badgeId: 'IT_GANDLING_BADGE',
         title: '加丁的徽章',
         zoneLabel: '通灵学院',
         inc: 2,
         cap: 100,
-        isEligible: isScholomanceEquipment,
+        equipPool: 'scholomance',
         theme: { border: '#4a148c', title: '#ce93d8', shadow: 'rgba(74,20,140,0.25)' }
     },
-
     IT_RIVENDARE_BADGE: {
-        badgeId: 'IT_RIVENDARE_BADGE',
         title: '瑞文戴尔男爵的徽章',
         zoneLabel: '斯坦索姆',
         inc: 2,
         cap: 100,
-        isEligible: isStratholmeEquipment,
+        equipPool: 'stratholme',
         theme: { border: '#263238', title: '#b388ff', shadow: 'rgba(38,50,56,0.25)' }
     },
     IT_REND_BADGE: {
-        badgeId: 'IT_REND_BADGE',
         title: '雷德黑手的徽章',
         zoneLabel: '黑石塔上',
         inc: 2,
         cap: 100,
-        isEligible: isUpperBlackrockSpireEquipment,
+        equipPool: 'upper_blackrock_spire',
         theme: { border: '#4e342e', title: '#ffab91', shadow: 'rgba(78,52,46,0.25)' }
     },
     IT_HAKKAR_BADGE: {
-        badgeId: 'IT_HAKKAR_BADGE',
         title: '夺灵者的徽章',
         zoneLabel: '祖尔格拉布',
         inc: 2,
         cap: 100,
-        isEligible: isZulGurubBadgeEquipment,
+        equipPool: 'zul_gurub',
         theme: { border: '#4a148c', title: '#4CAF50', shadow: 'rgba(78,52,46,0.25)' }
     },
     IT_OSSIRIAN_BADGE: {
-        badgeId: 'IT_OSSIRIAN_BADGE',
         title: '无疤者的徽章',
         zoneLabel: '安琪拉废墟',
         inc: 2,
         cap: 100,
-        isEligible: isRuinsOfAhnQirajEquipment,
+        equipPool: 'ruins_of_ahnqiraj',
         theme: { border: '#b08900', title: '#ffd54f', shadow: 'rgba(176,137,0,0.25)' }
     },
-
 };
+
+// 生成最终运行时规则对象（保持现有代码的访问方式不变：BADGE_UPGRADE_RULES[badgeId].isEligible(eq)）
+const BADGE_UPGRADE_RULES = Object.fromEntries(
+    Object.entries(BADGE_UPGRADE_RULES_CONFIG).map(([badgeId, cfg]) => [
+        badgeId,
+        {
+            badgeId,
+            ...cfg,
+            isEligible: makeBadgeEquipPredicate(cfg.equipPool),
+        }
+    ])
+);
 
 const FIXED_EQUIPMENTS = {
     EQ_001: {

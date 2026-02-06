@@ -1206,6 +1206,7 @@ const SKILLS = {
             }
             return {
                 damage: Math.floor(damage),
+                isCrit: isCrit,
                 school: 'shadow'
             };
         }
@@ -6207,7 +6208,7 @@ const FIXED_EQUIPMENTS = {
     EQ_137: {
         id: 'EQ_137',
         name: '吞噬披风',
-        icon: "icons/wow/vanilla/armor/INV_Misc_Cape_20.png",
+        icon: "icons/wow/vanilla/armor/tunshipifeng.png",
         type: 'equipment',
         slot: 'cloak',
         rarity: 'purple',
@@ -6231,7 +6232,7 @@ const FIXED_EQUIPMENTS = {
     EQ_138: {
         id: 'EQ_138',
         name: '曼多基尔的徽记',
-        icon: "icons/wow/vanilla/armor/INV_Jewelry_Ring_16.png",
+        icon: "icons/wow/vanilla/armor/INV_Jewelry_Talisman_01.png",
         type: 'equipment',
         slot: 'ring1',
         rarity: 'blue',
@@ -26581,6 +26582,72 @@ export default function WoWIdleGame() {
                 const [exp, gold, drop, researchSpeed] = values;
                 dispatch({ type: 'CHEAT_SET_REBIRTH_BONUS', payload: { exp, gold, drop, researchSpeed } });
                 setConsoleLogs(prev => [...prev, `✓ 已设置轮回加成：exp=${exp}, gold=${gold}, drop=${drop}, research=${researchSpeed}`]);
+            }
+            // ===== 新增：add set =====
+            // 用法：add set <setId>[,<level>]
+            // 示例：add set valor_set
+            else if (subCmd === 'set' && parts[2]) {
+                const setArg = parts[2];
+                const [setIdRaw, levelStr] = setArg.split(',');
+
+                const setId = (setIdRaw || '').trim();
+                if (!setId) {
+                    setConsoleLogs(prev => [...prev, '✗ 错误：setId 不能为空']);
+                    return;
+                }
+
+                const normalizedSetId = setId.toLowerCase();
+
+                const parsedLevel = parseInt(levelStr?.trim());
+                const level = Number.isFinite(parsedLevel) ? parsedLevel : 1;
+                const clampedLevel = Math.max(1, Math.min(100, level));
+
+                // 收集所有装备模板（常规掉落 + 任务/剧情奖励）
+                const allTemplates = [
+                    ...(FIXED_EQUIPMENTS ? Object.values(FIXED_EQUIPMENTS) : []),
+                    ...(QUEST_REWARD_EQUIPMENTS ? Object.values(QUEST_REWARD_EQUIPMENTS) : []),
+                ]
+                    .filter(Boolean)
+                    .filter(tpl => {
+                        const sid = (tpl.setId || tpl.set || '').toString().toLowerCase();
+                        return sid === normalizedSetId;
+                    });
+
+                if (allTemplates.length === 0) {
+                    setConsoleLogs(prev => [...prev, `✗ 错误：找不到 setId 为 "${normalizedSetId}" 的装备`]);
+                    return;
+                }
+
+                // 去重（按装备ID）
+                const uniqueTemplates = Array.from(
+                    new Map(allTemplates.map(tpl => [tpl.id, tpl])).values()
+                );
+
+                // 批量添加
+                const addedLines = [];
+                for (const tpl of uniqueTemplates) {
+                    const instance = {
+                        ...tpl,
+                        instanceId: `cheat_${Date.now()}_${Math.random().toString(36)}`,
+                        qualityColor: getRarityColor(tpl.rarity),
+                        currentLevel: clampedLevel,
+                        stats: scaleStats(tpl.baseStats || {}, tpl.growth || {}, clampedLevel)
+                    };
+
+                    dispatch({ type: 'CHEAT_ADD_EQUIPMENT', payload: instance });
+                    addedLines.push(`   + ${tpl.name} (ID: ${tpl.id}) Lv.${clampedLevel}`);
+
+                    if (clampedLevel >= 100) {
+                        dispatch({ type: 'CHEAT_ADD_LV100_CODEX', payload: tpl.id });
+                    }
+                }
+
+                const setName = SET_BONUSES?.[normalizedSetId]?.name || uniqueTemplates[0]?.setName || normalizedSetId;
+                setConsoleLogs(prev => [
+                    ...prev,
+                    `✓ 成功添加套装「${setName}」(setId: ${normalizedSetId}) 共 ${uniqueTemplates.length} 件`,
+                    ...addedLines
+                ]);
             }
             else {
                 setConsoleLogs(prev => [...prev, '✗ 用法：']);

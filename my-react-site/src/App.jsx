@@ -24329,23 +24329,6 @@ const BossPrepareModal = ({ state, dispatch }) => {
                                             </div>
                                         </div>
 
-                                        <div style={{
-                                            padding: 10,
-                                            background: 'rgba(156,39,176,0.10)',
-                                            borderRadius: 6,
-                                            borderLeft: '3px solid #9c27b0'
-                                        }}>
-                                            <div style={{ fontSize: 12, color: '#ce93d8', fontWeight: 600, marginBottom: 4 }}>
-                                                ☠️ 堕落之血
-                                            </div>
-                                            <div style={{ fontSize: 11, color: '#aaa', lineHeight: 1.5 }}>
-                                                <span style={{ color: '#ffd700' }}>分散站位</span>：随机1名角色获得1层【堕落之血】
-                                                <br/>
-                                                <span style={{ color: '#ffd700' }}>集中站位</span>：所有角色获得1层【堕落之血】
-                                                <br/>
-                                                【堕落之血】为<span style={{ color: '#81c784' }}>中毒DOT</span>，每层每回合造成 <span style={{ color: '#ffd700' }}>{boss.corruptedBloodDotMultiplier}倍</span> Boss攻击 的<span style={{ color: '#9c27b0' }}>暗影伤害</span>，可叠层至战斗结束
-                                            </div>
-                                        </div>
 
                                         <div style={{
                                             padding: 10,

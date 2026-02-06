@@ -8001,8 +8001,8 @@ const BOSS_DATA = {
         defenseDownDefense: 8000,
         defenseDownDuration: 4,
 
-        // 技能循环：奥斯里安之力 → 践踏 → 堕落之血 → 结舌诅咒 → 包围之风
-        cycle: ['ossirian_strength', 'trample', 'corrupted_blood', 'tongue_curse', 'surrounding_winds'],
+        // 技能循环：奥斯里安之力 → 践踏 → 结舌诅咒 → 包围之风
+        cycle: ['ossirian_strength', 'trample', 'tongue_curse', 'surrounding_winds'],
 
         // 技能1：奥斯里安之力（10×攻击，物理）
         ossirianStrengthMultiplier: 10,
@@ -8011,13 +8011,10 @@ const BOSS_DATA = {
         trampleMultiplier: 3,
         knockupDuration: 1,
 
-        // 技能3：堕落之血（沿用哈卡同款 DOT：0.5×攻击/层/回合，暗影）
-        corruptedBloodDotMultiplier: 0.5,
-
-        // 技能4：结舌诅咒（急速/暴击归零，持续3回合）
+        // 技能3：结舌诅咒（急速/暴击归零，持续3回合）
         tongueCurseDuration: 3,
 
-        // 技能5：包围之风（3×攻击，自然；集中站位改为全体）
+        // 技能4：包围之风（3×攻击，自然；集中站位改为全体）
         surroundingWindsMultiplier: 3,
 
         // 汲能水晶（不攻击）
@@ -12106,28 +12103,6 @@ function stepBossCombat(state) {
                 addLog(`→ 分散站位触发【击飞】：全体下一回合无法行动`, 'debuff');
             }
         }
-
-        // 技能3：堕落之血（沿用哈卡同款）
-        else if (bossAction === 'corrupted_blood') {
-            if (combat.strategy.stance === 'concentrated') {
-                addLog(`【${boss.name}】施放【堕落之血】（集中站位），所有角色获得1层【堕落之血】！`);
-                combat.playerStates.forEach((ps, pIdx) => applyCorruptedBlood(ps, pIdx));
-            } else {
-                const candidates = combat.playerStates
-                    .map((ps, idx) => ({ ps, idx }))
-                    .filter(o => (o.ps?.currentHp ?? 0) > 0)
-                    .map(o => o.idx);
-
-                if (candidates.length <= 0) {
-                    addLog(`【${boss.name}】施放【堕落之血】，但没有存活目标`);
-                } else {
-                    const tIdx = candidates[Math.floor(Math.random() * candidates.length)];
-                    addLog(`【${boss.name}】施放【堕落之血】命中 位置${tIdx + 1} ${combat.playerStates[tIdx].char.name}！`);
-                    applyCorruptedBlood(combat.playerStates[tIdx], tIdx);
-                }
-            }
-        }
-
         // 技能4：结舌诅咒（所有角色急速/暴击降为0，持续3回合）
         else if (bossAction === 'tongue_curse') {
             const dur = Math.max(1, Math.floor(Number(boss.tongueCurseDuration || 3)));

@@ -26179,7 +26179,7 @@ const BossPrepareModal = ({ state, dispatch }) => {
                                                 background: 'rgba(0,0,0,0.4)',
                                                 borderRadius: 3
                                             }}>
-                                                位置 {slot + 1} {slot === 0 && '(坦克位)'}
+
                                             </div>
 
                                             {char ? (

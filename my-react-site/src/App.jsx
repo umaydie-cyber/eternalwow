@@ -7056,7 +7056,7 @@ const FIXED_EQUIPMENTS = {
     EQ_166: {
         id: 'EQ_166',
         name: '迅击戒指',
-        icon: "icons/wow/vanilla/armor/INV_Jewelry_Ring_35.png",
+        icon: "icons/wow/vanilla/armor/INV_Jewelry_Ring_07.png",
         type: 'equipment',
         slot: 'ring1',
         rarity: 'blue',

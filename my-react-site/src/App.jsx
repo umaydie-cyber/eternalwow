@@ -16837,6 +16837,22 @@ function gameReducer(state, action) {
                 }
             };
         }
+        case "CHEAT_ADD_SPACETIME_COIN": {
+            const raw = action?.payload?.amount;
+            const delta = Math.floor(Number(raw));
+
+            if (!Number.isFinite(delta) || delta <= 0) return state;
+
+            return {
+                ...state,
+                resources: {
+                    ...state.resources,
+                    // 如果你原来字段名不是这个（比如 spCoin / spaceTimeCoin），按你的实际字段改
+                    spacetimeCoin: (state.resources?.spacetimeCoin ?? 0) + delta,
+                },
+            };
+        }
+
 
         case 'CHEAT_ADD_EQUIPMENT': {
             const newInventory = [...state.inventory, action.payload];
@@ -27781,6 +27797,14 @@ export default function WoWIdleGame() {
                     setConsoleLogs(prev => [...prev, `✓ 成功添加 ${amount} 金币`]);
                 } else {
                     setConsoleLogs(prev => [...prev, '✗ 错误：金币数量必须是正数']);
+                }
+            }else if (subCmd === 'spcoin' && parts[2]) {
+                const amount = parseFloat(parts[2]);
+                if (!isNaN(amount) && amount > 0) {
+                    dispatch({ type: 'CHEAT_ADD_SPACETIME_COIN', payload: amount });
+                    setConsoleLogs(prev => [...prev, `✓ 成功添加 ${amount} 时空币`]);
+                } else {
+                    setConsoleLogs(prev => [...prev, '✗ 错误：时空币数量必须是正数']);
                 }
             }
             else if (subCmd === 'equip' && parts[2]) {

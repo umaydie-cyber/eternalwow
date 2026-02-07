@@ -7489,6 +7489,39 @@ const FIXED_EQUIPMENTS = {
         },
     },
 
+    // ==================== Legendary（橙色）- 逐风者部件合成：风剑 ====================
+    EQ_182: {
+        id: 'EQ_182',
+        name: '雷霆之怒，逐风者的祝福之剑',
+        icon: "icons/wow/vanilla/weapons/INV_Sword_39.png",
+        type: 'equipment',
+        slot: 'mainHand',
+        rarity: 'orange',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            attack: 2500,
+            hp: 6500,
+            magicResist: 200,
+            mastery: 25,
+            versatility: 25,
+            haste: 25,
+        },
+        growth: {
+            // 橙武不做成长（如需成长可改为与其它装备一致）
+        },
+        specialEffect: {
+            type: 'thunderfury',
+            name: '风怒闪电链',
+            trigger: 'turn_start',
+            chance: 0.20,
+            damageMult: 1.2,
+            damageType: 'nature',
+            selfDamageTakenMult: 0.8,
+            selfBuffDuration: 2,
+        },
+    },
+
 };
 
 //赤脊山5件图鉴100级点亮效果
@@ -9246,6 +9279,19 @@ function formatItemStatValue(stat, valueRaw) {
 
 
 function mergeEquipments(eqA, eqB) {
+    // ==================== 特殊配方：逐风者左右颅合成风剑 ====================
+    // 规则：EQ_176（右） + EQ_181（左） => EQ_182（雷霆之怒，逐风者的祝福之剑）
+    const isThunderfuryRecipe = (a, b) => {
+        const ida = a?.id;
+        const idb = b?.id;
+        return (ida === 'EQ_176' && idb === 'EQ_181') || (ida === 'EQ_181' && idb === 'EQ_176');
+    };
+
+    if (isThunderfuryRecipe(eqA, eqB)) {
+        const forged = createEquipmentInstance('EQ_182');
+        return forged || null;
+    }
+
     if (eqA.id !== eqB.id) return null;
 
     const getLevel = (eq) => (eq?.currentLevel ?? eq?.level ?? 0);
@@ -10267,6 +10313,35 @@ function rollProcStatEffects(character, trigger) {
     return { bonus: totalBonus, triggered };
 }
 
+// ==================== 装备特效：风剑（雷霆之怒）闪电链 ====================
+// 数据约定：specialEffect.type === 'thunderfury'
+// 触发：turn_start，chance=0.20
+// 效果：对所有敌人造成 damageMult * 攻击强度 的自然伤害；并获得承伤降低 selfDamageTakenMult（如0.8）持续 selfBuffDuration 回合
+function rollThunderfuryEffect(character, trigger) {
+    const eqList = Object.values(character?.equipment || {}).filter(Boolean);
+    for (const eq of eqList) {
+        const effects = getEquipmentSpecialEffectList(eq);
+        if (effects.length === 0) continue;
+
+        for (const se of effects) {
+            if (!se || se.type !== 'thunderfury') continue;
+            if ((se.trigger || 'turn_start') !== trigger) continue;
+
+            const chance = Math.max(0, Math.min(1, Number(se.chance) || 0));
+            if (chance <= 0) continue;
+            if (Math.random() >= chance) continue;
+
+            return {
+                label: se.name || eq.name || '雷霆之怒',
+                damageMult: Number(se.damageMult) || 1.2,
+                selfDamageTakenMult: Number(se.selfDamageTakenMult) || 0.8,
+                selfBuffDuration: Math.max(1, Math.floor(Number(se.selfBuffDuration) || 2)),
+            };
+        }
+    }
+    return null;
+}
+
 // ==================== BOSS战斗一步推进函数 ====================
 function stepBossCombat(state) {
     if (!state.bossCombat) return state;
@@ -10724,6 +10799,61 @@ function stepBossCombat(state) {
                 const t = formatProcStatBonusText(tp.bonus);
                 if (t) addLog(`【${tp.label}】触发：${t}（本回合）`);
             });
+        }
+
+        // ==================== 装备特效：雷霆之怒（风剑） ====================
+        // 回合开始20%概率：对所有敌人造成1.2倍攻击的自然伤害；并获得承伤-20%持续2回合
+        const thunderfury = rollThunderfuryEffect(p.char, 'turn_start');
+        if (thunderfury) {
+            const atk = Number(p.char?.stats?.attack) || 0;
+            const raw = Math.floor(atk * (Number(thunderfury.damageMult) || 1.2));
+            const minionName = boss.minion?.name || boss.cannoneer?.name || '小弟';
+
+            // 伤害：Boss
+            if ((combat.bossHp ?? 0) > 0) {
+                const actual = Math.max(1, Math.floor(raw - (boss.defense || 0)));
+                combat.bossHp -= actual;
+                addLog(`【${thunderfury.label}】闪电链命中 ${boss.name}：造成 ${actual} 自然伤害`);
+            }
+
+            // 伤害：所有存活且非免疫的小弟
+            if (Array.isArray(combat.minions) && combat.minions.length > 0) {
+                combat.minions.forEach((m, mi) => {
+                    if (!m || (m.hp ?? 0) <= 0) return;
+                    if (m.immune) {
+                        addLog(`【${thunderfury.label}】闪电链被 ${minionName} 免疫`, 'warning');
+                        return;
+                    }
+                    const def = m.defense ?? boss.minion?.defense ?? boss.cannoneer?.defense ?? 0;
+                    const actual = Math.max(1, Math.floor(raw - def));
+                    combat.minions[mi].hp -= actual;
+                    addLog(`【${thunderfury.label}】闪电链命中 ${minionName}：造成 ${actual} 自然伤害`);
+                });
+            }
+
+            // 自身承伤降低Buff（刷新）
+            const buffType = 'thunderfury_guard';
+            const dur = Math.max(1, Math.floor(thunderfury.selfBuffDuration || 2));
+            const dtm = Number(thunderfury.selfDamageTakenMult) || 0.8;
+            const existingIdx = (p.buffs || []).findIndex(b => b?.type === buffType);
+            if (existingIdx === -1) {
+                p.buffs.push({
+                    type: buffType,
+                    name: '雷霆守护',
+                    damageTakenMult: dtm,
+                    duration: dur,
+                    justApplied: true,
+                });
+            } else {
+                p.buffs[existingIdx] = {
+                    ...p.buffs[existingIdx],
+                    name: '雷霆守护',
+                    damageTakenMult: dtm,
+                    duration: dur,
+                    justApplied: true,
+                };
+            }
+            addLog(`【雷霆守护】${p.char.name} 受到的所有伤害降低 ${Math.round((1 - dtm) * 100)}%（持续${dur}回合）`, 'buff');
         }
 
         // 饰品/装备特效：技能栏强化
@@ -14776,6 +14906,56 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
                         text: `【${tp.label}】触发：${t}（本回合）`
                     });
                 }
+            });
+        }
+
+        // ==================== 装备特效：雷霆之怒（风剑） ====================
+        // 回合开始20%概率：对敌人造成1.2倍攻击的自然伤害；并获得承伤-20%持续2回合
+        const thunderfury = rollThunderfuryEffect(character, 'turn_start');
+        if (thunderfury && enemyHp > 0) {
+            const atk = Number(character?.stats?.attack) || 0;
+            const raw = Math.floor(atk * (Number(thunderfury.damageMult) || 1.2));
+            const def = Number(combatState?.enemy?.defense) || 0;
+            const actual = Math.max(1, Math.floor(raw - def));
+            enemyHp -= actual;
+
+            logs.push({
+                round,
+                kind: 'proc',
+                actor: character.name,
+                proc: thunderfury.label,
+                text: `【${thunderfury.label}】闪电链：对 ${combatState?.enemy?.name || '敌人'} 造成 ${actual} 自然伤害`
+            });
+
+            // 自身承伤降低Buff（刷新）
+            const buffType = 'thunderfury_guard';
+            const dur = Math.max(1, Math.floor(thunderfury.selfBuffDuration || 2));
+            const dtm = Number(thunderfury.selfDamageTakenMult) || 0.8;
+            const idx = buffs.findIndex(b => b?.type === buffType);
+            if (idx === -1) {
+                buffs.push({
+                    type: buffType,
+                    name: '雷霆守护',
+                    damageTakenMult: dtm,
+                    duration: dur,
+                    justApplied: true,
+                });
+            } else {
+                buffs[idx] = {
+                    ...buffs[idx],
+                    name: '雷霆守护',
+                    damageTakenMult: dtm,
+                    duration: dur,
+                    justApplied: true,
+                };
+            }
+
+            logs.push({
+                round,
+                kind: 'buff',
+                actor: character.name,
+                proc: '雷霆守护',
+                text: `【雷霆守护】受到的所有伤害降低 ${Math.round((1 - dtm) * 100)}%（持续${dur}回合）`
             });
         }
 
@@ -20191,6 +20371,29 @@ const ItemDetailsModal = ({ item, onClose, onEquip, characters, state , dispatch
                             </div>
                         )}
 
+                        {/* thunderfury 类型（风剑：闪电链 + 承伤降低） */}
+                        {item.specialEffect.type === 'thunderfury' && (
+                            <div style={{ fontSize: 12, color: '#ffb74d', lineHeight: 1.6 }}>
+                                <div style={{ marginBottom: 8, color: '#fff' }}>
+                                    每回合有 <span style={{ color: '#ffd700', fontWeight: 600 }}>
+                                        {((item.specialEffect.chance || 0) * 100).toFixed(0)}%
+                                    </span> 概率释放一道闪电链：
+                                </div>
+                                <div style={{ marginTop: 8, color: '#fff' }}>
+                                    • 对所有敌人造成 <span style={{ color: '#ffd700', fontWeight: 600 }}>
+                                        {(item.specialEffect.damageMult || 1.2).toFixed(1)}倍攻击强度
+                                    </span> 的自然伤害
+                                </div>
+                                <div style={{ marginTop: 8, color: '#fff' }}>
+                                    • 并使自身受到的所有伤害降低 <span style={{ color: '#ffd700', fontWeight: 600 }}>
+                                        {Math.round((1 - (item.specialEffect.selfDamageTakenMult || 0.8)) * 100)}%
+                                    </span> ，持续 <span style={{ color: '#ffd700', fontWeight: 600 }}>
+                                        {Math.max(1, Math.floor(item.specialEffect.selfBuffDuration || 2))}
+                                    </span> 回合
+                                </div>
+                            </div>
+                        )}
+
                         {/* map_slayer 类型（地图战斗伤害加成） */}
                         {item.specialEffect.type === 'map_slayer' && (
                             <div style={{ fontSize: 12, color: '#ffb74d', lineHeight: 1.6 }}>
@@ -21876,7 +22079,10 @@ const InventoryPage = ({ state, dispatch }) => {
                                     return;
                                 }
 
-                                if (fromItem && fromItem.type === 'equipment' && fromItem.id === toItem.id) {
+                                const isThunderfuryRecipe = (aId, bId) =>
+                                    (aId === 'EQ_176' && bId === 'EQ_181') || (aId === 'EQ_181' && bId === 'EQ_176');
+
+                                if (fromItem && fromItem.type === 'equipment' && (fromItem.id === toItem.id || isThunderfuryRecipe(fromItem.id, toItem.id))) {
                                     dispatch({
                                         type: 'MERGE_EQUIPMENT',
                                         payload: { instanceIdA: fromInstanceId, instanceIdB: toInstanceId }
@@ -22009,6 +22215,12 @@ const InventoryPage = ({ state, dispatch }) => {
                                     {item.specialEffect.type === 'map_slayer' && (
                                         <>
                                             🗺️ 地图伤害 +{((item.specialEffect.bonusDamageVsMap || 0) * 100).toFixed(0)}%
+                                        </>
+                                    )}
+
+                                    {item.specialEffect.type === 'thunderfury' && (
+                                        <>
+                                            ⚡ 闪电链 {(Number(item.specialEffect.chance) * 100).toFixed(0)}%
                                         </>
                                     )}
                                 </div>

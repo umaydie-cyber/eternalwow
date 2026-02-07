@@ -8857,7 +8857,7 @@ const BOSS_DATA = {
             gold: 2000000,
             exp: 1200000,
             items: [
-                { id: 'IT_GARR_BADGE', chance: 0.8 }
+
             ]
         }
     },

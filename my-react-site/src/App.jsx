@@ -20,6 +20,8 @@ const BOSS_BONUS_CONFIG = {
     baron_geddon: { name: '迦顿男爵', bonus: 0.25 },
     // ✅ 新增：熔火之心 - 焚化者古雷曼格
     golemagg: { name: '焚化者古雷曼格', bonus: 0.25 },
+    // ✅ 新增：熔火之心 - 管理者埃克索图斯
+    majordomo_executus: { name: '管理者埃克索图斯', bonus: 0.25 },
 };
 
 // 兼容旧代码：派生出 names / bossBonus 两个对象（不再手写维护）
@@ -8790,6 +8792,18 @@ const WORLD_BOSSES = {
         unlockLevel: 60
     },
 
+    // ✅ 新增：60级世界首领 - 管理者埃克索图斯（熔火之心）
+    majordomo_executus: {
+        id: 'majordomo_executus',
+        name: '管理者埃克索图斯',
+        icon: 'icons/wow/vanilla/boss/guanlizhe.png', // 需要添加对应图标
+        hp: 20000000,
+        attack: 12800,
+        defense: 15000,
+        rewards: { gold: 2600000, exp: 1500000 },
+        unlockLevel: 60
+    },
+
 };
 
 // 装备槽位定义
@@ -9423,6 +9437,53 @@ const BOSS_DATA = {
                 { id: 'EQ_186', chance: 0.1 },  // 预言短裤
                 { id: 'EQ_171', chance: 0.02 }  // 不短暂能量护符
             ]
+        }
+    },
+
+    // ✅ 新增：60级世界首领 - 管理者埃克索图斯（熔火之心）
+    majordomo_executus: {
+        id: 'majordomo_executus',
+        name: '管理者埃克索图斯',
+        maxHp: 20000000,
+        attack: 12800,
+        defense: 15000,
+
+        // 技能循环：反物理护盾 → 奥爆术 → 反魔法护盾 → 奥爆术
+        cycle: ['anti_physical_shield', 'arcane_explosion', 'anti_magic_shield', 'arcane_explosion'],
+
+        // 被动：固有2个烈焰行者医师（每回合为全体己方回复 10×Boss攻击）
+        healerCount: 2,
+        healerHp: 3000000,
+        healerHealMultiplier: 10,
+        healerName: '烈焰行者医师',
+
+        // 被动：固有2个烈焰行者精英（每回合对全体角色造成 1.5×Boss攻击 的法术伤害）
+        eliteCount: 2,
+        eliteHp: 5000000,
+        eliteAoEDamageMultiplier: 1.5,
+        eliteName: '烈焰行者精英',
+
+        // 技能1：反物理护盾（全体敌方单位免疫物理伤害）
+        antiPhysicalDuration: 2,
+
+        // 技能2：奥爆术（全体法术伤害，计算魔抗）
+        arcaneExplosionMultiplier: 2,
+
+        // 技能3：反魔法护盾（全体敌方单位免疫法术伤害）
+        antiMagicDuration: 2,
+
+        // UI通用小弟配置（本Boss实际小弟为两种类型，战斗中以每个小弟对象的 maxHp/displayName 为准）
+        minion: {
+            name: '烈焰行者',
+            maxHp: 5000000,
+            attack: 12800,
+            defense: 15000
+        },
+
+        rewards: {
+            gold: 2600000,
+            exp: 1500000,
+            items: []
         }
     },
 
@@ -10529,8 +10590,15 @@ function stepBossCombat(state) {
     const bossBase = BOSS_DATA[combat.bossId];
     if (!bossBase) return state;
 
+    // 统一确保存在 bossBuffs（用于各Boss的被动/计时器）
+    combat.bossBuffs = combat.bossBuffs || {};
+
     // 本回合开始时的"防御覆盖"持续时间，用于回合末递减（避免刚触发就被扣1回合）
     const bossDefenseOverrideRemainingStart = Number(combat.bossDefenseOverrideRemaining || 0);
+
+    // 管理者埃克索图斯：护盾在本回合开始时的剩余回合数（用于回合末递减）
+    const executusPhysicalShieldStart = Number(combat.bossBuffs.executusPhysicalShield || 0);
+    const executusMagicShieldStart = Number(combat.bossBuffs.executusMagicShield || 0);
 
     combat.round += 1;
     // ✅ 添加辅助函数，创建带回合数的日志对象
@@ -10592,6 +10660,28 @@ function stepBossCombat(state) {
         damage = Math.max(1, Math.floor(damage * takenMult * buffTakenMult * atonementTakenMult * demoralizingShoutMult * versTakenMult * spellVulnMult));
 
         return { damage, resistReduction, magicResist: mr, spellVulnMult };
+    };
+
+    // ==================== 管理者埃克索图斯：护盾免疫（反物理 / 反魔法） ====================
+    // 约定：
+    // - school 未提供 => 默认视为 physical
+    // - school === 'physical' => 物理
+    // - 其它 => 法术/非物理
+    const isMagicSchool = (school) => {
+        if (!school) return false;
+        return school !== 'physical';
+    };
+
+    const getExecutusShieldInfo = (school) => {
+        if (combat.bossId !== 'majordomo_executus') return { immune: false, shieldName: '' };
+
+        const isMagic = isMagicSchool(school);
+        const phys = Number(combat.bossBuffs.executusPhysicalShield || 0);
+        const mag = Number(combat.bossBuffs.executusMagicShield || 0);
+
+        if (isMagic && mag > 0) return { immune: true, shieldName: '反魔法护盾' };
+        if (!isMagic && phys > 0) return { immune: true, shieldName: '反物理护盾' };
+        return { immune: false, shieldName: '' };
     };
 
 
@@ -10889,6 +10979,73 @@ function stepBossCombat(state) {
         }
     }
 
+    // ==================== 管理者埃克索图斯：被动（固有烈焰行者医师/精英） ====================
+    // 被动：
+    // - 固有2个【烈焰行者医师】（HP 3,000,000）
+    // - 固有2个【烈焰行者精英】（HP 5,000,000）
+    // 行动逻辑在“小弟行动阶段”处理。
+    if (combat.bossId === 'majordomo_executus') {
+        combat.bossBuffs = combat.bossBuffs || {};
+        combat.minions = Array.isArray(combat.minions) ? combat.minions : [];
+
+        // 初始化护盾剩余回合
+        if (!Number.isFinite(Number(combat.bossBuffs.executusPhysicalShield))) {
+            combat.bossBuffs.executusPhysicalShield = 0;
+        }
+        if (!Number.isFinite(Number(combat.bossBuffs.executusMagicShield))) {
+            combat.bossBuffs.executusMagicShield = 0;
+        }
+
+        // 开场生成随从（不会自动重生）
+        if (!combat.bossBuffs.executusAddsSpawned) {
+            const healerCount = Math.max(0, Math.floor(Number(boss.healerCount || 2)));
+            const eliteCount = Math.max(0, Math.floor(Number(boss.eliteCount || 2)));
+
+            const healerHp = Math.floor(Number(boss.healerHp || 3000000));
+            const eliteHp = Math.floor(Number(boss.eliteHp || 5000000));
+
+            const atk = Math.floor(Number(boss.attack || 0));
+            const def = Math.floor(Number(boss.defense || 0));
+
+            const healerName = boss.healerName || '烈焰行者医师';
+            const eliteName = boss.eliteName || '烈焰行者精英';
+
+            for (let k = 0; k < healerCount; k++) {
+                combat.minions.push({
+                    hp: healerHp,
+                    maxHp: healerHp,
+                    attack: atk,
+                    defense: def,
+                    isFlamewakerHealer: true,
+                    isFlamewakerElite: false,
+                    displayName: `${healerName}${k + 1}`,
+                    immune: false,
+                    dots: []
+                });
+            }
+
+            for (let k = 0; k < eliteCount; k++) {
+                combat.minions.push({
+                    hp: eliteHp,
+                    maxHp: eliteHp,
+                    attack: atk,
+                    defense: def,
+                    isFlamewakerHealer: false,
+                    isFlamewakerElite: true,
+                    displayName: `${eliteName}${k + 1}`,
+                    immune: false,
+                    dots: []
+                });
+            }
+
+            combat.bossBuffs.executusAddsSpawned = true;
+
+            if (healerCount + eliteCount > 0) {
+                addLog(`【${boss.name}】被动：固有 ${healerCount} 个【${healerName}】与 ${eliteCount} 个【${eliteName}】登场！`, 'warning');
+            }
+        }
+    }
+
     for (let i = 0; i < combat.playerStates.length; i++) {
         const p = combat.playerStates[i];
         if (p.currentHp <= 0) continue;
@@ -11028,9 +11185,14 @@ function stepBossCombat(state) {
 
             // 伤害：Boss
             if ((combat.bossHp ?? 0) > 0) {
+                const shieldInfo = getExecutusShieldInfo('nature');
+                if (shieldInfo.immune) {
+                    addLog(`【${thunderfury.label}】闪电链被【${shieldInfo.shieldName}】免疫`, 'warning');
+                } else {
                 const actual = Math.max(1, Math.floor(raw - (boss.defense || 0)));
                 combat.bossHp -= actual;
                 addLog(`【${thunderfury.label}】闪电链命中 ${boss.name}：造成 ${actual} 自然伤害`);
+                }
             }
 
             // 伤害：所有存活且非免疫的小弟
@@ -11039,6 +11201,12 @@ function stepBossCombat(state) {
                     if (!m || (m.hp ?? 0) <= 0) return;
                     if (m.immune) {
                         addLog(`【${thunderfury.label}】闪电链被 ${minionName} 免疫`, 'warning');
+                        return;
+                    }
+
+                    const shieldInfo = getExecutusShieldInfo('nature');
+                    if (shieldInfo.immune) {
+                        addLog(`【${thunderfury.label}】闪电链被【${shieldInfo.shieldName}】免疫`, 'warning');
                         return;
                     }
                     const def = m.defense ?? boss.minion?.defense ?? boss.cannoneer?.defense ?? 0;
@@ -11234,12 +11402,19 @@ function stepBossCombat(state) {
 
             const minionName = boss.minion?.name || boss.cannoneer?.name || '小弟';
 
+            // 复制伤害默认按“物理”处理（可被管理者埃克索图斯【反物理护盾】免疫）
+            const shieldInfo = getExecutusShieldInfo('physical');
+
             // 主目标是小弟 -> 额外打Boss
             if (targetType !== 'boss' && combat.bossHp > 0) {
+                if (shieldInfo.immune) {
+                    addLog(`【剑刃乱舞】额外伤害被【${shieldInfo.shieldName}】免疫！`, 'warning');
+                } else {
                 const bossDef = Number(boss.defense) || 0;
                 const cleaveToBoss = Math.max(1, cleaveBase - bossDef);
                 combat.bossHp -= cleaveToBoss;
                 addLog(`【剑刃乱舞】${p.char.name} 的${sourceLabel} 额外对 ${boss.name} 造成 ${cleaveToBoss} 伤害`);
+                }
             }
 
             // 额外打所有非主目标的小弟
@@ -11251,6 +11426,11 @@ function stepBossCombat(state) {
                     // 免疫
                     if (m.immune) {
                         addLog(`【剑刃乱舞】额外伤害被 火炮手${idx + 1}【登上甲板】免疫！`);
+                        return;
+                    }
+
+                    if (shieldInfo.immune) {
+                        addLog(`【剑刃乱舞】额外伤害被【${shieldInfo.shieldName}】免疫！`, 'warning');
                         return;
                     }
 
@@ -11311,6 +11491,16 @@ function stepBossCombat(state) {
                 let damage = basicResult.damage * buffDamageDealtMult;
                 const targetDefense = targetType === 'boss' ? boss.defense : (boss.minion?.defense || boss.cannoneer?.defense || 0);
                 const actualDamage = Math.max(1, Math.floor(damage - targetDefense));
+
+                // 管理者埃克索图斯：反物理护盾（免疫物理伤害）
+                {
+                    const shieldInfo = getExecutusShieldInfo('physical');
+                    if (shieldInfo.immune) {
+                        const minionName = boss.minion?.name || boss.cannoneer?.name || '小弟';
+                        addLog(`位置${i + 1} ${p.char.name} 的攻击被【${shieldInfo.shieldName}】免疫（目标：${targetType === 'boss' ? boss.name : minionName}）`, 'warning');
+                        return 0;
+                    }
+                }
 
                 if (targetType === 'boss') {
                     combat.bossHp -= actualDamage;
@@ -11387,28 +11577,35 @@ function stepBossCombat(state) {
 
             // 对 Boss 造成伤害
             if (combat.bossHp > 0) {
-                combat.bossHp -= damage;
-                addLog(`位置${i + 1} ${p.char.name} 的${skillName}对 ${boss.name} 造成 ${Math.floor(damage)} 伤害${result.isCrit ? '（暴击！）' : ''}`);
-                // 救赎机制
-                if (p.char.stats.atonement) {
-                    triggerAtonementHeal(p, damage);
-                }
-                if (result.isCrit && result.dotOnCrit) {
-                    combat.bossDots = combat.bossDots || [];
-                    combat.bossDots.push({ ...result.dotOnCrit, sourcePlayerId: p.char.id });
-                    addLog(`→ ${boss.name} 获得【重伤】，将持续受到 DOT 伤害`);
-                }
+                const shieldInfo = getExecutusShieldInfo(result.school);
+                if (shieldInfo.immune) {
+                    addLog(`位置${i + 1} ${p.char.name} 的${skillName}被【${shieldInfo.shieldName}】免疫（目标：${boss.name}）`, 'warning');
+                } else {
+                    combat.bossHp -= damage;
+                    addLog(`位置${i + 1} ${p.char.name} 的${skillName}对 ${boss.name} 造成 ${Math.floor(damage)} 伤害${result.isCrit ? '（暴击！）' : ''}`);
 
-                if (result.generateFingerOnHit && p.char.classId === 'frost_mage') {
-                    p.fingersOfFrost = (p.fingersOfFrost || 0) + 1;
-                    addLog(`【冰川突进】触发：${p.char.name} 获得1层寒冰指，当前${p.fingersOfFrost}层`);
-                }
+                    // 救赎机制
+                    if (p.char.stats.atonement) {
+                        triggerAtonementHeal(p, damage);
+                    }
 
-                if (p.char.talents?.[30] === 'demoralizing_shout') {
-                    if (!combat.bossDebuffs?.demoralizingShout) {
-                        combat.bossDebuffs = combat.bossDebuffs || {};
-                        combat.bossDebuffs.demoralizingShout = { damageMult: 0.8 };
-                        addLog(`【挫志怒吼】触发：所有敌人造成的伤害降低20%`);
+                    if (result.isCrit && result.dotOnCrit) {
+                        combat.bossDots = combat.bossDots || [];
+                        combat.bossDots.push({ ...result.dotOnCrit, sourcePlayerId: p.char.id });
+                        addLog(`→ ${boss.name} 获得【重伤】，将持续受到 DOT 伤害`);
+                    }
+
+                    if (result.generateFingerOnHit && p.char.classId === 'frost_mage') {
+                        p.fingersOfFrost = (p.fingersOfFrost || 0) + 1;
+                        addLog(`【冰川突进】触发：${p.char.name} 获得1层寒冰指，当前${p.fingersOfFrost}层`);
+                    }
+
+                    if (p.char.talents?.[30] === 'demoralizing_shout') {
+                        if (!combat.bossDebuffs?.demoralizingShout) {
+                            combat.bossDebuffs = combat.bossDebuffs || {};
+                            combat.bossDebuffs.demoralizingShout = { damageMult: 0.8 };
+                            addLog(`【挫志怒吼】触发：所有敌人造成的伤害降低20%`);
+                        }
                     }
                 }
             }
@@ -11420,6 +11617,12 @@ function stepBossCombat(state) {
                 // 检查免疫状态
                 if (m.immune) {
                     addLog(`位置${i + 1} ${p.char.name} 的${skillName}被 火炮手${idx + 1}【登上甲板】免疫！`);
+                    return;
+                }
+
+                const shieldInfo = getExecutusShieldInfo(result.school);
+                if (shieldInfo.immune) {
+                    addLog(`位置${i + 1} ${p.char.name} 的${skillName}被【${shieldInfo.shieldName}】免疫（目标：${(m.displayName || `${(boss.minion?.name || boss.cannoneer?.name || '小弟')}${idx + 1}`)}）`, 'warning');
                     return;
                 }
 
@@ -11452,13 +11655,18 @@ function stepBossCombat(state) {
                 addLog(`【山丘之王】触发：雷霆一击再次释放！`);
 
                 if (combat.bossHp > 0) {
-                    combat.bossHp -= extraDamage;
-                    addLog(`位置${i + 1} ${p.char.name} 的雷霆一击(山丘之王)对 ${boss.name} 造成 ${Math.floor(extraDamage)} 伤害${extraResult.isCrit ? '（暴击！）' : ''}`);
+                    const shieldInfo = getExecutusShieldInfo(extraResult.school);
+                    if (shieldInfo.immune) {
+                        addLog(`雷霆一击(山丘之王)被【${shieldInfo.shieldName}】免疫（目标：${boss.name}）`, 'warning');
+                    } else {
+                        combat.bossHp -= extraDamage;
+                        addLog(`位置${i + 1} ${p.char.name} 的雷霆一击(山丘之王)对 ${boss.name} 造成 ${Math.floor(extraDamage)} 伤害${extraResult.isCrit ? '（暴击！）' : ''}`);
 
-                    if (extraResult.isCrit && extraResult.dotOnCrit) {
-                        combat.bossDots = combat.bossDots || [];
-                        combat.bossDots.push({ ...extraResult.dotOnCrit, sourcePlayerId: p.char.id });
-                        addLog(`→ ${boss.name} 获得【重伤】`);
+                        if (extraResult.isCrit && extraResult.dotOnCrit) {
+                            combat.bossDots = combat.bossDots || [];
+                            combat.bossDots.push({ ...extraResult.dotOnCrit, sourcePlayerId: p.char.id });
+                            addLog(`→ ${boss.name} 获得【重伤】`);
+                        }
                     }
                 }
 
@@ -11466,6 +11674,12 @@ function stepBossCombat(state) {
                     if (m.hp <= 0) return;
                     if (m.immune) {
                         addLog(`雷霆一击(山丘之王)被 火炮手${idx + 1}【登上甲板】免疫！`);
+                        return;
+                    }
+
+                    const shieldInfo = getExecutusShieldInfo(extraResult.school);
+                    if (shieldInfo.immune) {
+                        addLog(`雷霆一击(山丘之王)被【${shieldInfo.shieldName}】免疫（目标：${(m.displayName || `${(boss.minion?.name || boss.cannoneer?.name || '小弟')}${idx + 1}`)}）`, 'warning');
                         return;
                     }
                     m.hp -= extraDamage;
@@ -11518,7 +11732,15 @@ function stepBossCombat(state) {
             const targetDefense = targetType === 'boss' ? boss.defense : (boss.minion?.defense || boss.cannoneer?.defense || 0);
 
             // 检查目标是否免疫
-            if (targetType === 'minion' && combat.minions[targetIndex]?.immune) {
+            const shieldInfo = getExecutusShieldInfo(result.school);
+            const minionName = boss.minion?.name || boss.cannoneer?.name || '小弟';
+            const targetLabel = (targetType === 'boss')
+                ? boss.name
+                : (combat.minions[targetIndex]?.displayName || `${minionName}${targetIndex + 1}`);
+
+            if (shieldInfo.immune) {
+                addLog(`位置${i + 1} ${p.char.name} 的${skill.name}被【${shieldInfo.shieldName}】免疫（目标：${targetLabel}）`, 'warning');
+            } else if (targetType === 'minion' && combat.minions[targetIndex]?.immune) {
                 addLog(`位置${i + 1} ${p.char.name} 的${skill.name}被【登上甲板】免疫！`);
             } else {
                 const actualDamage = Math.max(1, damage - targetDefense);
@@ -11529,8 +11751,7 @@ function stepBossCombat(state) {
                     combat.minions[targetIndex].hp -= actualDamage;
                 }
 
-                const minionName = boss.minion?.name || boss.cannoneer?.name || '小弟';
-                addLog(`位置${i + 1} ${p.char.name} 使用 ${skill.name} 对 ${targetType === 'boss' ? boss.name : minionName} 造成 ${actualDamage} 伤害${result.isCrit ? '（暴击）' : ''}`);
+                addLog(`位置${i + 1} ${p.char.name} 使用 ${skill.name} 对 ${targetLabel} 造成 ${actualDamage} 伤害${result.isCrit ? '（暴击）' : ''}`);
 
                 // 剑刃乱舞：复制伤害（普通攻击/刺骨/伏击/正中眉心）
                 if (['basic_attack', 'eviscerate', 'ambush', 'between_the_eyes'].includes(skillId)) {
@@ -11663,7 +11884,15 @@ function stepBossCombat(state) {
                             ? (boss.defense || 0)
                             : (boss.minion?.defense || boss.cannoneer?.defense || 0);
 
-                        if (targetType === 'minion' && combat.minions[targetIndex]?.immune) {
+                        const shieldInfo = getExecutusShieldInfo(extraResult.school);
+                        const minionName = boss.minion?.name || boss.cannoneer?.name || '小弟';
+                        const targetLabel = (targetType === 'boss')
+                            ? boss.name
+                            : (combat.minions[targetIndex]?.displayName || `${minionName}${targetIndex + 1}`);
+
+                        if (shieldInfo.immune) {
+                            addLog(`→ 额外伏击被【${shieldInfo.shieldName}】免疫（目标：${targetLabel}）`, 'warning');
+                        } else if (targetType === 'minion' && combat.minions[targetIndex]?.immune) {
                             addLog(`→ 额外伏击被【登上甲板】免疫！`);
                         } else {
                             const extraActual = Math.max(1, extraDamage - targetDef);
@@ -11673,8 +11902,7 @@ function stepBossCombat(state) {
                                 combat.minions[targetIndex].hp -= extraActual;
                             }
 
-                            const minionName = boss.minion?.name || boss.cannoneer?.name || '小弟';
-                            addLog(`→ ${p.char.name} 的伏击(藏锋寻时)对 ${targetType === 'boss' ? boss.name : minionName} 造成 ${extraActual} 伤害${extraResult.isCrit ? '（暴击）' : ''}`);
+                            addLog(`→ ${p.char.name} 的伏击(藏锋寻时)对 ${targetLabel} 造成 ${extraActual} 伤害${extraResult.isCrit ? '（暴击）' : ''}`);
 
                             // 剑刃乱舞：复制伤害（伏击同样触发）
                             applyBladeFlurryCleave(extraDamage, `${skill.name}(藏锋寻时)`);
@@ -11819,7 +12047,16 @@ function stepBossCombat(state) {
                 if (result.penanceDamage) {
                     const targetDefense = targetType === 'boss' ? boss.defense : (boss.minion?.defense || boss.cannoneer?.defense || 0);
 
-                    if (targetType === 'minion' && combat.minions[targetIndex]?.immune) {
+                    // 终极苦修视为“法术”（holy），可能被管理者埃克索图斯【反魔法护盾】免疫
+                    const shieldInfo = getExecutusShieldInfo('holy');
+                    const minionName = boss.minion?.name || boss.cannoneer?.name || '小弟';
+                    const targetLabel = (targetType === 'boss')
+                        ? boss.name
+                        : (combat.minions[targetIndex]?.displayName || `${minionName}${targetIndex + 1}`);
+
+                    if (shieldInfo.immune) {
+                        addLog(`【终极苦修】被【${shieldInfo.shieldName}】免疫（目标：${targetLabel}）`, 'warning');
+                    } else if (targetType === 'minion' && combat.minions[targetIndex]?.immune) {
                         addLog(`【终极苦修】被【登上甲板】免疫！`);
                     } else {
                         const actualDamage = Math.max(1, Math.floor(result.penanceDamage * buffDamageDealtMult - targetDefense));
@@ -12121,13 +12358,18 @@ function stepBossCombat(state) {
                 const blockValue = (warrior.char.stats.blockValue || 0) + (warrior.talentBuffs?.blockValueFlat || 0);
                 const aoeDamage = Math.floor(blockValue * 0.8);
                 if (aoeDamage > 0) {
-                    combat.bossHp -= aoeDamage;
-                    combat.minions.forEach(m => {
-                        if (m.hp > 0 && !m.immune) {
-                            m.hp -= aoeDamage;
-                        }
-                    });
-                    addLog(`【包二奶羁绊】防护战士对所有敌人造成 ${aoeDamage} 额外伤害（基于格挡值）`);
+                    const shieldInfo = getExecutusShieldInfo('physical');
+                    if (shieldInfo.immune) {
+                        addLog(`【包二奶羁绊】额外伤害被【${shieldInfo.shieldName}】免疫`, 'warning');
+                    } else {
+                        combat.bossHp -= aoeDamage;
+                        combat.minions.forEach(m => {
+                            if (m.hp > 0 && !m.immune) {
+                                m.hp -= aoeDamage;
+                            }
+                        });
+                        addLog(`【包二奶羁绊】防护战士对所有敌人造成 ${aoeDamage} 额外伤害（基于格挡值）`);
+                    }
                 }
             }
         }
@@ -12183,6 +12425,13 @@ function stepBossCombat(state) {
 
             if (targetType === 'boss') {
                 if ((combat.bossHp ?? 0) <= 0) return;
+
+                const shieldInfo = getExecutusShieldInfo('shadow');
+                if (shieldInfo.immune) {
+                    addLog(`【暗影魔】伤害被【${shieldInfo.shieldName}】免疫（目标：${boss.name}）`, 'warning');
+                    return;
+                }
+
                 const def = Number(boss?.defense) || 0;
                 const actual = Math.max(1, dmg - def);
                 combat.bossHp -= actual;
@@ -12195,6 +12444,15 @@ function stepBossCombat(state) {
             } else if (targetType === 'minion' && targetIndex >= 0 && combat.minions?.[targetIndex]) {
                 const m = combat.minions[targetIndex];
                 if ((m?.hp ?? 0) <= 0 || m?.immune) return;
+
+                const shieldInfo = getExecutusShieldInfo('shadow');
+                if (shieldInfo.immune) {
+                    const minionName = boss?.minion?.name || boss?.cannoneer?.name || '小弟';
+                    const targetLabel = m?.displayName || `${minionName}${targetIndex + 1}`;
+                    addLog(`【暗影魔】伤害被【${shieldInfo.shieldName}】免疫（目标：${targetLabel}）`, 'warning');
+                    return;
+                }
+
                 const def = Number(m?.defense) || Number(boss?.minion?.defense) || Number(boss?.cannoneer?.defense) || 0;
                 const actual = Math.max(1, dmg - def);
                 m.hp -= actual;
@@ -12212,10 +12470,19 @@ function stepBossCombat(state) {
     // DOT 结算
     if (combat.bossDots) {
         combat.bossDots = combat.bossDots.filter(dot => {
+            const dotName = dot.name || '重伤';
+
+            // 管理者埃克索图斯：护盾免疫会使 DOT 不造成伤害（但仍消耗持续时间）
+            const shieldInfo = getExecutusShieldInfo(dot.school);
+            if (shieldInfo.immune) {
+                addLog(`【${dotName}】被【${shieldInfo.shieldName}】免疫（目标：${boss.name}，剩余${dot.duration - 1}回合）`, 'warning');
+                dot.duration -= 1;
+                return dot.duration > 0;
+            }
+
             const dmg = Math.max(1, Math.floor(dot.damagePerTurn));
             combat.bossHp -= dmg;
 
-            const dotName = dot.name || '重伤';
             addLog(`【${dotName}】对 ${boss.name} 造成 ${dmg} DOT 伤害（剩余${dot.duration - 1}回合）`);
 
             if (dot.sourcePlayerId) {
@@ -12258,12 +12525,22 @@ function stepBossCombat(state) {
                     return dot.duration > 0;
                 }
 
+                const dotName = dot.name || '重伤';
+                const minionName = boss.minion?.name || boss.cannoneer?.name || '小弟';
+                const targetLabel = m.displayName || `${minionName}${idx + 1}`;
+
+                // 管理者埃克索图斯：护盾免疫会使 DOT 不造成伤害（但仍消耗持续时间）
+                const shieldInfo = getExecutusShieldInfo(dot.school);
+                if (shieldInfo.immune) {
+                    addLog(`【${dotName}】被【${shieldInfo.shieldName}】免疫（目标：${targetLabel}，剩余${dot.duration - 1}回合）`, 'warning');
+                    dot.duration -= 1;
+                    return dot.duration > 0;
+                }
+
                 const dmg = Math.max(1, Math.floor(dot.damagePerTurn));
                 m.hp -= dmg;
 
-                const dotName = dot.name || '重伤';
-                const minionName = boss.minion?.name || boss.cannoneer?.name || '小弟';
-                addLog(`【${dotName}】对 ${minionName}${idx + 1} 造成 ${dmg} DOT 伤害（剩余${dot.duration - 1}回合）`);
+                addLog(`【${dotName}】对 ${targetLabel} 造成 ${dmg} DOT 伤害（剩余${dot.duration - 1}回合）`);
 
                 if (dot.sourcePlayerId) {
                     const sourcePlayer = combat.playerStates.find(p => p.char.id === dot.sourcePlayerId);
@@ -12351,8 +12628,13 @@ function stepBossCombat(state) {
             if (playerState?.char?.talents?.[60] === 'shield_spikes') {
                 const spikeDmg = Math.floor(blockedAmount);
                 if (spikeDmg > 0 && (combat.bossHp ?? 0) > 0) {
-                    combat.bossHp -= spikeDmg;
-                    addLog(`【盾刺反击】触发：${playerState.char.name} 反击 ${boss.name} 造成 ${spikeDmg} 点真实伤害`);
+                    const shieldInfo = getExecutusShieldInfo('physical');
+                    if (shieldInfo.immune) {
+                        addLog(`【盾刺反击】被【${shieldInfo.shieldName}】免疫（目标：${boss.name}）`, 'warning');
+                    } else {
+                        combat.bossHp -= spikeDmg;
+                        addLog(`【盾刺反击】触发：${playerState.char.name} 反击 ${boss.name} 造成 ${spikeDmg} 点真实伤害`);
+                    }
                 }
             }
         }
@@ -14030,6 +14312,68 @@ function stepBossCombat(state) {
         }
     }
 
+    // ==================== 管理者埃克索图斯技能处理 ====================
+    else if (combat.bossId === 'majordomo_executus') {
+        combat.bossBuffs = combat.bossBuffs || {};
+
+        const pickRandomAlivePlayerIndex = () => {
+            const alive = combat.playerStates
+                .map((ps, idx) => ((ps.currentHp ?? 0) > 0 ? idx : -1))
+                .filter(idx => idx >= 0);
+            if (alive.length === 0) return -1;
+            return alive[Math.floor(Math.random() * alive.length)];
+        };
+
+        // 技能1：反物理护盾（全体敌方单位免疫物理伤害 2回合）
+        if (bossAction === 'anti_physical_shield') {
+            const dur = Math.max(1, Math.floor(Number(boss.antiPhysicalDuration || 2)));
+            combat.bossBuffs.executusPhysicalShield = dur;
+            // 通常两者不叠加：切换护盾时清空另一侧
+            combat.bossBuffs.executusMagicShield = 0;
+            addLog(`【${boss.name}】施放【反物理护盾】！所有敌方单位免疫物理伤害，持续 ${dur} 回合`, 'buff');
+        }
+
+        // 技能2：奥爆术（对全体角色造成 2×Boss攻击 的法术伤害，计算魔抗）
+        else if (bossAction === 'arcane_explosion') {
+            const raw = Math.floor((boss.attack || 0) * (boss.arcaneExplosionMultiplier || 2));
+            addLog(`【${boss.name}】施放【奥爆术】！`, 'warning');
+            combat.playerStates.forEach((ps, pIdx) => {
+                if ((ps.currentHp ?? 0) <= 0) return;
+                const arc = calcMagicDamage(ps, raw);
+                const shieldResult = applyShieldAbsorb(ps, arc.damage, logs, currentRound);
+                ps.currentHp -= shieldResult.finalDamage;
+
+                const resPct = Math.round(arc.resistReduction * 100);
+                const mrText = Number(arc.magicResist) < 0 ? `（有效魔抗 ${Math.floor(arc.magicResist)}）` : '';
+                const vulnPct = Math.round((arc.spellVulnMult - 1) * 100);
+                const vulnText = vulnPct > 0 ? `，法术易伤+${vulnPct}%` : '';
+                const shieldText = shieldResult.absorbed > 0 ? `，护盾吸收 ${shieldResult.absorbed}` : '';
+                addLog(`→ 命中 位置${pIdx + 1} ${ps.char.name}，造成 ${shieldResult.finalDamage} 点奥术伤害（魔抗减伤${resPct}%${mrText}${vulnText}${shieldText}）`);
+            });
+        }
+
+        // 技能3：反魔法护盾（全体敌方单位免疫法术伤害 2回合）
+        else if (bossAction === 'anti_magic_shield') {
+            const dur = Math.max(1, Math.floor(Number(boss.antiMagicDuration || 2)));
+            combat.bossBuffs.executusMagicShield = dur;
+            combat.bossBuffs.executusPhysicalShield = 0;
+            addLog(`【${boss.name}】施放【反魔法护盾】！所有敌方单位免疫法术伤害，持续 ${dur} 回合`, 'buff');
+        }
+
+        // 兜底：若出现未知动作，则进行一次普通物理攻击
+        else {
+            const tIdx = pickRandomAlivePlayerIndex();
+            if (tIdx >= 0) {
+                const target = combat.playerStates[tIdx];
+                const raw = Math.floor(boss.attack || 0);
+                const dmgResult = calcMitigatedAndBlockedDamage(target, raw);
+                const shieldResult = applyShieldAbsorb(target, dmgResult.damage, logs, currentRound);
+                target.currentHp -= shieldResult.finalDamage;
+                addLog(`【${boss.name}】进行普通攻击，命中 位置${tIdx + 1} ${target.char.name} 造成 ${shieldResult.finalDamage} 点物理伤害`);
+            }
+        }
+    }
+
     // ==================== 无疤者奥斯里安技能处理 ====================
     else if (combat.bossId === 'ossirian') {
         // 自然伤害：计算魔抗（并套用伤害减免/全能/挫志怒吼）
@@ -14248,6 +14592,57 @@ function stepBossCombat(state) {
                 const shieldText = shieldResult.absorbed > 0 ? `，护盾吸收 ${shieldResult.absorbed}` : '';
                 addLog(`【${boss.minion.name}${i + 1}】炮击 位置${pIdx + 1} ${ps.char.name}，造成 ${shieldResult.finalDamage} 点伤害（护甲减伤${drPct}%${shieldText}）`);
             });
+        }
+        // 管理者埃克索图斯：烈焰行者医师/精英（每回合被动）
+        else if (combat.bossId === 'majordomo_executus' && (m.isFlamewakerHealer || m.isFlamewakerElite)) {
+            // 医师：每回合为所有己方单位回复 10 * Boss攻击 的生命
+            if (m.isFlamewakerHealer) {
+                const rawHeal = Math.floor((boss.attack || 0) * (boss.healerHealMultiplier || 10));
+                const label = m.displayName || (boss.healerName || '烈焰行者医师');
+
+                // Boss
+                const bossMaxHp = Number(boss.maxHp || bossBase.maxHp || 0);
+                const bossBefore = Number(combat.bossHp || 0);
+                const bossHealed = Math.max(0, Math.min(rawHeal, Math.max(0, bossMaxHp - bossBefore)));
+                if (bossHealed > 0) {
+                    combat.bossHp = bossBefore + bossHealed;
+                }
+
+                // 随从（包含自己）
+                let addsHealedTotal = 0;
+                combat.minions.forEach(mm => {
+                    if (!mm || (mm.hp ?? 0) <= 0) return;
+                    const before = Number(mm.hp || 0);
+                    const maxHp = Number(mm.maxHp || before);
+                    const healed = Math.max(0, Math.min(rawHeal, Math.max(0, maxHp - before)));
+                    if (healed > 0) {
+                        mm.hp = before + healed;
+                        addsHealedTotal += healed;
+                    }
+                });
+
+                addLog(`【${label}】被动：为己方全体回复 ${rawHeal.toLocaleString()} 生命（Boss+${bossHealed.toLocaleString()}，随从合计+${addsHealedTotal.toLocaleString()}）`);
+            }
+
+            // 精英：每回合对所有角色造成 1.5 * Boss攻击 的法术伤害
+            if (m.isFlamewakerElite) {
+                const raw = Math.floor((boss.attack || 0) * (boss.eliteAoEDamageMultiplier || 1.5));
+                const label = m.displayName || (boss.eliteName || '烈焰行者精英');
+
+                combat.playerStates.forEach((ps, pIdx) => {
+                    if ((ps.currentHp ?? 0) <= 0) return;
+
+                    const { damage, resistReduction, magicResist } = calcMagicDamage(ps, raw);
+                    const shieldResult = applyShieldAbsorb(ps, damage, logs, currentRound);
+                    ps.currentHp -= shieldResult.finalDamage;
+
+                    const resPct = Math.round(resistReduction * 100);
+                    const mrText = magicResist < 0 ? `（有效魔抗 ${Math.floor(magicResist)}）` : '';
+                    const shieldText = shieldResult.absorbed > 0 ? `，护盾吸收 ${shieldResult.absorbed}` : '';
+
+                    addLog(`【${label}】命中 位置${pIdx + 1} ${ps.char.name}，造成 ${shieldResult.finalDamage} 点法术伤害（魔抗减伤${resPct}%${mrText}${shieldText}）`);
+                });
+            }
         }
 // 加丁的亡灵学徒：每回合随机释放暗影箭
         else if (combat.bossId === 'darkmaster_gandling' && m.isApprentice) {
@@ -14571,6 +14966,28 @@ function stepBossCombat(state) {
                 delete combat.bossDefenseOverride;
                 boss.defense = bossBase.defense;
                 addLog(`【${boss.name}】的防御恢复（${bossBase.defense.toLocaleString()}）`);
+            }
+        }
+    }
+
+    // ==================== 管理者埃克索图斯：护盾倒计时 ====================
+    // 只在“回合开始时已存在”的护盾在回合结束递减，避免刚施放就被扣掉持续时间。
+    if (combat.bossId === 'majordomo_executus') {
+        // 反物理护盾
+        if (executusPhysicalShieldStart > 0) {
+            const next = Math.max(0, Math.floor(Number(combat.bossBuffs.executusPhysicalShield || 0)) - 1);
+            combat.bossBuffs.executusPhysicalShield = next;
+            if (next <= 0 && executusPhysicalShieldStart > 0) {
+                addLog(`【${boss.name}】的【反物理护盾】消失`, 'warning');
+            }
+        }
+
+        // 反魔法护盾
+        if (executusMagicShieldStart > 0) {
+            const next = Math.max(0, Math.floor(Number(combat.bossBuffs.executusMagicShield || 0)) - 1);
+            combat.bossBuffs.executusMagicShield = next;
+            if (next <= 0 && executusMagicShieldStart > 0) {
+                addLog(`【${boss.name}】的【反魔法护盾】消失`, 'warning');
             }
         }
     }
@@ -21250,9 +21667,9 @@ const SpacetimeShopModal = ({ state, dispatch, onClose }) => {
             }}
         >
             <style>{`
-                @keyframes stShopSpin { 
-                    from { transform: rotate(0deg); } 
-                    to { transform: rotate(360deg); } 
+                @keyframes stShopSpin {
+                    from { transform: rotate(0deg); }
+                    to { transform: rotate(360deg); }
                 }
                 @keyframes stShopFloat {
                     0% { transform: translateY(0px); opacity: 0.75; }
@@ -26635,6 +27052,11 @@ const BossPrepareModal = ({ state, dispatch }) => {
         earthquake: '地震术',
         pyroblast: '炎爆术',
         fury: '狂怒',
+
+        // ✅ 管理者埃克索图斯
+        anti_physical_shield: '反物理护盾',
+        arcane_explosion: '奥爆术',
+        anti_magic_shield: '反魔法护盾',
     };
 
     const formatBossCycle = (boss) =>
@@ -26741,7 +27163,7 @@ const BossPrepareModal = ({ state, dispatch }) => {
                             position: 'relative',
                             overflow: 'hidden',
                             boxShadow: `
-        inset 0 0 40px rgba(0,0,0,0.5), 
+        inset 0 0 40px rgba(0,0,0,0.5),
         0 4px 20px rgba(0,0,0,0.4),
         0 0 30px rgba(139,48,48,0.3)
     `
@@ -28850,6 +29272,7 @@ const BossCombatModal = ({ combat, state }) => {
                                     const minionDisplayHp = Math.max(0, Math.floor(m.hp));
                                     const minionIsDead = m.hp <= 0;
                                     const minionHpPercent = Math.max(0, Math.min(100, (minionDisplayHp / minionMaxHp) * 100));
+                                    const minionLabel = m.displayName || `${minionName} ${i + 1}`;
 
                                     return (
                                         <div key={i} style={{
@@ -28877,7 +29300,7 @@ const BossCombatModal = ({ combat, state }) => {
                                                     fontSize: 12,
                                                     color: minionIsDead ? '#666' : m.immune ? '#64b5f6' : '#ce93d8'
                                                 }}>
-                                                    {minionName} {i + 1}
+                                                    {minionLabel}
                                                     {minionIsDead && ' (死亡)'}
                                                 </span>
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>

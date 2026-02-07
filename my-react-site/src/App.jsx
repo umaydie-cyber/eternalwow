@@ -5371,8 +5371,8 @@ const FIXED_EQUIPMENTS = {
         },
         specialEffect: {
             type: 'skill_slot_buff',
-            slots: [0,1],
-            attackBonus: 1200,
+            slots: [0,1,2],
+            attackBonus: 1000,
         }
     },
     EQ_109: {

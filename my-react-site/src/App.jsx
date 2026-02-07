@@ -7510,7 +7510,12 @@ const FIXED_EQUIPMENTS = {
             haste: 25,
         },
         growth: {
-            // 橙武不做成长（如需成长可改为与其它装备一致）
+            attack: 2,
+            hp: 2,
+            magicResist: 2,
+            mastery: 2,
+            versatility: 2,
+            haste: 2,
         },
         specialEffect: {
             type: 'thunderfury',
@@ -7523,6 +7528,108 @@ const FIXED_EQUIPMENTS = {
             selfBuffDuration: 2,
         },
     },
+    // ==================== Molten Core（熔火之心）- 焚化者古雷曼格掉落（腿部） ====================
+    EQ_183: {
+        id: 'EQ_183',
+        name: '力量腿铠',
+        icon: "icons/wow/vanilla/armor/INV_Pants_04.png",
+        type: 'equipment',
+        slot: 'legs',
+        rarity: 'purple',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            hp: 6800,
+            armor: 240,
+            mastery: 12,
+            blockRate: 5,
+            blockValue: 500,
+        },
+        growth: {
+            hp: 2,
+            armor: 2,
+            mastery: 2,
+            blockRate: 2,
+            blockValue: 2,
+        },
+        setId: 'might_set',
+        setName: '力量'
+    },
+    EQ_184: {
+        id: 'EQ_184',
+        name: '夜幕杀手短裤',
+        icon: "icons/wow/vanilla/armor/INV_Pants_06.png",
+        type: 'equipment',
+        slot: 'legs',
+        rarity: 'purple',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            attack: 520,
+            hp: 4000,
+            armor: 180,
+            critRate: 12,
+            mastery: 16,
+        },
+        growth: {
+            attack: 2,
+            hp: 2,
+            armor: 2,
+            critRate: 2,
+            mastery: 2,
+        },
+        setId: 'nightslayer_set',
+        setName: '夜幕杀手'
+    },
+    EQ_185: {
+        id: 'EQ_185',
+        name: '奥术师护腿',
+        icon: "icons/wow/vanilla/armor/INV_Pants_08.png",
+        type: 'equipment',
+        slot: 'legs',
+        rarity: 'purple',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            spellPower: 520,
+            hp: 3800,
+            haste: 12,
+            versatility: 16,
+        },
+        growth: {
+            spellPower: 2,
+            hp: 2,
+            haste: 2,
+            versatility: 2,
+        },
+        setId: 'arcanist_set',
+        setName: '奥术师'
+    },
+    EQ_186: {
+        id: 'EQ_186',
+        name: '预言短裤',
+        icon: "icons/wow/vanilla/armor/INV_Pants_08.png",
+        type: 'equipment',
+        slot: 'legs',
+        rarity: 'purple',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            spellPower: 480,
+            hp: 4200,
+            mastery: 12,
+            versatility: 16,
+        },
+        growth: {
+            spellPower: 2,
+            hp: 2,
+            mastery: 2,
+            versatility: 2,
+        },
+        setId: 'prophecy_set',
+        setName: '预言'
+    },
+
 
 };
 
@@ -9309,7 +9416,13 @@ const BOSS_DATA = {
         rewards: {
             gold: 2400000,
             exp: 1400000,
-            items: []
+            items: [
+                { id: 'EQ_183', chance: 0.1 },  // 力量腿铠
+                { id: 'EQ_184', chance: 0.1 },  // 夜幕杀手短裤
+                { id: 'EQ_185', chance: 0.1 },  // 奥术师护腿
+                { id: 'EQ_186', chance: 0.1 },  // 预言短裤
+                { id: 'EQ_171', chance: 0.02 }  // 不短暂能量护符
+            ]
         }
     },
 

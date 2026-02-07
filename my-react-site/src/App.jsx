@@ -6947,7 +6947,7 @@ const FIXED_EQUIPMENTS = {
     EQ_162: {
         id: 'EQ_162',
         name: '火焰符咒',
-        icon: "icons/wow/vanilla/items/INV_Misc_Rune_01.png",
+        icon: "icons/wow/vanilla/armor/INV_Jewelry_Talisman_09.png",
         type: 'equipment',
         slot: 'trinket1',
         rarity: 'blue',
@@ -6976,7 +6976,7 @@ const FIXED_EQUIPMENTS = {
     EQ_163: {
         id: 'EQ_163',
         name: '沉重的黑铁戒指',
-        icon: "icons/wow/vanilla/armor/INV_Jewelry_Ring_15.png",
+        icon: "icons/wow/vanilla/armor/INV_Jewelry_Ring_14.png",
         type: 'equipment',
         slot: 'ring2',
         rarity: 'blue',
@@ -7002,7 +7002,7 @@ const FIXED_EQUIPMENTS = {
     EQ_164: {
         id: 'EQ_164',
         name: '法术能量之戒',
-        icon: "icons/wow/vanilla/armor/INV_Jewelry_Ring_21.png",
+        icon: "icons/wow/vanilla/armor/fashunengliang.png",
         type: 'equipment',
         slot: 'ring1',
         rarity: 'blue',
@@ -7082,7 +7082,7 @@ const FIXED_EQUIPMENTS = {
     EQ_167: {
         id: 'EQ_167',
         name: '残忍利刃',
-        icon: "icons/wow/vanilla/weapons/INV_Sword_06.png",
+        icon: "icons/wow/vanilla/weapons/INV_Sword_15.png",
         type: 'equipment',
         slot: 'mainHand',
         rarity: 'purple',
@@ -7181,7 +7181,7 @@ const FIXED_EQUIPMENTS = {
     EQ_170: {
         id: 'EQ_170',
         name: '熔火犬牙',
-        icon: "icons/wow/vanilla/weapons/INV_Weapon_ShortBlade_12.png",
+        icon: "icons/wow/vanilla/weapons/INV_Weapon_ShortBlade_11.png",
         type: 'equipment',
         slot: 'offHand',
         rarity: 'purple',

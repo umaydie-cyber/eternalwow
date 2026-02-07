@@ -9277,7 +9277,7 @@ const BOSS_DATA = {
 
         // 被动：固有2只熔火恶犬（攻击/防御同Boss）
         houndCount: 2,
-        houndHp: 1800000,
+        houndHp: 18000000,
 
         // 熔火恶犬普攻倍率：常态1.2×；Boss血量≤30%后狂暴为3×
         houndNormalMultiplier: 1.2,

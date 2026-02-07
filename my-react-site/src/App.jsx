@@ -7141,7 +7141,7 @@ const FIXED_EQUIPMENTS = {
             type: 'proc_stat',
             trigger: 'turn_start',
             chance: 0.25,
-            stats: { spellPower: 2000 },
+            stats: { spellPower: 1500 },
             scaleWithLevel: true
         }
     },
@@ -7200,6 +7200,27 @@ const FIXED_EQUIPMENTS = {
             critRate: 2,
             haste: 2,
             versatility: 2,
+        }
+    },
+    EQ_171: {
+        id: 'EQ_171',
+        name: '不短暂能量护符',
+        icon: "icons/wow/vanilla/items/INV_Misc_StoneTablet_11.png",
+        type: 'equipment',
+        slot: 'trinket2',
+        rarity: 'purple',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            spellPower: 850
+        },
+        growth: {
+            spellPower: 2
+        },
+        specialEffect: {
+            type: 'skill_slot_buff',
+            slots: [0,1,4,5],
+            spellPowerBonus: 1800
         }
     },
 

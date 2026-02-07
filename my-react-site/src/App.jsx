@@ -2395,6 +2395,23 @@ const ZONES = {
         unlocked: false,
         unlockLevel: 60
     },
+    // ==================== 熔火之心（60级） ====================
+    molten_core: {
+        id: 'molten_core',
+        name: '熔火之心',
+        level: 60,
+        type: 'explore',
+        enemies: [
+            { name: '熔岩歼灭者', hp: 3100000, attack: 16000, defense: 8200, exp: 36000, gold: 26000 },
+            { name: '火焰行者祭司', hp: 2950000, attack: 15000, defense: 7900, exp: 35000, gold: 25500 },
+            { name: '上古熔岩犬', hp: 3300000, attack: 16500, defense: 8000, exp: 37000, gold: 27000 },
+            { name: '熔火恶魔卫士', hp: 3600000, attack: 17500, defense: 8600, exp: 39000, gold: 29000 },
+        ],
+        resources: ['铁矿', '魔法精华'],
+        unlocked: false,
+        unlockLevel: 60
+    },
+
 
 };
 
@@ -2652,6 +2669,48 @@ const DROP_TABLES = {
             { id: 'EQ_128', chance: 0.001 },
         ]
     },
+    // ==================== 熔火之心（60级）掉落 ====================
+    molten_core: {
+        equipment: [
+            // 力量（战士）4件套
+            { id: 'EQ_146', chance: 0.00045 },  // 力量头盔
+            { id: 'EQ_147', chance: 0.00045 },  // 力量护腕
+            { id: 'EQ_148', chance: 0.00045 },  // 力量腰带
+            { id: 'EQ_149', chance: 0.00045 },  // 力量马靴
+
+            // 夜幕杀手（盗贼）4件套
+            { id: 'EQ_150', chance: 0.00045 },  // 夜幕杀手头巾
+            { id: 'EQ_151', chance: 0.00045 },  // 夜幕杀手护腕
+            { id: 'EQ_152', chance: 0.00045 },  // 夜幕杀手腰带
+            { id: 'EQ_153', chance: 0.00045 },  // 夜幕杀手长靴
+
+            // 奥术师（法师）4件套
+            { id: 'EQ_154', chance: 0.00045 },  // 奥术师头冠
+            { id: 'EQ_155', chance: 0.00045 },  // 奥术师护腕
+            { id: 'EQ_156', chance: 0.00045 },  // 奥术师腰带
+            { id: 'EQ_157', chance: 0.00045 },  // 奥术师便鞋
+
+            // 预言（牧师）4件套
+            { id: 'EQ_158', chance: 0.00045 },  // 预言头饰
+            { id: 'EQ_159', chance: 0.00045 },  // 预言臂甲
+            { id: 'EQ_160', chance: 0.00045 },  // 预言束带
+            { id: 'EQ_161', chance: 0.00045 },  // 预言之靴
+
+            // 饰品 / 戒指 / 武器
+            { id: 'EQ_162', chance: 0.00035 },  // 火焰符咒（魔抗饰品）
+            { id: 'EQ_163', chance: 0.00035 },  // 沉重的黑铁戒指（坦克戒指）
+            { id: 'EQ_164', chance: 0.00035 },  // 法术能量之戒（法强戒指1）
+            { id: 'EQ_166', chance: 0.00035 },  // 迅击戒指（攻强戒指1）
+
+            { id: 'EQ_165', chance: 0.00025 },  // 钻孔虫之碟（坦克盾牌）
+            { id: 'EQ_170', chance: 0.00025 },  // 熔火犬牙（攻强副手）
+
+            { id: 'EQ_167', chance: 0.0002 },   // 残忍利刃（盗贼暴击爆发武器）
+            { id: 'EQ_169', chance: 0.0002 },   // 碧空之歌（法强武器）
+            { id: 'EQ_168', chance: 0.00005 },  // 祈福（橙）
+        ]
+    },
+
 
 };
 
@@ -6435,6 +6494,761 @@ const FIXED_EQUIPMENTS = {
             mastery: 2,
         }
     },
+    // ==================== 熔火之心（60级）装备 ====================
+    // 设计说明：
+    // - 由于本区装备数量较多，掉落率在 DROP_TABLES 中整体下调
+    // - 强度定位：相对【祖尔格拉布 / 安琪拉废墟】约提升：生命值 +30%，其余属性 +15%（左右）
+    //
+    // ✅ T1：力量（战士）
+    EQ_146: {
+        id: 'EQ_146',
+        name: '力量头盔',
+        icon: "icons/wow/vanilla/armor/INV_Helmet_02.png",
+        type: 'equipment',
+        slot: 'head',
+        rarity: 'purple',
+
+        setId: 'might_set',
+        setName: '力量',
+
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            hp: 4600,
+            armor: 230,
+            mastery: 25,
+            blockRate: 5,
+            blockValue: 460,
+            versatility: 28,
+        },
+        growth: {
+            hp: 2,
+            armor: 2,
+            mastery: 2,
+            blockRate: 2,
+            blockValue: 2,
+            versatility: 2,
+        }
+    },
+    EQ_147: {
+        id: 'EQ_147',
+        name: '力量护腕',
+        icon: "icons/wow/vanilla/armor/INV_Bracer_18.png",
+        type: 'equipment',
+        slot: 'wrist',
+        rarity: 'purple',
+
+        setId: 'might_set',
+        setName: '力量',
+
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            hp: 3600,
+            armor: 200,
+            mastery: 22,
+            blockRate: 4,
+            blockValue: 380,
+            versatility: 24,
+        },
+        growth: {
+            hp: 2,
+            armor: 2,
+            mastery: 2,
+            blockRate: 2,
+            blockValue: 2,
+            versatility: 2,
+        }
+    },
+    EQ_148: {
+        id: 'EQ_148',
+        name: '力量腰带',
+        icon: "icons/wow/vanilla/armor/INV_Belt_34.png",
+        type: 'equipment',
+        slot: 'belt',
+        rarity: 'purple',
+
+        setId: 'might_set',
+        setName: '力量',
+
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            hp: 3900,
+            armor: 210,
+            mastery: 24,
+            blockRate: 4,
+            blockValue: 400,
+            versatility: 26,
+        },
+        growth: {
+            hp: 2,
+            armor: 2,
+            mastery: 2,
+            blockRate: 2,
+            blockValue: 2,
+            versatility: 2,
+        }
+    },
+    EQ_149: {
+        id: 'EQ_149',
+        name: '力量马靴',
+        icon: "icons/wow/vanilla/armor/INV_Boots_Plate_03.png",
+        type: 'equipment',
+        slot: 'feet',
+        rarity: 'purple',
+
+        setId: 'might_set',
+        setName: '力量',
+
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            hp: 4200,
+            armor: 220,
+            mastery: 24,
+            blockRate: 4,
+            blockValue: 420,
+            versatility: 25,
+        },
+        growth: {
+            hp: 2,
+            armor: 2,
+            mastery: 2,
+            blockRate: 2,
+            blockValue: 2,
+            versatility: 2,
+        }
+    },
+
+    // ✅ T1：夜幕杀手（盗贼）
+    EQ_150: {
+        id: 'EQ_150',
+        name: '夜幕杀手头巾',
+        icon: "icons/wow/vanilla/armor/INV_Helmet_41.png",
+        type: 'equipment',
+        slot: 'head',
+        rarity: 'purple',
+
+        setId: 'nightslayer_set',
+        setName: '夜幕杀手',
+
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            attack: 520,
+            hp: 3800,
+            armor: 180,
+            critRate: 18,
+            haste: 28,
+            mastery: 24,
+        },
+        growth: {
+            attack: 2,
+            hp: 2,
+            armor: 2,
+            critRate: 2,
+            haste: 2,
+            mastery: 2,
+        }
+    },
+    EQ_151: {
+        id: 'EQ_151',
+        name: '夜幕杀手护腕',
+        icon: "icons/wow/vanilla/armor/INV_Bracer_07.png",
+        type: 'equipment',
+        slot: 'wrist',
+        rarity: 'purple',
+
+        setId: 'nightslayer_set',
+        setName: '夜幕杀手',
+
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            attack: 360,
+            hp: 3200,
+            armor: 150,
+            critRate: 15,
+            haste: 25,
+            versatility: 20,
+        },
+        growth: {
+            attack: 2,
+            hp: 2,
+            armor: 2,
+            critRate: 2,
+            haste: 2,
+            versatility: 2,
+        }
+    },
+    EQ_152: {
+        id: 'EQ_152',
+        name: '夜幕杀手腰带',
+        icon: "icons/wow/vanilla/armor/INV_Belt_03.png",
+        type: 'equipment',
+        slot: 'belt',
+        rarity: 'purple',
+
+        setId: 'nightslayer_set',
+        setName: '夜幕杀手',
+
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            attack: 400,
+            hp: 3300,
+            armor: 160,
+            critRate: 15,
+            haste: 25,
+            mastery: 22,
+        },
+        growth: {
+            attack: 2,
+            hp: 2,
+            armor: 2,
+            critRate: 2,
+            haste: 2,
+            mastery: 2,
+        }
+    },
+    EQ_153: {
+        id: 'EQ_153',
+        name: '夜幕杀手长靴',
+        icon: "icons/wow/vanilla/armor/INV_Boots_04.png",
+        type: 'equipment',
+        slot: 'feet',
+        rarity: 'purple',
+
+        setId: 'nightslayer_set',
+        setName: '夜幕杀手',
+
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            attack: 420,
+            hp: 3400,
+            armor: 170,
+            critRate: 16,
+            haste: 28,
+            mastery: 22,
+        },
+        growth: {
+            attack: 2,
+            hp: 2,
+            armor: 2,
+            critRate: 2,
+            haste: 2,
+            mastery: 2,
+        }
+    },
+
+    // ✅ T1：奥术师（法师）
+    EQ_154: {
+        id: 'EQ_154',
+        name: '奥术师头冠',
+        icon: "icons/wow/vanilla/armor/INV_Crown_02.png",
+        type: 'equipment',
+        slot: 'head',
+        rarity: 'purple',
+
+        setId: 'arcanist_set',
+        setName: '奥术师',
+
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            spellPower: 650,
+            hp: 3600,
+            critRate: 18,
+            haste: 28,
+            mastery: 24,
+            versatility: 22,
+        },
+        growth: {
+            spellPower: 2,
+            hp: 2,
+            critRate: 2,
+            haste: 2,
+            mastery: 2,
+            versatility: 2,
+        }
+    },
+    EQ_155: {
+        id: 'EQ_155',
+        name: '奥术师护腕',
+        icon: "icons/wow/vanilla/armor/INV_Bracer_09.png",
+        type: 'equipment',
+        slot: 'wrist',
+        rarity: 'purple',
+
+        setId: 'arcanist_set',
+        setName: '奥术师',
+
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            spellPower: 420,
+            hp: 3200,
+            critRate: 15,
+            haste: 25,
+            versatility: 22,
+        },
+        growth: {
+            spellPower: 2,
+            hp: 2,
+            critRate: 2,
+            haste: 2,
+            versatility: 2,
+        }
+    },
+    EQ_156: {
+        id: 'EQ_156',
+        name: '奥术师腰带',
+        icon: "icons/wow/vanilla/armor/INV_Belt_08.png",
+        type: 'equipment',
+        slot: 'belt',
+        rarity: 'purple',
+
+        setId: 'arcanist_set',
+        setName: '奥术师',
+
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            spellPower: 450,
+            hp: 3300,
+            haste: 25,
+            critRate: 15,
+            mastery: 22,
+        },
+        growth: {
+            spellPower: 2,
+            hp: 2,
+            haste: 2,
+            critRate: 2,
+            mastery: 2,
+        }
+    },
+    EQ_157: {
+        id: 'EQ_157',
+        name: '奥术师便鞋',
+        icon: "icons/wow/vanilla/armor/INV_Boots_02.png",
+        type: 'equipment',
+        slot: 'feet',
+        rarity: 'purple',
+
+        setId: 'arcanist_set',
+        setName: '奥术师',
+
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            spellPower: 480,
+            hp: 3400,
+            haste: 28,
+            critRate: 16,
+            mastery: 24,
+        },
+        growth: {
+            spellPower: 2,
+            hp: 2,
+            haste: 2,
+            critRate: 2,
+            mastery: 2,
+        }
+    },
+
+    // ✅ T1：预言（牧师）
+    EQ_158: {
+        id: 'EQ_158',
+        name: '预言头饰',
+        icon: "icons/wow/vanilla/armor/INV_Crown_01.png",
+        type: 'equipment',
+        slot: 'head',
+        rarity: 'purple',
+
+        setId: 'prophecy_set',
+        setName: '预言',
+
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            spellPower: 600,
+            hp: 3900,
+            mastery: 26,
+            versatility: 26,
+            haste: 25,
+        },
+        growth: {
+            spellPower: 2,
+            hp: 2,
+            mastery: 2,
+            versatility: 2,
+            haste: 2,
+        }
+    },
+    EQ_159: {
+        id: 'EQ_159',
+        name: '预言臂甲',
+        icon: "icons/wow/vanilla/armor/INV_Bracer_13.png",
+        type: 'equipment',
+        slot: 'wrist',
+        rarity: 'purple',
+
+        setId: 'prophecy_set',
+        setName: '预言',
+
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            spellPower: 420,
+            hp: 3400,
+            mastery: 24,
+            versatility: 22,
+            haste: 22,
+        },
+        growth: {
+            spellPower: 2,
+            hp: 2,
+            mastery: 2,
+            versatility: 2,
+            haste: 2,
+        }
+    },
+    EQ_160: {
+        id: 'EQ_160',
+        name: '预言束带',
+        icon: "icons/wow/vanilla/armor/INV_Belt_10.png",
+        type: 'equipment',
+        slot: 'belt',
+        rarity: 'purple',
+
+        setId: 'prophecy_set',
+        setName: '预言',
+
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            spellPower: 450,
+            hp: 3500,
+            mastery: 24,
+            versatility: 24,
+            critRate: 15,
+        },
+        growth: {
+            spellPower: 2,
+            hp: 2,
+            mastery: 2,
+            versatility: 2,
+            critRate: 2,
+        }
+    },
+    EQ_161: {
+        id: 'EQ_161',
+        name: '预言之靴',
+        icon: "icons/wow/vanilla/armor/INV_Boots_05.png",
+        type: 'equipment',
+        slot: 'feet',
+        rarity: 'purple',
+
+        setId: 'prophecy_set',
+        setName: '预言',
+
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            spellPower: 480,
+            hp: 3600,
+            mastery: 24,
+            versatility: 24,
+            haste: 25,
+        },
+        growth: {
+            spellPower: 2,
+            hp: 2,
+            mastery: 2,
+            versatility: 2,
+            haste: 2,
+        }
+    },
+
+    // ✅ 饰品：火焰符咒（魔抗饰品）
+    EQ_162: {
+        id: 'EQ_162',
+        name: '火焰符咒',
+        icon: "icons/wow/vanilla/items/INV_Misc_Rune_01.png",
+        type: 'equipment',
+        slot: 'trinket1',
+        rarity: 'blue',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            hp: 5400,
+            magicResist: 120,
+            versatility: 29,
+            mastery: 29,
+        },
+        growth: {
+            hp: 2,
+            magicResist: 2,
+            versatility: 2,
+            mastery: 2,
+        },
+        specialEffect: {
+            type: 'proc_stat',
+            trigger: 'turn_start',
+            chance: 0.25,
+            stats: { magicResist: 250 },
+            scaleWithLevel: true
+        }
+    },
+
+    // ✅ 戒指：沉重的黑铁戒指（坦克）
+    EQ_163: {
+        id: 'EQ_163',
+        name: '沉重的黑铁戒指',
+        icon: "icons/wow/vanilla/armor/INV_Jewelry_Ring_15.png",
+        type: 'equipment',
+        slot: 'ring2',
+        rarity: 'blue',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            hp: 4420,
+            armor: 173,
+            mastery: 23,
+            blockValue: 460,
+            versatility: 29,
+        },
+        growth: {
+            hp: 2,
+            armor: 2,
+            mastery: 2,
+            blockValue: 2,
+            versatility: 2,
+        }
+    },
+
+    // ✅ 戒指：法术能量之戒（法强）
+    EQ_164: {
+        id: 'EQ_164',
+        name: '法术能量之戒',
+        icon: "icons/wow/vanilla/armor/INV_Jewelry_Ring_21.png",
+        type: 'equipment',
+        slot: 'ring1',
+        rarity: 'blue',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            spellPower: 520,
+            hp: 3900,
+            critRate: 17,
+            haste: 29,
+            mastery: 23,
+        },
+        growth: {
+            spellPower: 2,
+            hp: 2,
+            critRate: 2,
+            haste: 2,
+            mastery: 2,
+        }
+    },
+
+    // ✅ 盾牌：钻孔虫之碟（坦克盾牌）
+    EQ_165: {
+        id: 'EQ_165',
+        name: '钻孔虫之碟',
+        icon: "icons/wow/vanilla/armor/INV_Shield_10.png",
+        type: 'equipment',
+        slot: 'offHand',
+        rarity: 'purple',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            hp: 5200,
+            armor: 260,
+            mastery: 23,
+            blockRate: 30,
+            blockValue: 690,
+            versatility: 23,
+        },
+        growth: {
+            hp: 2,
+            armor: 2,
+            mastery: 2,
+            blockRate: 2,
+            blockValue: 2,
+            versatility: 2,
+        },
+        specialEffect: {
+            type: 'proc_stat',
+            trigger: 'turn_start',
+            chance: 0.20,
+            stats: { armor: 2000 },
+            scaleWithLevel: true
+        }
+    },
+
+    // ✅ 戒指：迅击戒指（攻强）
+    EQ_166: {
+        id: 'EQ_166',
+        name: '迅击戒指',
+        icon: "icons/wow/vanilla/armor/INV_Jewelry_Ring_35.png",
+        type: 'equipment',
+        slot: 'ring1',
+        rarity: 'blue',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            attack: 520,
+            hp: 3900,
+            critRate: 17,
+            haste: 29,
+            mastery: 23,
+        },
+        growth: {
+            attack: 2,
+            hp: 2,
+            critRate: 2,
+            haste: 2,
+            mastery: 2,
+        }
+    },
+
+    // ✅ 武器：残忍利刃（盗贼爆发）
+    EQ_167: {
+        id: 'EQ_167',
+        name: '残忍利刃',
+        icon: "icons/wow/vanilla/weapons/INV_Sword_06.png",
+        type: 'equipment',
+        slot: 'mainHand',
+        rarity: 'purple',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            attack: 1725,
+            hp: 3640,
+            critRate: 29,
+            critDamage: 0.70,
+            haste: 35,
+            versatility: 23,
+        },
+        growth: {
+            attack: 2,
+            hp: 2,
+            critRate: 2,
+            critDamage: 2,
+            haste: 2,
+            versatility: 2,
+        },
+        specialEffect: {
+            type: 'proc_stat',
+            trigger: 'turn_start',
+            chance: 0.25,
+            stats: { attack: 1200, critRate: 20 },
+            scaleWithLevel: true
+        }
+    },
+
+    // ✅ 传说（橙）：祈福
+    EQ_168: {
+        id: 'EQ_168',
+        name: '祈福',
+        icon: "icons/wow/vanilla/weapons/INV_Staff_30.png",
+        type: 'equipment',
+        slot: 'mainHand',
+        rarity: 'orange',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            spellPower: 2000,
+            hp: 4500,
+            mastery: 30,
+            versatility: 28,
+            critRate: 20,
+            haste: 20,
+        },
+        growth: {
+            spellPower: 2,
+            hp: 2,
+            mastery: 2,
+            versatility: 2,
+            critRate: 2,
+            haste: 2,
+        },
+        specialEffect: {
+            type: 'proc_stat',
+            trigger: 'turn_start',
+            chance: 0.25,
+            stats: { spellPower: 2200 },
+            scaleWithLevel: true
+        }
+    },
+
+    // ✅ 武器：碧空之歌（法强武器）
+    EQ_169: {
+        id: 'EQ_169',
+        name: '碧空之歌',
+        icon: "icons/wow/vanilla/weapons/INV_Sword_39.png",
+        type: 'equipment',
+        slot: 'mainHand',
+        rarity: 'purple',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            spellPower: 1550,
+            hp: 4290,
+            critRate: 29,
+            haste: 29,
+            mastery: 35,
+            versatility: 23,
+        },
+        growth: {
+            spellPower: 2,
+            hp: 2,
+            critRate: 2,
+            haste: 2,
+            mastery: 2,
+            versatility: 2,
+        },
+        specialEffect: {
+            type: 'skill_slot_buff',
+            slots: [2, 3],
+            spellPowerBonus: 1150
+        }
+    },
+
+    // ✅ 副手：熔火犬牙（攻强副手）
+    EQ_170: {
+        id: 'EQ_170',
+        name: '熔火犬牙',
+        icon: "icons/wow/vanilla/weapons/INV_Weapon_ShortBlade_12.png",
+        type: 'equipment',
+        slot: 'offHand',
+        rarity: 'purple',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            attack: 980,
+            hp: 3250,
+            critRate: 23,
+            haste: 23,
+            mastery: 23,
+            versatility: 17,
+        },
+        growth: {
+            attack: 2,
+            hp: 2,
+            critRate: 2,
+            haste: 2,
+            mastery: 2,
+            versatility: 2,
+        }
+    },
+
+
 
 };
 
@@ -7651,6 +8465,37 @@ const SET_BONUSES = {
             { count: 8, bonus: { hp: 1000, versatility:20 } }
         ]
     }
+    ,
+    // ==================== 熔火之心 · T1 套装（4件套） ====================
+    might_set: {
+        name: '力量',
+        tiers: [
+            { count: 2, bonus: { hp: 800, armor: 120, mastery: 15 } },
+            { count: 4, bonus: { blockRate: 6, blockValue: 500, versatility: 25 } }
+        ]
+    },
+    nightslayer_set: {
+        name: '夜幕杀手',
+        tiers: [
+            { count: 2, bonus: { attack: 250, haste: 15 } },
+            { count: 4, bonus: { critRate: 12, critDamage: 0.35, versatility: 20 } }
+        ]
+    },
+    arcanist_set: {
+        name: '奥术师',
+        tiers: [
+            { count: 2, bonus: { spellPower: 320, haste: 15 } },
+            { count: 4, bonus: { critRate: 12, mastery: 20, versatility: 20 } }
+        ]
+    },
+    prophecy_set: {
+        name: '预言',
+        tiers: [
+            { count: 2, bonus: { spellPower: 320, mastery: 15 } },
+            { count: 4, bonus: { hp: 1200, versatility: 25, haste: 10 } }
+        ]
+    }
+
 };
 
 // ==================== BOSS DATA ====================
@@ -21616,7 +22461,7 @@ const GrandVaultModal = ({ rows, inventoryFull, onClose, onClaim }) => {
                                                     transition: 'all 0.12s',
                                                     opacity: inventoryFull ? 0.95 : 1
                                                 }}
-                                                title="点击选择（悬停查看属性）"
+                                                title="点击选择"
                                             >
                                                 {picked && (
                                                     <div style={{

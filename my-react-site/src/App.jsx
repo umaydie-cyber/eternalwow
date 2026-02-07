@@ -7371,6 +7371,123 @@ const FIXED_EQUIPMENTS = {
             // 无成长
         },
     },
+    // ==================== Molten Core（熔火之心）- 迦顿男爵掉落（护肩/逐风者部件） ====================
+    EQ_177: {
+        id: 'EQ_177',
+        name: '力量肩铠',
+        icon: "icons/wow/vanilla/armor/INV_Shoulder_30.png",
+        type: 'equipment',
+        slot: 'shoulder',
+        rarity: 'purple',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            hp: 5200,
+            armor: 220,
+            mastery: 12,
+            blockRate: 4,
+            blockValue: 420
+        },
+        growth: {
+            hp: 2,
+            armor: 2,
+            mastery: 2,
+            blockRate: 2,
+            blockValue: 2
+        },
+        setId: 'might_set',
+        setName: '力量'
+    },
+    EQ_178: {
+        id: 'EQ_178',
+        name: '夜幕杀手护肩',
+        icon: "icons/wow/vanilla/armor/INV_Shoulder_07.png",
+        type: 'equipment',
+        slot: 'shoulder',
+        rarity: 'purple',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            attack: 480,
+            hp: 3600,
+            armor: 170,
+            critRate: 12,
+            haste: 16
+        },
+        growth: {
+            attack: 2,
+            hp: 2,
+            armor: 2,
+            critRate: 2,
+            haste: 2
+        },
+        setId: 'nightslayer_set',
+        setName: '夜幕杀手'
+    },
+    EQ_179: {
+        id: 'EQ_179',
+        name: '奥术师衬肩',
+        icon: "icons/wow/vanilla/armor/INV_Shoulder_23.png",
+        type: 'equipment',
+        slot: 'shoulder',
+        rarity: 'purple',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            spellPower: 480,
+            hp: 3400,
+            critRate: 12,
+            haste: 16
+        },
+        growth: {
+            spellPower: 2,
+            hp: 2,
+            critRate: 2,
+            haste: 2
+        },
+        setId: 'arcanist_set',
+        setName: '奥术师'
+    },
+    EQ_180: {
+        id: 'EQ_180',
+        name: '预言衬肩',
+        icon: "icons/wow/vanilla/armor/INV_Shoulder_09.png",
+        type: 'equipment',
+        slot: 'shoulder',
+        rarity: 'purple',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            spellPower: 450,
+            hp: 3800,
+            mastery: 12,
+            critRate: 16
+        },
+        growth: {
+            spellPower: 2,
+            hp: 2,
+            mastery: 2,
+            critRate: 2
+        },
+        setId: 'prophecy_set',
+        setName: '预言'
+    },
+    EQ_181: {
+        id: 'EQ_181',
+        name: '逐风者的禁锢之颅（左）',
+        icon: "icons/wow/vanilla/spells/Spell_Ice_Lament.png",
+        type: 'equipment',
+        slot: 'offHand',
+        rarity: 'orange',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            // 无属性（用于后续合成/收藏等）
+        },
+        growth: {
+            // 无成长
+        },
+    },
 
 };
 
@@ -9091,7 +9208,11 @@ const BOSS_DATA = {
             gold: 2200000,
             exp: 1300000,
             items: [
-                { id: 'IT_GEDDON_BADGE', chance: 0.8 }
+                { id: 'EQ_177', chance: 0.1 },  // 力量肩铠
+                { id: 'EQ_178', chance: 0.1 },  // 夜幕杀手护肩
+                { id: 'EQ_179', chance: 0.1 },  // 奥术师衬肩
+                { id: 'EQ_180', chance: 0.1 },  // 预言衬肩
+                { id: 'EQ_181', chance: 0.02 }  // 逐风者的禁锢之颅（左）
             ]
         }
     },

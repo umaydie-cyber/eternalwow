@@ -6503,7 +6503,7 @@ const FIXED_EQUIPMENTS = {
     EQ_146: {
         id: 'EQ_146',
         name: '力量头盔',
-        icon: "icons/wow/vanilla/armor/INV_Helmet_02.png",
+        icon: "icons/wow/vanilla/armor/INV_Helmet_09.png",
         type: 'equipment',
         slot: 'head',
         rarity: 'purple',
@@ -6531,7 +6531,7 @@ const FIXED_EQUIPMENTS = {
     EQ_147: {
         id: 'EQ_147',
         name: '力量护腕',
-        icon: "icons/wow/vanilla/armor/INV_Bracer_18.png",
+        icon: "icons/wow/vanilla/armor/INV_Bracer_19.png",
         type: 'equipment',
         slot: 'wrist',
         rarity: 'purple',
@@ -6559,7 +6559,7 @@ const FIXED_EQUIPMENTS = {
     EQ_148: {
         id: 'EQ_148',
         name: '力量腰带',
-        icon: "icons/wow/vanilla/armor/INV_Belt_34.png",
+        icon: "icons/wow/vanilla/armor/INV_Belt_09.png",
         type: 'equipment',
         slot: 'belt',
         rarity: 'purple',
@@ -6587,7 +6587,7 @@ const FIXED_EQUIPMENTS = {
     EQ_149: {
         id: 'EQ_149',
         name: '力量马靴',
-        icon: "icons/wow/vanilla/armor/INV_Boots_Plate_03.png",
+        icon: "icons/wow/vanilla/armor/INV_Boots_Plate_04.png",
         type: 'equipment',
         slot: 'feet',
         rarity: 'purple',
@@ -6645,7 +6645,7 @@ const FIXED_EQUIPMENTS = {
     EQ_151: {
         id: 'EQ_151',
         name: '夜幕杀手护腕',
-        icon: "icons/wow/vanilla/armor/INV_Bracer_07.png",
+        icon: "icons/wow/vanilla/armor/INV_Bracer_02.png",
         type: 'equipment',
         slot: 'wrist',
         rarity: 'purple',
@@ -6673,7 +6673,7 @@ const FIXED_EQUIPMENTS = {
     EQ_152: {
         id: 'EQ_152',
         name: '夜幕杀手腰带',
-        icon: "icons/wow/vanilla/armor/INV_Belt_03.png",
+        icon: "icons/wow/vanilla/armor/INV_Belt_23.png",
         type: 'equipment',
         slot: 'belt',
         rarity: 'purple',
@@ -6701,7 +6701,7 @@ const FIXED_EQUIPMENTS = {
     EQ_153: {
         id: 'EQ_153',
         name: '夜幕杀手长靴',
-        icon: "icons/wow/vanilla/armor/INV_Boots_04.png",
+        icon: "icons/wow/vanilla/armor/INV_Boots_08.png",
         type: 'equipment',
         slot: 'feet',
         rarity: 'purple',

@@ -6731,7 +6731,7 @@ const FIXED_EQUIPMENTS = {
     EQ_154: {
         id: 'EQ_154',
         name: '奥术师头冠',
-        icon: "icons/wow/vanilla/armor/INV_Crown_02.png",
+        icon: "icons/wow/vanilla/armor/INV_Helmet_53.png",
         type: 'equipment',
         slot: 'head',
         rarity: 'purple',
@@ -6758,7 +6758,7 @@ const FIXED_EQUIPMENTS = {
     EQ_155: {
         id: 'EQ_155',
         name: '奥术师护腕',
-        icon: "icons/wow/vanilla/armor/INV_Bracer_09.png",
+        icon: "icons/wow/vanilla/armor/INV_Belt_29.png",
         type: 'equipment',
         slot: 'wrist',
         rarity: 'purple',
@@ -6784,7 +6784,7 @@ const FIXED_EQUIPMENTS = {
     EQ_156: {
         id: 'EQ_156',
         name: '奥术师腰带',
-        icon: "icons/wow/vanilla/armor/INV_Belt_08.png",
+        icon: "icons/wow/vanilla/armor/INV_Belt_30.png",
         type: 'equipment',
         slot: 'belt',
         rarity: 'purple',
@@ -6811,7 +6811,7 @@ const FIXED_EQUIPMENTS = {
     EQ_157: {
         id: 'EQ_157',
         name: '奥术师便鞋',
-        icon: "icons/wow/vanilla/armor/INV_Boots_02.png",
+        icon: "icons/wow/vanilla/armor/INV_Boots_07.png",
         type: 'equipment',
         slot: 'feet',
         rarity: 'purple',
@@ -6840,7 +6840,7 @@ const FIXED_EQUIPMENTS = {
     EQ_158: {
         id: 'EQ_158',
         name: '预言头饰',
-        icon: "icons/wow/vanilla/armor/INV_Crown_01.png",
+        icon: "icons/wow/vanilla/armor/INV_Helmet_34.png",
         type: 'equipment',
         slot: 'head',
         rarity: 'purple',
@@ -6866,7 +6866,7 @@ const FIXED_EQUIPMENTS = {
     EQ_159: {
         id: 'EQ_159',
         name: '预言臂甲',
-        icon: "icons/wow/vanilla/armor/INV_Bracer_13.png",
+        icon: "icons/wow/vanilla/armor/INV_Bracer_09.png",
         type: 'equipment',
         slot: 'wrist',
         rarity: 'purple',
@@ -6893,7 +6893,7 @@ const FIXED_EQUIPMENTS = {
     EQ_160: {
         id: 'EQ_160',
         name: '预言束带',
-        icon: "icons/wow/vanilla/armor/INV_Belt_10.png",
+        icon: "icons/wow/vanilla/armor/INV_Belt_22.png",
         type: 'equipment',
         slot: 'belt',
         rarity: 'purple',
@@ -6919,7 +6919,7 @@ const FIXED_EQUIPMENTS = {
     EQ_161: {
         id: 'EQ_161',
         name: '预言之靴',
-        icon: "icons/wow/vanilla/armor/INV_Boots_05.png",
+        icon: "icons/wow/vanilla/armor/INV_Boots_07.png",
         type: 'equipment',
         slot: 'feet',
         rarity: 'purple',

@@ -7375,7 +7375,7 @@ const FIXED_EQUIPMENTS = {
     EQ_177: {
         id: 'EQ_177',
         name: '力量肩铠',
-        icon: "icons/wow/vanilla/armor/INV_Shoulder_30.png",
+        icon: "icons/wow/vanilla/armor/INV_Shoulder_15.png",
         type: 'equipment',
         slot: 'shoulder',
         rarity: 'purple',
@@ -7401,7 +7401,7 @@ const FIXED_EQUIPMENTS = {
     EQ_178: {
         id: 'EQ_178',
         name: '夜幕杀手护肩',
-        icon: "icons/wow/vanilla/armor/INV_Shoulder_07.png",
+        icon: "icons/wow/vanilla/armor/INV_Shoulder_25.png",
         type: 'equipment',
         slot: 'shoulder',
         rarity: 'purple',
@@ -7427,7 +7427,7 @@ const FIXED_EQUIPMENTS = {
     EQ_179: {
         id: 'EQ_179',
         name: '奥术师衬肩',
-        icon: "icons/wow/vanilla/armor/INV_Shoulder_23.png",
+        icon: "icons/wow/vanilla/armor/INV_Shoulder_02.png",
         type: 'equipment',
         slot: 'shoulder',
         rarity: 'purple',
@@ -7451,7 +7451,7 @@ const FIXED_EQUIPMENTS = {
     EQ_180: {
         id: 'EQ_180',
         name: '预言衬肩',
-        icon: "icons/wow/vanilla/armor/INV_Shoulder_09.png",
+        icon: "icons/wow/vanilla/armor/INV_Shoulder_02.png",
         type: 'equipment',
         slot: 'shoulder',
         rarity: 'purple',

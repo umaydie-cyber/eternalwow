@@ -396,7 +396,7 @@ const TALENTS = {
                     id: 'shield_spikes',
                     type: TALENT_TYPES.ON_BLOCK,
                     name: '盾刺反击',
-                    description: '每次成功格挡后，对攻击者造成等同于本次被格挡掉的伤害值的真实伤害（Boss战默认反击Boss；地图战反击当前怪物）。'
+                    description: '每次成功格挡后，对攻击者造成等同于本次被格挡掉的伤害值的真实伤害。'
                 },
                 {
                     id: 'blood_and_thunder',

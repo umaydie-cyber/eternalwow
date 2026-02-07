@@ -7227,6 +7227,125 @@ const FIXED_EQUIPMENTS = {
 
 
 
+
+    // ==================== Molten Core（熔火之心）- 加尔掉落（手套/逐风者部件） ====================
+    EQ_172: {
+        id: 'EQ_172',
+        name: '力量护手',
+        icon: "icons/wow/vanilla/armor/INV_Gauntlets_10.png",
+        type: 'equipment',
+        slot: 'hands',
+        rarity: 'purple',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            hp: 4200,
+            armor: 210,
+            blockRate: 4,
+            blockValue: 400,
+            versatility: 12
+        },
+        growth: {
+            hp: 2,
+            armor: 2,
+            blockRate: 2,
+            blockValue: 2,
+            versatility: 2,
+        },
+        setId: 'might_set',
+        setName: '力量'
+    },
+    EQ_173: {
+        id: 'EQ_173',
+        name: '夜幕杀手手套',
+        icon: "icons/wow/vanilla/armor/INV_Gauntlets_21.png",
+        type: 'equipment',
+        slot: 'hands',
+        rarity: 'purple',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            attack: 420,
+            hp: 3000,
+            armor: 160,
+            critRate: 12,
+            haste: 16
+        },
+        growth: {
+            attack: 2,
+            hp: 2,
+            armor: 2,
+            critRate: 2,
+            haste: 2,
+        },
+        setId: 'nightslayer_set',
+        setName: '夜幕杀手'
+    },
+    EQ_174: {
+        id: 'EQ_174',
+        name: '奥术师手套',
+        icon: "icons/wow/vanilla/armor/INV_Gauntlets_14.png",
+        type: 'equipment',
+        slot: 'hands',
+        rarity: 'purple',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            spellPower: 420,
+            hp: 3000,
+            critRate: 12,
+            haste: 16
+        },
+        growth: {
+            spellPower: 2,
+            hp: 2,
+            critRate: 2,
+            haste: 2,
+        },
+        setId: 'arcanist_set',
+        setName: '奥术师'
+    },
+    EQ_175: {
+        id: 'EQ_175',
+        name: '预言手套',
+        icon: "icons/wow/vanilla/armor/INV_Gauntlets_14.png",
+        type: 'equipment',
+        slot: 'hands',
+        rarity: 'purple',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            spellPower: 400,
+            hp: 3400,
+            mastery: 12,
+            critRate: 16
+        },
+        growth: {
+            spellPower: 2,
+            hp: 2,
+            mastery: 2,
+            critRate: 2,
+        },
+        setId: 'prophecy_set',
+        setName: '预言'
+    },
+    EQ_176: {
+        id: 'EQ_176',
+        name: '逐风者的禁锢之颅（右）',
+        icon: "icons/wow/vanilla/spells/Spell_Ice_Lament.png",
+        type: 'equipment',
+        slot: 'offHand',
+        rarity: 'orange',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            // 无属性（用于后续合成/收藏等）
+        },
+        growth: {
+            // 无成长
+        },
+    },
+
 };
 
 //赤脊山5件图鉴100级点亮效果
@@ -8352,7 +8471,7 @@ const WORLD_BOSSES = {
         unlockLevel: 60
     },
 
-// ✅ 新增：60级世界首领 - 无疤者奥斯里安（安其拉）
+    // ✅ 新增：60级世界首领 - 无疤者奥斯里安（安其拉）
     // 说明：本体防御极高（需要击杀【汲能水晶】触发短暂“破甲窗口”）
     ossirian: {
         id: 'ossirian',
@@ -8817,52 +8936,7 @@ const BOSS_DATA = {
             ]
         }
     },
-
-
-    // ✅ 新增：60级世界首领 - 加尔（熔火之心）
-    garr: {
-        id: 'garr',
-        name: '加尔',
-        maxHp: 15000000,
-        attack: 10800,
-        defense: 10000,
-
-        // 技能循环：烈焰冲击 → 召唤火元素 → 烈焰风暴 → 火焰震击
-        cycle: ['flame_impact', 'summon_fire_elementals', 'flame_storm', 'fire_shock'],
-
-        // 技能1：烈焰冲击（随机目标 3×火焰法术伤害，并留下灼烧DOT：1.5×/回合，持续4回合）
-        flameImpactMultiplier: 3,
-        flameImpactDotMultiplier: 1.5,
-        flameImpactDotDuration: 4,
-
-        // 技能2：烈焰风暴（随机目标 3×；集中站位：全体 3×）
-        flameStormMultiplier: 3,
-
-        // 技能3：火焰震击（全体 3×；分散站位：击飞全体1回合）
-        fireShockMultiplier: 3,
-        knockupDuration: 1,
-
-        // 技能4：召唤火元素（2个）
-        summonCount: 2,
-        minion: {
-            name: '火元素',
-            maxHp: 1500000,
-            attack: 10800,
-            defense: 10000
-        },
-        scorchingPainMultiplier: 1.5,
-        spellVulnerabilityPerStack: 0.02, // 每层+2%法术承伤（持续到战斗结束，可叠层）
-
-        rewards: {
-            gold: 2000000,
-            exp: 1200000,
-            items: [
-
-            ]
-        }
-    },
-
-// ✅ 新增：60级世界首领 - 无疤者奥斯里安（安其拉）
+    // ✅ 新增：60级世界首领 - 无疤者奥斯里安（安其拉）
     ossirian: {
         id: 'ossirian',
         name: '无疤者奥斯里安',
@@ -8906,7 +8980,53 @@ const BOSS_DATA = {
                 { id: 'IT_OSSIRIAN_BADGE', chance: 0.8 }
             ]
         }
-    }
+    },
+    // ✅ 新增：60级世界首领 - 加尔（熔火之心）
+    garr: {
+        id: 'garr',
+        name: '加尔',
+        maxHp: 15000000,
+        attack: 10800,
+        defense: 10000,
+
+        // 技能循环：烈焰冲击 → 召唤火元素 → 烈焰风暴 → 火焰震击
+        cycle: ['flame_impact', 'summon_fire_elementals', 'flame_storm', 'fire_shock'],
+
+        // 技能1：烈焰冲击（随机目标 3×火焰法术伤害，并留下灼烧DOT：1.5×/回合，持续4回合）
+        flameImpactMultiplier: 3,
+        flameImpactDotMultiplier: 1.5,
+        flameImpactDotDuration: 4,
+
+        // 技能2：烈焰风暴（随机目标 3×；集中站位：全体 3×）
+        flameStormMultiplier: 3,
+
+        // 技能3：火焰震击（全体 3×；分散站位：击飞全体1回合）
+        fireShockMultiplier: 3,
+        knockupDuration: 1,
+
+        // 技能4：召唤火元素（2个）
+        summonCount: 2,
+        minion: {
+            name: '火元素',
+            maxHp: 1500000,
+            attack: 10800,
+            defense: 10000
+        },
+        scorchingPainMultiplier: 1.5,
+        spellVulnerabilityPerStack: 0.02, // 每层+2%法术承伤（持续到战斗结束，可叠层）
+
+        rewards: {
+            gold: 2000000,
+            exp: 1200000,
+            items: [
+                { id: 'EQ_172', chance: 0.1 },  // 力量护手
+                { id: 'EQ_173', chance: 0.1 },  // 夜幕杀手手套
+                { id: 'EQ_174', chance: 0.1 },  // 奥术师手套
+                { id: 'EQ_175', chance: 0.1 },  // 预言手套
+                { id: 'EQ_176', chance: 0.02 }  // 逐风者的禁锢之颅（右）
+            ]
+        }
+    },
 
 };
 
@@ -10033,6 +10153,7 @@ function stepBossCombat(state) {
 
         return { damage, resistReduction, magicResist: mr, spellVulnMult };
     };
+
 
     const triggerAtonementHeal = (source, damageDone) => {
         if (!source || damageDone <= 0) return;
@@ -12938,27 +13059,24 @@ function stepBossCombat(state) {
     }
 
 
-    // ==================== 加尔（Garr）技能处理 ====================
+    // ==================== 加尔技能处理 ====================
     else if (combat.bossId === 'garr') {
+        // 火焰法术伤害：计算魔抗（并套用受伤乘区/全能/救赎/挫志/法术易伤）
+        // 这里复用通用 calcMagicDamage(...)
+        const bossAction = boss.cycle[(combat.round - 1) % boss.cycle.length];
 
-        // 选取随机存活目标
         const pickRandomAlivePlayerIndex = () => {
-            const candidates = combat.playerStates
-                .map((ps, idx) => ({ ps, idx }))
-                .filter(o => (o.ps?.currentHp ?? 0) > 0)
-                .map(o => o.idx);
-
-            if (candidates.length <= 0) return -1;
-            return candidates[Math.floor(Math.random() * candidates.length)];
+            const aliveIdx = combat.playerStates.map((p, idx) => ({ p, idx })).filter(x => x.p.currentHp > 0);
+            if (aliveIdx.length === 0) return -1;
+            return aliveIdx[Math.floor(Math.random() * aliveIdx.length)].idx;
         };
 
-        // 技能1：烈焰冲击：随机目标 3×Boss攻击 的火焰法术伤害，并留下灼烧DOT（1.5×Boss攻击/回合，持续4回合）
         if (bossAction === 'flame_impact') {
+            // 烈焰冲击：随机目标 3×攻击 火焰法术伤害，并留下灼烧DOT
             const tIdx = pickRandomAlivePlayerIndex();
-            if (tIdx < 0) {
-                addLog(`【${boss.name}】施放【烈焰冲击】，但没有存活目标`);
-            } else {
+            if (tIdx >= 0) {
                 const target = combat.playerStates[tIdx];
+
                 const raw = Math.floor((boss.attack || 0) * (boss.flameImpactMultiplier || 3));
                 const fire = calcMagicDamage(target, raw);
 
@@ -12972,61 +13090,49 @@ function stepBossCombat(state) {
                 const shieldText = shieldResult.absorbed > 0 ? `，护盾吸收 ${shieldResult.absorbed}` : '';
                 addLog(`【${boss.name}】施放【烈焰冲击】命中 位置${tIdx + 1} ${target.char.name}，造成 ${shieldResult.finalDamage} 点火焰伤害（魔抗减伤${resPct}%${mrText}${vulnText}${shieldText}）`);
 
-                // 施加灼烧DOT（同名DOT刷新，不叠层）
-                const dotDamage = Math.floor((boss.attack || 0) * (boss.flameImpactDotMultiplier || 1.5));
-                const dotDuration = Math.max(1, Math.floor(Number(boss.flameImpactDotDuration || 4)));
-
+                // 灼烧DOT：每回合 1.5×攻击，持续4回合
+                const dotRaw = Math.floor((boss.attack || 0) * (boss.flameImpactDotMultiplier || 1.5));
                 target.dots = target.dots || [];
-                const existing = target.dots.find(d => d && d.name === '灼烧');
-                if (existing) {
-                    existing.damagePerTurn = dotDamage;
-                    existing.duration = dotDuration;
-                    existing.school = 'fire';
-                    addLog(`→ 位置${tIdx + 1} ${target.char.name} 的【灼烧】持续时间刷新（每回合 ${dotDamage} 点火焰伤害，持续 ${dotDuration} 回合）`, 'debuff');
-                } else {
-                    target.dots.push({
-                        name: '灼烧',
-                        type: 'dot',
-                        school: 'fire',
-                        damagePerTurn: dotDamage,
-                        duration: dotDuration
-                    });
-                    addLog(`→ 位置${tIdx + 1} ${target.char.name} 获得【灼烧】：每回合 ${dotDamage} 点火焰伤害，持续 ${dotDuration} 回合`, 'debuff');
-                }
+                target.dots.push({
+                    name: '灼烧',
+                    school: 'fire',
+                    damagePerTurn: dotRaw,
+                    duration: boss.flameImpactDotDuration || 4
+                });
+                addLog(`→ 位置${tIdx + 1} ${target.char.name} 被施加【灼烧】（每回合 ${dotRaw} 点火焰伤害，持续 ${boss.flameImpactDotDuration || 4} 回合）`, 'debuff');
             }
         }
 
-        // 技能4：召唤火元素：召唤2个火元素
         else if (bossAction === 'summon_fire_elementals') {
-            const count = Math.max(1, Math.floor(Number(boss.summonCount || 2)));
+            // 召唤火元素：召唤2个火元素
+            const count = boss.summonCount || 2;
 
+            combat.minions = Array.isArray(combat.minions) ? combat.minions : [];
             for (let i = 0; i < count; i++) {
                 combat.minions.push({
-                    hp: boss.minion.maxHp,
-                    maxHp: boss.minion.maxHp,
-                    attack: boss.minion.attack ?? boss.attack,
-                    defense: boss.minion.defense,
-                    isFireElemental: true,
-                    dots: []
+                    name: boss.minion?.name || '火元素',
+                    hp: boss.minion?.maxHp || 1500000,
+                    maxHp: boss.minion?.maxHp || 1500000,
+                    attack: boss.minion?.attack || boss.attack || 10800,
+                    defense: boss.minion?.defense || 10000,
+                    dots: [],
+                    isFireElemental: true
                 });
             }
-
-            addLog(`【${boss.name}】使用【召唤火元素】召唤了 ${count} 个${boss.minion?.name || '火元素'}！`);
-            const incPct = Math.round((boss.spellVulnerabilityPerStack ?? 0.02) * 100);
-            addLog(`→ ${boss.minion?.name || '火元素'}：每回合施放【灼热之痛】对随机目标造成 ${(boss.scorchingPainMultiplier || 1.5)}×Boss攻击 的火焰法术伤害，并使其受到法术伤害 +${incPct}%（可叠层到战斗结束）`);
+            addLog(`【${boss.name}】召唤了 ${count} 个【${boss.minion?.name || '火元素'}】！`, 'summon');
         }
 
-        // 技能2：烈焰风暴：随机目标 3×；集中站位：全体 3×
         else if (bossAction === 'flame_storm') {
+            // 烈焰风暴：随机目标 3×；集中站位：全体 3×
+            const stance = combat.strategy?.stance || 'balanced';
             const raw = Math.floor((boss.attack || 0) * (boss.flameStormMultiplier || 3));
 
-            if (combat.strategy.stance === 'concentrated') {
-                addLog(`【${boss.name}】施放【烈焰风暴】（集中站位：全体）！`);
-
+            if (stance === 'concentrated') {
+                // 全体
                 combat.playerStates.forEach((ps, pIdx) => {
-                    if (!ps || ps.currentHp <= 0) return;
-
+                    if (ps.currentHp <= 0) return;
                     const fire = calcMagicDamage(ps, raw);
+
                     const shieldResult = applyShieldAbsorb(ps, fire.damage, logs, currentRound);
                     ps.currentHp -= shieldResult.finalDamage;
 
@@ -13035,17 +13141,15 @@ function stepBossCombat(state) {
                     const vulnPct = Math.round((fire.spellVulnMult - 1) * 100);
                     const vulnText = vulnPct > 0 ? `，法术易伤+${vulnPct}%` : '';
                     const shieldText = shieldResult.absorbed > 0 ? `，护盾吸收 ${shieldResult.absorbed}` : '';
-                    addLog(`→ 位置${pIdx + 1} ${ps.char.name} 受到 ${shieldResult.finalDamage} 点火焰伤害（魔抗减伤${resPct}%${mrText}${vulnText}${shieldText}）`);
+                    addLog(`【${boss.name}】施放【烈焰风暴】命中 位置${pIdx + 1} ${ps.char.name}，造成 ${shieldResult.finalDamage} 点火焰伤害（魔抗减伤${resPct}%${mrText}${vulnText}${shieldText}）`);
                 });
-
             } else {
+                // 随机单体
                 const tIdx = pickRandomAlivePlayerIndex();
-                if (tIdx < 0) {
-                    addLog(`【${boss.name}】施放【烈焰风暴】，但没有存活目标`);
-                } else {
+                if (tIdx >= 0) {
                     const target = combat.playerStates[tIdx];
-
                     const fire = calcMagicDamage(target, raw);
+
                     const shieldResult = applyShieldAbsorb(target, fire.damage, logs, currentRound);
                     target.currentHp -= shieldResult.finalDamage;
 
@@ -13059,17 +13163,16 @@ function stepBossCombat(state) {
             }
         }
 
-        // 技能3：火焰震击：全体 3×；分散站位：额外【击飞】（全体下一回合无法行动）
         else if (bossAction === 'fire_shock') {
+            // 火焰震击：全体 3×；分散站位：击飞（下一回合无法行动）
+            const stance = combat.strategy?.stance || 'balanced';
             const raw = Math.floor((boss.attack || 0) * (boss.fireShockMultiplier || 3));
-            const isDispersed = combat.strategy.stance === 'dispersed';
-
-            addLog(`【${boss.name}】施放【火焰震击】${isDispersed ? '（分散站位：附带击飞）' : ''}！`);
 
             combat.playerStates.forEach((ps, pIdx) => {
-                if (!ps || ps.currentHp <= 0) return;
+                if (ps.currentHp <= 0) return;
 
                 const fire = calcMagicDamage(ps, raw);
+
                 const shieldResult = applyShieldAbsorb(ps, fire.damage, logs, currentRound);
                 ps.currentHp -= shieldResult.finalDamage;
 
@@ -13078,16 +13181,16 @@ function stepBossCombat(state) {
                 const vulnPct = Math.round((fire.spellVulnMult - 1) * 100);
                 const vulnText = vulnPct > 0 ? `，法术易伤+${vulnPct}%` : '';
                 const shieldText = shieldResult.absorbed > 0 ? `，护盾吸收 ${shieldResult.absorbed}` : '';
-                addLog(`→ 位置${pIdx + 1} ${ps.char.name} 受到 ${shieldResult.finalDamage} 点火焰伤害（魔抗减伤${resPct}%${mrText}${vulnText}${shieldText}）`);
-
-                if (isDispersed && ps.currentHp > 0) {
-                    ps.debuffs = ps.debuffs || {};
-                    ps.debuffs.knockup = { duration: Math.max(1, Math.floor(Number(boss.knockupDuration || 1))) };
-                }
+                addLog(`【${boss.name}】施放【火焰震击】命中 位置${pIdx + 1} ${ps.char.name}，造成 ${shieldResult.finalDamage} 点火焰伤害（魔抗减伤${resPct}%${mrText}${vulnText}${shieldText}）`);
             });
 
-            if (isDispersed) {
-                addLog(`→ 分散站位触发【击飞】：全体下一回合无法行动`, 'debuff');
+            if (stance === 'dispersed') {
+                combat.playerStates.forEach((ps, pIdx) => {
+                    if (ps.currentHp <= 0) return;
+                    ps.debuffs = ps.debuffs || {};
+                    ps.debuffs.knockup = { duration: boss.knockupDuration || 1 };
+                });
+                addLog(`【${boss.name}】的【火焰震击】触发【击飞】！全体下一回合无法行动`, 'debuff');
             }
         }
     }
@@ -13527,13 +13630,14 @@ function stepBossCombat(state) {
                 const resistReduction = getMagicResistDamageReduction(magicResist);
                 base = Math.floor(base * (1 - resistReduction));
 
-                // 火元素【灼热之痛】：法术易伤（只对非物理DOT生效）
+                // 法术易伤：仅对“非物理”DOT生效
                 spellVulnMult = getSpellVulnerabilityMult(ps);
-
-                const parts = [`魔抗减伤${Math.round(resistReduction * 100)}%`];
                 const vulnPct = Math.round((spellVulnMult - 1) * 100);
+
+                const parts = [];
+                parts.push(`魔抗减伤${Math.round(resistReduction * 100)}%`);
                 if (vulnPct > 0) parts.push(`法术易伤+${vulnPct}%`);
-                extraText = `（${parts.join('，')}）`;
+                extraText = parts.length ? `（${parts.join('，')}）` : '';
             }
 
             // ✅ 把“受伤乘区”补齐：角色常驻 + buff(盾墙等) + 挫志怒吼 + 全能
@@ -13562,7 +13666,7 @@ function stepBossCombat(state) {
                 `【${dot.name}】${stackText}对 位置${pIdx + 1} ${ps.char.name} 造成 ${shieldResult.finalDamage} 点${dot.school === 'physical' ? '流血' : ''}伤害${extraText}${shieldText}（剩余${dot.duration - 1}回合）`
             );
 
-            // 永久DOT不减少持续时间
+// 永久DOT不减少持续时间
             if (!dot.isPermanent) {
                 dot.duration -= 1;
             }
@@ -25553,12 +25657,12 @@ const BossPrepareModal = ({ state, dispatch }) => {
         blood_siphon: '血液虹吸',
         corrupted_blood: '堕落之血',
 
-
         // ✅ 加尔
         flame_impact: '烈焰冲击',
         summon_fire_elementals: '召唤火元素',
         flame_storm: '烈焰风暴',
         fire_shock: '火焰震击',
+
 
         // ✅ 无疤者奥斯里安
         ossirian_strength: '奥斯里安之力',

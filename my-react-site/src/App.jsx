@@ -8446,29 +8446,29 @@ const SET_BONUSES = {
     might_set: {
         name: '力量',
         tiers: [
-            { count: 2, bonus: { hp: 800, armor: 120, mastery: 15 } },
-            { count: 4, bonus: { blockRate: 6, blockValue: 500, versatility: 25 } }
+            { count: 2, bonus: { hp: 800, armor: 120, mastery: 12 } },
+            { count: 4, bonus: { blockRate: 6, blockValue: 360 } }
         ]
     },
     nightslayer_set: {
         name: '夜幕杀手',
         tiers: [
-            { count: 2, bonus: { attack: 250, haste: 15 } },
-            { count: 4, bonus: { critRate: 12, critDamage: 0.35, versatility: 20 } }
+            { count: 2, bonus: { attack: 250, haste: 12 } },
+            { count: 4, bonus: { critRate: 12, critDamage: 0.35 } }
         ]
     },
     arcanist_set: {
         name: '奥术师',
         tiers: [
-            { count: 2, bonus: { spellPower: 320, haste: 15 } },
-            { count: 4, bonus: { critRate: 12, mastery: 20, versatility: 20 } }
+            { count: 2, bonus: { spellPower: 300, haste: 12 } },
+            { count: 4, bonus: { critRate: 12, mastery: 12} }
         ]
     },
     prophecy_set: {
         name: '预言',
         tiers: [
-            { count: 2, bonus: { spellPower: 320, mastery: 15 } },
-            { count: 4, bonus: { hp: 1200, versatility: 25, haste: 10 } }
+            { count: 2, bonus: { spellPower: 300, mastery: 12 } },
+            { count: 4, bonus: { hp: 1200, versatility: 12, haste: 12 } }
         ]
     }
 

@@ -14657,7 +14657,11 @@ function getFunctionalBuildingCost(buildingId, state) {
     const builtCount = state.functionalBuildings?.[buildingId] || 0;
 
     // 每多建造一座，成本增加20%
-    const multiplier = Math.pow(1.2, builtCount);
+    const MAX_COST_INCREASE_PCT = 200000;
+    const MAX_MULTIPLIER = 1 + MAX_COST_INCREASE_PCT / 100;
+
+    const rawMultiplier = Math.pow(1.2, builtCount);
+    const multiplier = Math.min(rawMultiplier, MAX_MULTIPLIER);
 
     const cost = {};
     Object.entries(building.cost).forEach(([res, amount]) => {

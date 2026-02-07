@@ -8468,7 +8468,7 @@ const SET_BONUSES = {
         name: '预言',
         tiers: [
             { count: 2, bonus: { spellPower: 300, mastery: 12 } },
-            { count: 4, bonus: { hp: 1200, versatility: 12, haste: 12 } }
+            { count: 4, bonus: { hp: 1200, versatility: 18 } }
         ]
     }
 

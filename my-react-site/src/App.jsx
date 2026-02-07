@@ -16838,7 +16838,8 @@ function gameReducer(state, action) {
             };
         }
         case "CHEAT_ADD_SPACETIME_COIN": {
-            const raw = action?.payload?.amount;
+
+            const raw = action?.payload;
             const delta = Math.floor(Number(raw));
 
             if (!Number.isFinite(delta) || delta <= 0) return state;
@@ -16847,7 +16848,6 @@ function gameReducer(state, action) {
                 ...state,
                 resources: {
                     ...state.resources,
-                    // 如果你原来字段名不是这个（比如 spCoin / spaceTimeCoin），按你的实际字段改
                     spacetimeCoin: (state.resources?.spacetimeCoin ?? 0) + delta,
                 },
             };

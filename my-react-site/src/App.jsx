@@ -7962,8 +7962,8 @@ const BOSS_DATA = {
         acidMultiplier: 1.2,
 
         // 哈卡之子死亡：毒性之血（中毒DOT）
-        // 说明：按“目标自身法术强度”结算（0.4×SP），持续3回合，可叠层
-        toxicBloodDotSpCoeff: 0.4,
+        // 说明：按“BOSS攻击”结算（0.4×BossAtk），持续3回合，不可叠层（只刷新）
+        toxicBloodDotAtkCoeff: 0.4,
         toxicBloodDuration: 3,
 
         // 技能2：血液虹吸
@@ -10812,8 +10812,8 @@ function stepBossCombat(state) {
             // 标记已处理，避免重复触发
             deadSons.forEach(m => { m.deathProcessed = true; });
 
-            const stacksGained = deadSons.length;
-            addLog(`【${boss.name}】的【哈卡之子】死亡（${stacksGained}个），所有角色获得【毒性之血】！`);
+            const deadCount = deadSons.length;
+            addLog(`【${boss.name}】的【哈卡之子】死亡（${deadCount}个），所有角色获得【毒性之血】（不可叠层，只刷新）！`);
 
             combat.playerStates.forEach((ps, pIdx) => {
                 if (!ps || ps.currentHp <= 0) return;
@@ -10825,36 +10825,37 @@ function stepBossCombat(state) {
                 }
 
                 ps.dots = ps.dots || [];
-                const coeff = boss.toxicBloodDotSpCoeff ?? 0.4;
+                const coeff = boss.toxicBloodDotAtkCoeff ?? 0.4;
                 const duration = boss.toxicBloodDuration ?? 3;
 
-                // 按“目标自身法术强度”结算（更贴近设计：高法强更痛）
-                const basePerStack = Math.floor((ps.char?.stats?.spellPower || 0) * coeff);
+                // 按“BOSS攻击”结算
+                const basePerTurn = Math.floor((boss.attack || 0) * coeff);
 
                 const existing = ps.dots.find(d => d && d.name === '毒性之血');
                 if (existing) {
-                    existing.stacks = (existing.stacks || 1) + stacksGained;
+                    // 不可叠层：只刷新持续时间与每回合伤害
+                    existing.stacks = 1;
                     existing.duration = duration; // 刷新持续时间
                     existing.type = 'poison';
                     existing.isPoison = true;
                     existing.school = 'nature';
 
-                    const perTurn = Math.max(1, Math.floor(basePerStack * (existing.stacks || 1)));
+                    const perTurn = Math.max(1, Math.floor(basePerTurn));
                     existing.damagePerTurn = perTurn;
 
-                    addLog(`→ 位置${pIdx + 1} ${ps.char.name} 的【毒性之血】变为${existing.stacks}层（每回合${perTurn}自然伤害，持续${duration}回合）`, 'debuff');
+                    addLog(`→ 位置${pIdx + 1} ${ps.char.name} 的【毒性之血】刷新（每回合${perTurn}自然伤害，持续${duration}回合，不可叠层）`, 'debuff');
                 } else {
-                    const perTurn = Math.max(1, Math.floor(basePerStack * stacksGained));
+                    const perTurn = Math.max(1, Math.floor(basePerTurn));
                     ps.dots.push({
                         name: '毒性之血',
                         type: 'poison',
                         isPoison: true,
                         school: 'nature',
-                        stacks: stacksGained,
+                        stacks: 1,
                         damagePerTurn: perTurn,
                         duration: duration
                     });
-                    addLog(`→ 位置${pIdx + 1} ${ps.char.name} 获得【毒性之血】${stacksGained}层（每回合${perTurn}自然伤害，持续${duration}回合）`, 'debuff');
+                    addLog(`→ 位置${pIdx + 1} ${ps.char.name} 获得【毒性之血】（每回合${perTurn}自然伤害，持续${duration}回合，不可叠层）`, 'debuff');
                 }
             });
         }
@@ -11943,7 +11944,7 @@ function stepBossCombat(state) {
             if (need > 0) {
                 addLog(`【${boss.name}】使用【召唤哈卡之子】召唤了 ${need} 个${boss.minion.name}！`);
                 addLog(`→ ${boss.minion.name}：HP ${boss.minion.maxHp}，每回合对坦克喷吐【酸液】造成 ${(boss.acidMultiplier || 1.2)}×Boss攻击 的自然伤害（计算魔抗）`);
-                addLog(`→ ${boss.minion.name}死亡：全队获得【毒性之血】（${boss.toxicBloodDotSpCoeff || 0.4}×自身法强/回合，持续 ${boss.toxicBloodDuration || 3} 回合，可叠层）`);
+                addLog(`→ ${boss.minion.name}死亡：全队获得【毒性之血】（${boss.toxicBloodDotAtkCoeff || 0.4}×Boss攻击/回合，持续 ${boss.toxicBloodDuration || 3} 回合）`);
             } else {
                 addLog(`【${boss.name}】尝试召唤哈卡之子，但场上哈卡之子已满`);
             }
@@ -18730,8 +18731,8 @@ const ItemDetailsModal = ({ item, onClose, onEquip, characters, state , dispatch
                             isMatA
                                 ? state.inventory.some(i => i?.type === 'equipment' && i.id === 'EQ_042' && getLevel(i) >= 100)
                                 : isMatB
-                                ? state.inventory.some(i => i?.type === 'equipment' && i.id === 'EQ_041' && getLevel(i) >= 100)
-                                : false;
+                                    ? state.inventory.some(i => i?.type === 'equipment' && i.id === 'EQ_041' && getLevel(i) >= 100)
+                                    : false;
 
                         if (!(hasOther && (isMatA || isMatB))) return null;
 
@@ -23860,13 +23861,13 @@ const QuestPage = ({ state, dispatch }) => {
                             }}>
                                 {requirementMet ? '✓' : '✗'}
                                 {currentStep.requirement.type === 'character_level' &&
-                                `需要角色等级 ${currentStep.requirement.level}`}
+                                    `需要角色等级 ${currentStep.requirement.level}`}
                                 {currentStep.requirement.type === 'zone_battles' &&
-                                `需要在${ZONES[currentStep.requirement.zoneId]?.name}战斗${currentStep.requirement.count}次`}
+                                    `需要在${ZONES[currentStep.requirement.zoneId]?.name}战斗${currentStep.requirement.count}次`}
                                 {currentStep.requirement.type === 'boss_defeated' &&
-                                `需要击败${BOSS_DATA[currentStep.requirement.bossId]?.name}`}
+                                    `需要击败${BOSS_DATA[currentStep.requirement.bossId]?.name}`}
                                 {currentStep.requirement.type === 'have_gold' &&
-                                `需要${currentStep.requirement.amount}金币`}
+                                    `需要${currentStep.requirement.amount}金币`}
                             </div>
                         </div>
                     )}
@@ -24944,7 +24945,7 @@ const BossPrepareModal = ({ state, dispatch }) => {
                                                 <br/>
                                                 {boss.minion?.name} 会对当前坦克喷吐<span style={{ color: '#8bc34a' }}>酸液</span>，造成 <span style={{ color: '#ffd700' }}>{boss.acidMultiplier}倍</span> Boss攻击 的<span style={{ color: '#8bc34a' }}>自然伤害</span>（计算魔抗）
                                                 <br/>
-                                                {boss.minion?.name} 死亡会使全队获得 <span style={{ color: '#8bc34a' }}>毒性之血</span>：每回合造成 <span style={{ color: '#ffd700' }}>{boss.toxicBloodDotSpCoeff}倍</span> 目标法术强度 的自然伤害，持续 {boss.toxicBloodDuration} 回合（可叠层）
+                                                {boss.minion?.name} 死亡会使全队获得 <span style={{ color: '#8bc34a' }}>毒性之血</span>：每回合造成 <span style={{ color: '#ffd700' }}>{boss.toxicBloodDotAtkCoeff}倍</span> BOSS攻击 的自然伤害，持续 {boss.toxicBloodDuration} 回合（不可叠层）
                                             </div>
                                         </div>
 
@@ -25394,8 +25395,8 @@ const BossPrepareModal = ({ state, dispatch }) => {
                                                     isMapFighting
                                                         ? `地图战斗中：${zoneName || zoneId}`
                                                         : isGathering
-                                                        ? `采集中：${buildingName || gatherBuildingId}`
-                                                        : '待命'
+                                                            ? `采集中：${buildingName || gatherBuildingId}`
+                                                            : '待命'
                                                 }
                                             >
                                                 <div style={{ fontSize: 24 }}>

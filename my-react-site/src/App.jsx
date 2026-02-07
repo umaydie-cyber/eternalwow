@@ -22987,6 +22987,175 @@ const AchievementPage = ({ state }) => {
 // ==================== PAGE: CODEX ====================
 const CodexPage = ({ state, dispatch }) => {
     const [tab, setTab] = React.useState('equipment'); // 'equipment' | 'junk' | 'effects'
+// ===== 装备悬浮提示（宏伟宝库风格）=====
+    const [hoveredEquip, setHoveredEquip] = React.useState(null); // { tpl, unlocked, lv100, dropEnabled }
+    const [tooltipPos, setTooltipPos] = React.useState({ x: 0, y: 0 });
+
+    const STAT_LABELS = {
+        hp: '生命值',
+        mp: '法力值',
+        attack: '攻击',
+        spellPower: '法术强度',
+        armor: '护甲',
+        magicResist: '法术抗性',
+        blockValue: '格挡值',
+        blockRate: '格挡率',
+        critRate: '暴击',
+        haste: '急速',
+        mastery: '精通',
+        versatility: '全能',
+        critDamage: '暴击伤害',
+        lifeSteal: '吸血',
+        dodgeRate: '闪避',
+    };
+
+    const SLOT_LABELS = {
+        head: '头部',
+        chest: '胸部',
+        legs: '腿部',
+        hands: '手部',
+        feet: '脚部',
+        shoulder: '肩部',
+        waist: '腰部',
+        wrist: '手腕',
+        neck: '项链',
+        ring: '戒指',
+        mainHand: '主手',
+        offHand: '副手',
+        trinket: '饰品',
+    };
+
+    const formatEquipStat = (k, vRaw) => {
+        const v = Number(vRaw) || 0;
+        const label = STAT_LABELS[k] || k;
+
+        // 百分比点数（例如 暴击=+6%）
+        const percentPointStats = new Set(['critRate', 'haste', 'mastery', 'versatility', 'blockRate', 'dodgeRate']);
+        if (percentPointStats.has(k)) {
+            const val = Math.round(v * 10) / 10;
+            const sign = val >= 0 ? '+' : '';
+            return { label, value: `${sign}${val}%` };
+        }
+
+        // 暴击伤害：额外倍率（0.10 => +10%）
+        if (k === 'critDamage') {
+            const pct = Math.round(v * 1000) / 10;
+            const sign = pct >= 0 ? '+' : '';
+            return { label, value: `${sign}${pct}%` };
+        }
+
+        const val = Math.floor(v);
+        const sign = val >= 0 ? '+' : '';
+        return { label, value: `${sign}${val}` };
+    };
+
+    const handleEquipMouseMove = (e) => {
+        const pad = 16;
+        const w = 280;
+        const h = 260;
+        const vw = window.innerWidth || 1200;
+        const vh = window.innerHeight || 800;
+
+        let x = (e.clientX ?? 0) + 18;
+        let y = (e.clientY ?? 0) + 18;
+
+        if (x + w + pad > vw) x = (e.clientX ?? 0) - w - 18;
+        if (y + h + pad > vh) y = (e.clientY ?? 0) - h - 18;
+
+        x = Math.max(pad, Math.min(vw - w - pad, x));
+        y = Math.max(pad, Math.min(vh - h - pad, y));
+
+        setTooltipPos({ x, y });
+    };
+
+    const renderEquipTooltip = () => {
+        if (!hoveredEquip?.tpl) return null;
+        const { tpl, unlocked, lv100, dropEnabled } = hoveredEquip;
+
+        const displayLv = lv100 ? 100 : (Number(tpl.level) || 0);
+        const scaled = scaleStats(tpl.baseStats || {}, tpl.growth || {}, displayLv);
+
+        const statLines = Object.entries(scaled)
+            .filter(([, v]) => (Number(v) || 0) !== 0)
+            .map(([k, v]) => formatEquipStat(k, v));
+
+        const rarityColor = getRarityColor(tpl.rarity);
+        const slotText = SLOT_LABELS[tpl.slot] || tpl.slot || '未知部位';
+
+        return (
+            <div
+                style={{
+                    position: 'fixed',
+                    left: tooltipPos.x,
+                    top: tooltipPos.y,
+                    width: 280,
+                    zIndex: 9999,
+                    pointerEvents: 'none',
+                    background: 'linear-gradient(180deg, rgba(18,18,18,0.96), rgba(8,8,8,0.92))',
+                    border: '1px solid rgba(255,255,255,0.12)',
+                    borderRadius: 10,
+                    boxShadow: '0 18px 40px rgba(0,0,0,0.55)',
+                    padding: 12,
+                }}
+            >
+                <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 8 }}>
+                    <div style={{
+                        width: 38, height: 38, borderRadius: 8,
+                        background: 'rgba(0,0,0,0.35)',
+                        border: '1px solid rgba(255,255,255,0.10)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        flexShrink: 0
+                    }}>
+                        <ItemIcon item={tpl} size={28} />
+                    </div>
+
+                    <div style={{ minWidth: 0 }}>
+                        <div style={{
+                            fontSize: 13,
+                            fontWeight: 900,
+                            color: unlocked ? rarityColor : '#666',
+                            textShadow: unlocked ? '0 0 10px rgba(0,0,0,0.55)' : 'none',
+                            lineHeight: 1.2,
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                        }}>
+                            {tpl.name}
+                        </div>
+
+                        <div style={{ marginTop: 2, fontSize: 10, color: '#aaa' }}>
+                            {slotText} · Lv.{displayLv}{lv100 ? ' ✨' : ''}
+                        </div>
+                    </div>
+                </div>
+
+                <div style={{ height: 1, background: 'rgba(255,255,255,0.08)', margin: '8px 0' }} />
+
+                <div style={{ fontSize: 11, color: '#ddd', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    {statLines.length > 0 ? statLines.map((row, i) => (
+                        <div key={i} style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
+                            <span style={{ color: '#bbb' }}>{row.label}</span>
+                            <span style={{ color: '#fff', fontWeight: 800 }}>{row.value}</span>
+                        </div>
+                    )) : (
+                        <div style={{ color: '#777' }}>无属性</div>
+                    )}
+                </div>
+
+                <div style={{ height: 1, background: 'rgba(255,255,255,0.08)', margin: '10px 0 8px' }} />
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 10 }}>
+                <span style={{ color: unlocked ? '#8ee18e' : '#777' }}>
+                    {unlocked ? '✅ 已点亮图鉴' : '🔒 未点亮图鉴'}
+                </span>
+                    <span style={{ color: dropEnabled ? 'rgba(120,220,120,0.9)' : 'rgba(255,80,80,0.9)' }}>
+                    掉落：{dropEnabled ? '开启' : '关闭'}
+                </span>
+                </div>
+            </div>
+        );
+    };
+
 
     const allowDrop = (id) => state.dropFilters?.[id] !== false;
 
@@ -23324,7 +23493,12 @@ const CodexPage = ({ state, dispatch }) => {
                             return (
                                 <div
                                     key={tpl.id}
-                                    title={`${tpl.name}（点击开关掉落）`}
+                                    onMouseEnter={(e) => {
+                                        setHoveredEquip({ tpl, unlocked, lv100, dropEnabled });
+                                        handleEquipMouseMove(e);
+                                    }}
+                                    onMouseMove={handleEquipMouseMove}
+                                    onMouseLeave={() => setHoveredEquip(null)}
                                     style={{
                                         background: unlocked ? 'rgba(0,0,0,0.35)' : 'rgba(0,0,0,0.18)',
                                         borderRadius: 8,
@@ -23627,6 +23801,8 @@ const CodexPage = ({ state, dispatch }) => {
                     </div>
                 </>
             )}
+            {renderEquipTooltip()}
+
         </Panel>
     );
 };

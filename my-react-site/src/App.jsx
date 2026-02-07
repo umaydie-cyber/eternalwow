@@ -18,6 +18,8 @@ const BOSS_BONUS_CONFIG = {
     ossirian: { name: '无疤者奥斯里安', bonus: 0.25 },
     garr: { name: '加尔', bonus: 0.25 },
     baron_geddon: { name: '迦顿男爵', bonus: 0.25 },
+    // ✅ 新增：熔火之心 - 焚化者古雷曼格
+    golemagg: { name: '焚化者古雷曼格', bonus: 0.25 },
 };
 
 // 兼容旧代码：派生出 names / bossBonus 两个对象（不再手写维护）
@@ -8661,11 +8663,23 @@ const WORLD_BOSSES = {
     baron_geddon: {
         id: 'baron_geddon',
         name: '迦顿男爵',
-        icon: 'icons/wow/vanilla/boss/baron_geddon.png', // 需要添加对应图标
+        icon: 'icons/wow/vanilla/boss/jiadunnanjue.png', // 需要添加对应图标
         hp: 16000000,
         attack: 11200,
         defense: 12000,
         rewards: { gold: 2200000, exp: 1300000 },
+        unlockLevel: 60
+    },
+
+    // ✅ 新增：60级世界首领 - 焚化者古雷曼格（熔火之心）
+    golemagg: {
+        id: 'golemagg',
+        name: '焚化者古雷曼格',
+        icon: 'icons/wow/vanilla/boss/golemagg.png', // 需要添加对应图标
+        hp: 18000000,
+        attack: 12800,
+        defense: 13000,
+        rewards: { gold: 2400000, exp: 1400000 },
         unlockLevel: 60
     },
 
@@ -9247,6 +9261,55 @@ const BOSS_DATA = {
                 { id: 'EQ_180', chance: 0.1 },  // 预言衬肩
                 { id: 'EQ_181', chance: 0.02 }  // 逐风者的禁锢之颅（左）
             ]
+        }
+    },
+
+    // ✅ 新增：60级世界首领 - 焚化者古雷曼格（熔火之心）
+    golemagg: {
+        id: 'golemagg',
+        name: '焚化者古雷曼格',
+        maxHp: 18000000,
+        attack: 12800,
+        defense: 13000,
+
+        // 技能循环：熔岩喷溅 → 地震术 → 炎爆术 → 狂怒
+        cycle: ['lava_splash', 'earthquake', 'pyroblast', 'fury'],
+
+        // 被动：固有2只熔火恶犬（攻击/防御同Boss）
+        houndCount: 2,
+        houndHp: 1800000,
+
+        // 熔火恶犬普攻倍率：常态1.2×；Boss血量≤30%后狂暴为3×
+        houndNormalMultiplier: 1.2,
+        houndEnrageMultiplier: 3,
+        houndEnrageHpPct: 0.30,
+
+        // 技能1：熔岩喷溅（坦克，5×法术伤害，并使其承受所有伤害+5%可叠层到战斗结束）
+        lavaSplashMultiplier: 5,
+        lavaSplashVulnPerStack: 0.05,
+
+        // 技能2：地震术（随机目标3×；集中站位：全体3×）
+        earthquakeMultiplier: 3,
+
+        // 技能3：炎爆术（随机目标4×，并留下余烬DOT：每回合1.5×持续4回合）
+        pyroblastMultiplier: 4,
+        emberDotMultiplier: 1.5,
+        emberDotDuration: 4,
+
+        // 技能4：狂怒（自身与熔火恶犬造成的所有伤害+5%可叠加到战斗结束）
+        furyPerStack: 0.05,
+
+        minion: {
+            name: '熔火恶犬',
+            maxHp: 1800000,
+            attack: 12800,
+            defense: 13000
+        },
+
+        rewards: {
+            gold: 2400000,
+            exp: 1400000,
+            items: []
         }
     },
 
@@ -10670,6 +10733,47 @@ function stepBossCombat(state) {
         maybeSummonOssirianCrystal();
         // 兜底：如果上回合末水晶刚死但还没处理（例如DOT），这里先处理一次
         processOssirianCrystalDeaths();
+    }
+
+    // ==================== 焚化者古雷曼格：被动（固有熔火恶犬） ====================
+    // 说明：开场自带2只熔火恶犬（攻击/防御同Boss）；
+    //      当Boss生命值降至30%以下时，熔火恶犬进入狂暴（在小弟行动阶段生效）。
+    if (combat.bossId === 'golemagg') {
+        combat.bossBuffs = combat.bossBuffs || {};
+        combat.minions = Array.isArray(combat.minions) ? combat.minions : [];
+
+        // 初始化狂怒层数
+        if (!Number.isFinite(Number(combat.bossBuffs.furyStacks))) {
+            combat.bossBuffs.furyStacks = 0;
+        }
+
+        // 首次进入战斗：生成熔火恶犬（不会在死亡后自动重生）
+        if (!combat.bossBuffs.golemaggHoundsSpawned) {
+            const count = Math.max(0, Math.floor(Number(boss.houndCount || 2)));
+            const hp = Math.floor(Number(boss.houndHp || boss.minion?.maxHp || 1800000));
+            const atk = Math.floor(Number(boss.attack || 0));
+            const def = Math.floor(Number(boss.defense || 0));
+
+            for (let k = 0; k < count; k++) {
+                combat.minions.push({
+                    hp,
+                    maxHp: hp,
+                    attack: atk,
+                    defense: def,
+                    isMoltenHound: true,
+                    immune: false,
+                    dots: []
+                });
+            }
+
+            combat.bossBuffs.golemaggHoundsSpawned = true;
+            combat.bossBuffs.houndsEnraged = false;
+
+            const minionName = boss.minion?.name || '熔火恶犬';
+            if (count > 0) {
+                addLog(`【${boss.name}】被动：固有 ${count} 只【${minionName}】登场！`, 'warning');
+            }
+        }
     }
 
     for (let i = 0; i < combat.playerStates.length; i++) {
@@ -13642,6 +13746,177 @@ function stepBossCombat(state) {
         }
     }
 
+    // ==================== 焚化者古雷曼格技能处理 ====================
+    else if (combat.bossId === 'golemagg') {
+        // 使用 bossBuffs 记录【狂怒】叠层：每层使 Boss 与 熔火恶犬 造成的所有伤害 +5%
+        combat.bossBuffs = combat.bossBuffs || {};
+        combat.bossBuffs.furyStacks = Math.max(0, Math.floor(Number(combat.bossBuffs.furyStacks || 0)));
+
+        const furyPer = (typeof boss.furyPerStack === 'number' && Number.isFinite(boss.furyPerStack) && boss.furyPerStack > 0)
+            ? boss.furyPerStack
+            : 0.05;
+
+        const getFuryMult = () => 1 + (combat.bossBuffs.furyStacks || 0) * furyPer;
+
+        // 熔火恶犬狂暴阈值：Boss血量 ≤ 30%
+        const enragePct = (typeof boss.houndEnrageHpPct === 'number' && Number.isFinite(boss.houndEnrageHpPct) && boss.houndEnrageHpPct > 0)
+            ? boss.houndEnrageHpPct
+            : 0.30;
+
+        if (!combat.bossBuffs.houndsEnraged && (combat.bossHp ?? 0) > 0 && (boss.maxHp || 0) > 0) {
+            const hpPct = (combat.bossHp || 0) / (boss.maxHp || 1);
+            if (hpPct <= enragePct) {
+                combat.bossBuffs.houndsEnraged = true;
+                addLog(`【${boss.name}】生命值低于 ${Math.round(enragePct * 100)}%！两只【${boss.minion?.name || '熔火恶犬'}】进入【狂暴】！`, 'warning');
+            }
+        }
+
+        const pickRandomAlivePlayerIndex = () => {
+            const aliveIdx = combat.playerStates
+                .map((p, idx) => ({ p, idx }))
+                .filter(x => (x.p?.currentHp ?? 0) > 0)
+                .map(x => x.idx);
+            if (aliveIdx.length <= 0) return -1;
+            return aliveIdx[Math.floor(Math.random() * aliveIdx.length)];
+        };
+
+        // 技能1：熔岩喷溅（坦克：5×Boss攻击 法术伤害；并施加“承伤+5%”可叠层到战斗结束）
+        if (bossAction === 'lava_splash') {
+            const tIdx = pickAlivePlayerIndex();
+            if (tIdx >= 0) {
+                const target = combat.playerStates[tIdx];
+
+                const raw = Math.floor((boss.attack || 0) * (boss.lavaSplashMultiplier || 5) * getFuryMult());
+                const fire = calcMagicDamage(target, raw);
+
+                const shieldResult = applyShieldAbsorb(target, fire.damage, logs, currentRound);
+                target.currentHp -= shieldResult.finalDamage;
+
+                const resPct = Math.round(fire.resistReduction * 100);
+                const mrText = Number(fire.magicResist) < 0 ? `（魔抗 ${Math.floor(fire.magicResist)}）` : '';
+                const vulnPct = Math.round((fire.spellVulnMult - 1) * 100);
+                const vulnText = vulnPct > 0 ? `，法术易伤+${vulnPct}%` : '';
+                const shieldText = shieldResult.absorbed > 0 ? `，护盾吸收 ${shieldResult.absorbed}` : '';
+                const furyText = (combat.bossBuffs.furyStacks || 0) > 0 ? `（狂怒${combat.bossBuffs.furyStacks}层）` : '';
+                addLog(`【${boss.name}】施放【熔岩喷溅】${furyText} 命中 位置${tIdx + 1} ${target.char.name}，造成 ${shieldResult.finalDamage} 点火焰伤害（魔抗减伤${resPct}%${mrText}${vulnText}${shieldText}）`);
+
+                // 承伤提高：用 buffs 的 damageTakenMult 实现（可影响物理/法术/DOT），持续到战斗结束
+                const per = (typeof boss.lavaSplashVulnPerStack === 'number' && Number.isFinite(boss.lavaSplashVulnPerStack) && boss.lavaSplashVulnPerStack > 0)
+                    ? boss.lavaSplashVulnPerStack
+                    : 0.05;
+
+                target.buffs = Array.isArray(target.buffs) ? target.buffs : [];
+                const buffType = 'lava_splash_vuln';
+                let existing = target.buffs.find(b => b.type === buffType);
+
+                if (existing) {
+                    existing.stacks = (existing.stacks || 1) + 1;
+                    existing.damageTakenMult = 1 + (existing.stacks || 1) * per;
+                } else {
+                    existing = {
+                        type: buffType,
+                        name: '熔岩喷溅易伤',
+                        stacks: 1,
+                        damageTakenMult: 1 + 1 * per,
+                        // 不写 duration：持续到战斗结束（bossCombat结束自动清理）
+                        justApplied: true,
+                    };
+                    target.buffs.push(existing);
+                }
+
+                const stacks = existing.stacks || 1;
+                const totalPct = Math.round(stacks * per * 100);
+                addLog(`→ 位置${tIdx + 1} ${target.char.name} 获得【熔岩喷溅易伤】：受到所有伤害 +${Math.round(per * 100)}%（当前${stacks}层，总+${totalPct}%），持续到战斗结束`, 'debuff');
+            } else {
+                addLog(`【${boss.name}】施放【熔岩喷溅】，但没有存活目标`);
+            }
+        }
+
+        // 技能2：地震术（随机目标 3×；集中站位：全体 3×）
+        else if (bossAction === 'earthquake') {
+            const raw = Math.floor((boss.attack || 0) * (boss.earthquakeMultiplier || 3) * getFuryMult());
+            const stance = combat.strategy?.stance || 'balanced';
+
+            if (stance === 'concentrated') {
+                addLog(`【${boss.name}】施放【地震术】（集中站位：全体受击）！`);
+                combat.playerStates.forEach((ps, pIdx) => {
+                    if (!ps || ps.currentHp <= 0) return;
+
+                    const dmg = calcMagicDamage(ps, raw);
+                    const shieldResult = applyShieldAbsorb(ps, dmg.damage, logs, currentRound);
+                    ps.currentHp -= shieldResult.finalDamage;
+
+                    const resPct = Math.round(dmg.resistReduction * 100);
+                    const mrText = Number(dmg.magicResist) < 0 ? `（魔抗 ${Math.floor(dmg.magicResist)}）` : '';
+                    const vulnPct = Math.round((dmg.spellVulnMult - 1) * 100);
+                    const vulnText = vulnPct > 0 ? `，法术易伤+${vulnPct}%` : '';
+                    const shieldText = shieldResult.absorbed > 0 ? `，护盾吸收 ${shieldResult.absorbed}` : '';
+                    addLog(`→ 位置${pIdx + 1} ${ps.char.name} 受到 ${shieldResult.finalDamage} 点法术伤害（魔抗减伤${resPct}%${mrText}${vulnText}${shieldText}）`);
+                });
+            } else {
+                const tIdx = pickRandomAlivePlayerIndex();
+                if (tIdx < 0) {
+                    addLog(`【${boss.name}】施放【地震术】，但没有存活目标`);
+                } else {
+                    const target = combat.playerStates[tIdx];
+                    const dmg = calcMagicDamage(target, raw);
+                    const shieldResult = applyShieldAbsorb(target, dmg.damage, logs, currentRound);
+                    target.currentHp -= shieldResult.finalDamage;
+
+                    const resPct = Math.round(dmg.resistReduction * 100);
+                    const mrText = Number(dmg.magicResist) < 0 ? `（魔抗 ${Math.floor(dmg.magicResist)}）` : '';
+                    const vulnPct = Math.round((dmg.spellVulnMult - 1) * 100);
+                    const vulnText = vulnPct > 0 ? `，法术易伤+${vulnPct}%` : '';
+                    const shieldText = shieldResult.absorbed > 0 ? `，护盾吸收 ${shieldResult.absorbed}` : '';
+                    addLog(`【${boss.name}】施放【地震术】命中 位置${tIdx + 1} ${target.char.name}，造成 ${shieldResult.finalDamage} 点法术伤害（魔抗减伤${resPct}%${mrText}${vulnText}${shieldText}）`);
+                }
+            }
+        }
+
+        // 技能3：炎爆术（随机目标 4×；并留下余烬DOT：1.5×/回合，持续4回合）
+        else if (bossAction === 'pyroblast') {
+            const tIdx = pickRandomAlivePlayerIndex();
+            if (tIdx >= 0) {
+                const target = combat.playerStates[tIdx];
+
+                const raw = Math.floor((boss.attack || 0) * (boss.pyroblastMultiplier || 4) * getFuryMult());
+                const fire = calcMagicDamage(target, raw);
+
+                const shieldResult = applyShieldAbsorb(target, fire.damage, logs, currentRound);
+                target.currentHp -= shieldResult.finalDamage;
+
+                const resPct = Math.round(fire.resistReduction * 100);
+                const mrText = Number(fire.magicResist) < 0 ? `（魔抗 ${Math.floor(fire.magicResist)}）` : '';
+                const vulnPct = Math.round((fire.spellVulnMult - 1) * 100);
+                const vulnText = vulnPct > 0 ? `，法术易伤+${vulnPct}%` : '';
+                const shieldText = shieldResult.absorbed > 0 ? `，护盾吸收 ${shieldResult.absorbed}` : '';
+                addLog(`【${boss.name}】施放【炎爆术】命中 位置${tIdx + 1} ${target.char.name}，造成 ${shieldResult.finalDamage} 点火焰伤害（魔抗减伤${resPct}%${mrText}${vulnText}${shieldText}）`);
+
+                const dotRaw = Math.floor((boss.attack || 0) * (boss.emberDotMultiplier || 1.5) * getFuryMult());
+                const dur = Math.max(1, Math.floor(Number(boss.emberDotDuration || 4)));
+
+                target.dots = target.dots || [];
+                target.dots.push({
+                    name: '余烬',
+                    school: 'fire',
+                    damagePerTurn: dotRaw,
+                    duration: dur
+                });
+                addLog(`→ 位置${tIdx + 1} ${target.char.name} 被施加【余烬】（每回合 ${dotRaw} 点火焰伤害，持续 ${dur} 回合）`, 'debuff');
+            } else {
+                addLog(`【${boss.name}】施放【炎爆术】，但没有存活目标`);
+            }
+        }
+
+        // 技能4：狂怒（叠层增伤）
+        else if (bossAction === 'fury') {
+            combat.bossBuffs.furyStacks = (combat.bossBuffs.furyStacks || 0) + 1;
+            const stacks = combat.bossBuffs.furyStacks || 1;
+            const pct = Math.round(stacks * furyPer * 100);
+            addLog(`【${boss.name}】施放【狂怒】！自身与熔火恶犬造成的所有伤害 +${Math.round(furyPer * 100)}%（当前${stacks}层，总+${pct}%），持续到战斗结束`, 'buff');
+        }
+    }
+
     // ==================== 无疤者奥斯里安技能处理 ====================
     else if (combat.bossId === 'ossirian') {
         // 自然伤害：计算魔抗（并套用伤害减免/全能/挫志怒吼）
@@ -13952,6 +14227,57 @@ function stepBossCombat(state) {
                 const totalPct = Math.round(stacks * per * 100);
                 addLog(`→ 位置${tIdx + 1} ${target.char.name} 获得【法术易伤】：法术伤害承受 +${Math.round(per * 100)}%（当前${stacks}层，总+${totalPct}%），持续到战斗结束`, 'debuff');
             }
+        }
+
+        // 焚化者古雷曼格：熔火恶犬对坦克进行普通攻击（物理，吃护甲/格挡），Boss≤30%血量后进入狂暴
+        else if (combat.bossId === 'golemagg' && m.isMoltenHound) {
+            const tIdx = pickAlivePlayerIndex();
+            if (tIdx < 0) break;
+
+            const target = combat.playerStates[tIdx];
+
+            // 狂怒叠层（增伤）：由Boss技能【狂怒】叠加
+            combat.bossBuffs = combat.bossBuffs || {};
+            const furyStacks = Math.max(0, Math.floor(Number(combat.bossBuffs.furyStacks || 0)));
+            const furyPer = (typeof boss.furyPerStack === 'number' && Number.isFinite(boss.furyPerStack) && boss.furyPerStack > 0)
+                ? boss.furyPerStack
+                : 0.05;
+            const furyMult = 1 + furyStacks * furyPer;
+
+            // 判断熔火恶犬狂暴（Boss血量 ≤ 30%）
+            const enragePct = (typeof boss.houndEnrageHpPct === 'number' && Number.isFinite(boss.houndEnrageHpPct) && boss.houndEnrageHpPct > 0)
+                ? boss.houndEnrageHpPct
+                : 0.30;
+
+            const hpPct = ((combat.bossHp ?? 0) > 0 && (boss.maxHp || 0) > 0)
+                ? (combat.bossHp / (boss.maxHp || 1))
+                : 1;
+
+            const enraged = !!combat.bossBuffs.houndsEnraged || (hpPct <= enragePct);
+            if (enraged && !combat.bossBuffs.houndsEnraged) {
+                // 兜底：如果没在Boss阶段标记到（例如Boss阶段被跳过），这里也标记一次
+                combat.bossBuffs.houndsEnraged = true;
+                addLog(`【${boss.name}】生命值低于 ${Math.round(enragePct * 100)}%！两只【${boss.minion?.name || '熔火恶犬'}】进入【狂暴】！`, 'warning');
+            }
+
+            const mult = enraged
+                ? (boss.houndEnrageMultiplier || 3)
+                : (boss.houndNormalMultiplier || 1.2);
+
+            const raw = Math.floor((boss.attack || m.attack || 0) * mult * furyMult);
+            const { damage, dr, blockedAmount } = calcMitigatedAndBlockedDamage(target, raw, false);
+
+            const shieldResult = applyShieldAbsorb(target, damage, logs, currentRound);
+            target.currentHp -= shieldResult.finalDamage;
+
+            const drPct = Math.round(dr * 100);
+            const blockText = blockedAmount > 0 ? `，格挡 ${blockedAmount}` : '';
+            const shieldText = shieldResult.absorbed > 0 ? `，护盾吸收 ${shieldResult.absorbed}` : '';
+            const furyText = furyStacks > 0 ? `，狂怒+${Math.round(furyStacks * furyPer * 100)}%` : '';
+            const enrageText = enraged ? '【狂暴】' : '';
+            const minionName = boss.minion?.name || '熔火恶犬';
+
+            addLog(`【${minionName}${i + 1}】${enrageText}撕咬 位置${tIdx + 1} ${target.char.name}，造成 ${shieldResult.finalDamage} 点伤害${furyText}（护甲减伤${drPct}%${blockText}${shieldText}）`);
         }
 
         // 瑞文戴尔男爵的骷髅：对坦克（1号位）挥砍攻击
@@ -26190,6 +26516,12 @@ const BossPrepareModal = ({ state, dispatch }) => {
         hellfire: '地狱烈焰',
         soul_burn: '灵魂燃烧',
         living_bomb: '活体炸弹',
+
+        // ✅ 焚化者古雷曼格
+        lava_splash: '熔岩喷溅',
+        earthquake: '地震术',
+        pyroblast: '炎爆术',
+        fury: '狂怒',
     };
 
     const formatBossCycle = (boss) =>
@@ -27047,6 +27379,91 @@ const BossPrepareModal = ({ state, dispatch }) => {
                                                 并【击飞】目标：<span style={{ color: '#ffd700' }}>{boss.livingBombKnockupDuration}回合</span>无法行动
                                                 <br/>
                                                 <span style={{ color: '#ffd700' }}>集中站位</span>：改为对所有角色造成相同伤害（炸弹目标仍会被击飞）
+                                            </div>
+                                        </div>
+                                    </>
+                                )}
+
+                                {bossId === 'golemagg' && (
+                                    <>
+                                        <div style={{
+                                            padding: 10,
+                                            background: 'rgba(255,193,7,0.10)',
+                                            borderRadius: 6,
+                                            borderLeft: '3px solid #ffc107'
+                                        }}>
+                                            <div style={{ fontSize: 12, color: '#ffd54f', fontWeight: 600, marginBottom: 4 }}>
+                                                🐺 被动：熔火恶犬
+                                            </div>
+                                            <div style={{ fontSize: 11, color: '#aaa', lineHeight: 1.5 }}>
+                                                开场固有 <span style={{ color: '#ffd700' }}>{boss.houndCount || 2}只</span>【{boss.minion?.name || '熔火恶犬'}】（每只生命 {Number(boss.houndHp || boss.minion?.maxHp || 0).toLocaleString()}）
+                                                <br/>
+                                                熔火恶犬对<span style={{ color: '#ff9800' }}>坦克</span>普通攻击造成 <span style={{ color: '#ffd700' }}>{boss.houndNormalMultiplier || 1.2}倍</span> Boss攻击 的物理伤害（护甲/格挡可减免）
+                                                <br/>
+                                                当Boss生命值 ≤ <span style={{ color: '#ffd700' }}>{Math.round(((boss.houndEnrageHpPct ?? 0.30) * 100))}%</span> 时进入<span style={{ color: '#ff7043' }}>狂暴</span>：倍率变为 <span style={{ color: '#ffd700' }}>{boss.houndEnrageMultiplier || 3}倍</span>
+                                            </div>
+                                        </div>
+
+                                        <div style={{
+                                            padding: 10,
+                                            background: 'rgba(244,67,54,0.10)',
+                                            borderRadius: 6,
+                                            borderLeft: '3px solid #f44336'
+                                        }}>
+                                            <div style={{ fontSize: 12, color: '#ff6b6b', fontWeight: 600, marginBottom: 4 }}>
+                                                🌋 熔岩喷溅
+                                            </div>
+                                            <div style={{ fontSize: 11, color: '#aaa', lineHeight: 1.5 }}>
+                                                对当前坦克造成 <span style={{ color: '#ffd700' }}>{boss.lavaSplashMultiplier || 5}倍</span> Boss攻击 的<span style={{ color: '#ff7043' }}>火焰法术伤害</span>（计算魔抗）
+                                                <br/>
+                                                并使目标受到<span style={{ color: '#ff9800' }}>所有伤害</span>提高 <span style={{ color: '#ffd700' }}>{Math.round((boss.lavaSplashVulnPerStack || 0.05) * 100)}%</span>（可叠加，持续到战斗结束）
+                                            </div>
+                                        </div>
+
+                                        <div style={{
+                                            padding: 10,
+                                            background: 'rgba(33,150,243,0.10)',
+                                            borderRadius: 6,
+                                            borderLeft: '3px solid #2196F3'
+                                        }}>
+                                            <div style={{ fontSize: 12, color: '#64b5f6', fontWeight: 600, marginBottom: 4 }}>
+                                                🌍 地震术
+                                            </div>
+                                            <div style={{ fontSize: 11, color: '#aaa', lineHeight: 1.5 }}>
+                                                <span style={{ color: '#ffd700' }}>分散站位</span>：对随机目标造成 <span style={{ color: '#ffd700' }}>{boss.earthquakeMultiplier || 3}倍</span> Boss攻击 的法术伤害（计算魔抗）
+                                                <br/>
+                                                <span style={{ color: '#ffd700' }}>集中站位</span>：对所有角色造成相同伤害
+                                            </div>
+                                        </div>
+
+                                        <div style={{
+                                            padding: 10,
+                                            background: 'rgba(156,39,176,0.10)',
+                                            borderRadius: 6,
+                                            borderLeft: '3px solid #9c27b0'
+                                        }}>
+                                            <div style={{ fontSize: 12, color: '#ce93d8', fontWeight: 600, marginBottom: 4 }}>
+                                                🔥 炎爆术
+                                            </div>
+                                            <div style={{ fontSize: 11, color: '#aaa', lineHeight: 1.5 }}>
+                                                对随机目标造成 <span style={{ color: '#ffd700' }}>{boss.pyroblastMultiplier || 4}倍</span> Boss攻击 的<span style={{ color: '#ff7043' }}>火焰法术伤害</span>（计算魔抗）
+                                                <br/>
+                                                并留下【余烬】DOT：每回合 <span style={{ color: '#ffd700' }}>{boss.emberDotMultiplier || 1.5}倍</span> Boss攻击 的火焰伤害，持续 {boss.emberDotDuration || 4} 回合
+                                            </div>
+                                        </div>
+
+                                        <div style={{
+                                            padding: 10,
+                                            background: 'rgba(76,175,80,0.10)',
+                                            borderRadius: 6,
+                                            borderLeft: '3px solid #4caf50'
+                                        }}>
+                                            <div style={{ fontSize: 12, color: '#81c784', fontWeight: 600, marginBottom: 4 }}>
+                                                😡 狂怒
+                                            </div>
+                                            <div style={{ fontSize: 11, color: '#aaa', lineHeight: 1.5 }}>
+                                                使自身与熔火恶犬造成的<span style={{ color: '#ff9800' }}>所有伤害</span>提高 <span style={{ color: '#ffd700' }}>{Math.round((boss.furyPerStack || 0.05) * 100)}%</span>
+                                                （可叠加，持续到战斗结束）
                                             </div>
                                         </div>
                                     </>

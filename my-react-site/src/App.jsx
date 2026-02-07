@@ -3,6 +3,31 @@ import React, { useState, useEffect, useCallback, useReducer, useRef } from 'rea
 // ==================== GAME DATA ====================
 const RACES = ['人类', '矮人', '暗夜精灵', '侏儒', '兽人', '巨魔', '牛头人', '亡灵'];
 
+// ==================== BOSS BONUS CONFIG ====================
+// 统一维护：Boss 名称 & 重生加成（避免多处重复导致不一致）
+const BOSS_BONUS_CONFIG = {
+    hogger: { name: '霍格', bonus: 0.05 },
+    vancleef: { name: '范克里夫', bonus: 0.10 },
+    prestor_lady: { name: '普瑞斯托女士', bonus: 0.15 },
+    thalnos: { name: '裂魂者萨尔诺斯', bonus: 0.15 },
+    dagran_thaurissan: { name: '达格兰·索瑞森大帝', bonus: 0.15 },
+    darkmaster_gandling: { name: '黑暗院长加丁', bonus: 0.20 },
+    baron_rivendare: { name: '瑞文戴尔男爵', bonus: 0.20 },
+    rend_blackhand: { name: '雷德黑手', bonus: 0.20 },
+    hakkar: { name: '血神哈卡', bonus: 0.25 },
+    ossirian: { name: '无疤者奥斯里安', bonus: 0.25 },
+    garr: { name: '加尔', bonus: 0.25 },
+    baron_geddon: { name: '迦顿男爵', bonus: 0.25 },
+};
+
+// 兼容旧代码：派生出 names / bossBonus 两个对象（不再手写维护）
+const BOSS_NAMES = Object.fromEntries(
+    Object.entries(BOSS_BONUS_CONFIG).map(([id, cfg]) => [id, cfg.name])
+);
+const BOSS_BONUS = Object.fromEntries(
+    Object.entries(BOSS_BONUS_CONFIG).map(([id, cfg]) => [id, cfg.bonus])
+);
+
 // ==================== RACE TRAITS ====================
 // 说明：种族被动技能/效果不占用技能栏（SkillEditor 会过滤 passive）。
 // 如需扩展其它种族，往这里继续加即可。
@@ -2901,6 +2926,7 @@ const BADGE_UPGRADE_RULES_CONFIG = {
         equipPool: 'ruins_of_ahnqiraj',
         theme: { border: '#b08900', title: '#ffd54f', shadow: 'rgba(176,137,0,0.25)' }
     },
+
 };
 
 // 生成最终运行时规则对象（保持现有代码的访问方式不变：BADGE_UPGRADE_RULES[badgeId].isEligible(eq)）
@@ -8457,8 +8483,18 @@ const WORLD_BOSSES = {
         rewards: { gold: 1400000, exp: 900000 },
         unlockLevel: 60
     },
-
-
+    // ✅ 新增：60级世界首领 - 无疤者奥斯里安（安其拉）
+    // 说明：本体防御极高（需要击杀【汲能水晶】触发短暂“破甲窗口”）
+    ossirian: {
+        id: 'ossirian',
+        name: '无疤者奥斯里安',
+        icon: 'icons/wow/vanilla/boss/ossirian.png', // 需要添加对应图标
+        hp: 12000000,
+        attack: 8500,
+        defense: 800000,
+        rewards: { gold: 1800000, exp: 1100000 },
+        unlockLevel: 60
+    },
     // ✅ 新增：60级世界首领 - 加尔（熔火之心）
     garr: {
         id: 'garr',
@@ -8471,16 +8507,15 @@ const WORLD_BOSSES = {
         unlockLevel: 60
     },
 
-    // ✅ 新增：60级世界首领 - 无疤者奥斯里安（安其拉）
-    // 说明：本体防御极高（需要击杀【汲能水晶】触发短暂“破甲窗口”）
-    ossirian: {
-        id: 'ossirian',
-        name: '无疤者奥斯里安',
-        icon: 'icons/wow/vanilla/boss/ossirian.png', // 需要添加对应图标
-        hp: 12000000,
-        attack: 8500,
-        defense: 800000,
-        rewards: { gold: 1800000, exp: 1100000 },
+    // ✅ 新增：60级世界首领 - 迦顿男爵（熔火之心）
+    baron_geddon: {
+        id: 'baron_geddon',
+        name: '迦顿男爵',
+        icon: 'icons/wow/vanilla/boss/baron_geddon.png', // 需要添加对应图标
+        hp: 16000000,
+        attack: 11200,
+        defense: 12000,
+        rewards: { gold: 2200000, exp: 1300000 },
         unlockLevel: 60
     },
 
@@ -9024,6 +9059,39 @@ const BOSS_DATA = {
                 { id: 'EQ_174', chance: 0.1 },  // 奥术师手套
                 { id: 'EQ_175', chance: 0.1 },  // 预言手套
                 { id: 'EQ_176', chance: 0.02 }  // 逐风者的禁锢之颅（右）
+            ]
+        }
+    },
+
+    // ✅ 新增：60级世界首领 - 迦顿男爵（熔火之心）
+    baron_geddon: {
+        id: 'baron_geddon',
+        name: '迦顿男爵',
+        maxHp: 16000000,
+        attack: 11200,
+        defense: 12000,
+
+        // 技能循环：地狱烈焰 → 灵魂燃烧 → 地狱烈焰 → 活体炸弹
+        cycle: ['hellfire', 'soul_burn', 'hellfire', 'living_bomb'],
+
+        // 技能1：地狱烈焰（AOE火焰法术伤害，计算魔抗）
+        // 说明：基础0.5×Boss攻击；每次施放会使下一次地狱烈焰额外+0.25×Boss攻击（可叠加到战斗结束）
+        hellfireBaseMultiplier: 0.5,
+        hellfireIncreaseMultiplier: 0.25,
+
+        // 技能2：灵魂燃烧（单体火焰法术伤害，计算魔抗）
+        soulBurnMultiplier: 8,
+
+        // 技能3：活体炸弹（火焰法术伤害，计算魔抗；击飞2回合）
+        // 分散站位：随机单体；集中站位：全体
+        livingBombMultiplier: 4,
+        livingBombKnockupDuration: 2,
+
+        rewards: {
+            gold: 2200000,
+            exp: 1300000,
+            items: [
+                { id: 'IT_GEDDON_BADGE', chance: 0.8 }
             ]
         }
     },
@@ -13191,6 +13259,134 @@ function stepBossCombat(state) {
                     ps.debuffs.knockup = { duration: boss.knockupDuration || 1 };
                 });
                 addLog(`【${boss.name}】的【火焰震击】触发【击飞】！全体下一回合无法行动`, 'debuff');
+            }
+        }
+    }
+
+    // ==================== 迦顿男爵技能处理 ====================
+    else if (combat.bossId === 'baron_geddon') {
+        // 使用 bossBuffs 记录“地狱烈焰”叠层（每次施放使下一次伤害+0.25×Boss攻击）
+        combat.bossBuffs = combat.bossBuffs || {};
+        combat.bossBuffs.hellfireStacks = Math.max(0, Math.floor(Number(combat.bossBuffs.hellfireStacks || 0)));
+
+        const base = Number.isFinite(Number(boss.hellfireBaseMultiplier)) ? Number(boss.hellfireBaseMultiplier) : 0.5;
+        const inc = Number.isFinite(Number(boss.hellfireIncreaseMultiplier)) ? Number(boss.hellfireIncreaseMultiplier) : 0.25;
+
+        const getHellfireMultiplier = (stacks) => {
+            const s = Math.max(0, Math.floor(Number(stacks || 0)));
+            return base + s * inc;
+        };
+
+        const pickRandomAlivePlayerIndex = () => {
+            const aliveIdx = combat.playerStates
+                .map((p, idx) => ({ p, idx }))
+                .filter(x => (x.p?.currentHp ?? 0) > 0)
+                .map(x => x.idx);
+            if (aliveIdx.length <= 0) return -1;
+            return aliveIdx[Math.floor(Math.random() * aliveIdx.length)];
+        };
+
+        // 技能1：地狱烈焰（AOE）
+        if (bossAction === 'hellfire') {
+            const stacks = combat.bossBuffs.hellfireStacks || 0;
+            const mult = getHellfireMultiplier(stacks);
+            const raw = Math.floor((boss.attack || 0) * mult);
+
+            addLog(`【${boss.name}】施放【地狱烈焰】！伤害倍率 ${mult.toFixed(2)}×（基础${base} + 叠层${stacks}×${inc}）`);
+
+            combat.playerStates.forEach((ps, pIdx) => {
+                if (!ps || ps.currentHp <= 0) return;
+
+                const fire = calcMagicDamage(ps, raw);
+                const shieldResult = applyShieldAbsorb(ps, fire.damage, logs, currentRound);
+                ps.currentHp -= shieldResult.finalDamage;
+
+                const resPct = Math.round(fire.resistReduction * 100);
+                const mrText = Number(fire.magicResist) < 0 ? `（魔抗 ${Math.floor(fire.magicResist)}）` : '';
+                const vulnPct = Math.round((fire.spellVulnMult - 1) * 100);
+                const vulnText = vulnPct > 0 ? `，法术易伤+${vulnPct}%` : '';
+                const shieldText = shieldResult.absorbed > 0 ? `，护盾吸收 ${shieldResult.absorbed}` : '';
+                addLog(`→ 位置${pIdx + 1} ${ps.char.name} 受到 ${shieldResult.finalDamage} 点火焰伤害（魔抗减伤${resPct}%${mrText}${vulnText}${shieldText}）`);
+            });
+
+            // 叠层：使下一次地狱烈焰额外+0.25×Boss攻击（可叠加）
+            combat.bossBuffs.hellfireStacks = (combat.bossBuffs.hellfireStacks || 0) + 1;
+            const nextStacks = combat.bossBuffs.hellfireStacks;
+            const nextMult = getHellfireMultiplier(nextStacks);
+            addLog(`→ 下一次【地狱烈焰】伤害提高 ${inc}×Boss攻击（当前叠层：${nextStacks}，下次倍率${nextMult.toFixed(2)}×）`);
+        }
+
+        // 技能2：灵魂燃烧（单体打坦克）
+        else if (bossAction === 'soul_burn') {
+            const tIdx = pickAlivePlayerIndex();
+            if (tIdx >= 0) {
+                const target = combat.playerStates[tIdx];
+                const raw = Math.floor((boss.attack || 0) * (boss.soulBurnMultiplier || 8));
+
+                const fire = calcMagicDamage(target, raw);
+                const shieldResult = applyShieldAbsorb(target, fire.damage, logs, currentRound);
+                target.currentHp -= shieldResult.finalDamage;
+
+                const resPct = Math.round(fire.resistReduction * 100);
+                const mrText = Number(fire.magicResist) < 0 ? `（魔抗 ${Math.floor(fire.magicResist)}）` : '';
+                const vulnPct = Math.round((fire.spellVulnMult - 1) * 100);
+                const vulnText = vulnPct > 0 ? `，法术易伤+${vulnPct}%` : '';
+                const shieldText = shieldResult.absorbed > 0 ? `，护盾吸收 ${shieldResult.absorbed}` : '';
+                addLog(`【${boss.name}】施放【灵魂燃烧】命中 位置${tIdx + 1} ${target.char.name}，造成 ${shieldResult.finalDamage} 点火焰伤害（魔抗减伤${resPct}%${mrText}${vulnText}${shieldText}）`);
+            } else {
+                addLog(`【${boss.name}】施放【灵魂燃烧】，但没有存活目标`);
+            }
+        }
+
+        // 技能3：活体炸弹（随机目标；集中站位：全体）
+        else if (bossAction === 'living_bomb') {
+            const stance = combat.strategy?.stance || 'balanced';
+            const tIdx = pickRandomAlivePlayerIndex();
+
+            if (tIdx < 0) {
+                addLog(`【${boss.name}】施放【活体炸弹】，但没有存活目标`);
+            } else {
+                const raw = Math.floor((boss.attack || 0) * (boss.livingBombMultiplier || 4));
+                const knockDur = Math.max(1, Math.floor(Number(boss.livingBombKnockupDuration || 2)));
+
+                if (stance === 'concentrated') {
+                    addLog(`【${boss.name}】施放【活体炸弹】（集中站位：全体受击）！炸弹落在 位置${tIdx + 1} ${combat.playerStates[tIdx].char.name}`);
+                    combat.playerStates.forEach((ps, pIdx) => {
+                        if (!ps || ps.currentHp <= 0) return;
+
+                        const fire = calcMagicDamage(ps, raw);
+                        const shieldResult = applyShieldAbsorb(ps, fire.damage, logs, currentRound);
+                        ps.currentHp -= shieldResult.finalDamage;
+
+                        const resPct = Math.round(fire.resistReduction * 100);
+                        const mrText = Number(fire.magicResist) < 0 ? `（魔抗 ${Math.floor(fire.magicResist)}）` : '';
+                        const vulnPct = Math.round((fire.spellVulnMult - 1) * 100);
+                        const vulnText = vulnPct > 0 ? `，法术易伤+${vulnPct}%` : '';
+                        const shieldText = shieldResult.absorbed > 0 ? `，护盾吸收 ${shieldResult.absorbed}` : '';
+                        addLog(`→ 位置${pIdx + 1} ${ps.char.name} 受到 ${shieldResult.finalDamage} 点火焰伤害（魔抗减伤${resPct}%${mrText}${vulnText}${shieldText}）`);
+                    });
+                } else {
+                    const target = combat.playerStates[tIdx];
+
+                    const fire = calcMagicDamage(target, raw);
+                    const shieldResult = applyShieldAbsorb(target, fire.damage, logs, currentRound);
+                    target.currentHp -= shieldResult.finalDamage;
+
+                    const resPct = Math.round(fire.resistReduction * 100);
+                    const mrText = Number(fire.magicResist) < 0 ? `（魔抗 ${Math.floor(fire.magicResist)}）` : '';
+                    const vulnPct = Math.round((fire.spellVulnMult - 1) * 100);
+                    const vulnText = vulnPct > 0 ? `，法术易伤+${vulnPct}%` : '';
+                    const shieldText = shieldResult.absorbed > 0 ? `，护盾吸收 ${shieldResult.absorbed}` : '';
+                    addLog(`【${boss.name}】施放【活体炸弹】命中 位置${tIdx + 1} ${target.char.name}，造成 ${shieldResult.finalDamage} 点火焰伤害（魔抗减伤${resPct}%${mrText}${vulnText}${shieldText}）`);
+                }
+
+                // 击飞：只击飞“炸弹目标”（默认与分散站位一致；集中站位仍击飞炸弹携带者）
+                const bombTarget = combat.playerStates[tIdx];
+                if (bombTarget && bombTarget.currentHp > 0) {
+                    bombTarget.debuffs = bombTarget.debuffs || {};
+                    bombTarget.debuffs.knockup = { duration: knockDur };
+                    addLog(`→ 位置${tIdx + 1} ${bombTarget.char.name} 被【击飞】，${knockDur}回合无法行动`, 'debuff');
+                }
             }
         }
     }
@@ -17973,17 +18169,8 @@ function gameReducer(state, action) {
             const maxLevel = state.characters.reduce((m, c) => Math.max(m, c.level || 0), 0);
             const levelBonus = maxLevel * 0.002;
 
-            // Boss加成：根据击杀的Boss给予加成
-            const bossBonus = {
-                hogger: 0.05,      // 霍格+5%
-                vancleef: 0.10,   // 范克里夫+10%（预留）
-                prestor_lady: 0.15,//普瑞斯托女士+15%
-                thalnos: 0.2, //萨尔诺斯+20%
-                dagran_thaurissan: 0.2, // 达格兰·索瑞森大帝 +20%
-                darkmaster_gandling: 0.1, // 黑暗院长加丁 +10%
-                baron_rivendare: 0.1, // 瑞文戴尔男爵 +10%
-                rend_blackhand: 0.1,//雷德黑手 +10%
-            };
+            // Boss加成：根据击杀的Boss给予加成（使用全局 BOSS_BONUS_CONFIG 单一数据源）
+            const bossBonus = BOSS_BONUS;
             const defeatedBosses = state.defeatedBosses || [];
             const totalBossBonus = defeatedBosses.reduce((sum, bossId) => sum + (bossBonus[bossId] || 0), 0);
 
@@ -25656,19 +25843,20 @@ const BossPrepareModal = ({ state, dispatch }) => {
         summon_hakkar_sons: '召唤哈卡之子',
         blood_siphon: '血液虹吸',
         corrupted_blood: '堕落之血',
-
-        // ✅ 加尔
-        flame_impact: '烈焰冲击',
-        summon_fire_elementals: '召唤火元素',
-        flame_storm: '烈焰风暴',
-        fire_shock: '火焰震击',
-
-
         // ✅ 无疤者奥斯里安
         ossirian_strength: '奥斯里安之力',
         trample: '践踏',
         tongue_curse: '结舌诅咒',
         surrounding_winds: '包围之风',
+        // ✅ 加尔
+        flame_impact: '烈焰冲击',
+        summon_fire_elementals: '召唤火元素',
+        flame_storm: '烈焰风暴',
+        fire_shock: '火焰震击',
+        // ✅ 迦顿男爵
+        hellfire: '地狱烈焰',
+        soul_burn: '灵魂燃烧',
+        living_bomb: '活体炸弹',
     };
 
     const formatBossCycle = (boss) =>
@@ -26474,6 +26662,58 @@ const BossPrepareModal = ({ state, dispatch }) => {
                                                 对<span style={{ color: '#ff9800' }}>所有角色</span>造成 <span style={{ color: '#ffd700' }}>{boss.fireShockMultiplier}倍</span> Boss攻击 的火焰法术伤害（计算魔抗）
                                                 <br/>
                                                 <span style={{ color: '#ffd700' }}>分散站位</span>：额外附带【击飞】，全体下一回合无法行动
+                                            </div>
+                                        </div>
+                                    </>
+                                )}
+
+                                {bossId === 'baron_geddon' && (
+                                    <>
+                                        <div style={{
+                                            padding: 10,
+                                            background: 'rgba(244,67,54,0.10)',
+                                            borderRadius: 6,
+                                            borderLeft: '3px solid #f44336'
+                                        }}>
+                                            <div style={{ fontSize: 12, color: '#ff6b6b', fontWeight: 600, marginBottom: 4 }}>
+                                                🔥 地狱烈焰
+                                            </div>
+                                            <div style={{ fontSize: 11, color: '#aaa', lineHeight: 1.5 }}>
+                                                对<span style={{ color: '#ff9800' }}>所有角色</span>造成 <span style={{ color: '#ffd700' }}>{boss.hellfireBaseMultiplier}倍</span> Boss攻击 的火焰法术伤害（计算魔抗）
+                                                <br/>
+                                                每次施放会使下一次【地狱烈焰】伤害额外提高 <span style={{ color: '#ffd700' }}>{boss.hellfireIncreaseMultiplier}倍</span> Boss攻击（可叠加到战斗结束）
+                                            </div>
+                                        </div>
+
+                                        <div style={{
+                                            padding: 10,
+                                            background: 'rgba(156,39,176,0.10)',
+                                            borderRadius: 6,
+                                            borderLeft: '3px solid #9c27b0'
+                                        }}>
+                                            <div style={{ fontSize: 12, color: '#ce93d8', fontWeight: 600, marginBottom: 4 }}>
+                                                🕯️ 灵魂燃烧
+                                            </div>
+                                            <div style={{ fontSize: 11, color: '#aaa', lineHeight: 1.5 }}>
+                                                对当前坦克造成 <span style={{ color: '#ffd700' }}>{boss.soulBurnMultiplier}倍</span> Boss攻击 的法术伤害（计算魔抗）
+                                            </div>
+                                        </div>
+
+                                        <div style={{
+                                            padding: 10,
+                                            background: 'rgba(255,193,7,0.10)',
+                                            borderRadius: 6,
+                                            borderLeft: '3px solid #ffc107'
+                                        }}>
+                                            <div style={{ fontSize: 12, color: '#ffd54f', fontWeight: 600, marginBottom: 4 }}>
+                                                💣 活体炸弹
+                                            </div>
+                                            <div style={{ fontSize: 11, color: '#aaa', lineHeight: 1.5 }}>
+                                                默认对随机目标造成 <span style={{ color: '#ffd700' }}>{boss.livingBombMultiplier}倍</span> Boss攻击 的法术伤害（计算魔抗）
+                                                <br/>
+                                                并【击飞】目标：<span style={{ color: '#ffd700' }}>{boss.livingBombKnockupDuration}回合</span>无法行动
+                                                <br/>
+                                                <span style={{ color: '#ffd700' }}>集中站位</span>：改为对所有角色造成相同伤害（炸弹目标仍会被击飞）
                                             </div>
                                         </div>
                                     </>
@@ -28060,17 +28300,7 @@ const RebirthPlotModal = ({ state, dispatch }) => {
     if (!state.showRebirthPlot) return null;
     const p = state.showRebirthPlot;
     const bossNames = (p.defeatedBosses || []).map(id => {
-        const names = {
-            hogger: '霍格',
-            vancleef: '范克里夫',
-            prestor_lady: '普瑞斯托女士',
-            thalnos: '萨尔诺斯',
-            dagran_thaurissan: '索瑞森大帝',
-            darkmaster_gandling: '黑暗院长加丁',
-            baron_rivendare: '瑞文戴尔男爵',
-            rend_blackhand: '雷德黑手'
-        };
-        return names[id] || id;
+        return BOSS_NAMES[id] || id;
     });
     return (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.95)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000 }}>
@@ -28114,17 +28344,7 @@ const RebirthBonusModal = ({ state, onClose }) => {
     // 所有可能的羁绊池
     const ALL_BONDS = ['baoernai', 'jianyue'];
 
-    // Boss加成配置
-    const BOSS_BONUS_CONFIG = {
-        hogger: { name: '霍格', bonus: 0.05 },
-        vancleef: { name: '范克里夫', bonus: 0.10 },
-        prestor_lady:{ name: '普瑞斯托女士', bonus: 0.15 },
-        thalnos: { name: '裂魂者萨尔诺斯', bonus: 0.15 },
-        dagran_thaurissan: { name: '达格兰·索瑞森大帝', bonus: 0.15 },
-        darkmaster_gandling:{ name: '黑暗院长加丁', bonus: 0.20 },
-        baron_rivendare: { name: '瑞文戴尔男爵', bonus: 0.20 },
-        rend_blackhand:{ name: '雷德黑手', bonus: 0.20 },
-    };
+    // Boss加成配置：使用全局 BOSS_BONUS_CONFIG（单一数据源）
 
     // 去重后的已获得羁绊
     const uniqueBonds = [...new Set(bonds)];

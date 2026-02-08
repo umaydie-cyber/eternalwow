@@ -1,5 +1,61 @@
 import React, { useState, useEffect, useCallback, useReducer, useRef } from 'react';
 
+
+// ==================== H5 / MOBILE HELPERS ====================
+const MOBILE_BREAKPOINT = 768;
+
+// 简单的响应式判断：屏幕宽度 <= breakpoint 认为是移动端布局
+const useIsMobile = (breakpoint = MOBILE_BREAKPOINT) => {
+    const [isMobile, setIsMobile] = useState(() => {
+        if (typeof window === 'undefined') return false;
+        if (!window.matchMedia) return window.innerWidth <= breakpoint;
+        return window.matchMedia(`(max-width: ${breakpoint}px)`).matches;
+    });
+
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+        const mq = window.matchMedia ? window.matchMedia(`(max-width: ${breakpoint}px)`) : null;
+
+        const update = () => {
+            if (mq) setIsMobile(mq.matches);
+            else setIsMobile(window.innerWidth <= breakpoint);
+        };
+
+        update();
+
+        if (mq) {
+            if (mq.addEventListener) mq.addEventListener('change', update);
+            else mq.addListener(update);
+            return () => {
+                if (mq.removeEventListener) mq.removeEventListener('change', update);
+                else mq.removeListener(update);
+            };
+        } else {
+            window.addEventListener('resize', update);
+            return () => window.removeEventListener('resize', update);
+        }
+    }, [breakpoint]);
+
+    return isMobile;
+};
+
+const isTouchDevice = () => {
+    if (typeof window === 'undefined') return false;
+    return (
+        'ontouchstart' in window ||
+        (navigator && (navigator.maxTouchPoints || navigator.msMaxTouchPoints) > 0)
+    );
+};
+
+// iOS 安全区（刘海屏）底部内边距
+const safeAreaBottom = () => 'env(safe-area-inset-bottom, 0px)';
+
+// ==================== DEBUG FLAGS ====================
+// 移动端（尤其是 iOS Safari）频繁 console.log 会显著卡顿；默认关闭调试日志
+const DEBUG_LOG = false;
+
+
+
 // ==================== GAME DATA ====================
 const RACES = ['人类', '矮人', '暗夜精灵', '侏儒', '兽人', '巨魔', '牛头人', '亡灵'];
 
@@ -18767,7 +18823,7 @@ function gameReducer(state, action) {
                 const zone = newState.zones[zoneId];
                 const charIndex = newState.characters.findIndex(c => c.id === charId);
 
-                console.log("【派遣循环】", {
+                DEBUG_LOG && console.log("【派遣循环】", {
                     charId, zoneId,
                     hasZone: !!zone,
                     enemiesLen: zone?.enemies?.length,
@@ -18799,7 +18855,7 @@ function gameReducer(state, action) {
                     const isFullHp = curHp >= maxHp;
 
                     // ✅ 添加调试日志
-                    console.log('【战斗检查】', {
+                    DEBUG_LOG && console.log('【战斗检查】', {
                         charName: char.name,
                         now,
                         lastCombatTime,
@@ -18817,7 +18873,7 @@ function gameReducer(state, action) {
                         const enemy = zone.enemies[Math.floor(Math.random() * zone.enemies.length)];
                         char.combatState = createCombatState(char, enemy, char.skillSlots || []);
                         char.lastCombatTime = now; // 进入战斗
-                        console.log('【开始新战斗】', char.name);
+                        DEBUG_LOG && console.log('【开始新战斗】', char.name);
                     }
                 }
 
@@ -19233,14 +19289,14 @@ function gameReducer(state, action) {
 
         case 'CREATE_CHARACTER': {
             const { name, race, classId } = action.payload;
-            console.log(race);
+            DEBUG_LOG && console.log(race);
             if (state.characters.length >= state.characterSlots) return state;
 
             const classData = CLASSES[classId];
             const baseSkillSlots = Array(8).fill('basic_attack');
             const baseSkills = classData.skills.filter(s => s.level <= 1).map(s => s.skillId);
             const raceExtraSkills = RACE_TRAITS?.[race]?.extraSkills || [];
-            console.log(RACE_TRAITS?.[race]?.extraSkills.length);
+            DEBUG_LOG && console.log(RACE_TRAITS?.[race]?.extraSkills.length);
             const newChar = {
                 id: `char_${Date.now()}`,
                 name,
@@ -20663,7 +20719,7 @@ function gameReducer(state, action) {
             // 添加到新建筑
             newAssignments[buildingId] = [...(newAssignments[buildingId] || []), characterId];
 
-            console.log(`✓ 成功派遣角色 ${characterId} 到 ${buildingId}`);
+            DEBUG_LOG && console.log(`✓ 成功派遣角色 ${characterId} 到 ${buildingId}`);
 
             return {
                 ...state,
@@ -21065,6 +21121,150 @@ const Button = ({ children, onClick, variant = 'primary', disabled, style }) => 
         >
             {children}
         </button>
+    );
+};
+
+
+// ==================== MOBILE ACTION SHEET (H5) ====================
+// 用于替代右键/Shift/拖拽等桌面交互（移动端：长按/按钮操作）
+const MobileActionSheet = ({ open, title, subtitle, actions = [], onClose }) => {
+    if (!open) return null;
+
+    return (
+        <div
+            onClick={onClose}
+            style={{
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                background: 'rgba(0,0,0,0.65)',
+                zIndex: 2500,
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'flex-end',
+                padding: 12,
+            }}
+        >
+            <div
+                onClick={(e) => e.stopPropagation()}
+                style={{
+                    width: '100%',
+                    maxWidth: 520,
+                    background: 'linear-gradient(180deg, rgba(35,28,20,0.98), rgba(20,14,10,0.98))',
+                    border: '1px solid #4a3c2a',
+                    borderRadius: 14,
+                    overflow: 'hidden',
+                    boxShadow: '0 10px 30px rgba(0,0,0,0.6)',
+                    paddingBottom: safeAreaBottom(),
+                }}
+            >
+                <div style={{ padding: '14px 16px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+                        <div style={{ minWidth: 0 }}>
+                            <div style={{
+                                fontSize: 14,
+                                fontWeight: 800,
+                                color: '#ffd700',
+                                whiteSpace: 'nowrap',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis'
+                            }}>
+                                {title}
+                            </div>
+                            {subtitle ? (
+                                <div style={{ marginTop: 4, fontSize: 11, color: '#aaa', lineHeight: 1.4 }}>
+                                    {subtitle}
+                                </div>
+                            ) : null}
+                        </div>
+                        <button
+                            onClick={onClose}
+                            style={{
+                                background: 'transparent',
+                                border: 'none',
+                                color: '#aaa',
+                                fontSize: 18,
+                                padding: 8,
+                                cursor: 'pointer'
+                            }}
+                        >
+                            ✕
+                        </button>
+                    </div>
+                </div>
+
+                <div style={{ padding: 12, display: 'grid', gap: 10 }}>
+                    {actions.filter(Boolean).map((a, idx) => (
+                        <button
+                            key={idx}
+                            onClick={() => {
+                                if (a.disabled) return;
+                                a.onClick?.();
+                            }}
+                            disabled={a.disabled}
+                            style={{
+                                padding: '12px 14px',
+                                borderRadius: 10,
+                                border: `1px solid ${
+                                    a.variant === 'danger'
+                                        ? 'rgba(244,67,54,0.6)'
+                                        : 'rgba(201,162,39,0.35)'
+                                }`,
+                                background: a.disabled
+                                    ? 'rgba(80,80,80,0.25)'
+                                    : (a.variant === 'danger'
+                                        ? 'rgba(244,67,54,0.18)'
+                                        : 'rgba(201,162,39,0.10)'),
+                                color: a.disabled
+                                    ? '#666'
+                                    : (a.variant === 'danger' ? '#ff6b6b' : '#ffd700'),
+                                textAlign: 'left',
+                                fontFamily: 'inherit',
+                                fontSize: 14,
+                                fontWeight: 700,
+                                cursor: a.disabled ? 'not-allowed' : 'pointer'
+                            }}
+                        >
+                            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'center' }}>
+                                <span>{a.label}</span>
+                                {a.hint ? (
+                                    <span style={{ fontSize: 11, color: '#aaa', fontWeight: 500 }}>
+                                        {a.hint}
+                                    </span>
+                                ) : null}
+                            </div>
+                            {a.desc ? (
+                                <div style={{ marginTop: 6, fontSize: 11, color: '#aaa', fontWeight: 500, lineHeight: 1.4 }}>
+                                    {a.desc}
+                                </div>
+                            ) : null}
+                        </button>
+                    ))}
+                </div>
+
+                <div style={{ padding: 12 }}>
+                    <button
+                        onClick={onClose}
+                        style={{
+                            width: '100%',
+                            padding: '12px 14px',
+                            borderRadius: 10,
+                            border: '1px solid rgba(255,255,255,0.12)',
+                            background: 'rgba(0,0,0,0.25)',
+                            color: '#ddd',
+                            fontFamily: 'inherit',
+                            fontSize: 14,
+                            fontWeight: 700,
+                            cursor: 'pointer'
+                        }}
+                    >
+                        取消
+                    </button>
+                </div>
+            </div>
+        </div>
     );
 };
 
@@ -23201,9 +23401,30 @@ const TalentPage = ({ state, dispatch }) => {
     );
 };
 
-const MapPage = ({ state, dispatch }) => {
-    const [draggedChar, setDraggedChar] = useState(null);
 
+const MapPage = ({ state, dispatch }) => {
+    const isMobile = useIsMobile();
+    const [draggedChar, setDraggedChar] = useState(null);
+    const [selectedCharId, setSelectedCharId] = useState(null);
+
+    // 桌面端切回时清空点选状态
+    useEffect(() => {
+        if (!isMobile) setSelectedCharId(null);
+    }, [isMobile]);
+
+    const selectedChar = selectedCharId
+        ? state.characters.find(c => c.id === selectedCharId)
+        : null;
+
+    const assignToZone = useCallback((characterId, zoneId) => {
+        if (!characterId || !zoneId) return;
+        dispatch({
+            type: 'ASSIGN_ZONE',
+            payload: { characterId, zoneId }
+        });
+    }, [dispatch]);
+
+    // ===== 拖拽派遣（桌面端保留） =====
     const handleDragStart = (e, charId) => {
         setDraggedChar(charId);
         // ✅ Edge/部分浏览器需要 setData 才会认为这是“有效拖拽”
@@ -23218,11 +23439,9 @@ const MapPage = ({ state, dispatch }) => {
 
     const handleDrop = (e, zoneId) => {
         e.preventDefault();
-        if (draggedChar) {
-            dispatch({
-                type: 'ASSIGN_ZONE',
-                payload: { characterId: draggedChar, zoneId }
-            });
+        const charId = draggedChar || e.dataTransfer.getData('text/plain');
+        if (charId) {
+            assignToZone(charId, zoneId);
             setDraggedChar(null);
         }
     };
@@ -23237,6 +23456,12 @@ const MapPage = ({ state, dispatch }) => {
         !state.assignments[c.id] && !resourceAssignedIds.has(c.id)
     );
 
+    const handleSelectChar = (charId) => {
+        // 移动端使用点选派遣（拖拽在 H5 上不稳定）
+        if (!isMobile) return;
+        setSelectedCharId(prev => prev === charId ? null : charId);
+    };
+
     return (
         <div>
             {/* 未分配的角色列表 */}
@@ -23247,7 +23472,7 @@ const MapPage = ({ state, dispatch }) => {
                         top: 12,
                         zIndex: 50,
                         // 可选：如果角色很多，固定栏自己滚动
-                        maxHeight: '40vh',
+                        maxHeight: isMobile ? '46vh' : '40vh',
                         overflowY: 'auto',
                     }}
                 >
@@ -23257,52 +23482,79 @@ const MapPage = ({ state, dispatch }) => {
                             gap: 12,
                             flexWrap: 'wrap'
                         }}>
-                            {unassignedChars.map(char => (
-                                <div
-                                    key={char.id}
-                                    draggable
-                                    onDragStart={(e) => handleDragStart(e, char.id)}
-                                    style={{
-                                        padding: '12px 16px',
-                                        background: 'linear-gradient(135deg, rgba(201,162,39,0.2), rgba(139,115,25,0.1))',
-                                        border: '2px solid #c9a227',
-                                        borderRadius: 6,
-                                        cursor: 'grab',
-                                        transition: 'all 0.2s',
-                                        userSelect: 'none'
-                                    }}
-                                    onMouseEnter={(e) => {
-                                        e.currentTarget.style.transform = 'translateY(-4px)';
-                                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(201,162,39,0.4)';
-                                    }}
-                                    onMouseLeave={(e) => {
-                                        e.currentTarget.style.transform = 'translateY(0)';
-                                        e.currentTarget.style.boxShadow = 'none';
-                                    }}
-                                >
-                                    <div style={{ fontSize: 14, color: '#ffd700', fontWeight: 600 }}>
-                                        {char.name}
+                            {unassignedChars.map(char => {
+                                const selected = selectedCharId === char.id;
+
+                                return (
+                                    <div
+                                        key={char.id}
+                                        draggable={!isMobile}
+                                        onDragStart={!isMobile ? (e) => handleDragStart(e, char.id) : undefined}
+                                        onClick={() => handleSelectChar(char.id)}
+                                        style={{
+                                            padding: '12px 16px',
+                                            background: selected
+                                                ? 'linear-gradient(135deg, rgba(255,215,0,0.22), rgba(139,115,25,0.12))'
+                                                : 'linear-gradient(135deg, rgba(201,162,39,0.2), rgba(139,115,25,0.1))',
+                                            border: selected ? '2px solid #ffd700' : '2px solid #c9a227',
+                                            borderRadius: 8,
+                                            cursor: isMobile ? 'pointer' : 'grab',
+                                            transition: 'all 0.2s',
+                                            userSelect: 'none',
+                                            minWidth: 140,
+                                            opacity: selectedCharId && !selected ? 0.85 : 1,
+                                        }}
+                                        onMouseEnter={(e) => {
+                                            if (isMobile) return;
+                                            e.currentTarget.style.transform = 'translateY(-4px)';
+                                            e.currentTarget.style.boxShadow = '0 4px 12px rgba(201,162,39,0.4)';
+                                        }}
+                                        onMouseLeave={(e) => {
+                                            if (isMobile) return;
+                                            e.currentTarget.style.transform = 'translateY(0)';
+                                            e.currentTarget.style.boxShadow = 'none';
+                                        }}
+                                    >
+                                        <div style={{ fontSize: 14, color: '#ffd700', fontWeight: 700 }}>
+                                            {char.name}
+                                        </div>
+                                        <div style={{ fontSize: 11, color: '#888', marginTop: 4 }}>
+                                            Lv.{char.level} {CLASSES[char.classId].name}
+                                        </div>
+                                        {isMobile && selected && (
+                                            <div style={{ marginTop: 6, fontSize: 11, color: '#ffd700', fontWeight: 700 }}>
+                                                ✅ 已选中，点选下方区域派遣
+                                            </div>
+                                        )}
                                     </div>
-                                    <div style={{ fontSize: 11, color: '#888', marginTop: 4 }}>
-                                        Lv.{char.level} {CLASSES[char.classId].name}
-                                    </div>
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
+
                         <div style={{
                             marginTop: 12,
                             fontSize: 12,
                             color: '#888',
                             fontStyle: 'italic'
                         }}>
-                            💡 拖拽角色到区域进行分配
+                            {isMobile ? '💡 点选角色 → 点选区域【派遣】按钮' : '💡 拖拽角色到区域进行分配'}
                         </div>
+
+                        {isMobile && selectedChar && (
+                            <div style={{ marginTop: 8, fontSize: 12, color: '#aaa' }}>
+                                当前选择：<span style={{ color: '#ffd700', fontWeight: 800 }}>{selectedChar.name}</span>（再次点选可取消）
+                            </div>
+                        )}
                     </Panel>
                 </div>
             )}
 
             {/* 区域列表 */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 16 }}>
+            <div style={{
+                display: 'grid',
+                gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(300px, 1fr))',
+                gap: 16
+            }}>
                 {Object.values(state.zones).map(zone => {
                     const assignedChars = Object.entries(state.assignments)
                         .filter(([_, zId]) => zId === zone.id)
@@ -23312,8 +23564,8 @@ const MapPage = ({ state, dispatch }) => {
                     return (
                         <div
                             key={zone.id}
-                            onDragOver={zone.unlocked ? handleDragOver : undefined}
-                            onDrop={zone.unlocked ? (e) => handleDrop(e, zone.id) : undefined}
+                            onDragOver={!isMobile && zone.unlocked ? handleDragOver : undefined}
+                            onDrop={!isMobile && zone.unlocked ? (e) => handleDrop(e, zone.id) : undefined}
                             style={{
                                 opacity: zone.unlocked ? 1 : 0.6,
                                 transition: 'all 0.2s'
@@ -23352,25 +23604,32 @@ const MapPage = ({ state, dispatch }) => {
                                             <div style={{ fontSize: 12, color: '#888', marginBottom: 8 }}>
                                                 已分配角色:
                                             </div>
+
                                             {assignedChars.length > 0 ? (
                                                 assignedChars.map(char => (
                                                     <div key={char.id} style={{
                                                         display: 'flex',
                                                         justifyContent: 'space-between',
                                                         alignItems: 'center',
+                                                        gap: 8,
                                                         padding: 6,
                                                         background: 'rgba(201,162,39,0.1)',
                                                         borderRadius: 4,
-                                                        marginBottom: 4
+                                                        marginBottom: 6
                                                     }}>
-                                                        <span style={{ fontSize: 11 }}>{char.name} (Lv.{char.level})</span>
+                                                        <span style={{ fontSize: 11 }}>
+                                                            {char.name} (Lv.{char.level})
+                                                        </span>
                                                         <Button
-                                                            onClick={() => dispatch({
-                                                                type: 'UNASSIGN_CHARACTER',
-                                                                payload: { characterId: char.id }
-                                                            })}
+                                                            onClick={(e) => {
+                                                                e?.stopPropagation?.();
+                                                                dispatch({
+                                                                    type: 'UNASSIGN_CHARACTER',
+                                                                    payload: { characterId: char.id }
+                                                                });
+                                                            }}
                                                             variant="danger"
-                                                            style={{ padding: '4px 8px', fontSize: 10 }}
+                                                            style={{ padding: '6px 10px', fontSize: 11 }}
                                                         >
                                                             召回
                                                         </Button>
@@ -23378,7 +23637,33 @@ const MapPage = ({ state, dispatch }) => {
                                                 ))
                                             ) : (
                                                 <div style={{ fontSize: 11, color: '#666', fontStyle: 'italic', textAlign: 'center' }}>
-                                                    拖拽角色到此处
+                                                    {isMobile
+                                                        ? (selectedCharId ? '点下面按钮派遣选中角色' : '先在上方点选一个角色')
+                                                        : '拖拽角色到此处'}
+                                                </div>
+                                            )}
+
+                                            {/* ✅ 移动端：点选派遣按钮 */}
+                                            {isMobile && selectedCharId && (
+                                                <div style={{ marginTop: 10 }}>
+                                                    <Button
+                                                        onClick={() => {
+                                                            assignToZone(selectedCharId, zone.id);
+                                                            setSelectedCharId(null);
+                                                        }}
+                                                        disabled={!selectedCharId}
+                                                        style={{ width: '100%', padding: '10px 12px', fontSize: 13 }}
+                                                    >
+                                                        ✅ 派遣 {selectedChar?.name || '选中角色'}
+                                                    </Button>
+
+                                                    <Button
+                                                        onClick={() => setSelectedCharId(null)}
+                                                        variant="secondary"
+                                                        style={{ width: '100%', marginTop: 8, padding: '10px 12px', fontSize: 13 }}
+                                                    >
+                                                        取消选择
+                                                    </Button>
                                                 </div>
                                             )}
                                         </div>
@@ -23729,13 +24014,50 @@ const CharacterPage = ({ state, dispatch }) => {
 };
 
 // ==================== PAGE: INVENTORY ====================
+
 const InventoryPage = ({ state, dispatch }) => {
+    const isMobile = useIsMobile();
+    const touch = isTouchDevice();
+
     const [selectedItem, setSelectedItem] = useState(null);
+
+    // 桌面端：保留拖拽排序/合成
     const [draggedItemId, setDraggedItemId] = useState(null);
     const [draggedIndex, setDraggedIndex] = useState(null);
 
+    // 移动端：替代拖拽/右键/Shift 的交互
+    const [actionSheet, setActionSheet] = useState(null); // { item, index }
+    const [moveMode, setMoveMode] = useState(null);       // { fromIndex }
+    const [mergeMode, setMergeMode] = useState(null);     // { sourceItem, sourceInstanceId, sourceIndex }
+
+    // 长按打开菜单
+    const longPressTimerRef = useRef(null);
+    const longPressStartRef = useRef(null);
+    const longPressTriggeredRef = useRef(false);
+
     const mechanicalArmCount = state.functionalBuildings?.mechanical_arm ?? 0;
     const autoMergeSlots = Math.min(10, mechanicalArmCount);
+
+    const isThunderfuryRecipe = (aId, bId) =>
+        (aId === 'EQ_176' && bId === 'EQ_181') || (aId === 'EQ_181' && bId === 'EQ_176');
+
+    const clearDrag = () => {
+        setDraggedItemId(null);
+        setDraggedIndex(null);
+    };
+
+    const cancelModes = useCallback(() => {
+        setMoveMode(null);
+        setMergeMode(null);
+    }, []);
+
+    // 切换到桌面端时，自动退出移动端模式
+    useEffect(() => {
+        if (!isMobile) {
+            setActionSheet(null);
+            cancelModes();
+        }
+    }, [isMobile, cancelModes]);
 
     const handleDropToEmpty = (e, targetIndex) => {
         e.preventDefault();
@@ -23747,13 +24069,257 @@ const InventoryPage = ({ state, dispatch }) => {
             });
         }
 
-        setDraggedItemId(null);
-        setDraggedIndex(null);
+        clearDrag();
     };
+
+    const openActionSheet = (item, index) => {
+        setActionSheet({ item, index });
+    };
+
+    const closeActionSheet = () => setActionSheet(null);
+
+    const startMove = (fromIndex) => {
+        setMoveMode({ fromIndex });
+        setMergeMode(null);
+    };
+
+    const startMerge = (item, sourceIndex) => {
+        if (!item?.instanceId) return;
+        setMergeMode({
+            sourceItem: item,
+            sourceInstanceId: item.instanceId,
+            sourceIndex,
+        });
+        setMoveMode(null);
+    };
+
+    const doMove = (toIndex) => {
+        if (!moveMode) return;
+
+        const fromIndex = moveMode.fromIndex;
+        if (fromIndex === toIndex) {
+            setMoveMode(null);
+            return;
+        }
+
+        dispatch({
+            type: 'MOVE_INVENTORY_ITEM',
+            payload: { fromIndex, toIndex }
+        });
+
+        setMoveMode(null);
+    };
+
+    const doMerge = (targetItem) => {
+        if (!mergeMode) return;
+
+        const fromItem = mergeMode.sourceItem;
+        if (!fromItem?.instanceId || !targetItem?.instanceId) {
+            setMergeMode(null);
+            return;
+        }
+
+        if (fromItem.instanceId === targetItem.instanceId) {
+            setMergeMode(null);
+            return;
+        }
+
+        if (fromItem.id === targetItem.id || isThunderfuryRecipe(fromItem.id, targetItem.id)) {
+            dispatch({
+                type: 'MERGE_EQUIPMENT',
+                payload: { instanceIdA: fromItem.instanceId, instanceIdB: targetItem.instanceId }
+            });
+        } else {
+            alert('这两件装备无法合成（需要相同装备，或雷霆之怒配方对：EQ_176 + EQ_181）。');
+        }
+
+        setMergeMode(null);
+    };
+
+    const sellOrDrop = (item) => {
+        if (!item) return;
+
+        // 有售价 → 出售；否则 → 丢弃（沿用原逻辑：USE_ITEM 视作丢弃）
+        if (item.sellPrice) {
+            if (window.confirm(`出售 ${item.name}，获得 🪙${item.sellPrice} 金币？`)) {
+                dispatch({ type: 'SELL_ITEM', payload: { itemInstanceId: item.instanceId || item.id } });
+            }
+            return;
+        }
+
+        if (window.confirm(`确定要丢弃 ${item.name} 吗？`)) {
+            dispatch({ type: 'USE_ITEM', payload: { itemInstanceId: item.instanceId || item.id } });
+        }
+    };
+
+    const useItem = (item) => {
+        if (!item) return;
+        dispatch({ type: 'USE_ITEM', payload: { itemInstanceId: item.instanceId || item.id } });
+    };
+
+    // ===== 长按处理（仅触屏/移动端启用） =====
+    const clearLongPress = () => {
+        if (longPressTimerRef.current) {
+            clearTimeout(longPressTimerRef.current);
+            longPressTimerRef.current = null;
+        }
+        longPressStartRef.current = null;
+    };
+
+    const onSlotPointerDown = (e, item, index) => {
+        if (!(isMobile || touch)) return;
+        if (e.pointerType === 'mouse') return; // 鼠标端不启用长按
+        if (!item) return;
+
+        longPressTriggeredRef.current = false;
+        longPressStartRef.current = { x: e.clientX, y: e.clientY };
+
+        clearLongPress();
+        longPressTimerRef.current = setTimeout(() => {
+            longPressTriggeredRef.current = true;
+            openActionSheet(item, index);
+            clearLongPress();
+        }, 450);
+    };
+
+    const onSlotPointerMove = (e) => {
+        if (!(isMobile || touch)) return;
+        if (!longPressStartRef.current) return;
+
+        const dx = e.clientX - longPressStartRef.current.x;
+        const dy = e.clientY - longPressStartRef.current.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        // 手指滑动（滚动）时，取消长按
+        if (dist > 12) {
+            clearLongPress();
+        }
+    };
+
+    const onSlotPointerUp = () => clearLongPress();
+    const onSlotPointerCancel = () => clearLongPress();
+
+    // ===== 单击处理（移动端模式优先） =====
+    const handleSlotClick = (e, item, index) => {
+        // 如果刚刚触发了长按菜单，则吞掉本次 click
+        if (longPressTriggeredRef.current) {
+            longPressTriggeredRef.current = false;
+            return;
+        }
+
+        // 移动/合成模式下：点击直接完成操作
+        if (isMobile) {
+            if (moveMode) {
+                doMove(index);
+                return;
+            }
+            if (mergeMode) {
+                if (item?.type === 'equipment') doMerge(item);
+                else setMergeMode(null); // 点到空/非装备则取消
+                return;
+            }
+        }
+
+        // 普通模式：沿用原交互逻辑（并确保移动端可用）
+        if (item?.type === 'consumable' && item.canUse) {
+            useItem(item);
+            return;
+        }
+
+        if (item?.type !== 'equipment') return;
+
+        // 桌面端保留 Shift+点击链式合成
+        if (!isMobile && e.shiftKey && item.instanceId) {
+            e.preventDefault();
+            dispatch({ type: 'MERGE_EQUIPMENT_CHAIN', payload: { targetInstanceId: item.instanceId } });
+            return;
+        }
+
+        setSelectedItem(item);
+    };
+
+    // ===== 生成 action sheet actions =====
+    const sheetActions = (() => {
+        if (!actionSheet?.item) return [];
+
+        const item = actionSheet.item;
+        const index = actionSheet.index;
+
+        const actions = [];
+
+        if (item.type === 'equipment') {
+            actions.push({
+                label: '🔍 查看装备详情',
+                onClick: () => {
+                    closeActionSheet();
+                    setSelectedItem(item);
+                }
+            });
+
+            if (item.instanceId) {
+                actions.push({
+                    label: '🔧 选择合成目标',
+                    desc: '进入合成模式：再点另一件可合成装备完成合成',
+                    onClick: () => {
+                        closeActionSheet();
+                        startMerge(item, index);
+                    }
+                });
+
+                actions.push({
+                    label: '⛓️ 链式合成',
+                    desc: '等同于桌面端 Shift+点击（从该装备开始尽可能合成）',
+                    onClick: () => {
+                        closeActionSheet();
+                        dispatch({ type: 'MERGE_EQUIPMENT_CHAIN', payload: { targetInstanceId: item.instanceId } });
+                    }
+                });
+
+                actions.push({
+                    label: '📦 移动/调整位置',
+                    desc: '进入移动模式：再点目标格位完成移动',
+                    onClick: () => {
+                        closeActionSheet();
+                        startMove(index);
+                    }
+                });
+            }
+        } else {
+            if (item.type === 'consumable' && item.canUse) {
+                actions.push({
+                    label: '✨ 使用',
+                    onClick: () => {
+                        closeActionSheet();
+                        useItem(item);
+                    }
+                });
+            }
+
+            actions.push({
+                label: '📦 移动/调整位置',
+                desc: '进入移动模式：再点目标格位完成移动',
+                onClick: () => {
+                    closeActionSheet();
+                    startMove(index);
+                }
+            });
+        }
+
+        actions.push({
+            label: item.sellPrice ? `🪙 出售（+${item.sellPrice} 金币）` : '🗑️ 丢弃',
+            variant: 'danger',
+            onClick: () => {
+                closeActionSheet();
+                sellOrDrop(item);
+            }
+        });
+
+        return actions;
+    })();
 
     return (
         <div>
-            {/* ✅ 装备详情模态框 - 确保这部分存在 */}
+            {/* ✅ 装备详情模态框 */}
             {selectedItem && selectedItem.type === 'equipment' && (
                 <ItemDetailsModal
                     item={selectedItem}
@@ -23767,13 +24333,25 @@ const InventoryPage = ({ state, dispatch }) => {
                 />
             )}
 
+            {/* ✅ 移动端 Action Sheet（长按 / 按钮打开） */}
+            <MobileActionSheet
+                open={!!actionSheet}
+                title={actionSheet?.item ? actionSheet.item.name : '操作'}
+                subtitle={actionSheet?.item?.type === 'equipment'
+                    ? `装备 Lv.${actionSheet?.item?.currentLevel ?? actionSheet?.item?.level ?? 0}`
+                    : (actionSheet?.item?.type || '')}
+                actions={sheetActions}
+                onClose={closeActionSheet}
+            />
+
             <Panel
                 title={`道具栏 (${state.inventory.length}/${state.inventorySize})`}
                 actions={
-                    <div style={{ display: 'flex', gap: 8 }}>
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                         <Button
                             variant="secondary"
                             onClick={() => dispatch({ type: 'SORT_INVENTORY' })}
+                            style={{ padding: '8px 12px' }}
                         >
                             📦 整理背包
                         </Button>
@@ -23792,158 +24370,203 @@ const InventoryPage = ({ state, dispatch }) => {
                                     dispatch({ type: 'SELL_ALL_JUNK' });
                                 }
                             }}
+                            style={{ padding: '8px 12px' }}
                         >
                             🔘 一键卖垃圾
                         </Button>
+
+                        {(isMobile && (moveMode || mergeMode)) && (
+                            <Button
+                                variant="secondary"
+                                onClick={cancelModes}
+                                style={{ padding: '8px 12px' }}
+                            >
+                                ✖ 退出模式
+                            </Button>
+                        )}
                     </div>
                 }
             >
+                {/* 模式提示条（移动端） */}
+                {isMobile && (moveMode || mergeMode) && (
+                    <div style={{
+                        marginBottom: 12,
+                        padding: 10,
+                        background: 'rgba(201,162,39,0.08)',
+                        border: '1px solid rgba(201,162,39,0.35)',
+                        borderRadius: 8
+                    }}>
+                        <div style={{ fontSize: 12, color: '#ffd700', fontWeight: 800 }}>
+                            {moveMode ? '📦 移动模式：点选目标格位完成移动' : '🔧 合成模式：点选另一件可合成装备'}
+                        </div>
+                        <div style={{ marginTop: 6, fontSize: 11, color: '#aaa', lineHeight: 1.5 }}>
+                            {moveMode
+                                ? '再次点选同一格位可取消。'
+                                : '点到非装备/空白处将取消合成模式。'}
+                        </div>
+                    </div>
+                )}
+
                 <div style={{
                     display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))',
+                    gridTemplateColumns: `repeat(auto-fill, minmax(${isMobile ? 96 : 120}px, 1fr))`,
                     gap: 8
                 }}>
-                    {state.inventory.map((item, index) => (
-                        <div
-                            key={item.instanceId || item.id}
-                            draggable={item.type === 'equipment'}
-                            onDragStart={(e) => {
-                                if (item.type !== 'equipment') return;
-                                if (!item.instanceId) return;
-                                setDraggedItemId(item.instanceId);
-                                setDraggedIndex(index);
-                                e.dataTransfer.effectAllowed = 'move';
-                            }}
-                            onDragOver={(e) => {
-                                e.preventDefault();
-                                e.dataTransfer.dropEffect = 'move';
-                            }}
-                            onDrop={(e) => {
-                                e.preventDefault();
+                    {state.inventory.map((item, index) => {
+                        const isMoveSource = !!moveMode && moveMode.fromIndex === index;
+                        const isMergeSource = !!mergeMode && mergeMode.sourceInstanceId === item.instanceId;
 
-                                const fromInstanceId = draggedItemId;
-                                const toInstanceId = item.instanceId;
+                        return (
+                            <div
+                                key={item.instanceId || item.id || index}
+                                draggable={item.type === 'equipment' && !isMobile}
+                                onDragStart={(e) => {
+                                    if (isMobile) return;
+                                    if (item.type !== 'equipment') return;
+                                    if (!item.instanceId) return;
+                                    setDraggedItemId(item.instanceId);
+                                    setDraggedIndex(index);
+                                    e.dataTransfer.effectAllowed = 'move';
+                                }}
+                                onDragOver={(e) => {
+                                    if (isMobile) return;
+                                    e.preventDefault();
+                                    e.dataTransfer.dropEffect = 'move';
+                                }}
+                                onDrop={(e) => {
+                                    if (isMobile) return;
+                                    e.preventDefault();
 
-                                if (!fromInstanceId || fromInstanceId === toInstanceId) {
-                                    setDraggedItemId(null);
-                                    setDraggedIndex(null);
-                                    return;
-                                }
+                                    const fromInstanceId = draggedItemId;
+                                    const toInstanceId = item.instanceId;
 
-                                const fromItem = state.inventory.find(i => i.instanceId === fromInstanceId);
-                                const toItem = item;
+                                    if (!fromInstanceId || fromInstanceId === toInstanceId) {
+                                        clearDrag();
+                                        return;
+                                    }
 
-                                if (!toItem || toItem.type !== 'equipment') {
-                                    if (draggedIndex !== null) {
+                                    const fromItem = state.inventory.find(i => i.instanceId === fromInstanceId);
+                                    const toItem = item;
+
+                                    if (!toItem || toItem.type !== 'equipment') {
+                                        if (draggedIndex !== null) {
+                                            dispatch({
+                                                type: 'MOVE_INVENTORY_ITEM',
+                                                payload: { fromIndex: draggedIndex, toIndex: index }
+                                            });
+                                        }
+                                        clearDrag();
+                                        return;
+                                    }
+
+                                    if (fromItem && fromItem.type === 'equipment' && (fromItem.id === toItem.id || isThunderfuryRecipe(fromItem.id, toItem.id))) {
+                                        dispatch({
+                                            type: 'MERGE_EQUIPMENT',
+                                            payload: { instanceIdA: fromInstanceId, instanceIdB: toInstanceId }
+                                        });
+                                    } else if (draggedIndex !== null) {
                                         dispatch({
                                             type: 'MOVE_INVENTORY_ITEM',
                                             payload: { fromIndex: draggedIndex, toIndex: index }
                                         });
                                     }
-                                    setDraggedItemId(null);
-                                    setDraggedIndex(null);
-                                    return;
-                                }
 
-                                const isThunderfuryRecipe = (aId, bId) =>
-                                    (aId === 'EQ_176' && bId === 'EQ_181') || (aId === 'EQ_181' && bId === 'EQ_176');
-
-                                if (fromItem && fromItem.type === 'equipment' && (fromItem.id === toItem.id || isThunderfuryRecipe(fromItem.id, toItem.id))) {
-                                    dispatch({
-                                        type: 'MERGE_EQUIPMENT',
-                                        payload: { instanceIdA: fromInstanceId, instanceIdB: toInstanceId }
-                                    });
-                                } else if (draggedIndex !== null) {
-                                    dispatch({
-                                        type: 'MOVE_INVENTORY_ITEM',
-                                        payload: { fromIndex: draggedIndex, toIndex: index }
-                                    });
-                                }
-
-                                setDraggedItemId(null);
-                                setDraggedIndex(null);
-                            }}
-                            onDragEnd={() => {
-                                setDraggedItemId(null);
-                                setDraggedIndex(null);
-                            }}
-                            onClick={(e) => {
-                                // ✅ 消耗品使用
-                                if (item.type === 'consumable' && item.canUse) {
-                                    dispatch({ type: 'USE_ITEM', payload: { itemInstanceId: item.instanceId || item.id } });
-                                    return;
-                                }
-
-                                // ✅ 非装备不处理
-                                if (item.type !== 'equipment') return;
-
-                                // ✅ Shift+点击：链式合成
-                                if (e.shiftKey && item.instanceId) {
+                                    clearDrag();
+                                }}
+                                onDragEnd={() => {
+                                    if (isMobile) return;
+                                    clearDrag();
+                                }}
+                                onPointerDown={(e) => onSlotPointerDown(e, item, index)}
+                                onPointerMove={onSlotPointerMove}
+                                onPointerUp={onSlotPointerUp}
+                                onPointerCancel={onSlotPointerCancel}
+                                onClick={(e) => handleSlotClick(e, item, index)}
+                                onContextMenu={(e) => {
                                     e.preventDefault();
-                                    dispatch({ type: 'MERGE_EQUIPMENT_CHAIN', payload: { targetInstanceId: item.instanceId } });
-                                    return;
-                                }
-
-                                // ✅ 普通点击：打开详情模态框
-                                setSelectedItem(item);
-                            }}
-                            onContextMenu={(e) => {
-                                e.preventDefault();
-
-                                if (item.sellPrice) {
-                                    if (window.confirm(`出售 ${item.name}，获得 🪙${item.sellPrice} 金币？`)) {
-                                        dispatch({ type: 'SELL_ITEM', payload: { itemInstanceId: item.instanceId || item.id } });
+                                    if (isMobile) {
+                                        openActionSheet(item, index);
+                                        return;
                                     }
-                                } else {
-                                    if (window.confirm(`确定要丢弃 ${item.name} 吗？`)) {
-                                        dispatch({ type: 'USE_ITEM', payload: { itemInstanceId: item.instanceId || item.id } });
+
+                                    // 桌面端：保留右键出售/丢弃
+                                    sellOrDrop(item);
+                                }}
+                                style={{
+                                    position: 'relative',
+                                    padding: 12,
+                                    background: item.type === 'equipment'
+                                        ? `linear-gradient(135deg, ${(item.qualityColor || getRarityColor(item.rarity))}22, rgba(0,0,0,0.3))`
+                                        : 'rgba(0,0,0,0.3)',
+                                    border: `2px solid ${item.type === 'equipment' ? (item.qualityColor || getRarityColor(item.rarity)) : '#4a3c2a'}`,
+                                    outline: (draggedItemId && item.type === 'equipment' && draggedItemId === item.instanceId)
+                                        ? '2px solid #ffd700'
+                                        : (isMoveSource || isMergeSource ? '2px solid #ffd700' : 'none'),
+                                    borderRadius: 8,
+                                    textAlign: 'center',
+                                    cursor: isMobile ? 'pointer' : (item.type === 'equipment' ? 'grab' : 'default'),
+                                    transition: 'all 0.2s',
+                                    userSelect: 'none'
+                                }}
+                                onMouseEnter={(e) => {
+                                    if (isMobile) return;
+                                    if (item.type === 'equipment') {
+                                        e.currentTarget.style.transform = 'translateY(-4px)';
+                                        e.currentTarget.style.boxShadow = `0 4px 12px ${(item.qualityColor || getRarityColor(item.rarity))}66`;
                                     }
-                                }
-                            }}
-                            style={{
-                                position: 'relative',
-                                padding: 12,
-                                background: item.type === 'equipment'
-                                    ? `linear-gradient(135deg, ${(item.qualityColor || getRarityColor(item.rarity))}22, rgba(0,0,0,0.3))`
-                                    : 'rgba(0,0,0,0.3)',
-                                border: `2px solid ${item.type === 'equipment' ? (item.qualityColor || getRarityColor(item.rarity)) : '#4a3c2a'}`,
-                                outline: (draggedItemId && item.type === 'equipment' && draggedItemId === item.instanceId)
-                                    ? '2px solid #ffd700'
-                                    : 'none',
-                                borderRadius: 6,
-                                textAlign: 'center',
-                                cursor: item.type === 'equipment' ? 'grab' : 'default',
-                                transition: 'all 0.2s'
-                            }}
-                            onMouseEnter={(e) => {
-                                if (item.type === 'equipment') {
-                                    e.currentTarget.style.transform = 'translateY(-4px)';
-                                    e.currentTarget.style.boxShadow = `0 4px 12px ${item.qualityColor}66`;
-                                }
-                            }}
-                            onMouseLeave={(e) => {
-                                if (item.type === 'equipment') {
-                                    e.currentTarget.style.transform = 'translateY(0)';
-                                    e.currentTarget.style.boxShadow = 'none';
-                                }
-                            }}
-                        >
-                            <div style={{ fontSize: 28, marginBottom: 8 }}>
-                                <ItemIcon item={item} size={32} />
-                            </div>
-                            <div style={{
-                                fontSize: 11,
-                                color: item.type === 'equipment' ? item.qualityColor : '#ffd700',
-                                fontWeight: item.type === 'equipment' ? 600 : 'normal'
-                            }}>
-                                {item.name}
-                            </div>
-                            {item.type === 'equipment' && (
-                                <div style={{ fontSize: 9, color: '#888', marginTop: 4 }}>
-                                    Lv.{item.currentLevel ?? item.level ?? 0}
+                                }}
+                                onMouseLeave={(e) => {
+                                    if (isMobile) return;
+                                    if (item.type === 'equipment') {
+                                        e.currentTarget.style.transform = 'translateY(0)';
+                                        e.currentTarget.style.boxShadow = 'none';
+                                    }
+                                }}
+                            >
+                                {/* 移动端：显式菜单按钮（避免只靠长按） */}
+                                {isMobile && (
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            openActionSheet(item, index);
+                                        }}
+                                        style={{
+                                            position: 'absolute',
+                                            top: 6,
+                                            left: 6,
+                                            width: 28,
+                                            height: 28,
+                                            borderRadius: 8,
+                                            background: 'rgba(0,0,0,0.35)',
+                                            border: '1px solid rgba(255,255,255,0.12)',
+                                            color: '#ddd',
+                                            fontSize: 16,
+                                            cursor: 'pointer',
+                                            lineHeight: '26px'
+                                        }}
+                                        title="操作"
+                                    >
+                                        ⋯
+                                    </button>
+                                )}
+
+                                <div style={{ fontSize: 28, marginBottom: 8 }}>
+                                    <ItemIcon item={item} size={32} />
                                 </div>
-                            )}
-                            {(() => {
+                                <div style={{
+                                    fontSize: 11,
+                                    color: item.type === 'equipment' ? (item.qualityColor || getRarityColor(item.rarity)) : '#ffd700',
+                                    fontWeight: item.type === 'equipment' ? 700 : 'normal'
+                                }}>
+                                    {item.name}
+                                </div>
+                                {item.type === 'equipment' && (
+                                    <div style={{ fontSize: 9, color: '#888', marginTop: 4 }}>
+                                        Lv.{item.currentLevel ?? item.level ?? 0}
+                                    </div>
+                                )}
+
+                                {(() => {
                                     const effects = getEquipmentSpecialEffectList(item);
                                     if (!effects || effects.length === 0) return null;
 
@@ -23965,21 +24588,21 @@ const InventoryPage = ({ state, dispatch }) => {
                                                 ? `地图伤害+${(se.bonusDamageVsMap * 100).toFixed(0)}%`
                                                 : se.type === 'skill_slot_buff'
                                                     ? (() => {
-                                                              const slots = Array.isArray(se.slots)
-                                                                ? se.slots
-                                                                : (Number.isFinite(Number(se.slot)) ? [Number(se.slot)] : []);
-                                                              const slotText = slots.length ? slots.map(s => s + 1).join('、') : '？';
+                                                        const slots = Array.isArray(se.slots)
+                                                            ? se.slots
+                                                            : (Number.isFinite(Number(se.slot)) ? [Number(se.slot)] : []);
+                                                        const slotText = slots.length ? slots.map(s => s + 1).join('、') : '？';
 
-                                                              const atk = Number(se.attackBonus) || 0;
-                                                              const sp  = Number(se.spellPowerBonus) || 0;
+                                                        const atk = Number(se.attackBonus) || 0;
+                                                        const sp  = Number(se.spellPowerBonus) || 0;
 
-                                                              const bonusText = [
-                                                                atk ? `攻+${Math.floor(atk)}` : null,
-                                                                sp  ? `法强+${Math.floor(sp)}` : null,
-                                                              ].filter(Boolean).join(' ');
+                                                        const bonusText = [
+                                                            atk ? `攻+${Math.floor(atk)}` : null,
+                                                            sp  ? `法强+${Math.floor(sp)}` : null,
+                                                        ].filter(Boolean).join(' ');
 
-                                                              return `技能栏${slotText}${bonusText ? `（${bonusText}）` : ''}`;
-                                                            })()
+                                                        return `技能栏${slotText}${bonusText ? `（${bonusText}）` : ''}`;
+                                                    })()
                                                     : se.type === 'basic_attack_repeat'
                                                         ? `连击${(se.chance * 100).toFixed(0)}%`
                                                         : se.type === 'proc_stat'
@@ -23995,60 +24618,91 @@ const InventoryPage = ({ state, dispatch }) => {
                                         </div>
                                     );
                                 })()}
-                            {index < autoMergeSlots && item?.type === 'equipment' && (
-                                <div style={{
-                                    position: 'absolute',
-                                    top: 4,
-                                    right: 4,
-                                    background: 'rgba(76,175,80,0.85)',
-                                    color: '#fff',
-                                    fontSize: 10,
-                                    padding: '3px 7px',
-                                    borderRadius: 4,
-                                    pointerEvents: 'none',
-                                    zIndex: 10,
-                                    border: '1px solid rgba(255,255,255,0.3)',
-                                    boxShadow: '0 0 8px rgba(76,175,80,0.6)',
-                                    fontWeight: 600
-                                }}>
-                                    🦾
-                                </div>
-                            )}
-                        </div>
-                    ))}
 
-                    {/* 空栏位 - 支持拖放 */}
+                                {index < autoMergeSlots && item?.type === 'equipment' && (
+                                    <div style={{
+                                        position: 'absolute',
+                                        top: 6,
+                                        right: 6,
+                                        background: 'rgba(76,175,80,0.85)',
+                                        color: '#fff',
+                                        fontSize: 10,
+                                        padding: '3px 7px',
+                                        borderRadius: 6,
+                                        pointerEvents: 'none',
+                                        zIndex: 10,
+                                        border: '1px solid rgba(255,255,255,0.3)',
+                                        boxShadow: '0 0 8px rgba(76,175,80,0.6)',
+                                        fontWeight: 700
+                                    }}>
+                                        🦾
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })}
+
+                    {/* 空栏位 - 桌面支持拖放；移动端支持点选移动 */}
                     {Array.from({ length: Math.max(0, state.inventorySize - state.inventory.length) }).map((_, i) => {
                         const targetIndex = state.inventory.length + i;
+
                         return (
                             <div
                                 key={`empty_${i}`}
                                 onDragOver={(e) => {
+                                    if (isMobile) return;
                                     e.preventDefault();
                                     e.dataTransfer.dropEffect = 'move';
                                 }}
-                                onDrop={(e) => handleDropToEmpty(e, targetIndex)}
+                                onDrop={(e) => {
+                                    if (isMobile) return;
+                                    handleDropToEmpty(e, targetIndex);
+                                }}
+                                onClick={() => {
+                                    if (!isMobile) return;
+
+                                    if (moveMode) {
+                                        doMove(targetIndex);
+                                        return;
+                                    }
+
+                                    if (mergeMode) {
+                                        setMergeMode(null);
+                                    }
+                                }}
                                 style={{
                                     padding: 12,
-                                    background: draggedItemId ? 'rgba(201,162,39,0.1)' : 'rgba(0,0,0,0.2)',
-                                    border: draggedItemId ? '2px dashed #c9a227' : '1px dashed #333',
-                                    borderRadius: 6,
+                                    background: (draggedItemId || moveMode) ? 'rgba(201,162,39,0.1)' : 'rgba(0,0,0,0.2)',
+                                    border: (draggedItemId || moveMode) ? '2px dashed #c9a227' : '1px dashed #333',
+                                    borderRadius: 8,
                                     textAlign: 'center',
-                                    opacity: draggedItemId ? 0.8 : 0.3,
+                                    opacity: (draggedItemId || moveMode) ? 0.85 : 0.3,
                                     transition: 'all 0.2s',
-                                    minHeight: 80,
+                                    minHeight: 84,
                                     display: 'flex',
                                     alignItems: 'center',
-                                    justifyContent: 'center'
+                                    justifyContent: 'center',
+                                    cursor: isMobile && moveMode ? 'pointer' : 'default'
                                 }}
                             >
-                                <div style={{ fontSize: 28, color: draggedItemId ? '#c9a227' : '#333' }}>
-                                    {draggedItemId ? '📥' : '∅'}
+                                <div style={{ fontSize: 28, color: (draggedItemId || moveMode) ? '#c9a227' : '#333' }}>
+                                    {(draggedItemId || moveMode) ? '📥' : '∅'}
                                 </div>
                             </div>
                         );
                     })}
                 </div>
+
+                {/* 移动端说明 */}
+                {isMobile && (
+                    <div style={{ marginTop: 12, fontSize: 12, color: '#888', lineHeight: 1.5 }}>
+                        💡 触屏操作：
+                        <br />
+                        1）点装备：看详情；点左上角「⋯」或长按：打开操作菜单（移动/合成/出售等）
+                        <br />
+                        2）移动/合成：进入模式后，再点目标格位或目标装备完成操作
+                    </div>
+                )}
             </Panel>
         </div>
     );
@@ -24056,8 +24710,20 @@ const InventoryPage = ({ state, dispatch }) => {
 
 // ==================== PAGE: CITY (重新设计) ====================
 const CityPage = ({ state, dispatch }) => {
+    const isMobile = useIsMobile();
     const [draggedChar, setDraggedChar] = useState(null);
+    const [selectedCharId, setSelectedCharId] = useState(null);
     const [activeTab, setActiveTab] = useState('resources'); // 'resources' | 'functional'
+
+    // 桌面端切回时清空点选状态
+    useEffect(() => {
+        if (!isMobile) setSelectedCharId(null);
+    }, [isMobile]);
+
+    const selectedChar = selectedCharId
+        ? state.characters.find(c => c.id === selectedCharId)
+        : null;
+
 
     // 获取未被派遣的角色（不在地图也不在资源建筑）
     const getAvailableChars = () => {
@@ -24097,10 +24763,8 @@ const CityPage = ({ state, dispatch }) => {
     const handleDrop = (e, buildingId) => {
         e.preventDefault();
 
-        // ✅ 直接从 dataTransfer 获取数据
-        const charId = e.dataTransfer.getData('text/plain');
-
-        console.log('handleDrop 触发:', { charId, buildingId }); // 调试日志
+        // ✅ 优先使用 draggedChar，其次从 dataTransfer 获取（提升兼容性）
+        const charId = draggedChar || e.dataTransfer.getData('text/plain');
 
         if (charId) {
             dispatch({
@@ -24166,19 +24830,28 @@ const CityPage = ({ state, dispatch }) => {
                     <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
                         {availableChars.map(char => {
                             const gatherStats = calculateGatherStats(char);
+                            const selected = selectedCharId === char.id;
                             return (
                                 <div
                                     key={char.id}
-                                    draggable
-                                    onDragStart={(e) => handleDragStart(e, char.id)}
+                                    draggable={!isMobile}
+                                    onDragStart={!isMobile ? (e) => handleDragStart(e, char.id) : undefined}
+                                    onClick={() => {
+                                        if (!isMobile) return;
+                                        setSelectedCharId(prev => prev === char.id ? null : char.id);
+                                    }}
                                     style={{
                                         padding: 12,
-                                        background: 'linear-gradient(135deg, rgba(201,162,39,0.2), rgba(139,115,25,0.1))',
-                                        border: '2px solid #c9a227',
+                                        background: selected
+                                            ? 'linear-gradient(135deg, rgba(255,215,0,0.22), rgba(139,115,25,0.12))'
+                                            : 'linear-gradient(135deg, rgba(201,162,39,0.2), rgba(139,115,25,0.1))',
+                                        border: selected ? '2px solid #ffd700' : '2px solid #c9a227',
                                         borderRadius: 8,
-                                        cursor: 'grab',
+                                        cursor: isMobile ? 'pointer' : 'grab',
                                         transition: 'all 0.2s',
-                                        minWidth: 140
+                                        minWidth: 140,
+                                        userSelect: 'none',
+                                        opacity: selectedCharId && !selected ? 0.85 : 1
                                     }}
                                 >
                                     <div style={{ fontSize: 14, color: '#ffd700', fontWeight: 600, marginBottom: 4 }}>
@@ -24192,13 +24865,25 @@ const CityPage = ({ state, dispatch }) => {
                                         <span title="精细">🎯{gatherStats.precision}</span>
                                         <span title="感知">👁️{gatherStats.perception}</span>
                                     </div>
+
+{isMobile && selected && (
+    <div style={{ marginTop: 6, fontSize: 11, color: '#ffd700', fontWeight: 700 }}>
+        ✅ 已选中
+    </div>
+)}
+
                                 </div>
                             );
                         })}
                     </div>
                     <div style={{ marginTop: 12, fontSize: 12, color: '#888', fontStyle: 'italic' }}>
-                        💡 拖拽角色到下方建筑进行派遣采集
+                        {isMobile ? '💡 点选角色 → 点选建筑【派遣】按钮' : '💡 拖拽角色到下方建筑进行派遣采集'}
                     </div>
+                    {isMobile && selectedChar && (
+                        <div style={{ marginTop: 8, fontSize: 12, color: '#aaa' }}>
+                            当前选择：<span style={{ color: '#ffd700', fontWeight: 800 }}>{selectedChar.name}</span>（再次点选可取消）
+                        </div>
+                    )}
                 </Panel>
             )}
 
@@ -24264,12 +24949,13 @@ const CityPage = ({ state, dispatch }) => {
                         const currentProduction = workers.length > 0
                             ? calculateBuildingProduction(building.id, workers.map(w => w.id), state)
                             : 0;
+                        const isFull = workers.length >= building.maxWorkers;
 
                         return (
                             <div
                                 key={building.id}
-                                onDragOver={handleDragOver}
-                                onDrop={(e) => handleDrop(e, building.id)}
+                                onDragOver={!isMobile ? handleDragOver : undefined}
+                                onDrop={!isMobile ? (e) => handleDrop(e, building.id) : undefined}
                                 style={{
                                     background: 'linear-gradient(135deg, rgba(40,35,30,0.9), rgba(25,20,15,0.95))',
                                     border: workers.length > 0 ? '2px solid #c9a227' : '2px solid #4a3c2a',
@@ -24409,9 +25095,36 @@ const CityPage = ({ state, dispatch }) => {
                                             fontSize: 12,
                                             fontStyle: 'italic'
                                         }}>
-                                            拖拽角色到此处开始采集
+                                            {isMobile ? (selectedCharId ? '点下面按钮派遣选中角色' : '先在上方点选一个角色') : '拖拽角色到此处开始采集'}
                                         </div>
                                     )}
+{isMobile && selectedCharId && (
+    <div style={{ marginTop: 12 }}>
+        <Button
+            onClick={() => {
+                if (isFull) return;
+                dispatch({
+                    type: 'ASSIGN_RESOURCE_BUILDING',
+                    payload: { characterId: selectedCharId, buildingId: building.id }
+                });
+                setSelectedCharId(null);
+            }}
+            disabled={isFull}
+            style={{ width: '100%', padding: '10px 12px', fontSize: 13 }}
+        >
+            {isFull ? '⛔ 已满员' : `✅ 派遣 ${selectedChar?.name || '选中角色'}`}
+        </Button>
+
+        <Button
+            onClick={() => setSelectedCharId(null)}
+            variant="secondary"
+            style={{ width: '100%', marginTop: 8, padding: '10px 12px', fontSize: 13 }}
+        >
+            取消选择
+        </Button>
+    </div>
+)}
+
                                 </div>
                             </div>
                         );
@@ -28210,9 +28923,9 @@ const QuestPage = ({ state, dispatch }) => {
 // ==================== Boss准备模态（重新设计版） ====================
 const BossPrepareModal = ({ state, dispatch }) => {
     const bossId = state.prepareBoss;
-    console.log('bossId:', bossId);
-    console.log('BOSS_DATA:', BOSS_DATA);
-    console.log('boss:', BOSS_DATA[bossId]);
+    DEBUG_LOG && console.log('bossId:', bossId);
+    DEBUG_LOG && console.log('BOSS_DATA:', BOSS_DATA);
+    DEBUG_LOG && console.log('boss:', BOSS_DATA[bossId]);
     if (!bossId) return null;
     const boss = BOSS_DATA[bossId];
 
@@ -32111,7 +32824,19 @@ const QuestObjectiveIndicator = ({ zone, requirement, progress }) => {
 
 // ==================== MAIN APP ====================
 export default function WoWIdleGame() {
-    const [state, dispatch] = useReducer(gameReducer, initialState);
+const [state, dispatch] = useReducer(gameReducer, initialState);
+
+// ==================== H5 / MOBILE UI ====================
+const isMobile = useIsMobile();
+const bottomNavHeight = 64; // px（底部导航高度）
+const mobilePagePadding = `12px 12px calc(${bottomNavHeight}px + ${safeAreaBottom()}) 12px`;
+
+// Header：移动端默认折叠，桌面端默认展开
+const [headerExpanded, setHeaderExpanded] = useState(false);
+useEffect(() => {
+    setHeaderExpanded(!isMobile);
+}, [isMobile]);
+
     const [consoleOpen, setConsoleOpen] = useState(false);
     const [command, setCommand] = useState('');
     const [consoleLogs, setConsoleLogs] = useState([]);
@@ -32568,19 +33293,27 @@ export default function WoWIdleGame() {
             background: 'linear-gradient(135deg, #1a1510 0%, #0d0a07 50%, #151210 100%)',
             fontFamily: '"Noto Serif SC", "Cinzel", Georgia, serif',
             color: '#e8dcc4',
-            padding: 16,
+            padding: isMobile ? mobilePagePadding : 16,
         }}>
             <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Noto+Serif+SC:wght@400;600&display=swap');
-        
+
         * { box-sizing: border-box; }
-        
+
         ::-webkit-scrollbar { width: 8px; height: 8px; }
         ::-webkit-scrollbar-track { background: rgba(0,0,0,0.3); border-radius: 4px; }
         ::-webkit-scrollbar-thumb { background: #4a3c2a; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #5a4c3a; }
-        
+
         select, input { font-family: inherit; }
+
+        button { touch-action: manipulation; }
+        * { -webkit-tap-highlight-color: transparent; }
+
+        @media (max-width: 768px) {
+            /* 让移动端滚动更顺滑 */
+            .wow-h5-scroll-x { -webkit-overflow-scrolling: touch; }
+        }
       `}</style>
 
             {state.offlineRewards && (
@@ -32626,45 +33359,120 @@ export default function WoWIdleGame() {
             <div style={{
                 display: 'flex',
                 justifyContent: 'space-between',
-                alignItems: 'center',
+                alignItems: 'flex-start',
+                flexWrap: 'wrap',
+                gap: 12,
                 marginBottom: 16,
-                padding: '12px 20px',
+                padding: isMobile ? '10px 12px' : '12px 20px',
                 background: 'linear-gradient(180deg, rgba(40,30,20,0.9), rgba(25,18,12,0.95))',
                 border: '2px solid #4a3c2a',
                 borderRadius: 8,
                 boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
             }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-                    <h1 style={{
-                        margin: 0,
-                        fontSize: 24,
-                        color: '#c9a227',
-                        textShadow: '2px 2px 4px rgba(0,0,0,0.8)',
-                        fontWeight: 700,
+                <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: 10,
+                        flexWrap: 'wrap'
                     }}>
-                        ⚔️ 艾泽拉斯万世轮回
-                    </h1>
-                    <span style={{
-                        padding: '4px 12px',
-                        background: 'rgba(201,162,39,0.2)',
-                        borderRadius: 4,
-                        fontSize: 12,
-                        color: '#c9a227',
+                        <h1 style={{
+                            margin: 0,
+                            fontSize: isMobile ? 18 : 24,
+                            color: '#c9a227',
+                            textShadow: '2px 2px 4px rgba(0,0,0,0.8)',
+                            fontWeight: 700,
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                        }}>
+                            ⚔️ 艾泽拉斯万世轮回
+                        </h1>
+
+                        {/* 移动端：将常用操作缩成“图标按钮”，减少横向占用 */}
+                        {isMobile && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                <Button
+                                    onClick={() => setIsPaused(!isPaused)}
+                                    variant="secondary"
+                                    style={{ padding: '6px 10px', fontSize: 12 }}
+                                >
+                                    {isPaused ? '▶️' : '⏸️'}
+                                </Button>
+
+                                <Button
+                                    onClick={exportSave}
+                                    variant="secondary"
+                                    disabled={showExport}
+                                    style={{ padding: '6px 10px', fontSize: 12 }}
+                                >
+                                    {showExport ? '✓' : '💾'}
+                                </Button>
+
+                                <button
+                                    onClick={() => setHeaderExpanded(prev => !prev)}
+                                    style={{
+                                        padding: '6px 10px',
+                                        borderRadius: 6,
+                                        background: 'rgba(0,0,0,0.25)',
+                                        border: '1px solid #4a3c2a',
+                                        color: '#c9a227',
+                                        fontFamily: 'inherit',
+                                        fontSize: 12,
+                                        fontWeight: 700,
+                                        cursor: 'pointer',
+                                    }}
+                                >
+                                    {headerExpanded ? '收起 ▲' : '展开 ▼'}
+                                </button>
+                            </div>
+                        )}
+                    </div>
+
+                    <div style={{
+                        marginTop: 8,
+                        display: 'flex',
+                        flexWrap: 'wrap',
+                        gap: 10,
+                        alignItems: 'center'
                     }}>
-            本世帧: {Math.floor(state.lifeFrame || 0)} ｜ 总帧: {Math.floor(state.frame)}
-          </span>
+                        <span style={{
+                            padding: '4px 10px',
+                            background: 'rgba(201,162,39,0.2)',
+                            borderRadius: 4,
+                            fontSize: 11,
+                            color: '#c9a227',
+                        }}>
+                            本世帧: {Math.floor(state.lifeFrame || 0)} ｜ 总帧: {Math.floor(state.frame)}
+                        </span>
+
+                        <span style={{ fontSize: 12, color: '#aaa' }}>
+                            🪙 {Math.floor(state.resources.gold)}
+                        </span>
+
+                        <span style={{ fontSize: 12, color: '#aaa' }}>
+                            🌀 {Math.floor(state.resources.spacetimeCoin || 0)}
+                        </span>
+                    </div>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <span style={{ fontSize: 12, color: '#888' }}>🪙 {Math.floor(state.resources.gold)}</span>
-                        <span style={{ fontSize: 12, color: '#888' }}>🌀 {Math.floor(state.resources.spacetimeCoin || 0)}</span>
+                {/* 桌面端常驻；移动端展开后显示 */}
+                {(!isMobile || headerExpanded) && (
+                    <div style={{
+                        display: 'flex',
+                        flexWrap: 'wrap',
+                        alignItems: 'center',
+                        justifyContent: isMobile ? 'flex-start' : 'flex-end',
+                        gap: 10,
+                        width: isMobile ? '100%' : 'auto',
+                    }}>
                         <Button
                             onClick={() => setShowSpacetimeShop(true)}
                             variant="secondary"
                             style={{
-                                padding: '4px 10px',
-                                fontSize: 11,
+                                padding: '6px 10px',
+                                fontSize: 12,
                                 borderRadius: 999,
                                 background: 'linear-gradient(180deg, rgba(123,220,255,0.22), rgba(60,120,180,0.12))',
                                 border: '1px solid rgba(123,220,255,0.55)',
@@ -32675,86 +33483,178 @@ export default function WoWIdleGame() {
                         >
                             🌀 时空商城
                         </Button>
-                    </div>
 
-                    <Button onClick={() => setShowRebirthBonus(true)} variant="secondary" style={{ padding: '6px 10px', fontSize: 11 }}>
-                        ⚡ 轮回加成
-                    </Button>
-
-                    {state.rebirthUnlocked && (
-                        <Button onClick={() => dispatch({ type: 'OPEN_REBIRTH_CONFIRM' })} variant="danger">
-                            重生轮回
+                        <Button
+                            onClick={() => setShowRebirthBonus(true)}
+                            variant="secondary"
+                            style={{ padding: '6px 10px', fontSize: 12 }}
+                        >
+                            ⚡ 轮回加成
                         </Button>
-                    )}
 
-                    <Button onClick={() => setIsPaused(!isPaused)} variant="secondary">
-                        {isPaused ? '▶️ 继续' : '⏸️ 暂停'}
-                    </Button>
+                        {state.rebirthUnlocked && (
+                            <Button
+                                onClick={() => dispatch({ type: 'OPEN_REBIRTH_CONFIRM' })}
+                                variant="danger"
+                                style={{ padding: '6px 10px', fontSize: 12 }}
+                            >
+                                重生轮回
+                            </Button>
+                        )}
 
-                    <Button onClick={exportSave} variant="secondary" disabled={showExport}>
-                        {showExport ? '✓ 已保存' : '💾 保存'}
-                    </Button>
+                        {/* 桌面端保留全尺寸暂停/保存按钮 */}
+                        {!isMobile && (
+                            <>
+                                <Button
+                                    onClick={() => setIsPaused(!isPaused)}
+                                    variant="secondary"
+                                    style={{ padding: '6px 10px', fontSize: 12 }}
+                                >
+                                    {isPaused ? '▶️ 继续' : '⏸️ 暂停'}
+                                </Button>
 
-                    <div style={{ display: 'flex', gap: 4 }}>
-                        <input
-                            type="text"
-                            placeholder="粘贴存档..."
-                            value={importData}
-                            onChange={(e) => setImportData(e.target.value)}
-                            style={{
-                                padding: '6px 10px',
-                                width: 120,
-                                background: 'rgba(0,0,0,0.4)',
-                                border: '1px solid #4a3c2a',
-                                borderRadius: 4,
-                                color: '#fff',
-                                fontSize: 12,
-                            }}
-                        />
-                        <Button onClick={importSave} variant="secondary">导入</Button>
+                                <Button
+                                    onClick={exportSave}
+                                    variant="secondary"
+                                    disabled={showExport}
+                                    style={{ padding: '6px 10px', fontSize: 12 }}
+                                >
+                                    {showExport ? '✓ 已保存' : '💾 保存'}
+                                </Button>
+                            </>
+                        )}
+
+                        <div style={{
+                            display: 'flex',
+                            gap: 6,
+                            width: isMobile ? '100%' : 'auto',
+                        }}>
+                            <input
+                                type="text"
+                                placeholder="粘贴存档..."
+                                value={importData}
+                                onChange={(e) => setImportData(e.target.value)}
+                                style={{
+                                    flex: 1,
+                                    minWidth: 0,
+                                    padding: '8px 10px',
+                                    background: 'rgba(0,0,0,0.4)',
+                                    border: '1px solid #4a3c2a',
+                                    borderRadius: 6,
+                                    color: '#fff',
+                                    fontSize: 12,
+                                }}
+                            />
+                            <Button
+                                onClick={importSave}
+                                variant="secondary"
+                                style={{ padding: '8px 12px', fontSize: 12, whiteSpace: 'nowrap' }}
+                            >
+                                导入
+                            </Button>
+                        </div>
                     </div>
-                </div>
+                )}
             </div>
+{/* Navigation */}
+            {!isMobile && (
+                <div style={{
+                    display: 'flex',
+                    gap: 4,
+                    marginBottom: 16,
+                    padding: 4,
+                    background: 'rgba(0,0,0,0.3)',
+                    borderRadius: 8,
+                    border: '1px solid #3a3a3a',
+                    flexWrap: 'wrap',
+                }}>
+                    {menus.map(menu => (
+                        <button
+                            key={menu.id}
+                            onClick={() => dispatch({ type: 'SET_MENU', payload: menu.id })}
+                            style={{
+                                flex: '1 0 90px',
+                                padding: '12px 16px',
+                                background: state.currentMenu === menu.id
+                                    ? 'linear-gradient(180deg, rgba(201,162,39,0.3), rgba(139,115,25,0.2))'
+                                    : 'transparent',
+                                border: state.currentMenu === menu.id
+                                    ? '1px solid #c9a227'
+                                    : '1px solid transparent',
+                                borderRadius: 6,
+                                color: state.currentMenu === menu.id ? '#ffd700' : '#888',
+                                cursor: 'pointer',
+                                fontFamily: 'inherit',
+                                fontSize: 13,
+                                transition: 'all 0.2s',
+                                textShadow: state.currentMenu === menu.id ? '0 0 10px rgba(255,215,0,0.5)' : 'none',
+                            }}
+                        >
+                            {menu.icon} {menu.name}
+                        </button>
+                    ))}
+                </div>
+            )}
 
-            {/* Navigation */}
-            <div style={{
-                display: 'flex',
-                gap: 4,
-                marginBottom: 16,
-                padding: 4,
-                background: 'rgba(0,0,0,0.3)',
-                borderRadius: 8,
-                border: '1px solid #3a3a3a',
-            }}>
-                {menus.map(menu => (
-                    <button
-                        key={menu.id}
-                        onClick={() => dispatch({ type: 'SET_MENU', payload: menu.id })}
+            {/* 移动端：固定底部导航（可横向滚动） */}
+            {isMobile && (
+                <div style={{
+                    position: 'fixed',
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    zIndex: 1500,
+                    background: 'rgba(0,0,0,0.88)',
+                    borderTop: '1px solid rgba(201,162,39,0.25)',
+                    padding: `8px 8px calc(8px + ${safeAreaBottom()}) 8px`,
+                    backdropFilter: 'blur(6px)',
+                }}>
+                    <div
+                        className="wow-h5-scroll-x"
                         style={{
-                            flex: 1,
-                            padding: '12px 16px',
-                            background: state.currentMenu === menu.id
-                                ? 'linear-gradient(180deg, rgba(201,162,39,0.3), rgba(139,115,25,0.2))'
-                                : 'transparent',
-                            border: state.currentMenu === menu.id
-                                ? '1px solid #c9a227'
-                                : '1px solid transparent',
-                            borderRadius: 6,
-                            color: state.currentMenu === menu.id ? '#ffd700' : '#888',
-                            cursor: 'pointer',
-                            fontFamily: 'inherit',
-                            fontSize: 13,
-                            transition: 'all 0.2s',
-                            textShadow: state.currentMenu === menu.id ? '0 0 10px rgba(255,215,0,0.5)' : 'none',
+                            display: 'flex',
+                            gap: 6,
+                            overflowX: 'auto',
+                            WebkitOverflowScrolling: 'touch',
+                            paddingBottom: 2,
                         }}
                     >
-                        {menu.icon} {menu.name}
-                    </button>
-                ))}
-            </div>
-
-            {/* Content */}
-            <div style={{ minHeight: 'calc(100vh - 160px)' }}>
+                        {menus.map(menu => {
+                            const active = state.currentMenu === menu.id;
+                            return (
+                                <button
+                                    key={menu.id}
+                                    onClick={() => dispatch({ type: 'SET_MENU', payload: menu.id })}
+                                    style={{
+                                        flex: '0 0 auto',
+                                        minWidth: 72,
+                                        padding: '10px 10px',
+                                        background: active
+                                            ? 'linear-gradient(180deg, rgba(201,162,39,0.35), rgba(139,115,25,0.22))'
+                                            : 'rgba(0,0,0,0.2)',
+                                        border: active
+                                            ? '1px solid rgba(201,162,39,0.9)'
+                                            : '1px solid rgba(255,255,255,0.08)',
+                                        borderRadius: 10,
+                                        color: active ? '#ffd700' : '#aaa',
+                                        cursor: 'pointer',
+                                        fontFamily: 'inherit',
+                                        textAlign: 'center',
+                                        lineHeight: 1.1,
+                                    }}
+                                >
+                                    <div style={{ fontSize: 18 }}>{menu.icon}</div>
+                                    <div style={{ fontSize: 11, marginTop: 4, fontWeight: 700 }}>
+                                        {menu.name}
+                                    </div>
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
+{/* Content */}
+            <div style={{ minHeight: isMobile ? 'auto' : 'calc(100vh - 160px)' }}>
                 {renderPage()}
             </div>
 

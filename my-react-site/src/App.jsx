@@ -29210,8 +29210,6 @@ const BossPrepareModal = ({ state, dispatch }) => {
                                     {bossId === 'ragnaros' && (
                                         <>
                                             {formatBossCycle(boss) || '未知'}
-                                            <br />
-                                            <span style={{ color: '#777' }}>（下潜期间不会继续推进循环）</span>
                                         </>
                                     )}
                                     {bossId !== 'hogger' && bossId !== 'vancleef' && bossId !== 'ragnaros' && (formatBossCycle(boss) || '未知')}

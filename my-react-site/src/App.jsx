@@ -3686,7 +3686,8 @@ const FIXED_EQUIPMENTS = {
         specialEffect: {
             type: 'skill_slot_buff',
             slots: [0, 4],
-            spellPowerBonus: 600
+            spellPowerBonus: 600,
+            bonus:{spellPower:600}
         }
     },
     EQ_032: {

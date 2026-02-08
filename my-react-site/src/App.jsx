@@ -9634,7 +9634,6 @@ const BOSS_DATA = {
     },
 
     // ✅ 新增：团队首领 - 火焰之王拉格纳罗斯（5人）
-    // 先打框架：目前仅有普通攻击循环；后续可在 cycle 中加入新技能，并在 stepBossCombat 中补充对应逻辑。
     ragnaros: {
         id: 'ragnaros',
         name: '火焰之王拉格纳罗斯',
@@ -9642,8 +9641,50 @@ const BOSS_DATA = {
         attack: 18000,
         defense: 18000,
 
-        // 占位循环（后续补充技能）
-        cycle: ['normal_attack'],
+        // 被动：萨弗拉斯，炎魔拉格纳罗斯之手 —— 每回合对坦克造成 2.5×BOSS攻击 的火焰伤害（计算魔抗）
+        sulfurasMultiplier: 2.5,
+
+        // 技能：拉格纳罗斯之怒（默认打坦克；集中站位：打全队）
+        wrathMultiplier: 3,
+
+        // 技能：元素怒火（随机目标；并施加余烬DOT）
+        elementalFuryMultiplier: 1.5,
+        emberDotMultiplier: 1.5,
+        emberDotDuration: 3,
+
+        // 技能：岩浆喷发（随机目标）
+        magmaEruptionMultiplier: 3,
+
+        // 技能：让火焰净化一切（多段热浪AOE）
+        purifyMultiplier: 3,
+        purifyWaves: 3,
+
+        // 技能：下潜（免疫伤害，召唤火焰之子）
+        submergeDuration: 3,
+        sonCount: 4,
+        sonHp: 6000000,
+        sonBurnTargets: 2,
+        sonBurnMultiplier: 1.2,
+
+        minion: {
+            name: '火焰之子',
+            maxHp: 6000000,
+            attack: 18000,
+            defense: 18000,
+        },
+
+        // 技能循环：
+        // 拉格纳罗斯之怒 → 元素怒火 → 岩浆喷发 → 让火焰净化一切 → 下潜 → 元素怒火 → 岩浆喷发 → 让火焰净化一切 → 循环
+        cycle: [
+            'ragnaros_wrath',
+            'elemental_fury',
+            'magma_eruption',
+            'purify_all',
+            'submerge',
+            'elemental_fury',
+            'magma_eruption',
+            'purify_all',
+        ],
 
         rewards: {
             gold: 3200000,
@@ -10765,6 +10806,10 @@ function stepBossCombat(state) {
     const executusPhysicalShieldStart = Number(combat.bossBuffs.executusPhysicalShield || 0);
     const executusMagicShieldStart = Number(combat.bossBuffs.executusMagicShield || 0);
 
+    // 火焰之王拉格纳罗斯：下潜免疫在本回合开始时的剩余回合数（用于回合末递减）
+    const ragnarosSubmergeStart = Number(combat.bossBuffs.ragnarosSubmergeTurns || 0);
+    const isRagnarosSubmergedThisRound = (combat.bossId === 'ragnaros' && ragnarosSubmergeStart > 0);
+
     combat.round += 1;
     // ✅ 添加辅助函数，创建带回合数的日志对象
     const currentRound = combat.round;
@@ -11349,7 +11394,7 @@ function stepBossCombat(state) {
             const minionName = boss.minion?.name || boss.cannoneer?.name || '小弟';
 
             // 伤害：Boss
-            if ((combat.bossHp ?? 0) > 0) {
+            if ((combat.bossHp ?? 0) > 0 && !isRagnarosSubmergedThisRound) {
                 const shieldInfo = getExecutusShieldInfo('nature');
                 if (shieldInfo.immune) {
                     addLog(`【${thunderfury.label}】闪电链被【${shieldInfo.shieldName}】免疫`, 'warning');
@@ -11485,7 +11530,7 @@ function stepBossCombat(state) {
         // 可被AOE命中的敌人数（用于狂徒盗贼20级天赋等）
         const enemyCount = (() => {
             let cnt = 0;
-            if ((combat.bossHp ?? 0) > 0) cnt += 1;
+            if ((combat.bossHp ?? 0) > 0 && !isRagnarosSubmergedThisRound) cnt += 1;
             if (Array.isArray(combat.minions) && combat.minions.length > 0) {
                 combat.minions.forEach(m => {
                     if (!m) return;
@@ -11515,7 +11560,7 @@ function stepBossCombat(state) {
             .map((m, idx) => ({ idx, hp: m.hp, immune: m.immune }))
             .filter(m => m.hp > 0 && !m.immune);
 
-        if (!combat.strategy.priorityBoss && attackableMinions.length > 0) {
+        if (((isRagnarosSubmergedThisRound && attackableMinions.length > 0) || (!combat.strategy.priorityBoss && attackableMinions.length > 0))) {
             attackableMinions.sort((a, b) => a.hp - b.hp);
             targetIndex = attackableMinions[0].idx;
             targetType = 'minion';
@@ -11571,7 +11616,7 @@ function stepBossCombat(state) {
             const shieldInfo = getExecutusShieldInfo('physical');
 
             // 主目标是小弟 -> 额外打Boss
-            if (targetType !== 'boss' && combat.bossHp > 0) {
+            if (targetType !== 'boss' && combat.bossHp > 0 && !isRagnarosSubmergedThisRound) {
                 if (shieldInfo.immune) {
                     addLog(`【剑刃乱舞】额外伤害被【${shieldInfo.shieldName}】免疫！`, 'warning');
                 } else {
@@ -11657,6 +11702,12 @@ function stepBossCombat(state) {
                 const targetDefense = targetType === 'boss' ? boss.defense : (boss.minion?.defense || boss.cannoneer?.defense || 0);
                 const actualDamage = Math.max(1, Math.floor(damage - targetDefense));
 
+                // 火焰之王拉格纳罗斯：下潜 - Boss免疫所有伤害
+                if (targetType === 'boss' && isRagnarosSubmergedThisRound) {
+                    addLog(`位置${i + 1} ${p.char.name} 的攻击被【下潜】免疫（目标：${boss.name}）`, 'warning');
+                    return 0;
+                }
+
                 // 管理者埃克索图斯：反物理护盾（免疫物理伤害）
                 {
                     const shieldInfo = getExecutusShieldInfo('physical');
@@ -11741,7 +11792,7 @@ function stepBossCombat(state) {
             const skillName = skill.name || '技能';
 
             // 对 Boss 造成伤害
-            if (combat.bossHp > 0) {
+            if (combat.bossHp > 0 && !isRagnarosSubmergedThisRound) {
                 const shieldInfo = getExecutusShieldInfo(result.school);
                 if (shieldInfo.immune) {
                     addLog(`位置${i + 1} ${p.char.name} 的${skillName}被【${shieldInfo.shieldName}】免疫（目标：${boss.name}）`, 'warning');
@@ -11819,7 +11870,7 @@ function stepBossCombat(state) {
 
                 addLog(`【山丘之王】触发：雷霆一击再次释放！`);
 
-                if (combat.bossHp > 0) {
+                if (combat.bossHp > 0 && !isRagnarosSubmergedThisRound) {
                     const shieldInfo = getExecutusShieldInfo(extraResult.school);
                     if (shieldInfo.immune) {
                         addLog(`雷霆一击(山丘之王)被【${shieldInfo.shieldName}】免疫（目标：${boss.name}）`, 'warning');
@@ -11903,7 +11954,9 @@ function stepBossCombat(state) {
                 ? boss.name
                 : (combat.minions[targetIndex]?.displayName || `${minionName}${targetIndex + 1}`);
 
-            if (shieldInfo.immune) {
+            if (targetType === 'boss' && isRagnarosSubmergedThisRound) {
+                addLog(`位置${i + 1} ${p.char.name} 的${skill.name}被【下潜】免疫（目标：${targetLabel}）`, 'warning');
+            } else if (shieldInfo.immune) {
                 addLog(`位置${i + 1} ${p.char.name} 的${skill.name}被【${shieldInfo.shieldName}】免疫（目标：${targetLabel}）`, 'warning');
             } else if (targetType === 'minion' && combat.minions[targetIndex]?.immune) {
                 addLog(`位置${i + 1} ${p.char.name} 的${skill.name}被【登上甲板】免疫！`);
@@ -12055,7 +12108,9 @@ function stepBossCombat(state) {
                             ? boss.name
                             : (combat.minions[targetIndex]?.displayName || `${minionName}${targetIndex + 1}`);
 
-                        if (shieldInfo.immune) {
+                        if (targetType === 'boss' && isRagnarosSubmergedThisRound) {
+                            addLog(`→ 额外伏击被【下潜】免疫（目标：${targetLabel}）`, 'warning');
+                        } else if (shieldInfo.immune) {
                             addLog(`→ 额外伏击被【${shieldInfo.shieldName}】免疫（目标：${targetLabel}）`, 'warning');
                         } else if (targetType === 'minion' && combat.minions[targetIndex]?.immune) {
                             addLog(`→ 额外伏击被【登上甲板】免疫！`);
@@ -12263,10 +12318,12 @@ function stepBossCombat(state) {
         // DOT处理
         if (result.dot) {
             if (result.dot.name === '冰风暴') {
-                if (targetType === 'boss') {
+                if (targetType === 'boss' && !isRagnarosSubmergedThisRound) {
                     combat.bossDots = combat.bossDots || [];
                     combat.bossDots.push({ ...result.dot, sourcePlayerId: p.char.id });
                     addLog(`位置${i + 1} ${p.char.name} 对 ${boss.name} 施放【冰风暴】，持续${result.dot.duration}回合`);
+                } else if (targetType === 'boss' && isRagnarosSubmergedThisRound) {
+                    addLog(`冰风暴被【下潜】免疫（目标：${boss.name}）`, 'warning');
                 } else if (targetIndex >= 0 && !combat.minions[targetIndex]?.immune) {
                     combat.minions[targetIndex].dots = combat.minions[targetIndex].dots || [];
                     combat.minions[targetIndex].dots.push({ ...result.dot, sourcePlayerId: p.char.id });
@@ -12277,8 +12334,12 @@ function stepBossCombat(state) {
             }else{
                 const dotObj = { ...result.dot, name: result.dot.name || skill.name, sourcePlayerId: p.char.id };
                 if (targetType === 'boss') {
-                    combat.bossDots = combat.bossDots || [];
-                    combat.bossDots.push(dotObj);
+                    if (isRagnarosSubmergedThisRound) {
+                        addLog(`→ ${boss.name}处于【下潜】状态，未能施加【${dotObj.name}】`, 'warning');
+                    } else {
+                        combat.bossDots = combat.bossDots || [];
+                        combat.bossDots.push(dotObj);
+                    }
                 } else if (targetType === 'minion' && !combat.minions[targetIndex]?.immune) {
                     combat.minions[targetIndex].dots = combat.minions[targetIndex].dots || [];
                     combat.minions[targetIndex].dots.push(dotObj);
@@ -12289,7 +12350,7 @@ function stepBossCombat(state) {
 
         // AOE DOT（寒冰宝珠）
         if (result.aoeDot) {
-            if (combat.bossHp > 0) {
+            if (combat.bossHp > 0 && !isRagnarosSubmergedThisRound) {
                 combat.bossDots = combat.bossDots || [];
                 combat.bossDots.push({ ...result.aoeDot, sourcePlayerId: p.char.id });
                 addLog(`位置${i + 1} ${p.char.name} 对 ${boss.name} 施放【${result.aoeDot.name}】，持续${result.aoeDot.duration}回合`);
@@ -12527,7 +12588,9 @@ function stepBossCombat(state) {
                     if (shieldInfo.immune) {
                         addLog(`【包二奶羁绊】额外伤害被【${shieldInfo.shieldName}】免疫`, 'warning');
                     } else {
-                        combat.bossHp -= aoeDamage;
+                        if (!isRagnarosSubmergedThisRound) {
+                            combat.bossHp -= aoeDamage;
+                        }
                         combat.minions.forEach(m => {
                             if (m.hp > 0 && !m.immune) {
                                 m.hp -= aoeDamage;
@@ -12557,7 +12620,7 @@ function stepBossCombat(state) {
                 .map((m, idx) => ({ idx, hp: Number(m?.hp) || 0, immune: !!m?.immune }))
                 .filter(x => x.hp > 0 && !x.immune);
 
-            if (!combat.strategy?.priorityBoss && attackableMinions.length > 0 && (combat.bossHp ?? 0) > 0) {
+            if (((isRagnarosSubmergedThisRound && attackableMinions.length > 0) || (!combat.strategy?.priorityBoss && attackableMinions.length > 0)) && (combat.bossHp ?? 0) > 0) {
                 attackableMinions.sort((a, b) => a.hp - b.hp);
                 targetType = 'minion';
                 targetIndex = attackableMinions[0].idx;
@@ -12590,6 +12653,11 @@ function stepBossCombat(state) {
 
             if (targetType === 'boss') {
                 if ((combat.bossHp ?? 0) <= 0) return;
+
+                if (isRagnarosSubmergedThisRound) {
+                    addLog(`【暗影魔】伤害被【下潜】免疫（目标：${boss.name}）`, 'warning');
+                    return;
+                }
 
                 const shieldInfo = getExecutusShieldInfo('shadow');
                 if (shieldInfo.immune) {
@@ -12636,6 +12704,13 @@ function stepBossCombat(state) {
     if (combat.bossDots) {
         combat.bossDots = combat.bossDots.filter(dot => {
             const dotName = dot.name || '重伤';
+
+            // 火焰之王拉格纳罗斯：下潜 - Boss免疫所有伤害（DOT不造成伤害，但仍消耗持续时间）
+            if (isRagnarosSubmergedThisRound) {
+                addLog(`【${dotName}】被【下潜】免疫（目标：${boss.name}，剩余${dot.duration - 1}回合）`, 'warning');
+                dot.duration -= 1;
+                return dot.duration > 0;
+            }
 
             // 管理者埃克索图斯：护盾免疫会使 DOT 不造成伤害（但仍消耗持续时间）
             const shieldInfo = getExecutusShieldInfo(dot.school);
@@ -14539,38 +14614,251 @@ function stepBossCombat(state) {
         }
     }
 
+
     // ==================== 火焰之王拉格纳罗斯（团队首领）技能处理 ====================
-    // 先打框架：目前仅普通攻击；后续可在此扩展为“技能循环 + 站位机制”。
+    // 机制：
+    // - 火焰伤害：计算魔抗（calcMagicDamage）
+    // - 被动【萨弗拉斯，炎魔拉格纳罗斯之手】：每回合对坦克造成 2.5×BOSS攻击 的火焰伤害
+    // - 技能循环：
+    //   拉格纳罗斯之怒 → 元素怒火 → 岩浆喷发 → 让火焰净化一切 → 下潜 → 元素怒火 → 岩浆喷发 → 让火焰净化一切 → 循环
+    // - 站位：
+    //   * 集中：拉格纳罗斯之怒 改为打全队
+    //   * 分散：元素怒火 / 岩浆喷发 的目标数会随【下潜】次数增长（每次下潜 +1 目标）
     else if (combat.bossId === 'ragnaros') {
-        // 默认：普通攻击打 1 号位（坦克优先），若 1 号位阵亡则顺位
-        const doNormalAttack = () => {
-            const tIdx = pickAlivePlayerIndex();
-            if (tIdx < 0) {
-                addLog(`【${boss.name}】试图攻击，但没有存活目标`);
-                return;
+        combat.bossBuffs = combat.bossBuffs || {};
+        combat.minions = Array.isArray(combat.minions) ? combat.minions : [];
+
+        // 初始化
+        if (!Number.isFinite(Number(combat.bossBuffs.ragnarosCycleIndex))) combat.bossBuffs.ragnarosCycleIndex = 0;
+        if (!Number.isFinite(Number(combat.bossBuffs.ragnarosSubmergeTurns))) combat.bossBuffs.ragnarosSubmergeTurns = 0;
+        if (!Number.isFinite(Number(combat.bossBuffs.ragnarosSubmergeCount))) combat.bossBuffs.ragnarosSubmergeCount = 0;
+        if (!Number.isFinite(Number(combat.bossBuffs.ragnarosSonSerial))) combat.bossBuffs.ragnarosSonSerial = 0;
+
+        const stance = combat.strategy?.stance || 'balanced';
+        const cycle = (Array.isArray(boss.cycle) && boss.cycle.length > 0) ? boss.cycle : ['ragnaros_wrath'];
+        const cycleIndex = Math.max(0, Math.floor(Number(combat.bossBuffs.ragnarosCycleIndex) || 0)) % cycle.length;
+        const action = cycle[cycleIndex];
+
+        // 工具：随机抽取 n 个存活玩家（不重复）
+        const pickNRandomAlivePlayers = (n) => {
+            const alive = combat.playerStates
+                .map((ps, idx) => ({ idx, hp: ps.currentHp }))
+                .filter(x => x.hp > 0)
+                .map(x => x.idx);
+
+            const result = [];
+            const need = Math.min(Math.max(0, Math.floor(n)), alive.length);
+
+            for (let k = 0; k < need; k++) {
+                const r = Math.floor(Math.random() * alive.length);
+                result.push(alive[r]);
+                alive.splice(r, 1);
             }
-
-            const target = combat.playerStates[tIdx];
-            const raw = Math.floor(boss.attack || 0);
-            const { damage, dr, blockedAmount } = calcMitigatedAndBlockedDamage(target, raw);
-            const shieldResult = applyShieldAbsorb(target, damage, logs, currentRound);
-            target.currentHp -= shieldResult.finalDamage;
-
-            const drPct = Math.round(dr * 100);
-            const blockText = blockedAmount > 0 ? `，格挡 ${blockedAmount}` : '';
-            const shieldText = shieldResult.absorbed > 0 ? `，护盾吸收 ${shieldResult.absorbed}` : '';
-            addLog(`【${boss.name}】普通攻击命中 位置${tIdx + 1} ${target.char.name}，造成 ${shieldResult.finalDamage} 点物理伤害（护甲减伤${drPct}%${blockText}${shieldText}）`);
+            return result;
         };
 
-        if (bossAction === 'normal_attack') {
-            doNormalAttack();
+        // 工具：对指定玩家造成火焰法术伤害（魔抗 + 承伤 + 护盾）
+        const dealFireDamageToPlayer = (tIdx, rawDamage, prefixText = '') => {
+            const target = combat.playerStates[tIdx];
+            if (!target || target.currentHp <= 0) return;
+
+            const fire = calcMagicDamage(target, rawDamage);
+            const shieldResult = applyShieldAbsorb(target, fire.damage, logs, currentRound);
+            target.currentHp -= shieldResult.finalDamage;
+
+            const resPct = Math.round(fire.resistReduction * 100);
+            const mrText = fire.magicResist ? `，魔抗 ${fire.magicResist}` : '';
+            const shieldText = shieldResult.absorbed > 0 ? `，护盾吸收 ${shieldResult.absorbed}` : '';
+
+            addLog(`${prefixText}命中 位置${tIdx + 1} ${target.char.name}，造成 ${shieldResult.finalDamage} 点火焰伤害（魔抗减伤${resPct}%${mrText}${shieldText}）`);
+        };
+
+        // 下潜阶段：Boss 本回合不行动（仅随从行动），且已在玩家侧做“免疫所有伤害”
+        if (ragnarosSubmergeStart > 0) {
+            addLog(`【${boss.name}】下潜中（剩余${ragnarosSubmergeStart}回合）：免疫所有伤害`, 'buff');
         } else {
-            // 兜底：未知动作也按普通攻击处理，保证框架可运行
-            doNormalAttack();
+            // ===== 被动：萨弗拉斯，炎魔拉格纳罗斯之手 =====
+            {
+                const tIdx = pickAlivePlayerIndex();
+                if (tIdx >= 0) {
+                    const target = combat.playerStates[tIdx];
+                    const mult = (typeof boss.sulfurasMultiplier === 'number') ? boss.sulfurasMultiplier : 2.5;
+                    const raw = Math.floor((boss.attack || 0) * mult);
+
+                    const fire = calcMagicDamage(target, raw);
+                    const shieldResult = applyShieldAbsorb(target, fire.damage, logs, currentRound);
+                    target.currentHp -= shieldResult.finalDamage;
+
+                    const resPct = Math.round(fire.resistReduction * 100);
+                    const mrText = fire.magicResist ? `，魔抗 ${fire.magicResist}` : '';
+                    const shieldText = shieldResult.absorbed > 0 ? `，护盾吸收 ${shieldResult.absorbed}` : '';
+
+                    addLog(`【萨弗拉斯】每回合灼烧命中 坦克 位置${tIdx + 1} ${target.char.name}，造成 ${shieldResult.finalDamage} 点火焰伤害（魔抗减伤${resPct}%${mrText}${shieldText}）`, 'debuff');
+                }
+            }
+
+            // ===== 技能 1：拉格纳罗斯之怒 =====
+            const doWrath = () => {
+                const mult = (typeof boss.wrathMultiplier === 'number') ? boss.wrathMultiplier : 3;
+                const raw = Math.floor((boss.attack || 0) * mult);
+
+                if (stance === 'concentrated') {
+                    addLog(`【${boss.name}】施放【拉格纳罗斯之怒】（集中站位：全队受击）`, 'warning');
+                    combat.playerStates.forEach((ps, idx) => {
+                        if (ps.currentHp <= 0) return;
+                        dealFireDamageToPlayer(idx, raw, `→ 【拉格纳罗斯之怒】`);
+                    });
+                } else {
+                    const tIdx = pickAlivePlayerIndex();
+                    if (tIdx < 0) return;
+                    addLog(`【${boss.name}】施放【拉格纳罗斯之怒】（锁定坦克）`, 'warning');
+                    dealFireDamageToPlayer(tIdx, raw, `→ 【拉格纳罗斯之怒】`);
+                }
+            };
+
+            // ===== 技能 2：元素怒火 + 余烬DOT =====
+            const doElementalFury = () => {
+                const baseTargets = 1;
+                const extraTargets = (stance === 'dispersed')
+                    ? Number(combat.bossBuffs.ragnarosSubmergeCount || 0)
+                    : 0;
+
+                const targets = pickNRandomAlivePlayers(baseTargets + extraTargets);
+                if (targets.length <= 0) return;
+
+                addLog(`【${boss.name}】施放【元素怒火】（目标 ${targets.length} 个）`, 'warning');
+
+                const hitMult = (typeof boss.elementalFuryMultiplier === 'number') ? boss.elementalFuryMultiplier : 1.5;
+                const dotMult = (typeof boss.emberDotMultiplier === 'number') ? boss.emberDotMultiplier : 1.5;
+                const dotDur = Math.max(1, Math.floor(Number(boss.emberDotDuration || 3)));
+
+                const hitRaw = Math.floor((boss.attack || 0) * hitMult);
+                const dotRaw = Math.floor((boss.attack || 0) * dotMult);
+
+                targets.forEach(tIdx => {
+                    dealFireDamageToPlayer(tIdx, hitRaw, `→ 【元素怒火】`);
+
+                    const ps = combat.playerStates[tIdx];
+                    if (!ps || ps.currentHp <= 0) return;
+
+                    ps.dots = ps.dots || [];
+                    const existing = ps.dots.find(d => d && d.name === '余烬');
+                    if (existing) {
+                        existing.damagePerTurn = dotRaw;
+                        existing.duration = dotDur;
+                        existing.school = 'fire';
+                    } else {
+                        ps.dots.push({
+                            name: '余烬',
+                            damagePerTurn: dotRaw,
+                            duration: dotDur,
+                            school: 'fire',
+                        });
+                    }
+
+                    addLog(`→ 位置${tIdx + 1} ${ps.char.name} 获得【余烬】DOT：每回合 ${dotRaw} 火焰伤害，持续${dotDur}回合`, 'debuff');
+                });
+            };
+
+            // ===== 技能 3：岩浆喷发 =====
+            const doMagmaEruption = () => {
+                const baseTargets = 1;
+                const extraTargets = (stance === 'dispersed')
+                    ? Number(combat.bossBuffs.ragnarosSubmergeCount || 0)
+                    : 0;
+
+                const targets = pickNRandomAlivePlayers(baseTargets + extraTargets);
+                if (targets.length <= 0) return;
+
+                addLog(`【${boss.name}】施放【岩浆喷发】（目标 ${targets.length} 个）`, 'warning');
+
+                const mult = (typeof boss.magmaEruptionMultiplier === 'number') ? boss.magmaEruptionMultiplier : 3;
+                const raw = Math.floor((boss.attack || 0) * mult);
+
+                targets.forEach(tIdx => {
+                    dealFireDamageToPlayer(tIdx, raw, `→ 【岩浆喷发】`);
+                });
+            };
+
+            // ===== 技能 5：让火焰净化一切（多段热浪） =====
+            const doPurifyAll = () => {
+                const waves = Math.max(1, Math.floor(Number(boss.purifyWaves || 3)));
+                const mult = (typeof boss.purifyMultiplier === 'number') ? boss.purifyMultiplier : 3;
+                const raw = Math.floor((boss.attack || 0) * mult);
+
+                addLog(`【${boss.name}】施放【让火焰净化一切】（热浪 ${waves} 段）`, 'warning');
+
+                for (let w = 1; w <= waves; w++) {
+                    combat.playerStates.forEach((ps, idx) => {
+                        if (ps.currentHp <= 0) return;
+                        dealFireDamageToPlayer(idx, raw, `→ 【热浪第${w}段】`);
+                    });
+                }
+            };
+
+            // ===== 技能 4：下潜（免疫3回合，召唤火焰之子） =====
+            const doSubmerge = () => {
+                const turns = Math.max(1, Math.floor(Number(boss.submergeDuration || 3)));
+                combat.bossBuffs.ragnarosSubmergeTurns = turns;
+                combat.bossBuffs.ragnarosSubmergeCount = Number(combat.bossBuffs.ragnarosSubmergeCount || 0) + 1;
+
+                addLog(`【${boss.name}】施放【下潜】！免疫所有伤害，持续 ${turns} 回合，并召唤火焰之子！`, 'buff');
+
+                const addCount = Math.max(0, Math.floor(Number(boss.sonCount || 4)));
+                const sonHp = Math.floor(Number(boss.sonHp || 6000000));
+                const atk = Math.floor(Number(boss.minion?.attack || boss.attack || 0));
+                const def = Math.floor(Number(boss.minion?.defense || boss.defense || 0));
+                const sonName = boss.minion?.name || '火焰之子';
+
+                for (let k = 0; k < addCount; k++) {
+                    const serial = Number(combat.bossBuffs.ragnarosSonSerial || 0) + 1;
+                    combat.bossBuffs.ragnarosSonSerial = serial;
+
+                    combat.minions.push({
+                        hp: sonHp,
+                        maxHp: sonHp,
+                        attack: atk,
+                        defense: def,
+                        immune: false,
+                        dots: [],
+                        isSonOfFlame: true,
+                        displayName: `${sonName}${serial}`,
+                    });
+                }
+
+                if (addCount > 0) {
+                    addLog(`→ 召唤 ${addCount} 个【${sonName}】（HP ${sonHp}）`, 'warning');
+                }
+            };
+
+            // ===== 执行动作（使用独立循环指针；下潜期间不会推进） =====
+            switch (action) {
+                case 'ragnaros_wrath':
+                    doWrath();
+                    break;
+                case 'elemental_fury':
+                    doElementalFury();
+                    break;
+                case 'magma_eruption':
+                    doMagmaEruption();
+                    break;
+                case 'purify_all':
+                    doPurifyAll();
+                    break;
+                case 'submerge':
+                    doSubmerge();
+                    break;
+                default:
+                    doWrath();
+                    break;
+            }
+
+            // 推进循环（下潜本身算一次动作）
+            combat.bossBuffs.ragnarosCycleIndex = (cycleIndex + 1) % cycle.length;
         }
     }
 
-    // ==================== 无疤者奥斯里安技能处理 ====================
+// ==================== 无疤者奥斯里安技能处理 ====================
     else if (combat.bossId === 'ossirian') {
         // 自然伤害：计算魔抗（并套用伤害减免/全能/挫志怒吼）
         const calcNatureDamage = (playerState, rawDamage) => {
@@ -14788,6 +15076,46 @@ function stepBossCombat(state) {
                 const shieldText = shieldResult.absorbed > 0 ? `，护盾吸收 ${shieldResult.absorbed}` : '';
                 addLog(`【${boss.minion.name}${i + 1}】炮击 位置${pIdx + 1} ${ps.char.name}，造成 ${shieldResult.finalDamage} 点伤害（护甲减伤${drPct}%${shieldText}）`);
             });
+        }
+
+        // 拉格纳罗斯的火焰之子：每回合对随机2目标释放【灼烧】（1.2×BOSS攻击的火焰法术伤害）
+        else if (combat.bossId === 'ragnaros' && m.isSonOfFlame) {
+            const aliveIdx = combat.playerStates
+                .map((ps, idx) => ({ idx, hp: ps.currentHp }))
+                .filter(x => x.hp > 0)
+                .map(x => x.idx);
+
+            if (aliveIdx.length > 0) {
+                const n = Math.max(1, Math.floor(Number(boss.sonBurnTargets || 2)));
+                const picked = [];
+                const pool = aliveIdx.slice();
+                const need = Math.min(n, pool.length);
+
+                for (let k = 0; k < need; k++) {
+                    const r = Math.floor(Math.random() * pool.length);
+                    picked.push(pool[r]);
+                    pool.splice(r, 1);
+                }
+
+                const mult = (typeof boss.sonBurnMultiplier === 'number') ? boss.sonBurnMultiplier : 1.2;
+                const raw = Math.floor((boss.attack || 0) * mult);
+                const sonLabel = m.displayName || (boss.minion?.name ? `${boss.minion.name}${i + 1}` : `火焰之子${i + 1}`);
+
+                picked.forEach(pIdx => {
+                    const ps = combat.playerStates[pIdx];
+                    if (!ps || ps.currentHp <= 0) return;
+
+                    const fire = calcMagicDamage(ps, raw);
+                    const shieldResult = applyShieldAbsorb(ps, fire.damage, logs, currentRound);
+                    ps.currentHp -= shieldResult.finalDamage;
+
+                    const resPct = Math.round(fire.resistReduction * 100);
+                    const mrText = fire.magicResist ? `，魔抗 ${fire.magicResist}` : '';
+                    const shieldText = shieldResult.absorbed > 0 ? `，护盾吸收 ${shieldResult.absorbed}` : '';
+
+                    addLog(`【${sonLabel}】施放【灼烧】命中 位置${pIdx + 1} ${ps.char.name}，造成 ${shieldResult.finalDamage} 点火焰伤害（魔抗减伤${resPct}%${mrText}${shieldText}）`);
+                });
+            }
         }
         // 管理者埃克索图斯：烈焰行者医师/精英（每回合被动）
         else if (combat.bossId === 'majordomo_executus' && (m.isFlamewakerHealer || m.isFlamewakerElite)) {
@@ -15184,6 +15512,19 @@ function stepBossCombat(state) {
             combat.bossBuffs.executusMagicShield = next;
             if (next <= 0 && executusMagicShieldStart > 0) {
                 addLog(`【${boss.name}】的【反魔法护盾】消失`, 'warning');
+            }
+        }
+    }
+
+
+    // ==================== 火焰之王拉格纳罗斯：下潜倒计时（回合末） ====================
+    if (combat.bossId === 'ragnaros') {
+        if (ragnarosSubmergeStart > 0) {
+            const next = Math.max(0, Math.floor(Number(combat.bossBuffs.ragnarosSubmergeTurns || 0)) - 1);
+            combat.bossBuffs.ragnarosSubmergeTurns = next;
+
+            if (next <= 0) {
+                addLog(`【${boss.name}】从岩浆中浮出，结束【下潜】！`, 'warning');
             }
         }
     }
@@ -27530,6 +27871,14 @@ const BossPrepareModal = ({ state, dispatch }) => {
         black_dragon_flame: '黑龙之炎',
         fangs_and_claws: '尖牙与利爪',
         normal_attack: '普通攻击',
+
+        // 火焰之王拉格纳罗斯
+        ragnaros_wrath: '拉格纳罗斯之怒',
+        elemental_fury: '元素怒火',
+        magma_eruption: '岩浆喷发',
+        purify_all: '让火焰净化一切',
+        submerge: '下潜',
+
         // 其他boss也可以逐步补齐
         mortal_strike: '致死打击',
         summon_cannoneers: '火炮手准备',
@@ -28724,6 +29073,28 @@ const BossPrepareModal = ({ state, dispatch }) => {
                                       </div>
                                     </div>
                                   </>
+
+                                )}
+
+                                {/* 火焰之王拉格纳罗斯的技能 */}
+                                {bossId === 'ragnaros' && (
+                                  <div style={{ marginTop: 8, lineHeight: 1.6 }}>
+                                    <div style={{ fontWeight: 700, marginBottom: 6 }}>技能与机制</div>
+                                    <ul style={{ margin: 0, paddingLeft: 18 }}>
+                                      <li><b>被动：萨弗拉斯，炎魔拉格纳罗斯之手</b> —— 每回合对坦克造成 <b>2.5×BOSS攻击</b> 的火焰法术伤害（计算魔抗）。</li>
+                                      <li><b>技能1：拉格纳罗斯之怒</b> —— 对坦克造成 <b>3×</b> 火焰法术伤害；<b>集中站位</b> 时改为对全队造成 <b>3×</b> 火焰法术伤害。</li>
+                                      <li><b>技能2：元素怒火</b> —— 随机目标造成 <b>1.5×</b> 火焰法术伤害，并施加<b>余烬DOT</b>：每回合 <b>1.5×</b> 火焰法术伤害，持续<b>3回合</b>。<b>分散站位</b>：每次 BOSS 释放【下潜】，该技能目标 +1。</li>
+                                      <li><b>技能3：岩浆喷发</b> —— 随机目标造成 <b>3×</b> 火焰法术伤害。<b>分散站位</b>：每次 BOSS 释放【下潜】，该技能目标 +1。</li>
+                                      <li><b>技能4：下潜</b> —— BOSS 免疫所有伤害<b>3回合</b>，召唤 <b>4个火焰之子</b>（HP 6,000,000，攻防同BOSS）。火焰之子每回合对随机<b>2</b>目标施放【灼烧】造成 <b>1.2×</b> 火焰法术伤害。</li>
+                                      <li><b>技能5：让火焰净化一切</b> —— 多段热浪对全队造成 <b>3×</b> 火焰法术伤害。</li>
+                                    </ul>
+                                    <div style={{ marginTop: 6 }}>
+                                      <div style={{ fontWeight: 700, marginBottom: 4 }}>技能循环</div>
+                                      <div style={{ fontSize: 12, opacity: 0.95 }}>
+                                        拉格纳罗斯之怒 → 元素怒火 → 岩浆喷发 → 让火焰净化一切 → 下潜 → 元素怒火 → 岩浆喷发 → 让火焰净化一切
+                                      </div>
+                                    </div>
+                                  </div>
                                 )}
 
                             </div>

@@ -22264,7 +22264,6 @@ const ItemDetailsModal = ({ item, onClose, onEquip, characters, state , dispatch
                         ))}
                     </div>
                     )}
-                </div>
 
                 <div style={{ marginBottom: 12 }}>
                   <div style={{ fontSize: 12, color: '#aaa', marginBottom: 6 }}>选择要装备的角色</div>
@@ -22360,7 +22359,6 @@ const ItemDetailsModal = ({ item, onClose, onEquip, characters, state , dispatch
                     </Button>
                 </div>
             </div>
-        </div>
     );
 };
 

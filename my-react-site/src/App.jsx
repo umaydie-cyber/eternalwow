@@ -7631,6 +7631,85 @@ const FIXED_EQUIPMENTS = {
         setId: 'prophecy_set',
         setName: '预言'
     },
+    // ==================== Molten Core（熔火之心）- 管理者埃克索图斯掉落（胸甲） ====================
+    EQ_187: {
+      id: 'EQ_187',
+      name: '力量胸甲',
+      icon: "icons/wow/vanilla/armor/INV_Chest_Plate16.png",
+      type: 'equipment',
+      slot: 'chest',
+      rarity: 'purple',
+      level: 0,
+      maxLevel: 100,
+      baseStats: {
+        hp: 7200,
+        armor: 260,
+        blockRate: 5,
+        blockValue: 540,
+        versatility: 16,
+      },
+      growth: { hp: 2, armor: 2, blockRate: 2, blockValue: 2, versatility: 2 },
+      setId: 'might_set',
+      setName: '力量'
+    },
+    EQ_188: {
+      id: 'EQ_188',
+      name: '夜幕杀手胸甲',
+      icon: "icons/wow/vanilla/armor/INV_Chest_Cloth_07.png",
+      type: 'equipment',
+      slot: 'chest',
+      rarity: 'purple',
+      level: 0,
+      maxLevel: 100,
+      baseStats: {
+        attack: 560,
+        hp: 4200,
+        armor: 190,
+        critRate: 12,
+        mastery: 16,
+      },
+      growth: { attack: 2, hp: 2, armor: 2, critRate: 2, haste: 2, mastery: 2 },
+      setId: 'nightslayer_set',
+      setName: '夜幕杀手'
+    },
+    EQ_189: {
+      id: 'EQ_189',
+      name: '奥术师长袍',
+      icon: "icons/wow/vanilla/armor/INV_Chest_Cloth_03.png",
+      type: 'equipment',
+      slot: 'chest',
+      rarity: 'purple',
+      level: 0,
+      maxLevel: 100,
+      baseStats: {
+        spellPower: 560,
+        hp: 4000,
+        critRate: 12,
+        mastery: 16,
+      },
+      growth: { spellPower: 2, hp: 2, critRate: 2, mastery: 2 },
+      setId: 'arcanist_set',
+      setName: '奥术师'
+    },
+    EQ_190: {
+      id: 'EQ_190',
+      name: '预言法袍',
+      icon: "icons/wow/vanilla/armor/INV_Chest_Cloth_03.png",
+      type: 'equipment',
+      slot: 'chest',
+      rarity: 'purple',
+      level: 0,
+      maxLevel: 100,
+      baseStats: {
+        spellPower: 520,
+        hp: 4600,
+        mastery: 12,
+        critRate: 16,
+      },
+      growth: { spellPower: 2, hp: 2, versatility: 2, critRate: 2 },
+      setId: 'prophecy_set',
+      setName: '预言'
+    },
 
 
 };
@@ -9483,7 +9562,12 @@ const BOSS_DATA = {
         rewards: {
             gold: 2600000,
             exp: 1500000,
-            items: []
+            items: [
+                { id: 'EQ_187', chance: 0.1 },  // 力量胸甲
+                { id: 'EQ_188', chance: 0.1 },  // 夜幕杀手胸甲
+                { id: 'EQ_189', chance: 0.1 },  // 奥术师长袍
+                { id: 'EQ_190', chance: 0.1 },  // 预言法袍
+            ]
         }
     },
 

@@ -23978,7 +23978,7 @@ const InventoryPage = ({ state, dispatch }) => {
                                                                 sp  ? `法强+${Math.floor(sp)}` : null,
                                                               ].filter(Boolean).join(' ');
 
-                                                              return `技能栏${slotText} 强化${bonusText ? `（${bonusText}）` : ''}`;
+                                                              return `技能栏${slotText}${bonusText ? `（${bonusText}）` : ''}`;
                                                             })()
                                                     : se.type === 'basic_attack_repeat'
                                                         ? `连击${(se.chance * 100).toFixed(0)}%`

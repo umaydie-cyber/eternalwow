@@ -22170,7 +22170,7 @@ const ItemDetailsModal = ({ item, onClose, onEquip, characters, state , dispatch
                             <div key={idx} style={{ marginTop: idx > 0 ? '10px' : 0 }}>
                                 {se.type === 'skill_slot_buff' && (
                                     <div style={{ color: '#8e44ad', fontSize: '14px' }}>
-                                        🎯 <strong>技能栏强化</strong>：第{se.slot + 1}格技能效果提升
+                                        🎯 <strong>技能栏强化</strong>：第 {se.slots.map(s => s + 1).join('、')}格技能效果提升
                                         <br />
                                         {Object.entries(se.bonus).map(([stat, value]) => (
                                             <span key={stat} style={{ display: 'block', marginLeft: '16px' }}>

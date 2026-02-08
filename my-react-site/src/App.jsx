@@ -9656,7 +9656,7 @@ const BOSS_DATA = {
         magmaEruptionMultiplier: 3,
 
         // 技能：让火焰净化一切（多段热浪AOE）
-        purifyMultiplier: 3,
+        purifyMultiplier: 1.2,
         purifyWaves: 3,
 
         // 技能：下潜（免疫伤害，召唤火焰之子）

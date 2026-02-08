@@ -23964,7 +23964,7 @@ const InventoryPage = ({ state, dispatch }) => {
                                             ⚡ {se.type === 'map_slayer'
                                                 ? `地图伤害+${(se.bonusDamageVsMap * 100).toFixed(0)}%`
                                                 : se.type === 'skill_slot_buff'
-                                                    ? `技能栏+${se.slot + 1} 强化`
+                                                    ? `技能栏+${se.slots.map(s => s + 1).join('/')} 强化`
                                                     : se.type === 'basic_attack_repeat'
                                                         ? `连击${(se.chance * 100).toFixed(0)}%`
                                                         : se.type === 'proc_stat'

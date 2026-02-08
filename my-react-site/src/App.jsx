@@ -22266,14 +22266,50 @@ const ItemDetailsModal = ({ item, onClose, onEquip, characters, state , dispatch
                     )}
                 </div>
 
-                <div style={{ display: 'flex', gap: 12 }}>
-                    <Button onClick={onClaim} style={{ flex: 1 }}>
-                        ✓ 领取奖励
-                    </Button>
-                    <Button onClick={onDismiss} variant="secondary" style={{ flex: 1 }}>
-                        稍后领取
-                    </Button>
+                <div style={{ marginBottom: 12 }}>
+                  <div style={{ fontSize: 12, color: '#aaa', marginBottom: 6 }}>选择要装备的角色</div>
+                  <select
+                    value={selectedCharId}
+                    onChange={(e) => setSelectedCharId(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      borderRadius: 8,
+                      border: '1px solid rgba(255,255,255,0.18)',
+                      background: 'rgba(0,0,0,0.35)',
+                      color: '#eee',
+                      outline: 'none',
+                      fontSize: 12,
+                    }}
+                  >
+                    <option value="">— 请选择 —</option>
+                    {(characters || []).map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}{c.level != null ? `（Lv${c.level}）` : ''}
+                      </option>
+                    ))}
+                  </select>
                 </div>
+
+                <div style={{ display: 'flex', gap: 12 }}>
+                  <Button
+                    style={{ flex: 1 }}
+                    disabled={!selectedCharId}
+                    onClick={() => {
+                      if (!selectedCharId) return;
+                      const itemInstanceId = item.instanceId ?? item.itemInstanceId ?? item.id;
+                      onEquip(selectedCharId, itemInstanceId);
+                      onClose();
+                    }}
+                  >
+                    ⚔️ 装备
+                  </Button>
+
+                  <Button onClick={onClose} variant="secondary" style={{ flex: 1 }}>
+                    关闭
+                  </Button>
+                </div>
+
         </div>
     );
 };

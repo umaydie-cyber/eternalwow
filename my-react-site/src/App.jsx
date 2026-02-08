@@ -22360,7 +22360,6 @@ const ItemDetailsModal = ({ item, onClose, onEquip, characters, state , dispatch
                     </Button>
                 </div>
             </div>
-        </div>
     );
 };
 

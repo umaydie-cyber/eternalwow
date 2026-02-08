@@ -7766,7 +7766,7 @@ const FIXED_EQUIPMENTS = {
       rarity: 'purple',
       level: 1,
       maxLevel: 100,
-      baseStats: { hp: 7800, armor: 270, mastery: 14, blockRate: 6, blockValue: 600 },
+      baseStats: { hp: 8000, armor: 270, mastery: 13, blockRate: 6, blockValue: 600 },
       growth: { hp: 2, armor: 2, mastery: 2, blockRate: 2, blockValue: 2 },
       setId: 'wrath_set',
       setName: '愤怒'
@@ -7781,7 +7781,7 @@ const FIXED_EQUIPMENTS = {
       rarity: 'purple',
       level: 1,
       maxLevel: 100,
-      baseStats: { attack: 620, hp: 4500, armor: 210, critRate: 14, mastery: 18 },
+      baseStats: { attack: 650, hp: 4800, armor: 210, critRate: 14, mastery: 16 },
       growth: { attack: 2, hp: 2, armor: 2, critRate: 2, mastery: 2 },
       setId: 'bloodfang_set',
       setName: '血牙'
@@ -7796,7 +7796,7 @@ const FIXED_EQUIPMENTS = {
       rarity: 'purple',
       level: 1,
       maxLevel: 100,
-      baseStats: { spellPower: 620, hp: 4300, haste: 14, versatility: 18 },
+      baseStats: { spellPower: 650, hp: 4800, haste: 14, versatility: 16 },
       growth: { spellPower: 2, hp: 2, haste: 2, versatility: 2 },
       setId: 'netherwind_set',
       setName: '灵风'
@@ -7811,7 +7811,7 @@ const FIXED_EQUIPMENTS = {
       rarity: 'purple',
       level: 1,
       maxLevel: 100,
-      baseStats: { spellPower: 580, hp: 5000, mastery: 14, versatility: 18 },
+      baseStats: { spellPower: 580, hp: 5300, mastery: 14, versatility: 16 },
       growth: { spellPower: 2, hp: 2, mastery: 2, versatility: 2 },
       setId: 'transcendence_set',
       setName: '卓越'
@@ -7820,20 +7820,20 @@ const FIXED_EQUIPMENTS = {
     EQ_195: {
       id: 'EQ_195',
       name: '埃古雷亚指环',
-      icon: 'icons/wow/vanilla/armor/INV_Jewelry_Ring_24.png',
+      icon: 'icons/wow/vanilla/armor/INV_Jewelry_Ring_15.png',
       type: 'equipment',
       slot: 'ring2',
       rarity: 'purple',
       level: 1,
       maxLevel: 100,
-      baseStats: { attack: 720, hp: 4800, critRate: 14, haste: 24, mastery: 24 },
+      baseStats: { attack: 620, hp: 4800, critRate: 14, haste: 22, mastery: 22 },
       growth: { attack: 2, hp: 2, critRate: 2, haste: 2, mastery: 2 }
     },
 
     EQ_196: {
       id: 'EQ_196',
       name: '环雾披风',
-      icon: 'icons/wow/vanilla/armor/INV_Misc_Cape_19.png',
+      icon: 'icons/wow/vanilla/armor/INV_Misc_Cape_17.png',
       type: 'equipment',
       slot: 'cloak',
       rarity: 'purple',
@@ -7846,14 +7846,14 @@ const FIXED_EQUIPMENTS = {
     EQ_197: {
       id: 'EQ_197',
       name: '火焰之王的项圈',
-      icon: 'icons/wow/vanilla/armor/INV_Jewelry_Necklace_12.png',
+      icon: 'icons/wow/vanilla/armor/INV_Jewelry_Amulet_05.png',
       type: 'equipment',
       slot: 'neck',
       rarity: 'purple',
       level: 1,
       maxLevel: 100,
-      baseStats: { spellPower: 720, hp: 4200, critRate: 14, haste: 24, mastery: 24 },
-      growth: { spellPower: 2, hp: 2, critRate: 2, haste: 2, mastery: 2 }
+      baseStats: { spellPower: 720, hp: 5500, critRate: 12, versatility: 20, mastery: 22 },
+      growth: { spellPower: 2, hp: 2, critRate: 2, versatility: 2, mastery: 2 }
     },
 
     EQ_198: {
@@ -7865,7 +7865,7 @@ const FIXED_EQUIPMENTS = {
       rarity: 'purple',
       level: 1,
       maxLevel: 100,
-      baseStats: { attack: 2400, hp: 5000, critRate: 18, critDamage: 0.6, versatility: 30 },
+      baseStats: { attack: 2250, hp: 4000, critRate: 20, critDamage: 0.8, versatility: 30 },
       growth: { attack: 2, hp: 2, critRate: 2, critDamage: 2, versatility: 2 },
       specialEffect: {
         type: 'map_slayer',
@@ -7876,26 +7876,26 @@ const FIXED_EQUIPMENTS = {
     EQ_199: {
       id: 'EQ_199',
       name: '萨弗拉斯指环',
-      icon: 'icons/wow/vanilla/armor/INV_Jewelry_Ring_16.png',
+      icon: 'icons/wow/vanilla/armor/safulasizhihuan.png',
       type: 'equipment',
       slot: 'ring2',
       rarity: 'purple',
       level: 1,
       maxLevel: 100,
-      baseStats: { spellPower: 680, hp: 5600, critRate: 12, mastery: 22, versatility: 18 },
+      baseStats: { spellPower: 680, hp: 5200, critRate: 12, mastery: 22, versatility: 20 },
       growth: { spellPower: 2, hp: 2, critRate: 2, mastery: 2, versatility: 2 }
     },
 
     EQ_200: {
       id: 'EQ_200',
       name: '削骨之刃',
-      icon: 'icons/wow/vanilla/weapons/INV_Sword_23.png',
+      icon: 'icons/wow/vanilla/weapons/INV_Sword_12.png',
       type: 'equipment',
       slot: 'mainHand',
       rarity: 'purple',
       level: 1,
       maxLevel: 100,
-      baseStats: { attack: 2500, hp: 4800, critRate: 20, critDamage: 0.6, mastery: 24 },
+      baseStats: { attack: 2400, hp: 4800, critRate: 20, critDamage: 0.8, mastery: 30 },
       growth: { attack: 2, hp: 2, critRate: 2, critDamage: 2, mastery: 2 },
       specialEffect: {
         type: 'ignore_defense',
@@ -7906,13 +7906,13 @@ const FIXED_EQUIPMENTS = {
     EQ_201: {
       id: 'EQ_201',
       name: '萨弗拉斯，炎魔拉格纳罗斯之手',
-      icon: 'icons/wow/vanilla/weapons/INV_Hammer_09.png',
+      icon: 'icons/wow/vanilla/weapons/safulasi.png',
       type: 'equipment',
       slot: 'mainHand',
       rarity: 'orange',
       level: 1,
       maxLevel: 100,
-      baseStats: { attack: 2800, hp: 6000, magicResist: 250, critRate: 20, critDamage: 0.8, versatility: 30 },
+      baseStats: { attack: 2500, hp: 6000, magicResist: 250, critRate: 20, critDamage: 0.8, versatility: 30 },
       growth: { attack: 2, hp: 2, magicResist: 2, critRate: 2, critDamage: 2, versatility: 2 },
       specialEffects: [
         {

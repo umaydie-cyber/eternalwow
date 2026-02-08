@@ -307,7 +307,7 @@ const FUNCTIONAL_BUILDINGS = {
         icon: '🌿',
         description: '每座提高喷泉效率10%（最多+200%）；仅影响“广场喷泉”的脱战回血。',
         unlockBoss: 'dagran_thaurissan',
-        cost: { gold: 250000, wood: 120000, herb: 80000 },
+        cost: { gold: 1000000, wood: 800000, herb: 800000 },
         maxCount: 20,
         effect: { type: 'fountainEfficiency', value: 0.10 }
     },
@@ -317,7 +317,7 @@ const FUNCTIONAL_BUILDINGS = {
         icon: '🪷',
         description: '每座提高喷泉效率10%（最多+200%）；仅影响“广场喷泉”的脱战回血。',
         unlockBoss: 'rend_blackhand',
-        cost: { gold: 350000, ironIngot: 90000, magicEssence: 60000 },
+        cost: { gold: 2500000, ironIngot: 900000, magicEssence: 600000 },
         maxCount: 20,
         effect: { type: 'fountainEfficiency', value: 0.10 }
     },

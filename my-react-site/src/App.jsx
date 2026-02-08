@@ -297,6 +297,30 @@ const FUNCTIONAL_BUILDINGS = {
         maxCount: 500,
         effect: { type: 'regen', value: 2 }
     },
+
+    // ✅ 新增：喷泉强化建筑（各 20，上限后共计 +200% 喷泉效率；独立乘区）
+    // 规则：每座提供 +10% 喷泉效率（线性叠加），20 座 = +200% => 倍率 3.0
+    // 两个建筑属于独立乘区：最终喷泉效率倍率 = 草坪倍率 × 外饰倍率
+    fountain_lawn: {
+        id: 'fountain_lawn',
+        name: '喷泉草坪',
+        icon: '🌿',
+        description: '每座提高喷泉效率10%（最多+200%）；仅影响“广场喷泉”的脱战回血。',
+        unlockBoss: 'dagran_thaurissan',
+        cost: { gold: 250000, wood: 120000, herb: 80000 },
+        maxCount: 20,
+        effect: { type: 'fountainEfficiency', value: 0.10 }
+    },
+    fountain_decor: {
+        id: 'fountain_decor',
+        name: '喷泉外饰',
+        icon: '🪷',
+        description: '每座提高喷泉效率10%（最多+200%）；仅影响“广场喷泉”的脱战回血。',
+        unlockBoss: 'rend_blackhand',
+        cost: { gold: 350000, ironIngot: 90000, magicEssence: 60000 },
+        maxCount: 20,
+        effect: { type: 'fountainEfficiency', value: 0.10 }
+    },
     warehouse: {
         id: 'warehouse',
         name: '仓库',
@@ -17430,6 +17454,23 @@ function getFunctionalBuildingCost(buildingId, state) {
     return cost;
 }
 
+// ==================== 喷泉效率倍率（喷泉草坪/喷泉外饰，独立乘区） ====================
+function getFountainEfficiency(state) {
+    const lawnCount = Math.max(0, Math.floor(Number(state?.functionalBuildings?.fountain_lawn) || 0));
+    const decorCount = Math.max(0, Math.floor(Number(state?.functionalBuildings?.fountain_decor) || 0));
+
+    const lawnMult = 1 + 0.10 * Math.min(20, lawnCount);
+    const decorMult = 1 + 0.10 * Math.min(20, decorCount);
+
+    return {
+        lawnCount,
+        decorCount,
+        lawnMult,
+        decorMult,
+        totalMult: lawnMult * decorMult,
+    };
+}
+
 // ==================== GAME REDUCER ====================
 function gameReducer(state, action) {
     switch (action.type) {
@@ -17843,6 +17884,7 @@ function gameReducer(state, action) {
 
             // ===== 功能建筑效果 =====
             const fountainCount = newState.functionalBuildings?.plaza_fountain || 0;
+            const { totalMult: fountainEfficiencyMult } = getFountainEfficiency(newState);
             const trainingCount = newState.functionalBuildings?.training_dummy || 0;
             const warehouseCount = newState.functionalBuildings?.warehouse || 0;
             const glowLighthouseCount = newState.functionalBuildings?.glow_lighthouse || 0;
@@ -18281,11 +18323,13 @@ function gameReducer(state, action) {
                 const lastCombatTime = char.lastCombatTime || 0;
                 if (now - lastCombatTime < REGEN_DELAY_MS) return char;
 
+                const fountainRegen = fountainCount * 2 * fountainEfficiencyMult;
+
                 return {
                     ...char,
                     stats: {
                         ...char.stats,
-                        currentHp: Math.min(maxHp, curHp + REGEN_PER_SECOND+fountainCount*2)
+                        currentHp: Math.min(maxHp, curHp + REGEN_PER_SECOND + fountainRegen)
                     }
                 };
             });
@@ -19846,6 +19890,11 @@ function gameReducer(state, action) {
             const { buildingId } = action.payload;
             const building = FUNCTIONAL_BUILDINGS[buildingId];
             if (!building) return state;
+
+            // ✅ 解锁检查：需要先击败指定 Boss
+            if (building.unlockBoss && !(state.defeatedBosses || []).includes(building.unlockBoss)) {
+                return state;
+            }
 
             const currentCount = state.functionalBuildings?.[buildingId] || 0;
 
@@ -23680,14 +23729,66 @@ const CityPage = ({ state, dispatch }) => {
 
             {/* 功能建筑区域 */}
             {activeTab === 'functional' && (
-                <div style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-                    gap: 16
-                }}>
+                <div>
+                    {/* ✅ 喷泉效率汇总（喷泉草坪/喷泉外饰独立乘区） */}
+                    {(() => {
+                        const fountainCount = state.functionalBuildings?.plaza_fountain || 0;
+                        const { lawnCount, decorCount, lawnMult, decorMult, totalMult } = getFountainEfficiency(state);
+                        const fountainRegen = fountainCount * 2 * totalMult;
+
+                        // 没建喷泉也允许看预览（避免用户不知道怎么涨）
+                        return (
+                            <div style={{
+                                marginBottom: 16,
+                                padding: 14,
+                                background: 'rgba(201,162,39,0.08)',
+                                border: '1px solid rgba(201,162,39,0.35)',
+                                borderRadius: 10
+                            }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+                                    <div>
+                                        <div style={{ color: '#ffd700', fontWeight: 700, fontSize: 13, marginBottom: 4 }}>
+                                            ⛲ 喷泉脱战回血效率
+                                        </div>
+                                        <div style={{ color: '#aaa', fontSize: 11, lineHeight: 1.5 }}>
+                                            广场喷泉数量：<span style={{ color: '#fff' }}>{fountainCount}</span>（每座基础 +2/秒）
+                                            <br />
+                                            喷泉草坪：{lawnCount}/20（×{lawnMult.toFixed(2)}）｜喷泉外饰：{decorCount}/20（×{decorMult.toFixed(2)}）
+                                            <br />
+                                            总倍率：<span style={{ color: '#4CAF50', fontWeight: 700 }}>×{totalMult.toFixed(2)}</span>
+                                        </div>
+                                    </div>
+                                    <div style={{
+                                        minWidth: 140,
+                                        padding: '10px 12px',
+                                        background: 'rgba(0,0,0,0.25)',
+                                        borderRadius: 8,
+                                        border: '1px solid rgba(255,255,255,0.08)'
+                                    }}>
+                                        <div style={{ color: '#888', fontSize: 11, marginBottom: 2 }}>当前喷泉额外回血</div>
+                                        <div style={{ color: fountainRegen > 0 ? '#4CAF50' : '#666', fontWeight: 800, fontSize: 16 }}>
+                                            +{fountainRegen.toFixed(1)}/秒
+                                        </div>
+                                        <div style={{ color: '#666', fontSize: 10, marginTop: 2 }}>
+                                            （仅脱战生效）
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        );
+                    })()}
+
+                    <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+                        gap: 16
+                    }}>
                     {Object.values(FUNCTIONAL_BUILDINGS).map(building => {
                         const currentCount = state.functionalBuildings?.[building.id] || 0;
                         const isMaxed = currentCount >= building.maxCount;
+
+                        // ✅ 解锁条件：击败指定 Boss
+                        const unlocked = !building.unlockBoss || (state.defeatedBosses || []).includes(building.unlockBoss);
 
                         // ✅ 获取动态成本
                         const dynamicCost = getFunctionalBuildingCost(building.id, state);
@@ -23701,10 +23802,14 @@ const CityPage = ({ state, dispatch }) => {
                         return (
                             <div key={building.id} style={{
                                 padding: 20,
-                                background: currentCount > 0
+                                background: !unlocked
+                                    ? 'rgba(0,0,0,0.45)'
+                                    : currentCount > 0
                                     ? 'linear-gradient(135deg, rgba(76,175,80,0.1), rgba(40,35,30,0.9))'
                                     : 'rgba(0,0,0,0.3)',
-                                border: currentCount > 0 ? '2px solid #4CAF50' : '2px solid #4a3c2a',
+                                border: !unlocked
+                                    ? '2px solid rgba(180,180,180,0.25)'
+                                    : (currentCount > 0 ? '2px solid #4CAF50' : '2px solid #4a3c2a'),
                                 borderRadius: 12
                             }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
@@ -23742,6 +23847,17 @@ const CityPage = ({ state, dispatch }) => {
                                     borderRadius: 6
                                 }}>
                                     {building.description}
+                                    {!unlocked && (
+                                        <div style={{
+                                            marginTop: 8,
+                                            paddingTop: 8,
+                                            borderTop: '1px dashed rgba(255,255,255,0.15)',
+                                            color: '#ff9800',
+                                            fontSize: 11
+                                        }}>
+                                            🔒 解锁条件：击败 {BOSS_NAMES[building.unlockBoss] || building.unlockBoss}
+                                        </div>
+                                    )}
                                 </div>
 
                                 {/* ✅ 显示动态成本 */}
@@ -23793,14 +23909,15 @@ const CityPage = ({ state, dispatch }) => {
                                         type: 'BUILD_FUNCTIONAL',
                                         payload: { buildingId: building.id }
                                     })}
-                                    disabled={!canBuild || isMaxed}
+                                    disabled={!unlocked || !canBuild || isMaxed}
                                     style={{ width: '100%' }}
                                 >
-                                    {isMaxed ? '已达上限' : '建造'}
+                                    {!unlocked ? '未解锁' : (isMaxed ? '已达上限' : '建造')}
                                 </Button>
                             </div>
                         );
                     })}
+                    </div>
                 </div>
             )}
         </div>

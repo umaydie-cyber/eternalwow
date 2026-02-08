@@ -2826,6 +2826,13 @@ const BADGE_EQUIP_POOLS = {
         setIds: ['ruins_of_ahnqiraj'],
         eqIdRanges: [[139, 145]],
     },
+    // 火焰之王的徽章：熔火之心（含BOSS掉落/传奇）
+    molten_core: {
+        // 兼容未来扩展：优先通过 setId 命中（T1/T2）
+        setIds: ['might_set', 'nightslayer_set', 'arcanist_set', 'prophecy_set', 'wrath_set', 'bloodfang_set', 'netherwind_set', 'transcendence_set'],
+        // 熔火之心相关装备 ID 范围（覆盖：地图掉落 + Boss掉落 + 风剑/橙锤等传奇）
+        eqIdRanges: [[146, 201]],
+    },
 };
 
 // 把 'EQ_001' -> 1；不符合格式返回 null
@@ -2957,6 +2964,16 @@ const BADGE_UPGRADE_RULES_CONFIG = {
         cap: 100,
         equipPool: 'ruins_of_ahnqiraj',
         theme: { border: '#b08900', title: '#ffd54f', shadow: 'rgba(176,137,0,0.25)' }
+    },
+
+    // ✅ 新增：团队首领 - 火焰之王拉格纳罗斯徽章
+    IT_RAGNAROS_BADGE: {
+        title: '火焰之王的徽章',
+        zoneLabel: '熔火之心 / 熔火之心BOSS掉落',
+        inc: 2,
+        cap: 100,
+        equipPool: 'molten_core',
+        theme: { border: '#ff6f00', title: '#ffcc80', shadow: 'rgba(255,111,0,0.28)' }
     },
 
 };
@@ -8385,6 +8402,18 @@ const ITEMS = {
         sellPrice: 0,  // 不可出售
         icon: 'icons/wow/vanilla/items/INV_Misc_StoneTablet_08.png',
         description: '使用后选择一件【安琪拉废墟】装备，使其等级提升 +2（最高100级）'
+    },
+
+    // 火焰之王的徽章（拉格纳罗斯掉落）
+    IT_RAGNAROS_BADGE: {
+        id: 'IT_RAGNAROS_BADGE',
+        name: '火焰之王的徽章',
+        type: 'consumable',
+        rarity: 'orange',
+        canUse: true,
+        sellPrice: 0,  // 不可出售
+        icon: 'icons/wow/vanilla/items/INV_Misc_Rune_06.png',
+        description: '使用后选择一件【熔火之心】或【熔火之心BOSS】掉落装备，使其等级提升 +2（最高100级）。可用于风剑/橙锤等传奇装备。'
     }
 
 
@@ -9187,7 +9216,7 @@ const SET_BONUSES = {
         name: '勇气',
         tiers: [
             { count: 3, bonus: { hp: 500, armor: 80, mastery: 10 } },
-            { count: 5 bonus: { blockRate: 5, blockValue: 300 } },
+            { count: 5, bonus: { blockRate: 5, blockValue: 300 } },
             { count: 8, bonus: { hp: 2000, attack:500 } }
         ]
     },
@@ -9874,6 +9903,7 @@ const BOSS_DATA = {
             gold: 3200000,
             exp: 1800000,
             items: [
+                { id: 'IT_RAGNAROS_BADGE', chance: 0.8 },
                 { id: 'EQ_191', chance: 0.10 },
                 { id: 'EQ_192', chance: 0.10 },
                 { id: 'EQ_193', chance: 0.10 },

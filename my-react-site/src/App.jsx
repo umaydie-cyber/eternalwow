@@ -22282,34 +22282,84 @@ const ItemDetailsModal = ({ item, onClose, onEquip, characters, state , dispatch
                       fontSize: 12,
                     }}
                   >
-                    <option value="">— 请选择 —</option>
-                    {(characters || []).map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name}{c.level != null ? `（Lv${c.level}）` : ''}
-                      </option>
-                    ))}
+                        <option value="">选择角色...</option>
+                        {characters.map(char => (
+                            <option key={char.id} value={char.id}>
+                                {char.name} (Lv.{char.level})
+                            </option>
+                        ))}
                   </select>
                 </div>
 
                 <div style={{ display: 'flex', gap: 12 }}>
-                  <Button
-                    style={{ flex: 1 }}
-                    disabled={!selectedCharId}
-                    onClick={() => {
-                      if (!selectedCharId) return;
-                      const itemInstanceId = item.instanceId ?? item.itemInstanceId ?? item.id;
-                      onEquip(selectedCharId, itemInstanceId);
-                      onClose();
-                    }}
-                  >
-                    ⚔️ 装备
-                  </Button>
+                    {item.id === 'REBIRTH_INVITATION' && (
+                        <Button
+                            variant="danger"
+                            onClick={() => {
+                                dispatch({ type: 'USE_ITEM', payload: { itemInstanceId: item.instanceId || item.id } });
+                                onClose();
+                            }}
+                            style={{ flex: 1 }}
+                        >
+                            🌀 使用邀请函
+                        </Button>
+                    )}
+                    <Button
+                        onClick={() => {
+                            if (selectedCharId) {
+                                onEquip(selectedCharId, item.instanceId || item.id);
+                                onClose();
+                            }
+                        }}
+                        disabled={!selectedCharId}
+                        style={{ flex: 1 }}
+                    >
+                        装备
+                    </Button>
+                    {(() => {
+                        const getLevel = (eq) => (eq?.currentLevel ?? eq?.level ?? 0);
+                        const isMatA = item.id === 'EQ_041' && getLevel(item) >= 100;
+                        const isMatB = item.id === 'EQ_042' && getLevel(item) >= 100;
 
-                  <Button onClick={onClose} variant="secondary" style={{ flex: 1 }}>
-                    关闭
-                  </Button>
+                        const hasOther =
+                            isMatA
+                                ? state.inventory.some(i => i?.type === 'equipment' && i.id === 'EQ_042' && getLevel(i) >= 100)
+                                : isMatB
+                                    ? state.inventory.some(i => i?.type === 'equipment' && i.id === 'EQ_041' && getLevel(i) >= 100)
+                                    : false;
+
+                        if (!(hasOther && (isMatA || isMatB))) return null;
+
+                        return (
+                            <Button
+                                onClick={() => {
+                                    if (window.confirm('消耗【反击者桑萨斯 Lv100】与【保护者加萨斯 Lv100】合成【鞭笞者苏萨斯 Lv0】？')) {
+                                        dispatch({ type: 'SYNTHESIZE_EQ_044' });
+                                        onClose();
+                                    }
+                                }}
+                                style={{ flex: 1 }}
+                            >
+                                ⚗️ 苏萨斯
+                            </Button>
+                        );
+                    })()}
+                    <Button
+                        variant="danger"
+                        onClick={() => {
+                            if (window.confirm(`确定要丢弃 ${item.name} 吗？`)) {
+                                dispatch({ type: 'USE_ITEM', payload: { itemInstanceId: item.instanceId || item.id } });
+                                onClose();
+                            }
+                        }}
+                    >
+                        🗑️ 丢弃
+                    </Button>
+                    <Button onClick={onClose} variant="secondary" style={{ flex: 1 }}>
+                        关闭
+                    </Button>
                 </div>
-
+            </div>
         </div>
     );
 };

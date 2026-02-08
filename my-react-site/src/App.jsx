@@ -22164,107 +22164,190 @@ const ItemDetailsModal = ({ item, onClose, onEquip, characters, state , dispatch
                 </div>
 
                 {/* 特殊效果显示 */}
-                {getEquipmentSpecialEffectList(item).length > 0 && (
-                    <div style={{ marginBottom: '16px', padding: '12px', backgroundColor: '#f8f9fa', borderRadius: '8px' }}>
-                        <h3 style={{ margin: '0 0 8px 0', color: '#d35400', fontSize: '16px' }}>⚡ 特殊效果</h3>
+                {(() => {
+                  const effects = getEquipmentSpecialEffectList(item);
+                  if (effects.length === 0) return null;
 
-                        {getEquipmentSpecialEffectList(item).map((se, idx) => (
-                            <div key={idx} style={{ marginTop: idx > 0 ? '10px' : 0 }}>
-                                {se.type === 'skill_slot_buff' && (
-                                    <div style={{ color: '#8e44ad', fontSize: '14px' }}>
-                                        🎯 <strong>技能栏强化</strong>：第 {se.slots.map(s => s + 1).join('、')}格技能效果提升
-                                        <br />
-                                        {Object.entries(se.bonus).map(([stat, value]) => (
-                                            <span key={stat} style={{ display: 'block', marginLeft: '16px' }}>
-                                                +{formatItemStatValue(stat, value)} {statNames[stat] || stat}
-                                            </span>
-                                        ))}
-                                        <div style={{ marginTop: '6px', fontSize: '12px', color: '#666' }}>
-                                            💡 说明：仅增强放在指定技能栏的技能
-                                        </div>
-                                    </div>
-                                )}
+                  const fmtPct = (v) => `${Math.round((Number(v) || 0) * 100)}%`;
 
-                                {se.type === 'basic_attack_repeat' && (
-                                    <div style={{ color: '#c0392b', fontSize: '14px' }}>
-                                        ⚔️ <strong>连击</strong>：普通攻击有{(se.chance * 100).toFixed(0)}%概率再攻击一次
-                                        <div style={{ marginTop: '6px', fontSize: '12px', color: '#666' }}>
-                                            💡 说明：额外攻击不消耗能量
-                                        </div>
-                                    </div>
-                                )}
+                  return (
+                    <div style={{
+                      background: 'rgba(255, 152, 0, 0.1)',
+                      border: '1px solid rgba(255, 152, 0, 0.3)',
+                      borderRadius: 8,
+                      padding: 16,
+                      marginBottom: 20
+                    }}>
+                      <h3 style={{ fontSize: 14, color: '#ff9800', marginBottom: 12 }}>⚡ 特殊效果</h3>
 
-                                {se.type === 'proc_stat' && se.trigger === 'turn_start' && (
-                                    <div style={{ color: '#16a085', fontSize: '14px' }}>
-                                        🎲 <strong>{se.name || '属性增益'}</strong>：每回合开始有{(se.chance * 100).toFixed(0)}%概率触发
-                                        <br />
-                                        {Object.entries(se.stats).map(([stat, value]) => (
-                                            <span key={stat} style={{ display: 'block', marginLeft: '16px' }}>
-                                                +{formatItemStatValue(stat, value)} {statNames[stat] || stat}
-                                            </span>
-                                        ))}
-                                        <div style={{ marginTop: '6px', fontSize: '12px', color: '#666' }}>
-                                            💡 说明：触发后本回合生效
-                                        </div>
-                                    </div>
-                                )}
+                      {effects.map((se, idx) => {
+                        if (!se || typeof se !== 'object') return null;
 
-                                {se.type === 'proc_damage' && se.trigger === 'turn_start' && (
-                                    <div style={{ color: '#e67e22', fontSize: '14px' }}>
-                                        🔥 <strong>{se.name || '触发伤害'}</strong>：每回合开始有{(se.chance * 100).toFixed(0)}%概率触发
-                                        <div style={{ marginTop: '4px', marginLeft: '16px', color: '#555' }}>
-                                            伤害：{se.damageMult ? `${se.damageMult}×` : ''}{se.basedOn === 'spellPower' ? '法强' : '攻击'}{se.damageFlat ? ` + ${se.damageFlat}` : ''}（{getSchoolCn(se.school)}）
-                                        </div>
-                                        <div style={{ marginTop: '6px', fontSize: '12px', color: '#666' }}>
-                                            💡 说明：触发伤害会受到目标防御影响
-                                        </div>
-                                    </div>
-                                )}
+                        const type = se.type;
+                        const chance = Math.max(0, Math.min(1, Number(se.chance) || 0));
+                        const trigger = se.trigger || 'turn_start';
 
-                                {se.type === 'ignore_defense' && (
-                                    <div style={{ color: '#2980b9', fontSize: '14px' }}>
-                                        🛡️ <strong>穿甲</strong>：无视敌人{((Number(se.pct ?? se.ignorePct ?? se.value) || 0) * 100).toFixed(0)}%防御
-                                    </div>
-                                )}
+                        return (
+                          <div key={idx} style={{ marginTop: idx ? 12 : 0 }}>
 
-                                {se.type === 'thunderfury' && (
-                                    <div style={{ color: '#0066ff', fontSize: '14px' }}>
-                                        ⚡ <strong>风剑：闪电链</strong>：每回合开始有{(se.chance * 100).toFixed(0)}%概率触发闪电链
-                                        <br />
-                                        <span style={{ marginLeft: '16px', display: 'block' }}>对所有敌人造成 {se.damageMult}倍攻击强度的自然伤害</span>
-                                        <span style={{ marginLeft: '16px', display: 'block' }}>同时获得 {((se.damageReduction || 0) * 100).toFixed(0)}%减伤（{se.selfBuffDuration}回合）</span>
-                                        <div style={{ marginTop: '6px', fontSize: '12px', color: '#666' }}>
-                                            💡 说明：对BOSS战的小怪也有效
-                                        </div>
-                                    </div>
-                                )}
+                            {/* skill_slot_buff：技能格强化 */}
+                            {type === 'skill_slot_buff' && (() => {
+                              const slots = Array.isArray(se.slots)
+                                ? se.slots
+                                : (Number.isFinite(Number(se.slot)) ? [Number(se.slot)] : []);
+                              const slotText = slots.length ? slots.map(s => s + 1).join('、') : '？';
 
-                                {se.type === 'map_slayer' && (
-                                    <div style={{ color: '#d35400', fontSize: '14px' }}>
-                                        🗺️ <strong>地图杀手</strong>：地图战斗中造成的伤害提高{(se.bonusDamageVsMap * 100).toFixed(0)}%
-                                        <div style={{ marginTop: '6px', fontSize: '12px', color: '#666' }}>
-                                            💡 说明：仅在地图战斗中生效
-                                        </div>
-                                    </div>
-                                )}
+                              const atk = Number(se.attackBonus) || 0;
+                              const sp = Number(se.spellPowerBonus) || 0;
 
-                                {![
-                                    'skill_slot_buff',
-                                    'basic_attack_repeat',
-                                    'proc_stat',
-                                    'proc_damage',
-                                    'ignore_defense',
-                                    'thunderfury',
-                                    'map_slayer'
-                                ].includes(se.type) && (
-                                    <div style={{ color: '#666', fontSize: '14px' }}>
-                                        ⚡ 特效：{se.type}
+                              return (
+                                <div style={{ fontSize: 12, color: '#ffb74d', lineHeight: 1.6 }}>
+                                  在第 <span style={{ color: '#ffd700', fontWeight: 600 }}>{slotText}</span> 技能格释放技能时：
+                                  {atk !== 0 && (
+                                    <div style={{ marginTop: 8, color: '#fff' }}>
+                                      • 攻击强度 <span style={{ color: '#4CAF50', fontWeight: 600 }}>+{formatItemStatValue('attack', atk)}</span>
                                     </div>
+                                  )}
+                                  {sp !== 0 && (
+                                    <div style={{ marginTop: 8, color: '#fff' }}>
+                                      • 法术强度 <span style={{ color: '#4CAF50', fontWeight: 600 }}>+{formatItemStatValue('spellPower', sp)}</span>
+                                    </div>
+                                  )}
+                                  <div style={{
+                                    marginTop: 12,
+                                    padding: '8px 12px',
+                                    background: 'rgba(255,215,0,0.1)',
+                                    borderRadius: 6,
+                                    border: '1px dashed rgba(255,215,0,0.3)',
+                                    fontSize: 11,
+                                    color: '#c9a227'
+                                  }}>
+                                    💡 提示：该特效会随装备等级线性增强（lv0=1x, lv100=2x）
+                                  </div>
+                                </div>
+                              );
+                            })()}
+
+                            {/* basic_attack_repeat */}
+                            {type === 'basic_attack_repeat' && (
+                              <div style={{ fontSize: 12, color: '#ffb74d', lineHeight: 1.6 }}>
+                                <div style={{ marginBottom: 8, color: '#fff' }}>
+                                  使用普通攻击后，有 <span style={{ color: '#ffd700', fontWeight: 600 }}>{(chance * 100).toFixed(0)}%</span> 概率再次发动一次普通攻击
+                                </div>
+                                <div style={{
+                                  marginTop: 12,
+                                  padding: '8px 12px',
+                                  background: 'rgba(255,215,0,0.1)',
+                                  borderRadius: 6,
+                                  border: '1px dashed rgba(255,215,0,0.3)',
+                                  fontSize: 11,
+                                  color: '#c9a227'
+                                }}>
+                                  💡 提示：连击伤害与普通攻击相同，可触发“质朴”等普攻相关天赋
+                                </div>
+                              </div>
+                            )}
+
+                            {/* proc_stat */}
+                            {type === 'proc_stat' && (
+                              <div style={{ fontSize: 12, color: '#ffb74d', lineHeight: 1.6 }}>
+                                <div style={{ marginBottom: 8, color: '#fff' }}>
+                                  {(trigger === 'turn_start') ? '每回合开始' : '触发时'}有 <span style={{ color: '#ffd700', fontWeight: 600 }}>{(chance * 100).toFixed(0)}%</span> 概率获得以下增益（仅本回合）：
+                                </div>
+
+                                {Object.entries((se.stats && typeof se.stats === 'object') ? se.stats : {}).map(([stat, value]) => (
+                                  <div key={stat} style={{ marginTop: 8, color: '#fff' }}>
+                                    • {statNames[stat] || stat}{' '}
+                                    <span style={{ color: '#4CAF50', fontWeight: 600 }}>+{formatItemStatValue(stat, value)}</span>
+                                  </div>
+                                ))}
+
+                                {se.scaleWithLevel && (
+                                  <div style={{
+                                    marginTop: 12,
+                                    padding: '8px 12px',
+                                    background: 'rgba(255,215,0,0.1)',
+                                    borderRadius: 6,
+                                    border: '1px dashed rgba(255,215,0,0.3)',
+                                    fontSize: 11,
+                                    color: '#c9a227'
+                                  }}>
+                                    💡 提示：该特效会随装备等级提升而增强（lv0=1x, lv100=2x）
+                                  </div>
                                 )}
-                            </div>
-                        ))}
+                              </div>
+                            )}
+
+                            {/* proc_damage */}
+                            {type === 'proc_damage' && (
+                              <div style={{ fontSize: 12, color: '#ffb74d', lineHeight: 1.6 }}>
+                                <div style={{ marginBottom: 8, color: '#fff' }}>
+                                  {(trigger === 'turn_start') ? '每回合开始' : '触发时'}有 <span style={{ color: '#ffd700', fontWeight: 600 }}>{(chance * 100).toFixed(0)}%</span> 概率触发
+                                  <span style={{ color: '#ffd700', fontWeight: 600 }}> {se.name || '额外伤害'} </span>：
+                                </div>
+                                <div style={{ marginTop: 8, color: '#fff' }}>
+                                  • 伤害：{Number(se.damageMult) ? `${Number(se.damageMult)}×` : ''}{se.basedOn === 'spellPower' ? '法术强度' : '攻击强度'}{Number(se.damageFlat) ? ` + ${Math.floor(Number(se.damageFlat) || 0)}` : ''}（{getSchoolCn(se.school)}）
+                                </div>
+                              </div>
+                            )}
+
+                            {/* ignore_defense */}
+                            {type === 'ignore_defense' && (
+                              <div style={{ fontSize: 12, color: '#ffb74d', lineHeight: 1.6 }}>
+                                <div style={{ color: '#fff' }}>
+                                  🛡️ 穿甲：无视敌人 <span style={{ color: '#ffd700', fontWeight: 600 }}>{fmtPct(se.pct ?? se.ignorePct ?? se.value)}</span> 防御
+                                </div>
+                              </div>
+                            )}
+
+                            {/* thunderfury：按你当前数据字段展示（不再 NaN） */}
+                            {type === 'thunderfury' && (() => {
+                              const damageMult = Number(se.damageMult) || 1.2;
+                              const selfDamageTakenMult = Number(se.selfDamageTakenMult) || 0.8;
+                              const selfBuffDuration = Math.max(1, Math.floor(Number(se.selfBuffDuration) || 2));
+                              const reductionPct = Math.round((1 - selfDamageTakenMult) * 100);
+
+                              return (
+                                <div style={{ fontSize: 12, color: '#ffb74d', lineHeight: 1.6 }}>
+                                  <div style={{ marginBottom: 8, color: '#fff' }}>
+                                    每回合开始有 <span style={{ color: '#ffd700', fontWeight: 600 }}>{(chance * 100).toFixed(0)}%</span> 概率释放一道闪电链：
+                                  </div>
+                                  <div style={{ marginTop: 8, color: '#fff' }}>
+                                    • 对所有敌人造成 <span style={{ color: '#ffd700', fontWeight: 600 }}>{damageMult.toFixed(1)}倍攻击强度</span> 的自然伤害
+                                  </div>
+                                  <div style={{ marginTop: 8, color: '#fff' }}>
+                                    • 并使自身受到的所有伤害降低 <span style={{ color: '#ffd700', fontWeight: 600 }}>{reductionPct}%</span> ，持续 <span style={{ color: '#ffd700', fontWeight: 600 }}>{selfBuffDuration}</span> 回合
+                                  </div>
+                                  <div style={{ marginTop: 12, fontSize: 11, color: '#c9a227' }}>
+                                    💡 说明：对BOSS战的小怪也有效
+                                  </div>
+                                </div>
+                              );
+                            })()}
+
+                            {/* map_slayer */}
+                            {type === 'map_slayer' && (
+                              <div style={{ fontSize: 12, color: '#ffb74d', lineHeight: 1.6 }}>
+                                <div style={{ marginBottom: 8, color: '#fff' }}>
+                                  地图战斗中造成的伤害提高 <span style={{ color: '#ffd700', fontWeight: 600 }}>{fmtPct(se.bonusDamageVsMap)}</span>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* fallback */}
+                            {![ 'skill_slot_buff','basic_attack_repeat','proc_stat','proc_damage','ignore_defense','thunderfury','map_slayer' ].includes(type) && (
+                              <div style={{ fontSize: 12, color: '#aaa' }}>
+                                ⚡ 特效：{String(type || 'unknown')}
+                              </div>
+                            )}
+
+                          </div>
+                        );
+                      })}
                     </div>
-                    )}
+                  );
+                })()}
+
 
                 <div style={{ marginBottom: 12 }}>
                   <div style={{ fontSize: 12, color: '#aaa', marginBottom: 6 }}>选择要装备的角色</div>

@@ -8299,7 +8299,7 @@ const RESEARCH = {
     },
     // ✅ 击败裂魂者萨尔诺斯后解锁
     alchemy_mastery: {
-        id: 'siphon_mastery',
+        id: 'alchemy_mastery',
         name: '炼金精通',
         description: '提升炼金术效率（击败裂魂者萨尔诺斯后解锁）',
         baseCost: 10000,

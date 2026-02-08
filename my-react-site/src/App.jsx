@@ -7739,6 +7739,186 @@ const FIXED_EQUIPMENTS = {
       setName: '预言'
     },
 
+    // ==================== Molten Core（熔火之心）- 拉格纳罗斯掉落 ====================
+    EQ_191: {
+      id: 'EQ_191',
+      name: '愤怒腿铠',
+      icon: 'icons/wow/vanilla/armor/INV_Pants_04.png',
+      type: 'equipment',
+      slot: 'legs',
+      rarity: 'purple',
+      level: 1,
+      maxLevel: 100,
+      baseStats: { hp: 7800, armor: 270, mastery: 14, blockRate: 6, blockValue: 600 },
+      growth: { hp: 2, armor: 2, mastery: 2, blockRate: 2, blockValue: 2 },
+      setId: 'wrath_set',
+      setName: '愤怒'
+    },
+
+    EQ_192: {
+      id: 'EQ_192',
+      name: '血牙短裤',
+      icon: 'icons/wow/vanilla/armor/INV_Pants_06.png',
+      type: 'equipment',
+      slot: 'legs',
+      rarity: 'purple',
+      level: 1,
+      maxLevel: 100,
+      baseStats: { attack: 620, hp: 4500, armor: 210, critRate: 14, mastery: 18 },
+      growth: { attack: 2, hp: 2, armor: 2, critRate: 2, mastery: 2 },
+      setId: 'bloodfang_set',
+      setName: '血牙'
+    },
+
+    EQ_193: {
+      id: 'EQ_193',
+      name: '灵风短裤',
+      icon: 'icons/wow/vanilla/armor/INV_Pants_08.png',
+      type: 'equipment',
+      slot: 'legs',
+      rarity: 'purple',
+      level: 1,
+      maxLevel: 100,
+      baseStats: { spellPower: 620, hp: 4300, haste: 14, versatility: 18 },
+      growth: { spellPower: 2, hp: 2, haste: 2, versatility: 2 },
+      setId: 'netherwind_set',
+      setName: '灵风'
+    },
+
+    EQ_194: {
+      id: 'EQ_194',
+      name: '卓越护腿',
+      icon: 'icons/wow/vanilla/armor/INV_Pants_09.png',
+      type: 'equipment',
+      slot: 'legs',
+      rarity: 'purple',
+      level: 1,
+      maxLevel: 100,
+      baseStats: { spellPower: 580, hp: 5000, mastery: 14, versatility: 18 },
+      growth: { spellPower: 2, hp: 2, mastery: 2, versatility: 2 },
+      setId: 'transcendence_set',
+      setName: '卓越'
+    },
+
+    EQ_195: {
+      id: 'EQ_195',
+      name: '埃古雷亚指环',
+      icon: 'icons/wow/vanilla/armor/INV_Jewelry_Ring_24.png',
+      type: 'equipment',
+      slot: 'ring2',
+      rarity: 'purple',
+      level: 1,
+      maxLevel: 100,
+      baseStats: { attack: 720, hp: 4800, critRate: 14, haste: 24, mastery: 24 },
+      growth: { attack: 2, hp: 2, critRate: 2, haste: 2, mastery: 2 }
+    },
+
+    EQ_196: {
+      id: 'EQ_196',
+      name: '环雾披风',
+      icon: 'icons/wow/vanilla/armor/INV_Misc_Cape_19.png',
+      type: 'equipment',
+      slot: 'cloak',
+      rarity: 'purple',
+      level: 1,
+      maxLevel: 100,
+      baseStats: { hp: 5200, armor: 180, magicResist: 260, versatility: 24 },
+      growth: { hp: 2, armor: 2, magicResist: 2, versatility: 2 }
+    },
+
+    EQ_197: {
+      id: 'EQ_197',
+      name: '火焰之王的项圈',
+      icon: 'icons/wow/vanilla/armor/INV_Jewelry_Necklace_12.png',
+      type: 'equipment',
+      slot: 'neck',
+      rarity: 'purple',
+      level: 1,
+      maxLevel: 100,
+      baseStats: { spellPower: 720, hp: 4200, critRate: 14, haste: 24, mastery: 24 },
+      growth: { spellPower: 2, hp: 2, critRate: 2, haste: 2, mastery: 2 }
+    },
+
+    EQ_198: {
+      id: 'EQ_198',
+      name: '脊骨收割者',
+      icon: 'icons/wow/vanilla/weapons/INV_Axe_09.png',
+      type: 'equipment',
+      slot: 'mainHand',
+      rarity: 'purple',
+      level: 1,
+      maxLevel: 100,
+      baseStats: { attack: 2400, hp: 5000, critRate: 18, critDamage: 0.6, versatility: 30 },
+      growth: { attack: 2, hp: 2, critRate: 2, critDamage: 2, versatility: 2 },
+      specialEffect: {
+        type: 'map_slayer',
+        bonusDamageVsMap: 0.40
+      }
+    },
+
+    EQ_199: {
+      id: 'EQ_199',
+      name: '萨弗拉斯指环',
+      icon: 'icons/wow/vanilla/armor/INV_Jewelry_Ring_16.png',
+      type: 'equipment',
+      slot: 'ring2',
+      rarity: 'purple',
+      level: 1,
+      maxLevel: 100,
+      baseStats: { spellPower: 680, hp: 5600, critRate: 12, mastery: 22, versatility: 18 },
+      growth: { spellPower: 2, hp: 2, critRate: 2, mastery: 2, versatility: 2 }
+    },
+
+    EQ_200: {
+      id: 'EQ_200',
+      name: '削骨之刃',
+      icon: 'icons/wow/vanilla/weapons/INV_Sword_23.png',
+      type: 'equipment',
+      slot: 'mainHand',
+      rarity: 'purple',
+      level: 1,
+      maxLevel: 100,
+      baseStats: { attack: 2500, hp: 4800, critRate: 20, critDamage: 0.6, mastery: 24 },
+      growth: { attack: 2, hp: 2, critRate: 2, critDamage: 2, mastery: 2 },
+      specialEffect: {
+        type: 'ignore_defense',
+        pct: 0.50
+      }
+    },
+
+    EQ_201: {
+      id: 'EQ_201',
+      name: '萨弗拉斯，炎魔拉格纳罗斯之手',
+      icon: 'icons/wow/vanilla/weapons/INV_Hammer_09.png',
+      type: 'equipment',
+      slot: 'mainHand',
+      rarity: 'orange',
+      level: 1,
+      maxLevel: 100,
+      baseStats: { attack: 2800, hp: 6000, magicResist: 250, critRate: 20, critDamage: 0.8, versatility: 30 },
+      growth: { attack: 2, hp: 2, magicResist: 2, critRate: 2, critDamage: 2, versatility: 2 },
+      specialEffects: [
+        {
+          type: 'proc_stat',
+          name: '萨弗拉斯之力',
+          trigger: 'turn_start',
+          chance: 0.25,
+          stats: { attack: 2000 },
+          scaleWithLevel: true
+        },
+        {
+          type: 'proc_damage',
+          name: '火焰箭',
+          trigger: 'turn_start',
+          chance: 0.25,
+          school: 'fire',
+          basedOn: 'attack',
+          damageMult: 1.5,
+          scaleWithLevel: true
+        }
+      ]
+    },
+
 
 };
 
@@ -9006,32 +9186,32 @@ const SET_BONUSES = {
     valor_set: {
         name: '勇气',
         tiers: [
-            { count: 2, bonus: { hp: 500, armor: 80, mastery: 10 } },
-            { count: 4, bonus: { blockRate: 5, blockValue: 300 } },
+            { count: 3, bonus: { hp: 500, armor: 80, mastery: 10 } },
+            { count: 5 bonus: { blockRate: 5, blockValue: 300 } },
             { count: 8, bonus: { hp: 2000, attack:500 } }
         ]
     },
     swiftshadow_set: {
         name: '迅影',
         tiers: [
-            { count: 2, bonus: { attack: 200, haste: 10 } },
-            { count: 4, bonus: { critRate: 10, critDamage: 0.30 } },
+            { count: 3, bonus: { attack: 200, haste: 10 } },
+            { count: 5, bonus: { critRate: 10, critDamage: 0.30 } },
             { count: 8, bonus: { hp: 1000, versatility:20 } }
         ]
     },
     devout_set: {
         name: '虔诚',
         tiers: [
-            { count: 2, bonus: { spellPower: 250, mastery: 10 } },
-            { count: 4, bonus: { hp: 800, versatility: 15 } },
+            { count: 3, bonus: { spellPower: 250, mastery: 10 } },
+            { count: 5, bonus: { hp: 800, versatility: 15 } },
             { count: 8, bonus: { hp: 1500, spellPower:500 } }
         ]
     },
     scholar_set: {
         name: '博学者',
         tiers: [
-            { count: 2, bonus: { spellPower: 250, versatility: 10 } },
-            { count: 4, bonus: { critRate: 10, mastery: 15 } },
+            { count: 3, bonus: { spellPower: 250, versatility: 10 } },
+            { count: 5, bonus: { critRate: 10, mastery: 15 } },
             { count: 8, bonus: { hp: 1000, versatility:20 } }
         ]
     }
@@ -9040,29 +9220,33 @@ const SET_BONUSES = {
     might_set: {
         name: '力量',
         tiers: [
-            { count: 2, bonus: { hp: 800, armor: 120, mastery: 12 } },
-            { count: 4, bonus: { blockRate: 6, blockValue: 360 } }
+            { count: 3, bonus: { hp: 800, armor: 120, mastery: 12 } },
+            { count: 5, bonus: { blockRate: 6, blockValue: 360 } },
+            { count: 8, bonus: { hp: 4000, attack:800 } },
         ]
     },
     nightslayer_set: {
         name: '夜幕杀手',
         tiers: [
-            { count: 2, bonus: { attack: 250, haste: 12 } },
-            { count: 4, bonus: { critRate: 12, critDamage: 0.35 } }
+            { count: 3, bonus: { attack: 250, haste: 12 } },
+            { count: 5, bonus: { critRate: 12, critDamage: 0.35 } },
+            { count: 8, bonus: { hp: 2000, versatility:25 } },
         ]
     },
     arcanist_set: {
         name: '奥术师',
         tiers: [
-            { count: 2, bonus: { spellPower: 300, haste: 12 } },
-            { count: 4, bonus: { critRate: 12, mastery: 12} }
+            { count: 3, bonus: { spellPower: 300, haste: 12 } },
+            { count: 5, bonus: { critRate: 12, mastery: 12} },
+            { count: 8, bonus: { hp: 2000, versatility: 25 } },
         ]
     },
     prophecy_set: {
         name: '预言',
         tiers: [
-            { count: 2, bonus: { spellPower: 300, mastery: 12 } },
-            { count: 4, bonus: { hp: 1200, versatility: 18 } }
+            { count: 3, bonus: { spellPower: 300, mastery: 12 } },
+            { count: 5, bonus: { hp: 1200, versatility: 18 } },
+            { count: 8, bonus: { hp: 2500, spellPower:800 } },
         ]
     }
 
@@ -9689,7 +9873,19 @@ const BOSS_DATA = {
         rewards: {
             gold: 3200000,
             exp: 1800000,
-            items: []
+            items: [
+                { id: 'EQ_191', chance: 0.10 },
+                { id: 'EQ_192', chance: 0.10 },
+                { id: 'EQ_193', chance: 0.10 },
+                { id: 'EQ_194', chance: 0.10 },
+                { id: 'EQ_195', chance: 0.10 },
+                { id: 'EQ_196', chance: 0.10 },
+                { id: 'EQ_197', chance: 0.10 },
+                { id: 'EQ_198', chance: 0.10 },
+                { id: 'EQ_199', chance: 0.10 },
+                { id: 'EQ_200', chance: 0.10 },
+                { id: 'EQ_201', chance: 0.02 }
+            ]
         }
     },
 
@@ -10756,6 +10952,108 @@ function rollProcStatEffects(character, trigger) {
     return { bonus: totalBonus, triggered };
 }
 
+
+
+// ==================== 装备特效：无视防御（穿甲） ====================
+// specialEffect: { type: 'ignore_defense', pct: 0.5 }
+// 说明：对目标造成的所有“扣防御”伤害，目标防御按 (1 - pct) 计算（最多无视90%）
+function getIgnoreDefensePct(character) {
+    try {
+        const eqList = Object.values(character?.equipment || {}).filter(Boolean);
+        let pct = 0;
+
+        eqList.forEach(eq => {
+            const effects = getEquipmentSpecialEffectList(eq);
+            effects.forEach(se => {
+                if (!se || se.type !== 'ignore_defense') return;
+                const v = Number(se.pct ?? se.ignorePct ?? se.value);
+                if (Number.isFinite(v) && v > 0) pct += v;
+            });
+        });
+
+        return clamp(pct, 0, 0.9);
+    } catch {
+        return 0;
+    }
+}
+
+function getEffectiveTargetDefense(attacker, targetDefenseRaw) {
+    const base = Math.max(0, Math.floor(Number(targetDefenseRaw) || 0));
+    const pct = getIgnoreDefensePct(attacker);
+    if (!Number.isFinite(pct) || pct <= 0) return base;
+    return Math.max(0, Math.floor(base * (1 - pct)));
+}
+
+// ==================== 装备特效：概率触发伤害（通用） ====================
+// specialEffect: {
+//   type: 'proc_damage',
+//   name: '火焰箭',
+//   trigger: 'turn_start',
+//   chance: 0.25,
+//   school: 'fire',
+//   basedOn: 'attack' | 'spellPower',
+//   damageMult: 1.5,   // 伤害 = 基础属性 * damageMult
+//   damageFlat: 0,     // 额外固定伤害（可选）
+//   scaleWithLevel: true
+// }
+function rollProcDamageEffects(character, trigger = 'turn_start') {
+    const eqList = Object.values(character?.equipment || {}).filter(Boolean);
+
+    const triggered = [];
+
+    eqList.forEach(eq => {
+        const effects = getEquipmentSpecialEffectList(eq);
+        effects.forEach(se => {
+            if (!se || se.type !== 'proc_damage') return;
+            if (se.trigger && se.trigger !== trigger) return;
+
+            const chance = Number(se.chance) || 0;
+            if (chance <= 0) return;
+
+            if (Math.random() > chance) return;
+
+            const basedOn = (se.basedOn === 'spellPower') ? 'spellPower' : 'attack';
+            const basis = Number(character?.stats?.[basedOn]) || 0;
+
+            const lv = Number(eq?.currentLevel ?? eq?.level ?? 0) || 0;
+            const lvMult = se.scaleWithLevel ? (1 + lv / 100) : 1;
+
+            const mult = Number(se.damageMult) || 0;
+            const flat = Number(se.damageFlat) || 0;
+
+            let rawDamage = 0;
+            if (mult !== 0) rawDamage += basis * mult;
+            rawDamage += flat;
+            rawDamage = Math.floor(rawDamage * lvMult);
+
+            triggered.push({
+                label: se.name || se.label || '触发伤害',
+                school: se.school || 'physical',
+                basedOn,
+                rawDamage,
+                chance
+            });
+        });
+    });
+
+    return triggered;
+}
+
+// 小工具：伤害学派中文
+function getSchoolCn(school) {
+    const s = String(school || '').toLowerCase();
+    const map = {
+        physical: '物理',
+        fire: '火焰',
+        frost: '冰霜',
+        arcane: '奥术',
+        nature: '自然',
+        shadow: '暗影',
+        holy: '神圣'
+    };
+    return map[s] || '伤害';
+}
+
 // ==================== 装备特效：风剑（雷霆之怒）闪电链 ====================
 // 数据约定：specialEffect.type === 'thunderfury'
 // 触发：turn_start，chance=0.20
@@ -11399,7 +11697,8 @@ function stepBossCombat(state) {
                 if (shieldInfo.immune) {
                     addLog(`【${thunderfury.label}】闪电链被【${shieldInfo.shieldName}】免疫`, 'warning');
                 } else {
-                const actual = Math.max(1, Math.floor(raw - (boss.defense || 0)));
+                const defEff = getEffectiveTargetDefense(p.char, (boss.defense || 0));
+                const actual = Math.max(1, Math.floor(raw - defEff));
                 combat.bossHp -= actual;
                 addLog(`【${thunderfury.label}】闪电链命中 ${boss.name}：造成 ${actual} 自然伤害`);
                 }
@@ -11419,8 +11718,9 @@ function stepBossCombat(state) {
                         addLog(`【${thunderfury.label}】闪电链被【${shieldInfo.shieldName}】免疫`, 'warning');
                         return;
                     }
-                    const def = m.defense ?? boss.minion?.defense ?? boss.cannoneer?.defense ?? 0;
-                    const actual = Math.max(1, Math.floor(raw - def));
+                    const defRaw = m.defense ?? boss.minion?.defense ?? boss.cannoneer?.defense ?? 0;
+                    const defEff = getEffectiveTargetDefense(p.char, defRaw);
+                    const actual = Math.max(1, Math.floor(raw - defEff));
                     combat.minions[mi].hp -= actual;
                     addLog(`【${thunderfury.label}】闪电链命中 ${minionName}：造成 ${actual} 自然伤害`);
                 });
@@ -11451,7 +11751,74 @@ function stepBossCombat(state) {
             addLog(`【雷霆守护】${p.char.name} 受到的所有伤害降低 ${Math.round((1 - dtm) * 100)}%（持续${dur}回合）`, 'buff');
         }
 
-        // 饰品/装备特效：技能栏强化
+                // ==================== 装备特效：概率触发伤害（例如：萨弗拉斯·火焰箭） ====================
+        const procDamages = rollProcDamageEffects(p.char, 'turn_start');
+        if (procDamages.length > 0) {
+            procDamages.forEach(pd => {
+                const school = pd.school || 'physical';
+
+                // 选目标：默认打 Boss；若 Boss 下潜/不优先Boss 或 Boss已死亡，则打血量最低且未免疫的小弟
+                let tType = 'boss';
+                let tIndex = -1;
+
+                const attackableMinions = (combat.minions || [])
+                    .map((m, idx) => ({ idx, hp: Number(m?.hp) || 0, immune: !!m?.immune }))
+                    .filter(x => x.hp > 0 && !x.immune);
+
+                if (((isRagnarosSubmergedThisRound && attackableMinions.length > 0) ||
+                    (!combat.strategy?.priorityBoss && attackableMinions.length > 0) ||
+                    ((combat.bossHp ?? 0) <= 0 && attackableMinions.length > 0))) {
+                    attackableMinions.sort((a, b) => a.hp - b.hp);
+                    tType = 'minion';
+                    tIndex = attackableMinions[0].idx;
+                }
+
+                // 管理者埃克索图斯护盾判定（火焰/暗影/自然 等视为“反魔法护盾”）
+                const shieldInfo = getExecutusShieldInfo(school);
+                if (shieldInfo.immune) {
+                    if (tType === 'boss') {
+                        addLog(`【${pd.label}】伤害被【${shieldInfo.shieldName}】免疫（目标：${boss.name}）`, 'warning');
+                    } else {
+                        const minionName = boss.minion?.name || boss.cannoneer?.name || '小弟';
+                        addLog(`【${pd.label}】伤害被【${shieldInfo.shieldName}】免疫（目标：${minionName}${tIndex + 1}）`, 'warning');
+                    }
+                    return;
+                }
+
+                // Boss 目标
+                if (tType === 'boss') {
+                    if ((combat.bossHp ?? 0) <= 0) return;
+
+                    if (isRagnarosSubmergedThisRound) {
+                        addLog(`【${pd.label}】伤害被【下潜】免疫（目标：${boss.name}）`, 'warning');
+                        return;
+                    }
+
+                    const defRaw = Number(boss.defense) || 0;
+                    const def = getEffectiveTargetDefense(p.char, defRaw);
+                    const actual = Math.max(1, Math.floor((Number(pd.rawDamage) || 0) - def));
+                    combat.bossHp -= actual;
+                    addLog(`【${pd.label}】命中 ${boss.name}：造成 ${actual} ${getSchoolCn(school)}伤害`);
+                }
+
+                // 小弟目标
+                if (tType === 'minion' && tIndex >= 0 && combat.minions?.[tIndex]) {
+                    const m = combat.minions[tIndex];
+                    if ((m?.hp ?? 0) <= 0 || m.immune) return;
+
+                    const defRaw = Number(m?.defense) || Number(boss.minion?.defense) || Number(boss.cannoneer?.defense) || 0;
+                    const def = getEffectiveTargetDefense(p.char, defRaw);
+                    const actual = Math.max(1, Math.floor((Number(pd.rawDamage) || 0) - def));
+
+                    m.hp -= actual;
+
+                    const minionName = boss.minion?.name || boss.cannoneer?.name || '小弟';
+                    addLog(`【${pd.label}】命中 ${minionName}${tIndex + 1}：造成 ${actual} ${getSchoolCn(school)}伤害`);
+                }
+            });
+        }
+
+// 饰品/装备特效：技能栏强化
         const slotBuff = getSkillSlotBuffBonus(p.char, slotIndex);
         // 种族：技能格属性加成（例如：巨魔【狂暴】前4格急速+20）
         const racialSlotBonus = getRacialSkillSlotStatBonus(p.char, slotIndex);
@@ -11620,7 +11987,8 @@ function stepBossCombat(state) {
                 if (shieldInfo.immune) {
                     addLog(`【剑刃乱舞】额外伤害被【${shieldInfo.shieldName}】免疫！`, 'warning');
                 } else {
-                const bossDef = Number(boss.defense) || 0;
+                const bossDefRaw = Number(boss.defense) || 0;
+                const bossDef = getEffectiveTargetDefense(p.char, bossDefRaw);
                 const cleaveToBoss = Math.max(1, cleaveBase - bossDef);
                 combat.bossHp -= cleaveToBoss;
                 addLog(`【剑刃乱舞】${p.char.name} 的${sourceLabel} 额外对 ${boss.name} 造成 ${cleaveToBoss} 伤害`);
@@ -11644,7 +12012,8 @@ function stepBossCombat(state) {
                         return;
                     }
 
-                    const def = Number(m.defense) || Number(boss.minion?.defense) || Number(boss.cannoneer?.defense) || 0;
+                    const defRaw = Number(m.defense) || Number(boss.minion?.defense) || Number(boss.cannoneer?.defense) || 0;
+                    const def = getEffectiveTargetDefense(p.char, defRaw);
                     const cleaveToMinion = Math.max(1, cleaveBase - def);
                     m.hp -= cleaveToMinion;
                     addLog(`【剑刃乱舞】${p.char.name} 的${sourceLabel} 额外对 ${minionName}${idx + 1} 造成 ${cleaveToMinion} 伤害`);
@@ -11699,7 +12068,8 @@ function stepBossCombat(state) {
 
             if (basicResult.damage) {
                 let damage = basicResult.damage * buffDamageDealtMult;
-                const targetDefense = targetType === 'boss' ? boss.defense : (boss.minion?.defense || boss.cannoneer?.defense || 0);
+                const targetDefenseRaw = targetType === 'boss' ? boss.defense : (boss.minion?.defense || boss.cannoneer?.defense || 0);
+                const targetDefense = getEffectiveTargetDefense(p.char, targetDefenseRaw);
                 const actualDamage = Math.max(1, Math.floor(damage - targetDefense));
 
                 // 火焰之王拉格纳罗斯：下潜 - Boss免疫所有伤害
@@ -11945,7 +12315,8 @@ function stepBossCombat(state) {
             }
             damage = Math.floor(damage * takenMult);
 
-            const targetDefense = targetType === 'boss' ? boss.defense : (boss.minion?.defense || boss.cannoneer?.defense || 0);
+            const targetDefenseRaw = targetType === 'boss' ? boss.defense : (boss.minion?.defense || boss.cannoneer?.defense || 0);
+            const targetDefense = getEffectiveTargetDefense(p.char, targetDefenseRaw);
 
             // 检查目标是否免疫
             const shieldInfo = getExecutusShieldInfo(result.school);
@@ -12265,7 +12636,8 @@ function stepBossCombat(state) {
 
                 // 终极苦修伤害
                 if (result.penanceDamage) {
-                    const targetDefense = targetType === 'boss' ? boss.defense : (boss.minion?.defense || boss.cannoneer?.defense || 0);
+                    const targetDefenseRaw = targetType === 'boss' ? boss.defense : (boss.minion?.defense || boss.cannoneer?.defense || 0);
+                const targetDefense = getEffectiveTargetDefense(p.char, targetDefenseRaw);
 
                     // 终极苦修视为“法术”（holy），可能被管理者埃克索图斯【反魔法护盾】免疫
                     const shieldInfo = getExecutusShieldInfo('holy');
@@ -12665,7 +13037,8 @@ function stepBossCombat(state) {
                     return;
                 }
 
-                const def = Number(boss?.defense) || 0;
+                const defRaw = Number(boss?.defense) || 0;
+                const def = getEffectiveTargetDefense(p.char, defRaw);
                 const actual = Math.max(1, dmg - def);
                 combat.bossHp -= actual;
                 addLog(`【暗影魔】位置${pIdx + 1} ${p.char.name} 对 ${boss.name} 造成 ${actual} 暗影伤害${isCrit ? '【暴击】' : ''}`);
@@ -12686,7 +13059,8 @@ function stepBossCombat(state) {
                     return;
                 }
 
-                const def = Number(m?.defense) || Number(boss?.minion?.defense) || Number(boss?.cannoneer?.defense) || 0;
+                const defRaw = Number(m?.defense) || Number(boss?.minion?.defense) || Number(boss?.cannoneer?.defense) || 0;
+                const def = getEffectiveTargetDefense(p.char, defRaw);
                 const actual = Math.max(1, dmg - def);
                 m.hp -= actual;
 
@@ -16055,6 +16429,10 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
     // ✅ 地图战斗总伤害加成（装备特效 + 成就加成，二者乘算）
     const mapDamageDealtMult = getMapDamageDealtMult(character, gameState);
 
+    // ✅ 目标防御（考虑无视防御/穿甲特效）
+    const enemyDefenseRaw = Number(combatState?.enemy?.defense) || 0;
+    const enemyDefense = getEffectiveTargetDefense(character, enemyDefenseRaw);
+
     // buffs
     let buffs = Array.isArray(combatState.buffs) ? [...combatState.buffs] : [];
     // enemy debuffs
@@ -16308,8 +16686,7 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
         if (thunderfury && enemyHp > 0) {
             const atk = Number(character?.stats?.attack) || 0;
             const raw = Math.floor(atk * (Number(thunderfury.damageMult) || 1.2));
-            const def = Number(combatState?.enemy?.defense) || 0;
-            const actual = Math.max(1, Math.floor(raw - def));
+            const actual = Math.max(1, Math.floor(raw - enemyDefense));
             enemyHp -= actual;
 
             logs.push({
@@ -16349,6 +16726,24 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
                 actor: character.name,
                 proc: '雷霆守护',
                 text: `【雷霆守护】受到的所有伤害降低 ${Math.round((1 - dtm) * 100)}%（持续${dur}回合）`
+            });
+        }
+
+        // ==================== 装备特效：概率触发伤害（例如：萨弗拉斯·火焰箭） ====================
+        const procDamages = rollProcDamageEffects(character, 'turn_start');
+        if (procDamages.length > 0 && enemyHp > 0) {
+            procDamages.forEach(pd => {
+                const raw = Math.floor((Number(pd.rawDamage) || 0) * mapDamageDealtMult);
+                const actual = Math.max(1, Math.floor(raw - enemyDefense));
+                enemyHp -= actual;
+
+                logs.push({
+                    round,
+                    kind: 'proc',
+                    actor: character.name,
+                    proc: pd.label,
+                    text: `【${pd.label}】命中 ${combatState?.enemy?.name || '敌人'}：造成 ${actual} ${getSchoolCn(pd.school)}伤害`
+                });
             });
         }
 
@@ -16496,7 +16891,7 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
             damage *= mapDamageDealtMult;
 
             // 全能等通用乘区已在上层calculate中处理，这里直接扣防御
-            const actualDamage = Math.max(1, Math.floor(damage - (combatState.enemy?.defense ?? 0)));
+            const actualDamage = Math.max(1, Math.floor(damage - enemyDefense));
             enemyHp -= actualDamage;
 
             logs.push({
@@ -16552,7 +16947,7 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
             // 30级天赋：山丘之王 - 雷霆一击有50%几率再次释放一次
             if (character.talents?.[30] === 'mountain_king' && Math.random() < 0.5) {
                 const extraResult = skill.calculate(charForCalc);
-                const extraDamage = Math.max(1, Math.floor((extraResult.aoeDamage * racialSlotDamageMult * mapDamageDealtMult) - (combatState.enemy?.defense ?? 0)));
+                const extraDamage = Math.max(1, Math.floor((extraResult.aoeDamage * racialSlotDamageMult * mapDamageDealtMult) - enemyDefense));
                 enemyHp -= extraDamage;
 
                 logs.push({
@@ -16699,7 +17094,7 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
             }
 
             damage = Math.floor(damage * takenMult);
-            const actualDamage = Math.max(1, damage - (combatState.enemy?.defense ?? 0));
+            const actualDamage = Math.max(1, damage - enemyDefense);
             enemyHp -= actualDamage;
 
             logs.push({
@@ -16933,7 +17328,7 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
                             }
 
                             extraDamage = Math.floor(extraDamage * takenMultExtra);
-                            const extraActual = Math.max(1, extraDamage - (combatState.enemy?.defense ?? 0));
+                            const extraActual = Math.max(1, extraDamage - enemyDefense);
                             enemyHp -= extraActual;
 
                             logs.push({
@@ -17188,7 +17583,7 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
             if (result.penanceDamage) {
                 const actualDamage = Math.max(
                     1,
-                    Math.floor(result.penanceDamage * racialSlotDamageMult * mapDamageDealtMult) - (combatState.enemy?.defense ?? 0)
+                    Math.floor(result.penanceDamage * racialSlotDamageMult * mapDamageDealtMult) - enemyDefense
                 );
                 enemyHp -= actualDamage;
                 if (character.stats.atonement) {
@@ -17468,7 +17863,7 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
             }
 
             sfDamage = Math.floor(sfDamage);
-            const actualSf = Math.max(1, sfDamage - (combatState.enemy?.defense ?? 0));
+            const actualSf = Math.max(1, sfDamage - enemyDefense);
 
             // 救赎机制（保持与其它 DOT 一致：按实际伤害触发）
             if (character.stats.atonement) {
@@ -17520,7 +17915,7 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
                 // ✅ 装备特效：地图屠戮（地图战斗伤害加成）
                 dotDamage *= mapDamageDealtMult;
                 dotDamage = Math.floor(dotDamage);
-                const actualDot = Math.max(1, dotDamage - (combatState.enemy?.defense ?? 0));
+                const actualDot = Math.max(1, dotDamage - enemyDefense);
                 if (character.stats.atonement) {
                     const healFromAtonement = Math.floor(actualDot * character.stats.atonement.healingRate);
                     const maxHp = character.stats.maxHp ?? character.stats.hp ?? 0;
@@ -21706,384 +22101,107 @@ const ItemDetailsModal = ({ item, onClose, onEquip, characters, state , dispatch
                 </div>
 
                 {/* 特殊效果显示 */}
-                {item.specialEffect && (
-                    <div style={{
-                        background: 'rgba(255, 152, 0, 0.1)',
-                        border: '1px solid rgba(255, 152, 0, 0.3)',
-                        borderRadius: 8,
-                        padding: 16,
-                        marginBottom: 20
-                    }}>
-                        <h3 style={{ fontSize: 14, color: '#ff9800', marginBottom: 12 }}>⚡ 特殊效果</h3>
-                        {/* skill_slot_buff 类型 */}
-                        {item.specialEffect.type === 'skill_slot_buff' && (
-                            <div style={{ fontSize: 12, color: '#ffb74d', lineHeight: 1.6 }}>
-                                在第 <span style={{ color: '#ffd700', fontWeight: 600 }}>
-                    {item.specialEffect.slots.map(s => s + 1).join('、')}
-                </span> 技能格释放技能时：
-                                {item.specialEffect.attackBonus && (
-                                    <div style={{ marginTop: 8, color: '#fff' }}>
-                                        • 攻击强度 <span style={{ color: '#4CAF50', fontWeight: 600 }}>+{item.specialEffect.attackBonus}</span>
+                {getEquipmentSpecialEffectList(item).length > 0 && (
+                    <div style={{ marginBottom: '16px', padding: '12px', backgroundColor: '#f8f9fa', borderRadius: '8px' }}>
+                        <h3 style={{ margin: '0 0 8px 0', color: '#d35400', fontSize: '16px' }}>⚡ 特殊效果</h3>
+
+                        {getEquipmentSpecialEffectList(item).map((se, idx) => (
+                            <div key={idx} style={{ marginTop: idx > 0 ? '10px' : 0 }}>
+                                {se.type === 'skill_slot_buff' && (
+                                    <div style={{ color: '#8e44ad', fontSize: '14px' }}>
+                                        🎯 <strong>技能栏强化</strong>：第{se.slot + 1}格技能效果提升
+                                        <br />
+                                        {Object.entries(se.bonus).map(([stat, value]) => (
+                                            <span key={stat} style={{ display: 'block', marginLeft: '16px' }}>
+                                                +{formatItemStatValue(stat, value)} {statNames[stat] || stat}
+                                            </span>
+                                        ))}
+                                        <div style={{ marginTop: '6px', fontSize: '12px', color: '#666' }}>
+                                            💡 说明：仅增强放在指定技能栏的技能
+                                        </div>
                                     </div>
                                 )}
-                                {item.specialEffect.spellPowerBonus && (
-                                    <div style={{ marginTop: 8, color: '#fff' }}>
-                                        • 法术强度 <span style={{ color: '#4CAF50', fontWeight: 600 }}>+{item.specialEffect.spellPowerBonus}</span>
+
+                                {se.type === 'basic_attack_repeat' && (
+                                    <div style={{ color: '#c0392b', fontSize: '14px' }}>
+                                        ⚔️ <strong>连击</strong>：普通攻击有{(se.chance * 100).toFixed(0)}%概率再攻击一次
+                                        <div style={{ marginTop: '6px', fontSize: '12px', color: '#666' }}>
+                                            💡 说明：额外攻击不消耗能量
+                                        </div>
+                                    </div>
+                                )}
+
+                                {se.type === 'proc_stat' && se.trigger === 'turn_start' && (
+                                    <div style={{ color: '#16a085', fontSize: '14px' }}>
+                                        🎲 <strong>{se.name || '属性增益'}</strong>：每回合开始有{(se.chance * 100).toFixed(0)}%概率触发
+                                        <br />
+                                        {Object.entries(se.stats).map(([stat, value]) => (
+                                            <span key={stat} style={{ display: 'block', marginLeft: '16px' }}>
+                                                +{formatItemStatValue(stat, value)} {statNames[stat] || stat}
+                                            </span>
+                                        ))}
+                                        <div style={{ marginTop: '6px', fontSize: '12px', color: '#666' }}>
+                                            💡 说明：触发后本回合生效
+                                        </div>
+                                    </div>
+                                )}
+
+                                {se.type === 'proc_damage' && se.trigger === 'turn_start' && (
+                                    <div style={{ color: '#e67e22', fontSize: '14px' }}>
+                                        🔥 <strong>{se.name || '触发伤害'}</strong>：每回合开始有{(se.chance * 100).toFixed(0)}%概率触发
+                                        <div style={{ marginTop: '4px', marginLeft: '16px', color: '#555' }}>
+                                            伤害：{se.damageMult ? `${se.damageMult}×` : ''}{se.basedOn === 'spellPower' ? '法强' : '攻击'}{se.damageFlat ? ` + ${se.damageFlat}` : ''}（{getSchoolCn(se.school)}）
+                                        </div>
+                                        <div style={{ marginTop: '6px', fontSize: '12px', color: '#666' }}>
+                                            💡 说明：触发伤害会受到目标防御影响
+                                        </div>
+                                    </div>
+                                )}
+
+                                {se.type === 'ignore_defense' && (
+                                    <div style={{ color: '#2980b9', fontSize: '14px' }}>
+                                        🛡️ <strong>穿甲</strong>：无视敌人{((Number(se.pct ?? se.ignorePct ?? se.value) || 0) * 100).toFixed(0)}%防御
+                                    </div>
+                                )}
+
+                                {se.type === 'thunderfury' && (
+                                    <div style={{ color: '#0066ff', fontSize: '14px' }}>
+                                        ⚡ <strong>风剑：闪电链</strong>：每回合开始有{(se.chance * 100).toFixed(0)}%概率触发闪电链
+                                        <br />
+                                        <span style={{ marginLeft: '16px', display: 'block' }}>造成 {se.damageMult}x攻击的自然伤害，可弹跳{se.maxJumps}次（最多命中{se.maxJumps + 1}个目标）</span>
+                                        <span style={{ marginLeft: '16px', display: 'block' }}>每次弹跳伤害降低为上次的{(se.jumpMultiplier * 100).toFixed(0)}%</span>
+                                        <span style={{ marginLeft: '16px', display: 'block' }}>同时获得 {((se.damageReduction || 0) * 100).toFixed(0)}%减伤（{se.damageReductionDuration}回合）</span>
+                                        <div style={{ marginTop: '6px', fontSize: '12px', color: '#666' }}>
+                                            💡 说明：对BOSS战的小怪也有效
+                                        </div>
+                                    </div>
+                                )}
+
+                                {se.type === 'map_slayer' && (
+                                    <div style={{ color: '#d35400', fontSize: '14px' }}>
+                                        🗺️ <strong>地图杀手</strong>：地图战斗中造成的伤害提高{(se.bonusDamageVsMap * 100).toFixed(0)}%
+                                        <div style={{ marginTop: '6px', fontSize: '12px', color: '#666' }}>
+                                            💡 说明：仅在地图战斗中生效
+                                        </div>
+                                    </div>
+                                )}
+
+                                {![
+                                    'skill_slot_buff',
+                                    'basic_attack_repeat',
+                                    'proc_stat',
+                                    'proc_damage',
+                                    'ignore_defense',
+                                    'thunderfury',
+                                    'map_slayer'
+                                ].includes(se.type) && (
+                                    <div style={{ color: '#666', fontSize: '14px' }}>
+                                        ⚡ 特效：{se.type}
                                     </div>
                                 )}
                             </div>
-                        )}
-
-                        {/* basic_attack_repeat 类型 */}
-                        {item.specialEffect.type === 'basic_attack_repeat' && (
-                            <div style={{ fontSize: 12, color: '#ffb74d', lineHeight: 1.6 }}>
-                                <div style={{ marginBottom: 8, color: '#fff' }}>
-                                    使用普通攻击后，有 <span style={{ color: '#ffd700', fontWeight: 600 }}>
-                        {(item.specialEffect.chance * 100).toFixed(0)}%
-                    </span> 概率再次发动一次普通攻击
-                                </div>
-                                <div style={{
-                                    marginTop: 12,
-                                    padding: '8px 12px',
-                                    background: 'rgba(255,215,0,0.1)',
-                                    borderRadius: 6,
-                                    border: '1px dashed rgba(255,215,0,0.3)',
-                                    fontSize: 11,
-                                    color: '#c9a227'
-                                }}>
-                                    💡 提示：连击伤害与普通攻击相同，可触发"质朴"等普攻相关天赋
-                                </div>
-                            </div>
-                        )}
-
-                        {/* proc_stat · turn_start 类型（每回合概率触发属性增益） */}
-                        {item.specialEffect.type === 'proc_stat' && item.specialEffect.trigger === 'turn_start' && (
-                            <div style={{ fontSize: 12, color: '#ffb74d', lineHeight: 1.6 }}>
-                                <div style={{ marginBottom: 8, color: '#fff' }}>
-                                    每回合有 <span style={{ color: '#ffd700', fontWeight: 600 }}>
-                                        {(item.specialEffect.chance * 100).toFixed(0)}%
-                                    </span> 概率获得以下增益（仅本回合）：
-                                </div>
-
-                                {(Object.entries(item.specialEffect.stats || {})).map(([stat, value]) => (
-                                    <div key={stat} style={{ marginTop: 8, color: '#fff' }}>
-                                        • {statNames[stat] || stat}{' '}
-                                        <span style={{ color: '#4CAF50', fontWeight: 600 }}>
-                                            +{formatItemStatValue(stat, value)}
-                                        </span>
-                                    </div>
-                                ))}
-
-                                {item.specialEffect.scaleWithLevel && (
-                                    <div style={{
-                                        marginTop: 12,
-                                        padding: '8px 12px',
-                                        background: 'rgba(255,215,0,0.1)',
-                                        borderRadius: 6,
-                                        border: '1px dashed rgba(255,215,0,0.3)',
-                                        fontSize: 11,
-                                        color: '#c9a227'
-                                    }}>
-                                        💡 提示：该特效会随装备等级提升而增强（lv0=1x, lv100=2x）
-                                    </div>
-                                )}
-                            </div>
-                        )}
-
-                        {/* thunderfury 类型（风剑：闪电链 + 承伤降低） */}
-                        {item.specialEffect.type === 'thunderfury' && (
-                            <div style={{ fontSize: 12, color: '#ffb74d', lineHeight: 1.6 }}>
-                                <div style={{ marginBottom: 8, color: '#fff' }}>
-                                    每回合有 <span style={{ color: '#ffd700', fontWeight: 600 }}>
-                                        {((item.specialEffect.chance || 0) * 100).toFixed(0)}%
-                                    </span> 概率释放一道闪电链：
-                                </div>
-                                <div style={{ marginTop: 8, color: '#fff' }}>
-                                    • 对所有敌人造成 <span style={{ color: '#ffd700', fontWeight: 600 }}>
-                                        {(item.specialEffect.damageMult || 1.2).toFixed(1)}倍攻击强度
-                                    </span> 的自然伤害
-                                </div>
-                                <div style={{ marginTop: 8, color: '#fff' }}>
-                                    • 并使自身受到的所有伤害降低 <span style={{ color: '#ffd700', fontWeight: 600 }}>
-                                        {Math.round((1 - (item.specialEffect.selfDamageTakenMult || 0.8)) * 100)}%
-                                    </span> ，持续 <span style={{ color: '#ffd700', fontWeight: 600 }}>
-                                        {Math.max(1, Math.floor(item.specialEffect.selfBuffDuration || 2))}
-                                    </span> 回合
-                                </div>
-                            </div>
-                        )}
-
-                        {/* map_slayer 类型（地图战斗伤害加成） */}
-                        {item.specialEffect.type === 'map_slayer' && (
-                            <div style={{ fontSize: 12, color: '#ffb74d', lineHeight: 1.6 }}>
-                                <div style={{ marginBottom: 8, color: '#fff' }}>
-                                    地图战斗中造成的伤害提高{' '}
-                                    <span style={{ color: '#ffd700', fontWeight: 600 }}>
-                                        {((item.specialEffect.bonusDamageVsMap || 0) * 100).toFixed(0)}%
-                                    </span>
-                                </div>
-                                <div style={{
-                                    marginTop: 12,
-                                    padding: '8px 12px',
-                                    background: 'rgba(255,215,0,0.1)',
-                                    borderRadius: 6,
-                                    border: '1px dashed rgba(255,215,0,0.3)',
-                                    fontSize: 11,
-                                    color: '#c9a227'
-                                }}>
-                                    💡 提示：仅对地图战斗生效，不影响 Boss 战
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                )}
-
-                <div style={{ marginBottom: 16 }}>
-                    <label style={{ display: 'block', fontSize: 12, color: '#c9a227', marginBottom: 8 }}>
-                        装备给角色
-                    </label>
-                    <select
-                        value={selectedCharId}
-                        onChange={(e) => setSelectedCharId(e.target.value)}
-                        style={{
-                            width: '100%',
-                            padding: '8px 12px',
-                            background: 'rgba(0,0,0,0.4)',
-                            border: '1px solid #4a3c2a',
-                            borderRadius: 4,
-                            color: '#fff',
-                            fontSize: 13,
-                            cursor: 'pointer'
-                        }}
-                    >
-                        <option value="">选择角色...</option>
-                        {characters.map(char => (
-                            <option key={char.id} value={char.id}>
-                                {char.name} (Lv.{char.level})
-                            </option>
                         ))}
-                    </select>
-                </div>
-
-                <div style={{ display: 'flex', gap: 12 }}>
-                    {item.id === 'REBIRTH_INVITATION' && (
-                        <Button
-                            variant="danger"
-                            onClick={() => {
-                                dispatch({ type: 'USE_ITEM', payload: { itemInstanceId: item.instanceId || item.id } });
-                                onClose();
-                            }}
-                            style={{ flex: 1 }}
-                        >
-                            🌀 使用邀请函
-                        </Button>
-                    )}
-                    <Button
-                        onClick={() => {
-                            if (selectedCharId) {
-                                onEquip(selectedCharId, item.instanceId || item.id);
-                                onClose();
-                            }
-                        }}
-                        disabled={!selectedCharId}
-                        style={{ flex: 1 }}
-                    >
-                        装备
-                    </Button>
-                    {(() => {
-                        const getLevel = (eq) => (eq?.currentLevel ?? eq?.level ?? 0);
-                        const isMatA = item.id === 'EQ_041' && getLevel(item) >= 100;
-                        const isMatB = item.id === 'EQ_042' && getLevel(item) >= 100;
-
-                        const hasOther =
-                            isMatA
-                                ? state.inventory.some(i => i?.type === 'equipment' && i.id === 'EQ_042' && getLevel(i) >= 100)
-                                : isMatB
-                                    ? state.inventory.some(i => i?.type === 'equipment' && i.id === 'EQ_041' && getLevel(i) >= 100)
-                                    : false;
-
-                        if (!(hasOther && (isMatA || isMatB))) return null;
-
-                        return (
-                            <Button
-                                onClick={() => {
-                                    if (window.confirm('消耗【反击者桑萨斯 Lv100】与【保护者加萨斯 Lv100】合成【鞭笞者苏萨斯 Lv0】？')) {
-                                        dispatch({ type: 'SYNTHESIZE_EQ_044' });
-                                        onClose();
-                                    }
-                                }}
-                                style={{ flex: 1 }}
-                            >
-                                ⚗️ 苏萨斯
-                            </Button>
-                        );
-                    })()}
-                    <Button
-                        variant="danger"
-                        onClick={() => {
-                            if (window.confirm(`确定要丢弃 ${item.name} 吗？`)) {
-                                dispatch({ type: 'USE_ITEM', payload: { itemInstanceId: item.instanceId || item.id } });
-                                onClose();
-                            }
-                        }}
-                    >
-                        🗑️ 丢弃
-                    </Button>
-                    <Button onClick={onClose} variant="secondary" style={{ flex: 1 }}>
-                        关闭
-                    </Button>
-                </div>
-            </div>
-        </div>
-    );
-};
-
-// 离线奖励模态框
-const OfflineRewardsModal = ({ rewards, actualSeconds, maxSeconds, onClaim, onDismiss }) => {
-    const formatTime = (seconds) => {
-        const days = Math.floor(seconds / 86400);
-        const hours = Math.floor((seconds % 86400) / 3600);
-        const minutes = Math.floor((seconds % 3600) / 60);
-
-        if (days > 0) return `${days}天 ${hours}小时`;
-        if (hours > 0) return `${hours}小时 ${minutes}分钟`;
-        return `${minutes}分钟`;
-    };
-
-    const totalExp = Object.values(rewards.exp).reduce((a, b) => a + b, 0);
-
-    return (
-        <div style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: 'rgba(0,0,0,0.85)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000,
-            padding: 20
-        }}>
-            <div style={{
-                background: 'linear-gradient(135deg, rgba(30,25,20,0.98) 0%, rgba(20,15,12,0.98) 100%)',
-                border: '3px solid #c9a227',
-                borderRadius: 12,
-                padding: 32,
-                maxWidth: 500,
-                width: '100%',
-                boxShadow: '0 8px 32px rgba(201,162,39,0.3), inset 0 1px 0 rgba(255,255,255,0.1)',
-            }}>
-                <div style={{ textAlign: 'center', marginBottom: 24 }}>
-                    <div style={{ fontSize: 48, marginBottom: 12 }}>💰</div>
-                    <h2 style={{
-                        margin: '0 0 8px 0',
-                        fontSize: 24,
-                        color: '#ffd700',
-                        textShadow: '2px 2px 4px rgba(0,0,0,0.8)'
-                    }}>
-                        欢迎回来!
-                    </h2>
-                    <p style={{ margin: 0, color: '#aaa', fontSize: 14 }}>
-                        你已离线 {formatTime(actualSeconds)}
-                        {actualSeconds >= maxSeconds && ` (达到上限: ${formatTime(maxSeconds)})`}
-                    </p>
-                </div>
-
-                <div style={{
-                    background: 'rgba(0,0,0,0.3)',
-                    borderRadius: 8,
-                    padding: 20,
-                    marginBottom: 20
-                }}>
-                    <h3 style={{
-                        margin: '0 0 16px 0',
-                        fontSize: 16,
-                        color: '#c9a227',
-                        textAlign: 'center'
-                    }}>
-                        挂机收益
-                    </h3>
-
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                        <div style={{
-                            background: 'rgba(201,162,39,0.1)',
-                            padding: 12,
-                            borderRadius: 6,
-                            border: '1px solid rgba(201,162,39,0.3)'
-                        }}>
-                            <div style={{ fontSize: 11, color: '#888', marginBottom: 4 }}>战斗次数</div>
-                            <div style={{ fontSize: 20, color: '#ffd700', fontWeight: 600 }}>
-                                {rewards.combats}
-                            </div>
-                        </div>
-
-                        <div style={{
-                            background: 'rgba(201,162,39,0.1)',
-                            padding: 12,
-                            borderRadius: 6,
-                            border: '1px solid rgba(201,162,39,0.3)'
-                        }}>
-                            <div style={{ fontSize: 11, color: '#888', marginBottom: 4 }}>金币</div>
-                            <div style={{ fontSize: 20, color: '#ffd700', fontWeight: 600 }}>
-                                +{Math.floor(rewards.gold)}
-                            </div>
-                        </div>
-
-                        <div style={{
-                            background: 'rgba(201,162,39,0.1)',
-                            padding: 12,
-                            borderRadius: 6,
-                            border: '1px solid rgba(201,162,39,0.3)'
-                        }}>
-                            <div style={{ fontSize: 11, color: '#888', marginBottom: 4 }}>经验值</div>
-                            <div style={{ fontSize: 20, color: '#4CAF50', fontWeight: 600 }}>
-                                +{Math.floor(totalExp)}
-                            </div>
-                        </div>
-
-                        <div style={{
-                            background: 'rgba(201,162,39,0.1)',
-                            padding: 12,
-                            borderRadius: 6,
-                            border: '1px solid rgba(201,162,39,0.3)'
-                        }}>
-                            <div style={{ fontSize: 11, color: '#888', marginBottom: 4 }}>物品</div>
-                            <div style={{ fontSize: 20, color: '#9C27B0', fontWeight: 600 }}>
-                                +{rewards.items.length}
-                            </div>
-                        </div>
-
-                        {Array.isArray(rewards.mounts) && (
-                            <div style={{
-                                background: 'rgba(201,162,39,0.1)',
-                                padding: 12,
-                                borderRadius: 6,
-                                border: '1px solid rgba(201,162,39,0.3)'
-                            }}>
-                                <div style={{ fontSize: 11, color: '#888', marginBottom: 4 }}>坐骑</div>
-                                <div style={{ fontSize: 20, color: '#ffd700', fontWeight: 600 }}>
-                                    +{rewards.mounts.length}
-                                </div>
-                            </div>
-                        )}
                     </div>
-
-                    {rewards.researchProgress > 0 && (
-                        <div style={{
-                            marginTop: 12,
-                            background: 'rgba(201,162,39,0.1)',
-                            padding: 12,
-                            borderRadius: 6,
-                            border: '1px solid rgba(201,162,39,0.3)',
-                            textAlign: 'center'
-                        }}>
-                            <div style={{ fontSize: 11, color: '#888', marginBottom: 4 }}>研究进度</div>
-                            <div style={{ fontSize: 20, color: '#2196F3', fontWeight: 600 }}>
-                                +{Math.floor(rewards.researchProgress)}%
-                            </div>
-                        </div>
                     )}
                 </div>
 
@@ -23596,54 +23714,43 @@ const InventoryPage = ({ state, dispatch }) => {
                                     Lv.{item.currentLevel ?? item.level ?? 0}
                                 </div>
                             )}
-                            {item.specialEffect && (
-                                <div style={{
-                                    fontSize: 9,
-                                    color: '#ff9800',
-                                    marginTop: 4,
-                                    padding: '2px 4px',
-                                    background: 'rgba(255, 152, 0, 0.15)',
-                                    borderRadius: 3
-                                }}>
-                                    {item.specialEffect.type === 'skill_slot_buff' && (
-                                        <>
-                                            ⚡ {item.specialEffect.slots.map(s => s + 1).join('/')}格
-                                            {item.specialEffect.attackBonus ? ` 攻+${item.specialEffect.attackBonus}` : ''}
-                                            {item.specialEffect.spellPowerBonus ? ` 法+${item.specialEffect.spellPowerBonus}` : ''}
-                                        </>
-                                    )}
-                                    {item.specialEffect.type === 'basic_attack_repeat' && (
-                                        <>
-                                            ⚔️ 普攻 {(item.specialEffect.chance * 100).toFixed(0)}% 连击
-                                        </>
-                                    )}
+                            {(() => {
+                                    const effects = getEquipmentSpecialEffectList(item);
+                                    if (!effects || effects.length === 0) return null;
 
-                                    {item.specialEffect.type === 'proc_stat' && item.specialEffect.trigger === 'turn_start' && (
-                                        <>
-                                            🎲 每回合 {(item.specialEffect.chance * 100).toFixed(0)}%{' '}
-                                            {(() => {
-                                                const entries = Object.entries(item.specialEffect.stats || {});
-                                                const brief = entries.slice(0, 2).map(([stat, val]) =>
-                                                    `${(STAT_LABELS[stat] || stat).replace('强度', '')}+${formatItemStatValue(stat, val)}`
-                                                );
-                                                return `${brief.join(' ')}${entries.length > 2 ? '…' : ''}`;
-                                            })()}
-                                        </>
-                                    )}
+                                    const se = effects[0];
+                                    const more = effects.length - 1;
 
-                                    {item.specialEffect.type === 'map_slayer' && (
-                                        <>
-                                            🗺️ 地图伤害 +{((item.specialEffect.bonusDamageVsMap || 0) * 100).toFixed(0)}%
-                                        </>
-                                    )}
-
-                                    {item.specialEffect.type === 'thunderfury' && (
-                                        <>
-                                            ⚡ 闪电链 {(Number(item.specialEffect.chance) * 100).toFixed(0)}%
-                                        </>
-                                    )}
-                                </div>
-                            )}
+                                    return (
+                                        <div style={{
+                                            marginTop: '4px',
+                                            fontSize: '11px',
+                                            color: '#f1c40f',
+                                            fontWeight: '500',
+                                            background: 'rgba(255, 152, 0, 0.15)',
+                                            padding: '2px 6px',
+                                            borderRadius: '4px',
+                                            display: 'inline-block'
+                                        }}>
+                                            ⚡ {se.type === 'map_slayer'
+                                                ? `地图伤害+${(se.bonusDamageVsMap * 100).toFixed(0)}%`
+                                                : se.type === 'skill_slot_buff'
+                                                    ? `技能栏+${se.slot + 1} 强化`
+                                                    : se.type === 'basic_attack_repeat'
+                                                        ? `连击${(se.chance * 100).toFixed(0)}%`
+                                                        : se.type === 'proc_stat'
+                                                            ? `${se.name || '属性增益'} ${(se.chance * 100).toFixed(0)}%`
+                                                            : se.type === 'proc_damage'
+                                                                ? `${se.name || '触发伤害'} ${(se.chance * 100).toFixed(0)}%`
+                                                                : se.type === 'ignore_defense'
+                                                                    ? `无视防御${((Number(se.pct ?? se.ignorePct ?? se.value) || 0) * 100).toFixed(0)}%`
+                                                                    : se.type === 'thunderfury'
+                                                                        ? `闪电链${(se.chance * 100).toFixed(0)}%`
+                                                                        : se.type
+                                            }{more > 0 ? ` +${more}` : ''}
+                                        </div>
+                                    );
+                                })()}
                             {index < autoMergeSlots && item?.type === 'equipment' && (
                                 <div style={{
                                     position: 'absolute',
@@ -24637,6 +24744,29 @@ function describeEquipmentSpecialEffect(eq) {
 
         if (se.type === 'map_slayer') {
             return `🗺️ 地图伤害 +${((Number(se.bonusDamageVsMap || 0)) * 100).toFixed(0)}%`;
+        }
+
+        if (se.type === 'ignore_defense') {
+            const pct = Number(se.pct ?? se.ignorePct ?? se.value) || 0;
+            return `🛡️ 无视防御 ${(pct * 100).toFixed(0)}%`;
+        }
+
+        if (se.type === 'proc_damage' && se.trigger === 'turn_start') {
+            const chance = (Number(se.chance || 0) * 100).toFixed(0);
+            const school = getSchoolCn(se.school || 'physical');
+            const basedOn = (se.basedOn === 'spellPower') ? '法强' : '攻击';
+            const mult = Number(se.damageMult) || 0;
+            const flat = Number(se.damageFlat) || 0;
+            const parts = [];
+            if (mult) parts.push(`${String(mult).replace(/\.0+$/, '')}×${basedOn}`);
+            if (flat) parts.push(`+${Math.floor(flat)}`);
+            const dmgText = parts.length > 0 ? parts.join('') : basedOn;
+            return `🔥 每回合 ${chance}%：${dmgText} ${school}伤害`;
+        }
+
+        if (se.type === 'thunderfury' && se.trigger === 'turn_start') {
+            const chance = (Number(se.chance || 0) * 100).toFixed(0);
+            return `⚡ 闪电链 ${chance}%`;
         }
 
         return `⚡ 特效：${se.type}`;

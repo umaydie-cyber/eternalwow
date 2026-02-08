@@ -28951,7 +28951,17 @@ const BossPrepareModal = ({ state, dispatch }) => {
         if (aBusy !== bBusy) return aBusy ? 1 : -1; // 待命在前
         return (b.level || 0) - (a.level || 0); // 同组按等级降序
     });
+    const isMobile = useIsMobile();
     const [dragged, setDragged] = useState(null);
+    const [selectedCharId, setSelectedCharId] = useState(null);
+    const [selectedFromSlot, setSelectedFromSlot] = useState(null);
+
+    // 打开/切换 Boss 时清理选择状态（避免残留）
+    useEffect(() => {
+        setDragged(null);
+        setSelectedCharId(null);
+        setSelectedFromSlot(null);
+    }, [bossId]);
 
     const BOSS_ACTION_NAME = {
         espionage: '谍报',
@@ -29042,6 +29052,10 @@ const BossPrepareModal = ({ state, dispatch }) => {
         }
         return acc;
     }, { totalHp: 0, totalAttack: 0, totalSpellPower: 0, count: 0 });
+
+    const selectedChar = selectedCharId
+        ? (state.characters || []).find(c => c.id === selectedCharId)
+        : null;
 
     return (
         <div style={{
@@ -30343,9 +30357,57 @@ const BossPrepareModal = ({ state, dispatch }) => {
                                 </div>
                             </div>
 
+                            {isMobile && (
+                                <div style={{
+                                    marginBottom: 12,
+                                    padding: '10px 12px',
+                                    background: 'rgba(0,0,0,0.25)',
+                                    borderRadius: 8,
+                                    border: '1px solid rgba(74,60,42,0.35)',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'space-between',
+                                    gap: 10
+                                }}>
+                                    <div style={{ fontSize: 11, color: '#aaa', lineHeight: 1.4 }}>
+                                        {selectedCharId
+                                            ? (
+                                                <>
+                                                    已选择：<span style={{ color: '#ffd700', fontWeight: 700 }}>
+                                                        {selectedChar?.name || selectedCharId}
+                                                    </span>，点击队伍位置加入/换位
+                                                </>
+                                            )
+                                            : '手机端：点选角色 → 点队伍位置加入/换位（无需拖拽）'}
+                                    </div>
+                                    {selectedCharId && (
+                                        <button
+                                            onClick={() => {
+                                                setSelectedCharId(null);
+                                                setSelectedFromSlot(null);
+                                            }}
+                                            style={{
+                                                padding: '6px 10px',
+                                                fontSize: 11,
+                                                borderRadius: 6,
+                                                background: 'rgba(255,255,255,0.08)',
+                                                border: '1px solid rgba(255,255,255,0.18)',
+                                                color: '#ddd',
+                                                cursor: 'pointer',
+                                                whiteSpace: 'nowrap'
+                                            }}
+                                        >
+                                            取消选择
+                                        </button>
+                                    )}
+                                </div>
+                            )}
+
                             <div style={{
                                 display: 'grid',
-                                gridTemplateColumns: `repeat(${teamSize}, 1fr)`,
+                                gridTemplateColumns: isMobile
+                                    ? (teamSize <= 3 ? `repeat(${teamSize}, 1fr)` : 'repeat(3, 1fr)')
+                                    : `repeat(${teamSize}, 1fr)`,
                                 gap: 12
                             }}>
                                 {Array.from({ length: teamSize }, (_, i) => i).map(slot => {
@@ -30355,18 +30417,47 @@ const BossPrepareModal = ({ state, dispatch }) => {
                                     return (
                                         <div
                                             key={slot}
+                                            onClick={() => {
+                                                if (!isMobile) return;
+
+                                                // 手机端：点选角色 → 点位置加入/换位（无需拖拽）
+                                                if (selectedCharId) {
+                                                    // 点同一个来源位置：视为取消选择
+                                                    if (selectedFromSlot === slot) {
+                                                        setSelectedCharId(null);
+                                                        setSelectedFromSlot(null);
+                                                        return;
+                                                    }
+
+                                                    dispatch({ type: 'SET_BOSS_TEAM_SLOT', payload: { slot, charId: selectedCharId } });
+                                                    setSelectedCharId(null);
+                                                    setSelectedFromSlot(null);
+                                                    return;
+                                                }
+
+                                                // 未选择角色时：点已有队员进入“换位模式”
+                                                if (charId) {
+                                                    setSelectedCharId(charId);
+                                                    setSelectedFromSlot(slot);
+                                                }
+                                            }}
                                             onDrop={(e) => {
+                                                if (isMobile) return;
                                                 e.preventDefault();
                                                 if (dragged) {
                                                     dispatch({ type: 'SET_BOSS_TEAM_SLOT', payload: { slot, charId: dragged } });
                                                 }
                                                 setDragged(null);
                                             }}
-                                            onDragOver={e => e.preventDefault()}
+                                            onDragOver={(e) => {
+                                                if (isMobile) return;
+                                                e.preventDefault();
+                                            }}
                                             style={{
-                                                padding: 16,
+                                                position: 'relative',
+                                                padding: isMobile ? 12 : 16,
                                                 borderRadius: 10,
-                                                minHeight: 120,
+                                                minHeight: isMobile ? 96 : 120,
                                                 background: char
                                                     ? 'linear-gradient(135deg, rgba(201,162,39,0.15) 0%, rgba(139,115,25,0.1) 100%)'
                                                     : 'rgba(0,0,0,0.3)',
@@ -30378,7 +30469,11 @@ const BossPrepareModal = ({ state, dispatch }) => {
                                                 alignItems: 'center',
                                                 justifyContent: 'center',
                                                 transition: 'all 0.2s',
-                                                cursor: 'default'
+                                                cursor: isMobile ? 'pointer' : 'default',
+                                                outline: isMobile && selectedFromSlot === slot
+                                                    ? '2px solid rgba(255,215,0,0.9)'
+                                                    : 'none',
+                                                outlineOffset: 2
                                             }}
                                         >
                                             {/* 位置标签 */}
@@ -30427,10 +30522,13 @@ const BossPrepareModal = ({ state, dispatch }) => {
 
                                                     {/* 移除按钮 */}
                                                     <button
-                                                        onClick={() => dispatch({
-                                                            type: 'SET_BOSS_TEAM_SLOT',
-                                                            payload: { slot, charId: null }
-                                                        })}
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            dispatch({
+                                                                type: 'SET_BOSS_TEAM_SLOT',
+                                                                payload: { slot, charId: null }
+                                                            });
+                                                        }}
                                                         style={{
                                                             position: 'absolute',
                                                             top: 8,
@@ -30461,7 +30559,11 @@ const BossPrepareModal = ({ state, dispatch }) => {
                                                         color: '#555',
                                                         textAlign: 'center'
                                                     }}>
-                                                        拖拽角色到此处
+                                                        {isMobile
+                                                            ? (selectedCharId
+                                                                ? `点击放置：${selectedChar?.name || '已选角色'}`
+                                                                : '点选角色后点击加入')
+                                                            : '拖拽角色到此处'}
                                                     </div>
                                                 </>
                                             )}
@@ -30517,7 +30619,9 @@ const BossPrepareModal = ({ state, dispatch }) => {
                                 fontWeight: 600,
                                 marginBottom: 12
                             }}>
-                                👥 所有角色 <span style={{ color: '#888', fontWeight: 400 }}>（仅待命角色可拖拽；地图战斗/采集中角色可在此召回）</span>
+                                👥 所有角色 <span style={{ color: '#888', fontWeight: 400 }}>
+                                （{isMobile ? '手机端：点选角色→点位置加入/换位；' : '仅待命角色可拖拽；'}地图战斗/采集中角色可在此召回）
+                            </span>
                             </div>
 
                             {allCharacters.length === 0 ? (
@@ -30572,8 +30676,34 @@ const BossPrepareModal = ({ state, dispatch }) => {
                                         return (
                                             <div
                                                 key={char.id}
-                                                draggable={canDrag}
+                                                draggable={!isMobile && canDrag}
+                                                onClick={() => {
+                                                    if (!isMobile) return;
+
+                                                    // 忙碌中的角色：点击卡片不做派遣（请用右侧“召回”按钮）
+                                                    if (isBusy && !isInTeam) return;
+
+                                                    // 再次点击：取消选择
+                                                    if (selectedCharId === char.id) {
+                                                        setSelectedCharId(null);
+                                                        setSelectedFromSlot(null);
+                                                        return;
+                                                    }
+
+                                                    // 已在队伍：点选后可用于换位
+                                                    if (isInTeam) {
+                                                        const s = state.bossTeam.indexOf(char.id);
+                                                        setSelectedCharId(char.id);
+                                                        setSelectedFromSlot(s >= 0 ? s : null);
+                                                        return;
+                                                    }
+
+                                                    if (!canDrag) return;
+                                                    setSelectedCharId(char.id);
+                                                    setSelectedFromSlot(null);
+                                                }}
                                                 onDragStart={(e) => {
+                                                    if (isMobile) return;
                                                     if (!canDrag) return;
                                                     setDragged(char.id);
                                                     // ✅ 部分浏览器需要 setData 才会认为这是“有效拖拽”
@@ -30599,7 +30729,13 @@ const BossPrepareModal = ({ state, dispatch }) => {
                                                                 ? '1px solid rgba(33,150,243,0.35)'
                                                                 : '1px solid rgba(74,60,42,0.5)',
                                                     borderRadius: 8,
-                                                    cursor: canDrag ? 'grab' : 'default',
+                                                    cursor: isMobile
+                                                        ? ((canDrag || isInTeam) ? 'pointer' : 'default')
+                                                        : (canDrag ? 'grab' : 'default'),
+                                                    outline: isMobile && selectedCharId === char.id
+                                                        ? '2px solid rgba(255,215,0,0.9)'
+                                                        : 'none',
+                                                    outlineOffset: 2,
                                                     opacity: isInTeam ? 0.6 : isBusy ? 0.85 : 1,
                                                     transition: 'all 0.15s',
                                                     display: 'flex',

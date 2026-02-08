@@ -29078,23 +29078,118 @@ const BossPrepareModal = ({ state, dispatch }) => {
 
                                 {/* 火焰之王拉格纳罗斯的技能 */}
                                 {bossId === 'ragnaros' && (
-                                  <div style={{ marginTop: 8, lineHeight: 1.6 }}>
-                                    <div style={{ fontWeight: 700, marginBottom: 6 }}>技能与机制</div>
-                                    <ul style={{ margin: 0, paddingLeft: 18 }}>
-                                      <li><b>被动：萨弗拉斯，炎魔拉格纳罗斯之手</b> —— 每回合对坦克造成 <b>2.5×BOSS攻击</b> 的火焰法术伤害（计算魔抗）。</li>
-                                      <li><b>技能1：拉格纳罗斯之怒</b> —— 对坦克造成 <b>3×</b> 火焰法术伤害；<b>集中站位</b> 时改为对全队造成 <b>3×</b> 火焰法术伤害。</li>
-                                      <li><b>技能2：元素怒火</b> —— 随机目标造成 <b>1.5×</b> 火焰法术伤害，并施加<b>余烬DOT</b>：每回合 <b>1.5×</b> 火焰法术伤害，持续<b>3回合</b>。<b>分散站位</b>：每次 BOSS 释放【下潜】，该技能目标 +1。</li>
-                                      <li><b>技能3：岩浆喷发</b> —— 随机目标造成 <b>3×</b> 火焰法术伤害。<b>分散站位</b>：每次 BOSS 释放【下潜】，该技能目标 +1。</li>
-                                      <li><b>技能4：下潜</b> —— BOSS 免疫所有伤害<b>3回合</b>，召唤 <b>4个火焰之子</b>（HP 6,000,000，攻防同BOSS）。火焰之子每回合对随机<b>2</b>目标施放【灼烧】造成 <b>1.2×</b> 火焰法术伤害。</li>
-                                      <li><b>技能5：让火焰净化一切</b> —— 多段热浪对全队造成 <b>3×</b> 火焰法术伤害。</li>
-                                    </ul>
-                                    <div style={{ marginTop: 6 }}>
-                                      <div style={{ fontWeight: 700, marginBottom: 4 }}>技能循环</div>
-                                      <div style={{ fontSize: 12, opacity: 0.95 }}>
-                                        拉格纳罗斯之怒 → 元素怒火 → 岩浆喷发 → 让火焰净化一切 → 下潜 → 元素怒火 → 岩浆喷发 → 让火焰净化一切
+                                  <>
+                                    <div style={{
+                                      padding: 10,
+                                      background: 'rgba(255,87,34,0.12)',
+                                      borderRadius: 6,
+                                      borderLeft: '3px solid #ff5722'
+                                    }}>
+                                      <div style={{ fontSize: 12, color: '#ffab91', fontWeight: 600, marginBottom: 4 }}>
+                                        🔥 被动：萨弗拉斯，炎魔拉格纳罗斯之手
+                                      </div>
+                                      <div style={{ fontSize: 11, color: '#aaa', lineHeight: 1.5 }}>
+                                        每回合对<span style={{ color: '#ff9800' }}>坦克</span>造成
+                                        <span style={{ color: '#ffd700' }}> {boss.sulfurasMultiplier}倍</span> Boss攻击 的
+                                        <span style={{ color: '#ff7043' }}>火焰法术伤害</span>（计算魔抗）
                                       </div>
                                     </div>
-                                  </div>
+
+                                    <div style={{
+                                      padding: 10,
+                                      background: 'rgba(244,67,54,0.10)',
+                                      borderRadius: 6,
+                                      borderLeft: '3px solid #f44336'
+                                    }}>
+                                      <div style={{ fontSize: 12, color: '#ff6b6b', fontWeight: 600, marginBottom: 4 }}>
+                                        💥 技能1：拉格纳罗斯之怒
+                                      </div>
+                                      <div style={{ fontSize: 11, color: '#aaa', lineHeight: 1.5 }}>
+                                        <span style={{ color: '#ffd700' }}>默认：</span>对坦克造成
+                                        <span style={{ color: '#ffd700' }}> {boss.wrathMultiplier}倍</span> Boss攻击 的
+                                        <span style={{ color: '#ff7043' }}>火焰法术伤害</span>
+                                        <br />
+                                        <span style={{ color: '#64b5f6' }}>集中站位：</span>对<span style={{ color: '#ff9800' }}>所有角色</span>造成相同伤害
+                                      </div>
+                                    </div>
+
+                                    <div style={{
+                                      padding: 10,
+                                      background: 'rgba(156,39,176,0.10)',
+                                      borderRadius: 6,
+                                      borderLeft: '3px solid #9c27b0'
+                                    }}>
+                                      <div style={{ fontSize: 12, color: '#ce93d8', fontWeight: 600, marginBottom: 4 }}>
+                                        🔥 技能2：元素怒火
+                                      </div>
+                                      <div style={{ fontSize: 11, color: '#aaa', lineHeight: 1.5 }}>
+                                        随机目标造成 <span style={{ color: '#ffd700' }}>{boss.elementalFuryMultiplier}倍</span> Boss攻击 的
+                                        <span style={{ color: '#ff7043' }}>火焰法术伤害</span>
+                                        <br />
+                                        并施加<span style={{ color: '#ffd700' }}>余烬DOT</span>：每回合
+                                        <span style={{ color: '#ffd700' }}> {boss.emberDotMultiplier}倍</span> Boss攻击 的火焰法术伤害，持续
+                                        <span style={{ color: '#ffd700' }}> {boss.emberDotDuration}</span> 回合
+                                        <br />
+                                        <span style={{ color: '#81c784' }}>分散站位：</span>每次BOSS释放【下潜】，该技能目标 +1
+                                      </div>
+                                    </div>
+
+                                    <div style={{
+                                      padding: 10,
+                                      background: 'rgba(255,152,0,0.10)',
+                                      borderRadius: 6,
+                                      borderLeft: '3px solid #ff9800'
+                                    }}>
+                                      <div style={{ fontSize: 12, color: '#ffcc80', fontWeight: 600, marginBottom: 4 }}>
+                                        🌋 技能3：岩浆喷发
+                                      </div>
+                                      <div style={{ fontSize: 11, color: '#aaa', lineHeight: 1.5 }}>
+                                        随机目标造成 <span style={{ color: '#ffd700' }}>{boss.magmaEruptionMultiplier}倍</span> Boss攻击 的
+                                        <span style={{ color: '#ff7043' }}>火焰法术伤害</span>
+                                        <br />
+                                        <span style={{ color: '#81c784' }}>分散站位：</span>每次BOSS释放【下潜】，该技能目标 +1
+                                      </div>
+                                    </div>
+
+                                    <div style={{
+                                      padding: 10,
+                                      background: 'rgba(33,150,243,0.10)',
+                                      borderRadius: 6,
+                                      borderLeft: '3px solid #2196F3'
+                                    }}>
+                                      <div style={{ fontSize: 12, color: '#64b5f6', fontWeight: 600, marginBottom: 4 }}>
+                                        🕳️ 技能4：下潜
+                                      </div>
+                                      <div style={{ fontSize: 11, color: '#aaa', lineHeight: 1.5 }}>
+                                        BOSS免疫所有伤害，持续 <span style={{ color: '#ffd700' }}>{boss.submergeDuration}</span> 回合
+                                        <br />
+                                        召唤 <span style={{ color: '#ffd700' }}>{boss.sonCount}</span> 个【火焰之子】（每个生命
+                                        <span style={{ color: '#ffd700' }}> {Number(boss.sonHp || 0).toLocaleString()}</span>，攻防同BOSS）
+                                        <br />
+                                        火焰之子每回合对随机<span style={{ color: '#ffd700' }}> {boss.sonBurnTargets}</span>目标施放【灼烧】造成
+                                        <span style={{ color: '#ffd700' }}> {boss.sonBurnMultiplier}倍</span> Boss攻击 的火焰法术伤害
+                                      </div>
+                                    </div>
+
+                                    <div style={{
+                                      padding: 10,
+                                      background: 'rgba(255,193,7,0.10)',
+                                      borderRadius: 6,
+                                      borderLeft: '3px solid #ffc107'
+                                    }}>
+                                      <div style={{ fontSize: 12, color: '#ffd54f', fontWeight: 600, marginBottom: 4 }}>
+                                        🌊 技能5：让火焰净化一切
+                                      </div>
+                                      <div style={{ fontSize: 11, color: '#aaa', lineHeight: 1.5 }}>
+                                        多段热浪对<span style={{ color: '#ff9800' }}>所有角色</span>造成
+                                        <span style={{ color: '#ffd700' }}> {boss.purifyMultiplier}倍</span> Boss攻击 的
+                                        <span style={{ color: '#ff7043' }}>火焰法术伤害</span>
+                                        {boss.purifyWaves ? (
+                                          <>，共<span style={{ color: '#ffd700' }}> {boss.purifyWaves}</span>段</>
+                                        ) : null}
+                                      </div>
+                                    </div>
+                                  </>
                                 )}
 
                             </div>
@@ -29112,7 +29207,14 @@ const BossPrepareModal = ({ state, dispatch }) => {
                                 <div style={{ fontSize: 11, color: '#888' }}>
                                     {bossId === 'hogger' && '召唤 → 重击 → 重击 → 重击 → 循环'}
                                     {bossId === 'vancleef' && '致死打击 → 火炮手准备 → 致死打击 → 登上甲板 → 循环'}
-                                    {bossId !== 'hogger' && bossId !== 'vancleef' && (formatBossCycle(boss) || '未知')}
+                                    {bossId === 'ragnaros' && (
+                                        <>
+                                            {formatBossCycle(boss) || '未知'}
+                                            <br />
+                                            <span style={{ color: '#777' }}>（下潜期间不会继续推进循环）</span>
+                                        </>
+                                    )}
+                                    {bossId !== 'hogger' && bossId !== 'vancleef' && bossId !== 'ragnaros' && (formatBossCycle(boss) || '未知')}
                                 </div>
                             </div>
                         </div>

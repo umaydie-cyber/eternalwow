@@ -7573,6 +7573,7 @@ const FIXED_EQUIPMENTS = {
             damageType: 'nature',
             selfDamageTakenMult: 0.8,
             selfBuffDuration: 2,
+            damageReduction: 0.2,
         },
     },
     // ==================== Molten Core（熔火之心）- 焚化者古雷曼格掉落（腿部） ====================
@@ -22229,9 +22230,8 @@ const ItemDetailsModal = ({ item, onClose, onEquip, characters, state , dispatch
                                     <div style={{ color: '#0066ff', fontSize: '14px' }}>
                                         ⚡ <strong>风剑：闪电链</strong>：每回合开始有{(se.chance * 100).toFixed(0)}%概率触发闪电链
                                         <br />
-                                        <span style={{ marginLeft: '16px', display: 'block' }}>造成 {se.damageMult}x攻击的自然伤害，可弹跳{se.maxJumps}次（最多命中{se.maxJumps + 1}个目标）</span>
-                                        <span style={{ marginLeft: '16px', display: 'block' }}>每次弹跳伤害降低为上次的{(se.jumpMultiplier * 100).toFixed(0)}%</span>
-                                        <span style={{ marginLeft: '16px', display: 'block' }}>同时获得 {((se.damageReduction || 0) * 100).toFixed(0)}%减伤（{se.damageReductionDuration}回合）</span>
+                                        <span style={{ marginLeft: '16px', display: 'block' }}>对所有敌人造成 {se.damageMult}倍攻击强度的自然伤害</span>
+                                        <span style={{ marginLeft: '16px', display: 'block' }}>同时获得 {((se.damageReduction || 0) * 100).toFixed(0)}%减伤（{se.selfBuffDuration}回合）</span>
                                         <div style={{ marginTop: '6px', fontSize: '12px', color: '#666' }}>
                                             💡 说明：对BOSS战的小怪也有效
                                         </div>

@@ -22,6 +22,10 @@ const BOSS_BONUS_CONFIG = {
     golemagg: { name: '焚化者古雷曼格', bonus: 0.25 },
     // ✅ 新增：熔火之心 - 管理者埃克索图斯
     majordomo_executus: { name: '管理者埃克索图斯', bonus: 0.25 },
+
+    // ✅ 新增：团队首领 - 火焰之王拉格纳罗斯
+    // 说明：团队首领与世界首领共用同一套战斗/奖励结算机制，仅在 UI/队伍人数上做区分。
+    ragnaros: { name: '火焰之王拉格纳罗斯', bonus: 0.30 },
 };
 
 // 兼容旧代码：派生出 names / bossBonus 两个对象（不再手写维护）
@@ -8885,6 +8889,40 @@ const WORLD_BOSSES = {
 
 };
 
+// ==================== 团队首领（Raid Boss） ====================
+// 说明：团队首领在「世界首领」页面中以独立区域展示。
+// 机制复用世界首领（同一套 Boss 战斗/结算/冷却），但准备界面支持 5 人队伍。
+// 后续如需更复杂技能，只需在 BOSS_DATA 中补充对应 bossId 的配置与战斗逻辑分支。
+const TEAM_BOSSES = {
+    ragnaros: {
+        id: 'ragnaros',
+        name: '火焰之王拉格纳罗斯',
+        icon: 'icons/wow/vanilla/boss/ragnaros.png', // 预留：自行补图标
+        hp: 30000000,
+        attack: 18000,
+        defense: 18000,
+        rewards: { gold: 3200000, exp: 1800000 },
+        unlockLevel: 60,
+        partySize: 5, // ✅ 团队首领：5人
+    },
+};
+
+// UI/逻辑层通用：获取 Boss 元信息
+function getBossMeta(bossId) {
+    return TEAM_BOSSES?.[bossId] || WORLD_BOSSES?.[bossId] || null;
+}
+
+function isTeamBoss(bossId) {
+    return !!TEAM_BOSSES?.[bossId];
+}
+
+function getBossPartySize(bossId) {
+    const meta = getBossMeta(bossId);
+    const n = Number(meta?.partySize);
+    if (Number.isFinite(n) && n > 0) return Math.floor(n);
+    return isTeamBoss(bossId) ? 5 : 3;
+}
+
 // 装备槽位定义
 const EQUIPMENT_SLOTS = {
     head: { name: '头部', icon: '⛑️' },
@@ -9568,6 +9606,25 @@ const BOSS_DATA = {
                 { id: 'EQ_189', chance: 0.1 },  // 奥术师长袍
                 { id: 'EQ_190', chance: 0.1 },  // 预言法袍
             ]
+        }
+    },
+
+    // ✅ 新增：团队首领 - 火焰之王拉格纳罗斯（5人）
+    // 先打框架：目前仅有普通攻击循环；后续可在 cycle 中加入新技能，并在 stepBossCombat 中补充对应逻辑。
+    ragnaros: {
+        id: 'ragnaros',
+        name: '火焰之王拉格纳罗斯',
+        maxHp: 30000000,
+        attack: 18000,
+        defense: 18000,
+
+        // 占位循环（后续补充技能）
+        cycle: ['normal_attack'],
+
+        rewards: {
+            gold: 3200000,
+            exp: 1800000,
+            items: []
         }
     },
 
@@ -14458,6 +14515,37 @@ function stepBossCombat(state) {
         }
     }
 
+    // ==================== 火焰之王拉格纳罗斯（团队首领）技能处理 ====================
+    // 先打框架：目前仅普通攻击；后续可在此扩展为“技能循环 + 站位机制”。
+    else if (combat.bossId === 'ragnaros') {
+        // 默认：普通攻击打 1 号位（坦克优先），若 1 号位阵亡则顺位
+        const doNormalAttack = () => {
+            const tIdx = pickAlivePlayerIndex();
+            if (tIdx < 0) {
+                addLog(`【${boss.name}】试图攻击，但没有存活目标`);
+                return;
+            }
+
+            const target = combat.playerStates[tIdx];
+            const raw = Math.floor(boss.attack || 0);
+            const { damage, dr, blockedAmount } = calcMitigatedAndBlockedDamage(target, raw);
+            const shieldResult = applyShieldAbsorb(target, damage, logs, currentRound);
+            target.currentHp -= shieldResult.finalDamage;
+
+            const drPct = Math.round(dr * 100);
+            const blockText = blockedAmount > 0 ? `，格挡 ${blockedAmount}` : '';
+            const shieldText = shieldResult.absorbed > 0 ? `，护盾吸收 ${shieldResult.absorbed}` : '';
+            addLog(`【${boss.name}】普通攻击命中 位置${tIdx + 1} ${target.char.name}，造成 ${shieldResult.finalDamage} 点物理伤害（护甲减伤${drPct}%${blockText}${shieldText}）`);
+        };
+
+        if (bossAction === 'normal_attack') {
+            doNormalAttack();
+        } else {
+            // 兜底：未知动作也按普通攻击处理，保证框架可运行
+            doNormalAttack();
+        }
+    }
+
     // ==================== 无疤者奥斯里安技能处理 ====================
     else if (combat.bossId === 'ossirian') {
         // 自然伤害：计算魔抗（并套用伤害减免/全能/挫志怒吼）
@@ -19279,7 +19367,8 @@ function gameReducer(state, action) {
             return {
                 ...state,
                 prepareBoss: bossId,
-                bossTeam: [null, null, null],
+                // ✅ 团队首领支持 5 人；世界首领默认 3 人
+                bossTeam: Array(getBossPartySize(bossId)).fill(null),
                 bossStrategy: { priorityBoss: true, stance: 'dispersed' }
             };
         }
@@ -24783,6 +24872,244 @@ const WorldBossPage = ({ state, dispatch }) => {
                 })}
             </div>
 
+            {/* ==================== 团队首领区域（框架） ==================== */}
+            <div style={{
+                marginTop: 24,
+                paddingTop: 20,
+                borderTop: '1px solid rgba(201,162,39,0.2)'
+            }}>
+                <div style={{
+                    display: 'flex',
+                    alignItems: 'flex-end',
+                    justifyContent: 'space-between',
+                    gap: 12,
+                    marginBottom: 16
+                }}>
+                    <div>
+                        <div style={{
+                            fontSize: 18,
+                            fontWeight: 900,
+                            color: '#ffd700',
+                            textShadow: '0 0 14px rgba(255,215,0,0.25)'
+                        }}>
+                            🧩 团队首领
+                        </div>
+                        <div style={{ fontSize: 12, color: '#aaa', marginTop: 6 }}>
+                            准备界面支持 <b style={{ color: '#ffd700' }}>5人</b> 队伍；战斗机制与世界首领一致（先搭框架，技能后续补充）。
+                        </div>
+                    </div>
+
+                    <div style={{
+                        fontSize: 11,
+                        color: '#888',
+                        padding: '6px 10px',
+                        background: 'rgba(0,0,0,0.25)',
+                        border: '1px solid rgba(255,255,255,0.08)',
+                        borderRadius: 8
+                    }}>
+                        👥 5人战斗
+                    </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 16 }}>
+                    {Object.values(TEAM_BOSSES).map(boss => {
+                        const bossData = BOSS_DATA[boss.id] || boss;
+                        const unlocked = !boss.unlockLevel || state.characters.some(c => c.level >= (boss.unlockLevel || 0));
+                        const cdSeconds = state.bossCooldowns?.[boss.id] || 0;
+                        const cdText = cdSeconds > 0
+                            ? `${String(Math.floor(cdSeconds / 60)).padStart(2, '0')}:${String(cdSeconds % 60).padStart(2, '0')}`
+                            : '';
+
+                        const partySize = getBossPartySize(boss.id);
+
+                        return (
+                            <div key={boss.id} style={{
+                                padding: 20,
+                                background: unlocked
+                                    ? 'linear-gradient(135deg, rgba(255,120,0,0.14) 0%, rgba(60,20,10,0.32) 100%)'
+                                    : 'rgba(0,0,0,0.3)',
+                                border: `2px solid ${unlocked ? 'rgba(255,140,0,0.65)' : '#333'}`,
+                                borderRadius: 12,
+                                opacity: unlocked ? 1 : 0.5,
+                                boxShadow: unlocked ? '0 4px 20px rgba(255,140,0,0.18)' : 'none'
+                            }}>
+                                {/* BOSS图片区域 */}
+                                <div style={{
+                                    width: '100%',
+                                    height: 180,
+                                    background: 'linear-gradient(135deg, rgba(90,30,10,0.55) 0%, rgba(25,10,6,0.75) 100%)',
+                                    border: '2px solid rgba(255,140,0,0.35)',
+                                    borderRadius: 10,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    marginBottom: 16,
+                                    overflow: 'hidden',
+                                    position: 'relative',
+                                    boxShadow: 'inset 0 0 30px rgba(0,0,0,0.55)'
+                                }}>
+                                    {boss.icon ? (
+                                        <img
+                                            src={boss.icon}
+                                            alt={boss.name}
+                                            style={{
+                                                width: '100%',
+                                                height: '100%',
+                                                objectFit: 'cover',
+                                                filter: unlocked ? 'none' : 'grayscale(100%)'
+                                            }}
+                                        />
+                                    ) : (
+                                        <div style={{
+                                            fontSize: 64,
+                                            opacity: 0.7,
+                                            filter: unlocked
+                                                ? 'drop-shadow(0 0 18px rgba(255,140,0,0.45))'
+                                                : 'grayscale(100%)'
+                                        }}>
+                                            {unlocked ? '🔥' : '🔒'}
+                                        </div>
+                                    )}
+
+                                    {/* 标签：团队首领 */}
+                                    <div style={{
+                                        position: 'absolute',
+                                        top: 10,
+                                        left: 10,
+                                        padding: '4px 8px',
+                                        borderRadius: 8,
+                                        background: 'rgba(0,0,0,0.55)',
+                                        border: '1px solid rgba(255,140,0,0.35)',
+                                        color: '#ffb74d',
+                                        fontSize: 11,
+                                        fontWeight: 900,
+                                        letterSpacing: 0.5
+                                    }}>
+                                        团队首领 · {partySize}人
+                                    </div>
+
+                                    {/* 锁定遮罩 */}
+                                    {!unlocked && (
+                                        <div style={{
+                                            position: 'absolute',
+                                            top: 0,
+                                            left: 0,
+                                            right: 0,
+                                            bottom: 0,
+                                            background: 'rgba(0,0,0,0.6)',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center'
+                                        }}>
+                                            <span style={{ fontSize: 48 }}>🔒</span>
+                                        </div>
+                                    )}
+
+                                    {/* 底部渐变 */}
+                                    <div style={{
+                                        position: 'absolute',
+                                        bottom: 0,
+                                        left: 0,
+                                        right: 0,
+                                        height: '40%',
+                                        background: 'linear-gradient(0deg, rgba(0,0,0,0.85) 0%, transparent 100%)',
+                                        pointerEvents: 'none'
+                                    }} />
+                                </div>
+
+                                {/* BOSS名称 */}
+                                <h3 style={{
+                                    textAlign: 'center',
+                                    color: unlocked ? '#ffb74d' : '#666',
+                                    margin: '0 0 12px 0',
+                                    fontSize: 20,
+                                    textShadow: unlocked ? '0 0 10px rgba(255,140,0,0.25)' : 'none'
+                                }}>
+                                    {boss.name}
+                                </h3>
+
+                                {/* BOSS属性预览 */}
+                                {unlocked && (
+                                    <div style={{
+                                        display: 'grid',
+                                        gridTemplateColumns: 'repeat(3, 1fr)',
+                                        gap: 8,
+                                        marginBottom: 16,
+                                        padding: 10,
+                                        background: 'rgba(0,0,0,0.3)',
+                                        borderRadius: 6
+                                    }}>
+                                        <div style={{ textAlign: 'center' }}>
+                                            <div style={{ fontSize: 10, color: '#888' }}>生命</div>
+                                            <div style={{ fontSize: 12, color: '#f44336', fontWeight: 600 }}>
+                                                {(bossData.maxHp || boss.hp)?.toLocaleString()}
+                                            </div>
+                                        </div>
+                                        <div style={{ textAlign: 'center' }}>
+                                            <div style={{ fontSize: 10, color: '#888' }}>攻击</div>
+                                            <div style={{ fontSize: 12, color: '#ff9800', fontWeight: 600 }}>
+                                                {bossData.attack || boss.attack}
+                                            </div>
+                                        </div>
+                                        <div style={{ textAlign: 'center' }}>
+                                            <div style={{ fontSize: 10, color: '#888' }}>防御</div>
+                                            <div style={{ fontSize: 12, color: '#4CAF50', fontWeight: 600 }}>
+                                                {bossData.defense || boss.defense}
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* 挑战按钮 / 解锁条件 */}
+                                {unlocked ? (
+                                    <div>
+                                        {cdSeconds > 0 && (
+                                            <div style={{
+                                                textAlign: 'center',
+                                                marginBottom: 10,
+                                                padding: '8px 10px',
+                                                background: 'rgba(0,0,0,0.25)',
+                                                border: '1px solid rgba(255,255,255,0.08)',
+                                                borderRadius: 6,
+                                                color: '#ffd700',
+                                                fontSize: 12
+                                            }}>
+                                                ⏳ 重生冷却中：<b>{cdText}</b>
+                                            </div>
+                                        )}
+                                        <Button
+                                            variant="danger"
+                                            style={{
+                                                width: '100%',
+                                                padding: '10px 16px',
+                                                fontSize: 14,
+                                                fontWeight: 600,
+                                                opacity: cdSeconds > 0 ? 0.6 : 1
+                                            }}
+                                            disabled={cdSeconds > 0}
+                                            onClick={() => dispatch({ type: 'OPEN_BOSS_PREPARE', payload: boss.id })}
+                                        >
+                                            {cdSeconds > 0 ? `⏳ 重生中 (${cdText})` : '🔥 进入准备'}
+                                        </Button>
+                                    </div>
+                                ) : (
+                                    <div style={{
+                                        textAlign: 'center',
+                                        color: '#666',
+                                        padding: '10px',
+                                        background: 'rgba(0,0,0,0.2)',
+                                        borderRadius: 6,
+                                        fontSize: 12
+                                    }}>
+                                        🔒 需要等级 {boss.unlockLevel || 0}
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })}
+                </div>
+            </div>
+
             {showVault && (
                 <GrandVaultModal
                     rows={vaultRows}
@@ -27056,6 +27383,11 @@ const BossPrepareModal = ({ state, dispatch }) => {
     console.log('boss:', BOSS_DATA[bossId]);
     if (!bossId) return null;
     const boss = BOSS_DATA[bossId];
+
+    // ✅ 团队首领/世界首领区分（框架）
+    const bossMeta = getBossMeta(bossId) || {};
+    const isTeam = isTeamBoss(bossId);
+    const teamSize = Math.max(1, (state.bossTeam || []).length || getBossPartySize(bossId));
     // ===== 角色状态（待命 / 地图战斗 / 采集） =====
     const mapAssignments = state.assignments || {};
     const resourceAssignments = state.resourceAssignments || {};
@@ -27203,7 +27535,7 @@ const BossPrepareModal = ({ state, dispatch }) => {
                         letterSpacing: 4,
                         marginBottom: 8
                     }}>
-                        ⚔️ 世界首领挑战 ⚔️
+                        ⚔️ {isTeam ? '团队首领' : '世界首领'}挑战 {isTeam ? '（5人）' : ''} ⚔️
                     </div>
                     <h2 style={{
                         margin: 0,
@@ -27252,9 +27584,9 @@ const BossPrepareModal = ({ state, dispatch }) => {
         0 0 30px rgba(139,48,48,0.3)
     `
                         }}>
-                            {WORLD_BOSSES[bossId]?.icon ? (
+                            {bossMeta?.icon ? (
                                 <img
-                                    src={WORLD_BOSSES[bossId].icon}
+                                    src={bossMeta.icon}
                                     alt={boss.name}
                                     style={{
                                         width: '100%',
@@ -27269,7 +27601,7 @@ const BossPrepareModal = ({ state, dispatch }) => {
                                     opacity: 0.6,
                                     filter: 'drop-shadow(0 0 20px rgba(255,100,100,0.5))'
                                 }}>
-                                    🐲
+                                    {isTeam ? '🔥' : '🐲'}
                                 </div>
                             )}
 
@@ -28323,7 +28655,7 @@ const BossPrepareModal = ({ state, dispatch }) => {
                                     color: '#c9a227',
                                     fontWeight: 600
                                 }}>
-                                    ⚔️ 队伍阵容
+                                    ⚔️ 队伍阵容（{teamSize}人）
                                 </div>
                                 <div style={{
                                     fontSize: 11,
@@ -28338,10 +28670,10 @@ const BossPrepareModal = ({ state, dispatch }) => {
 
                             <div style={{
                                 display: 'grid',
-                                gridTemplateColumns: 'repeat(3, 1fr)',
+                                gridTemplateColumns: `repeat(${teamSize}, 1fr)`,
                                 gap: 12
                             }}>
-                                {[0, 1, 2].map(slot => {
+                                {Array.from({ length: teamSize }, (_, i) => i).map(slot => {
                                     const charId = state.bossTeam[slot];
                                     const char = charId ? state.characters.find(c => c.id === charId) : null;
 
@@ -28386,7 +28718,7 @@ const BossPrepareModal = ({ state, dispatch }) => {
                                                 background: 'rgba(0,0,0,0.4)',
                                                 borderRadius: 3
                                             }}>
-
+                                                位置{slot + 1}
                                             </div>
 
                                             {char ? (
@@ -28911,6 +29243,8 @@ const BossCombatModal = ({ combat, state }) => {
     const boss = BOSS_DATA[combat.bossId];
     if (!boss) return null;
 
+    const isTeam = isTeamBoss(combat.bossId);
+
     const minionConfig = boss.minion || { name: '小弟', maxHp: 100 };
     const minionName = minionConfig.name || '小弟';
 
@@ -28948,7 +29282,7 @@ const BossCombatModal = ({ combat, state }) => {
                     letterSpacing: 3,
                     marginBottom: 6
                 }}>
-                    ⚔️ 世界首领战斗进行中 ⚔️
+                    ⚔️ {isTeam ? '团队首领' : '世界首领'}战斗进行中 {isTeam ? '（5人）' : ''} ⚔️
                 </div>
                 <div style={{
                     fontSize: 28,

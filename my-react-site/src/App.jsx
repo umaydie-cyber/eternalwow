@@ -24895,7 +24895,7 @@ const WorldBossPage = ({ state, dispatch }) => {
                             🧩 团队首领
                         </div>
                         <div style={{ fontSize: 12, color: '#aaa', marginTop: 6 }}>
-                            准备界面支持 <b style={{ color: '#ffd700' }}>5人</b> 队伍；战斗机制与世界首领一致（先搭框架，技能后续补充）。
+
                         </div>
                     </div>
 

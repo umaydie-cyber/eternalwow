@@ -28103,9 +28103,6 @@ const BossPrepareModal = ({ state, dispatch }) => {
                                         <br/>
                                         开场固有 <span style={{ color: '#ffd700' }}>{boss.eliteCount || 2}名</span>【{boss.eliteName || '烈焰行者精英'}】（每名生命 {Number(boss.eliteHp || 0).toLocaleString()}）
                                         <br/>
-                                        <span style={{ color: '#888' }}>
-                                          技能循环：反物理护盾 → 奥爆术 → 反魔法护盾 → 奥爆术
-                                        </span>
                                       </div>
                                     </div>
 

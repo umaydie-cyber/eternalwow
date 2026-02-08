@@ -28086,6 +28086,116 @@ const BossPrepareModal = ({ state, dispatch }) => {
                                     </>
                                 )}
 
+                                {/* 管理者埃克索图斯的技能 */}
+                                {bossId === 'majordomo_executus' && (
+                                  <>
+                                    <div style={{
+                                      padding: 10,
+                                      background: 'rgba(255,193,7,0.10)',
+                                      borderRadius: 6,
+                                      borderLeft: '3px solid #ffc107'
+                                    }}>
+                                      <div style={{ fontSize: 12, color: '#ffd54f', fontWeight: 600, marginBottom: 4 }}>
+                                        🧩 被动：烈焰行者随从
+                                      </div>
+                                      <div style={{ fontSize: 11, color: '#aaa', lineHeight: 1.5 }}>
+                                        开场固有 <span style={{ color: '#ffd700' }}>{boss.healerCount || 2}名</span>【{boss.healerName || '烈焰行者医师'}】（每名生命 {Number(boss.healerHp || 0).toLocaleString()}）
+                                        <br/>
+                                        开场固有 <span style={{ color: '#ffd700' }}>{boss.eliteCount || 2}名</span>【{boss.eliteName || '烈焰行者精英'}】（每名生命 {Number(boss.eliteHp || 0).toLocaleString()}）
+                                        <br/>
+                                        <span style={{ color: '#888' }}>
+                                          技能循环：反物理护盾 → 奥爆术 → 反魔法护盾 → 奥爆术
+                                        </span>
+                                      </div>
+                                    </div>
+
+                                    <div style={{
+                                      padding: 10,
+                                      background: 'rgba(76,175,80,0.10)',
+                                      borderRadius: 6,
+                                      borderLeft: '3px solid #4caf50'
+                                    }}>
+                                      <div style={{ fontSize: 12, color: '#81c784', fontWeight: 600, marginBottom: 4 }}>
+                                        👨‍⚕️ 医师效果：群体治疗
+                                      </div>
+                                      <div style={{ fontSize: 11, color: '#aaa', lineHeight: 1.5 }}>
+                                        每名【{boss.healerName || '烈焰行者医师'}】每回合为<span style={{ color: '#ff9800' }}>所有己方单位（含BOSS）</span>回复
+                                        <span style={{ color: '#ffd700' }}> Boss攻击×{boss.healerHealMultiplier || 10}</span> 的生命值
+                                        <br/>
+                                        <span style={{ color: '#888' }}>
+                                         （总治疗量会随存活医师数量叠加）
+                                        </span>
+                                      </div>
+                                    </div>
+
+                                    <div style={{
+                                      padding: 10,
+                                      background: 'rgba(244,67,54,0.10)',
+                                      borderRadius: 6,
+                                      borderLeft: '3px solid #f44336'
+                                    }}>
+                                      <div style={{ fontSize: 12, color: '#ff6b6b', fontWeight: 600, marginBottom: 4 }}>
+                                        🗡️ 精英效果：群体法术灼烧
+                                      </div>
+                                      <div style={{ fontSize: 11, color: '#aaa', lineHeight: 1.5 }}>
+                                        每名【{boss.eliteName || '烈焰行者精英'}】每回合对<span style={{ color: '#ff9800' }}>所有角色</span>造成
+                                        <span style={{ color: '#ffd700' }}> Boss攻击×{boss.eliteAoEDamageMultiplier || 1.5}</span> 的<span style={{ color: '#ff7043' }}>法术伤害</span>（计算魔抗）
+                                        <br/>
+                                        <span style={{ color: '#888' }}>
+                                         （总伤害会随存活精英数量叠加）
+                                        </span>
+                                      </div>
+                                    </div>
+
+                                    <div style={{
+                                      padding: 10,
+                                      background: 'rgba(33,150,243,0.10)',
+                                      borderRadius: 6,
+                                      borderLeft: '3px solid #2196F3'
+                                    }}>
+                                      <div style={{ fontSize: 12, color: '#64b5f6', fontWeight: 600, marginBottom: 4 }}>
+                                        🛡️ 反物理护盾
+                                      </div>
+                                      <div style={{ fontSize: 11, color: '#aaa', lineHeight: 1.5 }}>
+                                        使<span style={{ color: '#ff9800' }}>所有单位</span>（BOSS / 医师 / 精英）免疫<span style={{ color: '#ffd700' }}>物理伤害</span>
+                                        <br/>
+                                        持续 <span style={{ color: '#ffd700' }}>{boss.antiPhysicalDuration || 2}</span> 回合
+                                      </div>
+                                    </div>
+
+                                    <div style={{
+                                      padding: 10,
+                                      background: 'rgba(156,39,176,0.10)',
+                                      borderRadius: 6,
+                                      borderLeft: '3px solid #9c27b0'
+                                    }}>
+                                      <div style={{ fontSize: 12, color: '#ce93d8', fontWeight: 600, marginBottom: 4 }}>
+                                        ✨ 奥爆术
+                                      </div>
+                                      <div style={{ fontSize: 11, color: '#aaa', lineHeight: 1.5 }}>
+                                        对<span style={{ color: '#ff9800' }}>所有角色</span>造成
+                                        <span style={{ color: '#ffd700' }}> Boss攻击×{boss.arcaneExplosionMultiplier || 2}</span> 的<span style={{ color: '#ff7043' }}>法术伤害</span>（计算魔抗）
+                                      </div>
+                                    </div>
+
+                                    <div style={{
+                                      padding: 10,
+                                      background: 'rgba(255,235,59,0.10)',
+                                      borderRadius: 6,
+                                      borderLeft: '3px solid #ffeb3b'
+                                    }}>
+                                      <div style={{ fontSize: 12, color: '#fff59d', fontWeight: 600, marginBottom: 4 }}>
+                                        🧿 反魔法护盾
+                                      </div>
+                                      <div style={{ fontSize: 11, color: '#aaa', lineHeight: 1.5 }}>
+                                        使<span style={{ color: '#ff9800' }}>所有单位</span>（BOSS / 医师 / 精英）免疫<span style={{ color: '#ffd700' }}>法术伤害</span>
+                                        <br/>
+                                        持续 <span style={{ color: '#ffd700' }}>{boss.antiMagicDuration || 2}</span> 回合
+                                      </div>
+                                    </div>
+                                  </>
+                                )}
+
                             </div>
 
                             <div style={{

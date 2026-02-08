@@ -7972,6 +7972,20 @@ const UPPER_BLACKROCK_SPIRE_LV100_SET = ['EQ_103', 'EQ_104', 'EQ_105', 'EQ_106',
 // 祖尔格拉布 8 件装备全部达到过 Lv.100 → 暴击伤害 +20%
 const ZUL_GURUB_LV100_SET = ['EQ_131', 'EQ_132', 'EQ_133', 'EQ_134', 'EQ_135', 'EQ_136', 'EQ_137', 'EQ_138'];
 
+// 安琪拉废墟 7 件装备全部达到过 Lv.100 → 全队护甲 +300，魔法抗性 +100
+const RUINS_OF_AHNQIRAJ_LV100_SET = ['EQ_139', 'EQ_140', 'EQ_141', 'EQ_142', 'EQ_143', 'EQ_144', 'EQ_145'];
+
+// 熔火之心（地图掉落）26 件装备全部达到过 Lv.100 → 全队攻击 +800，法强 +800，魔法抗性 +200
+const MOLTEN_CORE_LV100_SET = [
+    'EQ_146', 'EQ_147', 'EQ_148', 'EQ_149',
+    'EQ_150', 'EQ_151', 'EQ_152', 'EQ_153',
+    'EQ_154', 'EQ_155', 'EQ_156', 'EQ_157',
+    'EQ_158', 'EQ_159', 'EQ_160', 'EQ_161',
+    'EQ_162', 'EQ_163', 'EQ_164', 'EQ_165',
+    'EQ_166', 'EQ_167', 'EQ_168', 'EQ_169',
+    'EQ_170', 'EQ_171'
+];
+
 // ==================== 图鉴集齐效果配置 ====================
 const CODEX_SET_EFFECTS = [
     {
@@ -8058,6 +8072,20 @@ const CODEX_SET_EFFECTS = [
         effect: '全队暴击伤害 +20%',
         color: '#8bc34a'
     },
+    {
+        id: 'ruins_of_ahnqiraj',
+        name: '安琪拉废墟',
+        equipIds: RUINS_OF_AHNQIRAJ_LV100_SET,
+        effect: '全队护甲 +300，魔法抗性 +100',
+        color: '#d4af37'
+    },
+    {
+        id: 'molten_core',
+        name: '熔火之心',
+        equipIds: MOLTEN_CORE_LV100_SET,
+        effect: '全队攻击 +800，法强 +800，魔法抗性 +200',
+        color: '#ff5722'
+    }
 ];
 
 // ==================== 坐骑图鉴（不占背包） ====================
@@ -10574,6 +10602,9 @@ function calculateTotalStats(character, partyAuras = { hpMul: 1, spellPowerMul: 
             { ids: STRATHOLME_lv100_SET, bonus: { haste: 10 } }, // 斯坦索姆：全队急速 +10
             { ids: UPPER_BLACKROCK_SPIRE_LV100_SET, bonus: { attack: 500, spellPower: 500 } }, // 黑石塔上：全队攻击 +500，法强 +500
             { ids: ZUL_GURUB_LV100_SET, bonus: { critDamage: 0.20 } }, // 祖尔格拉布：暴击伤害 +20%
+            { ids: RUINS_OF_AHNQIRAJ_LV100_SET, bonus: { armor: 300, magicResist: 100 } }, // 安琪拉废墟：全队护甲 +300，魔法抗性 +100
+            { ids: MOLTEN_CORE_LV100_SET, bonus: { attack: 800, spellPower: 800, magicResist: 200 } }, // 熔火之心：全队攻击 +1000，法强 +1000，魔法抗性 +200
+
         ];
 
         for (const rule of codexBonusRules) {

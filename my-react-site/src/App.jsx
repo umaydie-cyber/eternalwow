@@ -23964,7 +23964,22 @@ const InventoryPage = ({ state, dispatch }) => {
                                             ⚡ {se.type === 'map_slayer'
                                                 ? `地图伤害+${(se.bonusDamageVsMap * 100).toFixed(0)}%`
                                                 : se.type === 'skill_slot_buff'
-                                                    ? `技能栏+${se.slots.map(s => s + 1).join('/')} 强化`
+                                                    ? (() => {
+                                                              const slots = Array.isArray(se.slots)
+                                                                ? se.slots
+                                                                : (Number.isFinite(Number(se.slot)) ? [Number(se.slot)] : []);
+                                                              const slotText = slots.length ? slots.map(s => s + 1).join('、') : '？';
+
+                                                              const atk = Number(se.attackBonus) || 0;
+                                                              const sp  = Number(se.spellPowerBonus) || 0;
+
+                                                              const bonusText = [
+                                                                atk ? `攻+${Math.floor(atk)}` : null,
+                                                                sp  ? `法强+${Math.floor(sp)}` : null,
+                                                              ].filter(Boolean).join(' ');
+
+                                                              return `技能栏${slotText} 强化${bonusText ? `（${bonusText}）` : ''}`;
+                                                            })()
                                                     : se.type === 'basic_attack_repeat'
                                                         ? `连击${(se.chance * 100).toFixed(0)}%`
                                                         : se.type === 'proc_stat'

@@ -79,6 +79,9 @@ const BOSS_BONUS_CONFIG = {
     // ✅ 新增：熔火之心 - 管理者埃克索图斯
     majordomo_executus: { name: '管理者埃克索图斯', bonus: 0.25 },
 
+    // ✅ 新增：团队首领 - 奥妮克希亚
+    onyxia: { name: '奥妮克希亚', bonus: 0.30 },
+
     // ✅ 新增：团队首领 - 火焰之王拉格纳罗斯
     // 说明：团队首领与世界首领共用同一套战斗/奖励结算机制，仅在 UI/队伍人数上做区分。
     ragnaros: { name: '火焰之王拉格纳罗斯', bonus: 0.30 },
@@ -3020,6 +3023,18 @@ const BADGE_UPGRADE_RULES_CONFIG = {
         cap: 100,
         equipPool: 'ruins_of_ahnqiraj',
         theme: { border: '#b08900', title: '#ffd54f', shadow: 'rgba(176,137,0,0.25)' }
+    },
+
+
+    // ✅ 新增：团队首领 - 奥妮克希亚徽章
+    IT_ONYXIA_BADGE: {
+        title: '黑龙女王的徽章',
+        zoneLabel: '奥妮克希亚的巢穴',
+        inc: 2,
+        cap: 100,
+        // 目前游戏内的60级装备池以【熔火之心】为主；这里先复用 molten_core，后续可单独拆出 onyxias_lair
+        equipPool: 'molten_core',
+        theme: { border: '#212121', title: '#b388ff', shadow: 'rgba(179,136,255,0.22)' }
     },
 
     // ✅ 新增：团队首领 - 火焰之王拉格纳罗斯徽章
@@ -8490,6 +8505,19 @@ const ITEMS = {
         description: '使用后选择一件【安琪拉废墟】装备，使其等级提升 +2（最高100级）'
     },
 
+
+    // 黑龙女王的徽章（奥妮克希亚掉落）
+    IT_ONYXIA_BADGE: {
+        id: 'IT_ONYXIA_BADGE',
+        name: '黑龙女王的徽章',
+        type: 'consumable',
+        rarity: 'orange',
+        canUse: true,
+        sellPrice: 0,  // 不可出售
+        icon: 'icons/wow/vanilla/items/INV_Misc_Head_Dragon_01.png',
+        description: '使用后选择一件【熔火之心】或【熔火之心BOSS】掉落装备，使其等级提升 +2（最高100级）。'
+    },
+
     // 火焰之王的徽章（拉格纳罗斯掉落）
     IT_RAGNAROS_BADGE: {
         id: 'IT_RAGNAROS_BADGE',
@@ -9213,6 +9241,18 @@ const WORLD_BOSSES = {
 // 机制复用世界首领（同一套 Boss 战斗/结算/冷却），但准备界面支持 5 人队伍。
 // 后续如需更复杂技能，只需在 BOSS_DATA 中补充对应 bossId 的配置与战斗逻辑分支。
 const TEAM_BOSSES = {
+    onyxia: {
+        id: 'onyxia',
+        name: '奥妮克希亚',
+        icon: 'icons/wow/vanilla/boss/onyxia.png', // 需要添加对应图标
+        hp: 28000000,
+        attack: 17000,
+        defense: 17000,
+        rewards: { gold: 3000000, exp: 1700000 },
+        unlockLevel: 60,
+        partySize: 5, // ✅ 团队首领：5人
+    },
+
     ragnaros: {
         id: 'ragnaros',
         name: '火焰之王拉格纳罗斯',
@@ -9931,6 +9971,68 @@ const BOSS_DATA = {
             ]
         }
     },
+
+    // ✅ 新增：团队首领 - 奥妮克希亚（5人）
+    onyxia: {
+        id: 'onyxia',
+        name: '奥妮克希亚',
+        maxHp: 28000000,
+        attack: 17000,
+        defense: 17000,
+
+        // 技能1：龙翼打击（坦克，8×物理伤害）
+        dragonWingStrikeMultiplier: 8,
+
+        // 技能2：扫尾（分散站位：随机2目标 3×物理伤害；集中站位：无事发生）
+        tailSweepMultiplier: 3,
+        tailSweepTargets: 2,
+
+        // 技能3：火息术（默认打坦克；集中站位：全队 5×火焰伤害）
+        fireBreathMultiplier: 5,
+
+        // 技能4/5：召唤雏龙
+        whelpMaxCount: 8,
+        whelpSummonCount: 2,
+        deepBreathSummonCount: 4,
+        whelpMaxHp: 3000000,
+        whelpFireballMultiplier: 2,
+
+        // 技能5：深呼吸（集中站位：3×火焰AOE，并附加灼烧DOT：1.5×持续3回合；分散站位：全体下一回合跑位无法行动）
+        deepBreathMultiplier: 3,
+        burningDotMultiplier: 1.5,
+        burningDotDuration: 3,
+
+        // 技能6：恐惧低吼（全体恐惧 2 回合）
+        fearDuration: 2,
+
+        minion: {
+            name: '雏龙',
+            maxHp: 3000000,
+            attack: 17000,
+            defense: 17000,
+        },
+
+        // 技能循环：龙翼打击 → 扫尾 → 火息术 → 召唤雏龙 → 深呼吸 → 龙翼打击 → 恐惧低吼 → 龙翼打击
+        cycle: [
+            'dragon_wing_strike',
+            'tail_sweep',
+            'fire_breath',
+            'summon_whelps',
+            'deep_breath',
+            'dragon_wing_strike',
+            'fearful_roar',
+            'dragon_wing_strike',
+        ],
+
+        rewards: {
+            gold: 3000000,
+            exp: 1700000,
+            items: [
+                { id: 'IT_ONYXIA_BADGE', chance: 0.8 }, // ✅ 奥妮克希亚徽章
+            ]
+        }
+    },
+
 
     // ✅ 新增：团队首领 - 火焰之王拉格纳罗斯（5人）
     ragnaros: {
@@ -11487,6 +11589,8 @@ function stepBossCombat(state) {
                             addLog(`位置${i + 1} ${p.char.name} 的【恐惧】效果消失`);
                         } else if (key === 'knockup') {
                             addLog(`位置${i + 1} ${p.char.name} 的【击飞】效果消失`);
+                        } else if (key === 'running') {
+                            addLog(`位置${i + 1} ${p.char.name} 的【跑位】效果消失`);
                         } else if (key === 'shadowCurse') {
                             addLog(`位置${i + 1} ${p.char.name} 的【暗影诅咒】效果消失`);
                         } else if (key === 'tongueCurse') {
@@ -11753,6 +11857,19 @@ function stepBossCombat(state) {
             }
 
             addLog(`位置${i + 1} ${p.char.name} 因【击飞】无法行动（剩余${p.debuffs.knockup.duration}回合）`, 'debuff');
+            tickPlayerDurations(p, i);
+            continue;
+        }
+
+        // ==================== 跑位：跳过本回合行动 ====================
+        // 说明：与击飞类似，但文案为跑位（例如：奥妮克希亚【深呼吸】分散站位触发）。
+        if (p.debuffs?.running?.duration > 0) {
+            // 仍然推进技能轮转（表示这一回合被浪费）
+            if (Array.isArray(p.validSkills) && p.validSkills.length > 0) {
+                p.skillIndex = (p.skillIndex || 0) + 1;
+            }
+
+            addLog(`位置${i + 1} ${p.char.name} 因【跑位】无法行动（剩余${p.debuffs.running.duration}回合）`, 'debuff');
             tickPlayerDurations(p, i);
             continue;
         }
@@ -15351,6 +15468,275 @@ function stepBossCombat(state) {
         }
     }
 
+
+// ==================== 奥妮克希亚技能处理 ====================
+    else if (combat.bossId === 'onyxia') {
+        const stance = combat.strategy?.stance || 'dispersed';
+
+        // 召唤雏龙（上限：8只存活）
+        const summonWhelps = (count, reason = '') => {
+            combat.minions = combat.minions || [];
+            combat.bossBuffs = combat.bossBuffs || {};
+
+            const maxCount = Math.max(0, Math.floor(Number(boss.whelpMaxCount || 8)));
+            const aliveWhelps = combat.minions.filter(mm => (mm?.hp ?? 0) > 0 && mm.isOnyxiaWhelp).length;
+
+            const want = Math.max(0, Math.floor(Number(count || 0)));
+            const canAdd = Math.max(0, maxCount - aliveWhelps);
+            const addCount = Math.min(want, canAdd);
+
+            if (want > 0 && addCount <= 0) {
+                addLog(`→ 【雏龙】已达上限（${maxCount}只存活），无法继续召唤`, 'warning');
+                return 0;
+            }
+
+            const hp = Math.floor(Number(boss.whelpMaxHp || boss.minion?.maxHp || 3000000));
+            const atk = Math.floor(Number(boss.minion?.attack || boss.attack || 0));
+            const def = Math.floor(Number(boss.minion?.defense || boss.defense || 0));
+            const baseName = boss.minion?.name || '雏龙';
+
+            if (!Number.isFinite(Number(combat.bossBuffs.onyxiaWhelpSerial))) {
+                combat.bossBuffs.onyxiaWhelpSerial = 0;
+            }
+
+            for (let k = 0; k < addCount; k++) {
+                const serial = ++combat.bossBuffs.onyxiaWhelpSerial;
+                combat.minions.push({
+                    hp,
+                    maxHp: hp,
+                    attack: atk,
+                    defense: def,
+                    isOnyxiaWhelp: true,
+                    displayName: `${baseName}${serial}`,
+                    dots: []
+                });
+            }
+
+            if (addCount > 0) {
+                const reasonText = reason ? `（${reason}）` : '';
+                addLog(`→ 召唤 ${addCount} 只【${baseName}】${reasonText}（当前存活：${aliveWhelps + addCount}/${maxCount}）`, 'warning');
+            }
+            return addCount;
+        };
+
+        const pickRandomAlivePlayerIndex = () => {
+            const aliveIdx = combat.playerStates
+                .map((ps, idx) => ({ idx, hp: ps?.currentHp ?? 0 }))
+                .filter(x => x.hp > 0)
+                .map(x => x.idx);
+
+            if (aliveIdx.length <= 0) return -1;
+            return aliveIdx[Math.floor(Math.random() * aliveIdx.length)];
+        };
+
+        const pickNRandomAlivePlayers = (n) => {
+            const aliveIdx = combat.playerStates
+                .map((ps, idx) => ({ idx, hp: ps?.currentHp ?? 0 }))
+                .filter(x => x.hp > 0)
+                .map(x => x.idx);
+
+            const pool = aliveIdx.slice();
+            const picked = [];
+
+            const need = Math.min(Math.max(0, Math.floor(Number(n || 0))), pool.length);
+            for (let k = 0; k < need; k++) {
+                const r = Math.floor(Math.random() * pool.length);
+                picked.push(pool[r]);
+                pool.splice(r, 1);
+            }
+            return picked;
+        };
+
+        // ==================== 技能1：龙翼打击（坦克 8×物理） ====================
+        if (bossAction === 'dragon_wing_strike') {
+            const tIdx = pickAlivePlayerIndex();
+            if (tIdx >= 0) {
+                const target = combat.playerStates[tIdx];
+                const mult = (typeof boss.dragonWingStrikeMultiplier === 'number') ? boss.dragonWingStrikeMultiplier : 8;
+                const raw = Math.floor((boss.attack || 0) * mult);
+
+                const { damage, dr, blockedAmount } = calcMitigatedAndBlockedDamage(target, raw, true);
+                const shieldResult = applyShieldAbsorb(target, damage, logs, currentRound);
+                target.currentHp -= shieldResult.finalDamage;
+
+                const drPct = Math.round(dr * 100);
+                const blockText = blockedAmount > 0 ? `，格挡 ${blockedAmount}` : '';
+                const shieldText = shieldResult.absorbed > 0 ? `，护盾吸收 ${shieldResult.absorbed}` : '';
+                addLog(`【${boss.name}】施放【龙翼打击】命中 坦克 位置${tIdx + 1} ${target.char.name}，造成 ${shieldResult.finalDamage} 点物理伤害（护甲减伤${drPct}%${blockText}${shieldText}）`, 'warning');
+            }
+        }
+
+        // ==================== 技能2：扫尾（分散：随机2目标 3×物理；集中：无事发生） ====================
+        else if (bossAction === 'tail_sweep') {
+            if (stance === 'dispersed') {
+                const cnt = Math.max(1, Math.floor(Number(boss.tailSweepTargets || 2)));
+                const targets = pickNRandomAlivePlayers(cnt);
+                if (targets.length <= 0) {
+                    addLog(`【${boss.name}】施放【扫尾】，但没有存活目标`);
+                } else {
+                    const mult = (typeof boss.tailSweepMultiplier === 'number') ? boss.tailSweepMultiplier : 3;
+                    const raw = Math.floor((boss.attack || 0) * mult);
+
+                    addLog(`【${boss.name}】施放【扫尾】（分散站位：命中 ${targets.length} 名目标）`, 'warning');
+
+                    targets.forEach(tIdx => {
+                        const target = combat.playerStates[tIdx];
+                        if (!target || target.currentHp <= 0) return;
+
+                        const { damage, dr, blockedAmount } = calcMitigatedAndBlockedDamage(target, raw, false);
+                        const shieldResult = applyShieldAbsorb(target, damage, logs, currentRound);
+                        target.currentHp -= shieldResult.finalDamage;
+
+                        const drPct = Math.round(dr * 100);
+                        const blockText = blockedAmount > 0 ? `，格挡 ${blockedAmount}` : '';
+                        const shieldText = shieldResult.absorbed > 0 ? `，护盾吸收 ${shieldResult.absorbed}` : '';
+                        addLog(`→ 位置${tIdx + 1} ${target.char.name} 受到 ${shieldResult.finalDamage} 点物理伤害（护甲减伤${drPct}%${blockText}${shieldText}）`);
+                    });
+                }
+            } else {
+                addLog(`【${boss.name}】施放【扫尾】，但你们【集中站位】没有人被扫到`, 'proc');
+            }
+        }
+
+        // ==================== 技能3：火息术（默认坦克；集中：全队 5×火焰） ====================
+        else if (bossAction === 'fire_breath') {
+            const mult = (typeof boss.fireBreathMultiplier === 'number') ? boss.fireBreathMultiplier : 5;
+            const raw = Math.floor((boss.attack || 0) * mult);
+
+            if (stance === 'concentrated') {
+                addLog(`【${boss.name}】施放【火息术】（集中站位：全体受击）`, 'warning');
+                combat.playerStates.forEach((ps, pIdx) => {
+                    if (!ps || ps.currentHp <= 0) return;
+
+                    const fire = calcMagicDamage(ps, raw);
+                    const shieldResult = applyShieldAbsorb(ps, fire.damage, logs, currentRound);
+                    ps.currentHp -= shieldResult.finalDamage;
+
+                    const resPct = Math.round(fire.resistReduction * 100);
+                    const mrText = fire.magicResist ? `，魔抗 ${fire.magicResist}` : '';
+                    const shieldText = shieldResult.absorbed > 0 ? `，护盾吸收 ${shieldResult.absorbed}` : '';
+                    addLog(`→ 位置${pIdx + 1} ${ps.char.name} 受到 ${shieldResult.finalDamage} 点火焰伤害（魔抗减伤${resPct}%${mrText}${shieldText}）`);
+                });
+            } else {
+                const tIdx = pickAlivePlayerIndex();
+                if (tIdx >= 0) {
+                    const target = combat.playerStates[tIdx];
+
+                    const fire = calcMagicDamage(target, raw);
+                    const shieldResult = applyShieldAbsorb(target, fire.damage, logs, currentRound);
+                    target.currentHp -= shieldResult.finalDamage;
+
+                    const resPct = Math.round(fire.resistReduction * 100);
+                    const mrText = fire.magicResist ? `，魔抗 ${fire.magicResist}` : '';
+                    const shieldText = shieldResult.absorbed > 0 ? `，护盾吸收 ${shieldResult.absorbed}` : '';
+                    addLog(`【${boss.name}】施放【火息术】命中 坦克 位置${tIdx + 1} ${target.char.name}，造成 ${shieldResult.finalDamage} 点火焰伤害（魔抗减伤${resPct}%${mrText}${shieldText}）`, 'warning');
+                }
+            }
+        }
+
+        // ==================== 技能4：召唤雏龙（2只） ====================
+        else if (bossAction === 'summon_whelps') {
+            addLog(`【${boss.name}】施放【召唤雏龙】！`, 'warning');
+            summonWhelps(boss.whelpSummonCount || 2, '召唤雏龙');
+        }
+
+        // ==================== 技能5：深呼吸（召唤4雏龙；集中：AOE+灼烧；分散：全体跑位） ====================
+        else if (bossAction === 'deep_breath') {
+            addLog(`【${boss.name}】深深地吸了一口气……`, 'warning');
+            summonWhelps(boss.deepBreathSummonCount || 4, '深呼吸');
+
+            if (stance === 'concentrated') {
+                const hitMult = (typeof boss.deepBreathMultiplier === 'number') ? boss.deepBreathMultiplier : 3;
+                const hitRaw = Math.floor((boss.attack || 0) * hitMult);
+
+                const dotMult = (typeof boss.burningDotMultiplier === 'number') ? boss.burningDotMultiplier : 1.5;
+                const dotRaw = Math.floor((boss.attack || 0) * dotMult);
+                const dotDur = Math.max(1, Math.floor(Number(boss.burningDotDuration || 3)));
+
+                addLog(`【${boss.name}】释放【深呼吸】（集中站位：全体受击 + 灼烧DOT）`, 'warning');
+
+                combat.playerStates.forEach((ps, pIdx) => {
+                    if (!ps || ps.currentHp <= 0) return;
+
+                    // 本段：火焰AOE（魔抗）
+                    const fire = calcMagicDamage(ps, hitRaw);
+                    const shieldResult = applyShieldAbsorb(ps, fire.damage, logs, currentRound);
+                    ps.currentHp -= shieldResult.finalDamage;
+
+                    const resPct = Math.round(fire.resistReduction * 100);
+                    const mrText = fire.magicResist ? `，魔抗 ${fire.magicResist}` : '';
+                    const shieldText = shieldResult.absorbed > 0 ? `，护盾吸收 ${shieldResult.absorbed}` : '';
+                    addLog(`→ 位置${pIdx + 1} ${ps.char.name} 受到 ${shieldResult.finalDamage} 点火焰伤害（魔抗减伤${resPct}%${mrText}${shieldText}）`);
+
+                    // 附加：灼烧DOT（火焰，3回合）
+                    if (ps.currentHp > 0) {
+                        ps.dots = ps.dots || [];
+                        const existing = ps.dots.find(d => d && d.name === '灼烧');
+                        if (existing) {
+                            existing.damagePerTurn = dotRaw;
+                            existing.duration = dotDur;
+                            existing.school = 'fire';
+                        } else {
+                            ps.dots.push({
+                                name: '灼烧',
+                                damagePerTurn: dotRaw,
+                                duration: dotDur,
+                                school: 'fire',
+                            });
+                        }
+                        addLog(`   ↳ 获得【灼烧】DOT：每回合 ${dotRaw} 火焰伤害，持续${dotDur}回合`, 'debuff');
+                    }
+                });
+            } else {
+                // 分散站位：下一回合全体跑位，无法行动
+                combat.playerStates.forEach(ps => {
+                    if (!ps || ps.currentHp <= 0) return;
+                    ps.debuffs = ps.debuffs || {};
+                    ps.debuffs.running = { duration: 1 };
+                });
+                addLog(`→ 分散站位触发【跑位】：全体下一回合无法行动`, 'debuff');
+            }
+        }
+
+        // ==================== 技能6：恐惧低吼（全体恐惧2回合） ====================
+        else if (bossAction === 'fearful_roar') {
+            const dur = Math.max(1, Math.floor(Number(boss.fearDuration || 2)));
+            addLog(`【${boss.name}】施放【恐惧低吼】！全体陷入恐惧（持续${dur}回合）`, 'debuff');
+
+            combat.playerStates.forEach((ps, pIdx) => {
+                if (!ps || ps.currentHp <= 0) return;
+
+                // 亡灵：首次恐惧免疫
+                if (tryFirstFearImmunity(ps, pIdx, '恐惧低吼')) {
+                    return;
+                }
+
+                ps.debuffs = ps.debuffs || {};
+                ps.debuffs.fear = { duration: dur };
+            });
+        }
+
+        // 兜底：普通攻击（以免 cycle 配置错误导致 Boss“跳过”）
+        else {
+            const tIdx = pickAlivePlayerIndex();
+            if (tIdx >= 0) {
+                const target = combat.playerStates[tIdx];
+                const raw = Math.floor(boss.attack || 0);
+                const { damage, dr, blockedAmount } = calcMitigatedAndBlockedDamage(target, raw, false);
+
+                const shieldResult = applyShieldAbsorb(target, damage, logs, currentRound);
+                target.currentHp -= shieldResult.finalDamage;
+
+                const drPct = Math.round(dr * 100);
+                const blockText = blockedAmount > 0 ? `，格挡 ${blockedAmount}` : '';
+                const shieldText = shieldResult.absorbed > 0 ? `，护盾吸收 ${shieldResult.absorbed}` : '';
+                addLog(`【${boss.name}】普通攻击 位置${tIdx + 1} ${target.char.name}，造成 ${shieldResult.finalDamage} 点伤害（护甲减伤${drPct}%${blockText}${shieldText}）`);
+            }
+        }
+    }
+
+
+
 // ==================== 无疤者奥斯里安技能处理 ====================
     else if (combat.bossId === 'ossirian') {
         // 自然伤害：计算魔抗（并套用伤害减免/全能/挫志怒吼）
@@ -15610,6 +15996,34 @@ function stepBossCombat(state) {
                 });
             }
         }
+
+        // 奥妮克希亚的雏龙：对随机目标释放【火球术】（2×BOSS攻击的火焰法术伤害）
+        else if (combat.bossId === 'onyxia' && m.isOnyxiaWhelp) {
+            const aliveIdx = combat.playerStates
+                .map((ps, idx) => ({ idx, hp: ps?.currentHp ?? 0 }))
+                .filter(x => x.hp > 0)
+                .map(x => x.idx);
+
+            if (aliveIdx.length > 0) {
+                const tIdx = aliveIdx[Math.floor(Math.random() * aliveIdx.length)];
+                const target = combat.playerStates[tIdx];
+
+                const mult = (typeof boss.whelpFireballMultiplier === 'number') ? boss.whelpFireballMultiplier : 2;
+                const raw = Math.floor((boss.attack || m.attack || 0) * mult);
+
+                const fire = calcMagicDamage(target, raw);
+                const shieldResult = applyShieldAbsorb(target, fire.damage, logs, currentRound);
+                target.currentHp -= shieldResult.finalDamage;
+
+                const resPct = Math.round(fire.resistReduction * 100);
+                const mrText = fire.magicResist ? `，魔抗 ${fire.magicResist}` : '';
+                const shieldText = shieldResult.absorbed > 0 ? `，护盾吸收 ${shieldResult.absorbed}` : '';
+                const label = m.displayName || `${boss.minion?.name || '雏龙'}${i + 1}`;
+
+                addLog(`【${label}】施放【火球术】命中 位置${tIdx + 1} ${target.char.name}，造成 ${shieldResult.finalDamage} 点火焰伤害（魔抗减伤${resPct}%${mrText}${shieldText}）`);
+            }
+        }
+
         // 管理者埃克索图斯：烈焰行者医师/精英（每回合被动）
         else if (combat.bossId === 'majordomo_executus' && (m.isFlamewakerHealer || m.isFlamewakerElite)) {
             // 医师：每回合为所有己方单位回复 10 * Boss攻击 的生命
@@ -29029,6 +29443,15 @@ const BossPrepareModal = ({ state, dispatch }) => {
         purify_all: '让火焰净化一切',
         submerge: '下潜',
 
+
+        // 奥妮克希亚
+        dragon_wing_strike: '龙翼打击',
+        tail_sweep: '扫尾',
+        fire_breath: '火息术',
+        summon_whelps: '召唤雏龙',
+        deep_breath: '深呼吸',
+        fearful_roar: '恐惧低吼',
+
         // 其他boss也可以逐步补齐
         mortal_strike: '致死打击',
         summon_cannoneers: '火炮手准备',
@@ -31362,6 +31785,22 @@ const BossCombatModal = ({ combat, state }) => {
                                                         🦘 击飞 ({p.debuffs.knockup.duration}回合)
                                                     </span>
                                                 )}
+
+
+                                                {/* 跑位debuff */}
+                                                {p.debuffs?.running && (
+                                                    <span style={{
+                                                        padding: '3px 8px',
+                                                        background: 'rgba(33,150,243,0.16)',
+                                                        borderRadius: 4,
+                                                        fontSize: 10,
+                                                        color: '#90caf9',
+                                                        border: '1px solid rgba(33,150,243,0.26)'
+                                                    }}>
+                                                        🏃 跑位 ({p.debuffs.running.duration}回合)
+                                                    </span>
+                                                )}
+
 
                                                 {/* 结舌诅咒debuff */}
                                                 {p.debuffs?.tongueCurse && (

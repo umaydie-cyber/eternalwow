@@ -9034,6 +9034,209 @@ const FIXED_EQUIPMENTS = {
         versatility: 2,
       }
     },
+
+    // ==================== BWL团队首领：克洛玛古斯（T2 肩膀 / 源质盾 / 副手） ====================
+
+    // ✅ T2：愤怒（战士）- 肩铠
+    EQ_235: {
+      id: 'EQ_235',
+      name: '愤怒肩铠',
+      icon: 'icons/wow/vanilla/armor/fennujiankai.png',
+      type: 'equipment',
+      slot: 'shoulder',
+      rarity: 'purple',
+      setId: 'wrath_set',
+      setName: '愤怒',
+      level: 0,
+      maxLevel: 100,
+      baseStats: {
+        hp: 7800,
+        armor: 240,
+        magicResist: 100,
+        blockRate: 5,
+        blockValue: 600,
+        mastery: 16,
+      },
+      growth: {
+        hp: 2,
+        armor: 2,
+        magicResist: 2,
+        blockRate: 2,
+        blockValue: 2,
+        mastery: 2,
+      }
+    },
+
+    // ✅ T2：血牙（盗贼）- 肩甲
+    EQ_236: {
+      id: 'EQ_236',
+      name: '血牙肩甲',
+      icon: 'icons/wow/vanilla/armor/INV_Shoulder_23.png',
+      type: 'equipment',
+      slot: 'shoulder',
+      rarity: 'purple',
+      setId: 'bloodfang_set',
+      setName: '血牙',
+      level: 0,
+      maxLevel: 100,
+      baseStats: {
+        attack: 650,
+        hp: 4500,
+        armor: 200,
+        magicResist: 80,
+        critRate: 14,
+        haste: 16,
+      },
+      growth: {
+        attack: 2,
+        hp: 2,
+        armor: 2,
+        magicResist: 2,
+        critRate: 2,
+        haste: 2,
+      }
+    },
+
+    // ✅ T2：灵风（法师）- 衬肩
+    EQ_237: {
+      id: 'EQ_237',
+      name: '灵风衬肩',
+      icon: 'icons/wow/vanilla/armor/lingfengchenjian.png',
+      type: 'equipment',
+      slot: 'shoulder',
+      rarity: 'purple',
+      setId: 'netherwind_set',
+      setName: '灵风',
+      level: 0,
+      maxLevel: 100,
+      baseStats: {
+        spellPower: 700,
+        hp: 4500,
+        magicResist: 80,
+        critRate: 14,
+        haste: 16,
+        mastery: 16,
+      },
+      growth: {
+        spellPower: 2,
+        hp: 2,
+        magicResist: 2,
+        critRate: 2,
+        haste: 2,
+        mastery: 2,
+      }
+    },
+
+    // ✅ T2：卓越（牧师）- 肩铠
+    EQ_238: {
+      id: 'EQ_238',
+      name: '卓越肩铠',
+      icon: 'icons/wow/vanilla/armor/INV_Shoulder_02.png',
+      type: 'equipment',
+      slot: 'shoulder',
+      rarity: 'purple',
+      setId: 'transcendence_set',
+      setName: '卓越',
+      level: 0,
+      maxLevel: 100,
+      baseStats: {
+        spellPower: 650,
+        hp: 5600,
+        magicResist: 80,
+        mastery: 16,
+        haste: 16,
+        versatility: 16,
+      },
+      growth: {
+        spellPower: 2,
+        hp: 2,
+        magicResist: 2,
+        mastery: 2,
+        haste: 2,
+        versatility: 2,
+      }
+    },
+
+    // ✅ 盾牌：源质壁垒（坦克盾牌）
+    EQ_239: {
+      id: 'EQ_239',
+      name: '源质壁垒',
+      icon: 'icons/wow/vanilla/armor/INV_Shield_17.png',
+      type: 'equipment',
+      slot: 'offHand',
+      rarity: 'purple',
+      level: 0,
+      maxLevel: 100,
+      baseStats: {
+        hp: 9000,
+        armor: 460,
+        magicResist: 220,
+        blockRate: 30,
+        blockValue: 950,
+        mastery: 20,
+      },
+      growth: {
+        hp: 2,
+        armor: 2,
+        magicResist: 2,
+        blockRate: 2,
+        blockValue: 2,
+        mastery: 2,
+      }
+    },
+
+    // ✅ 副手：克洛玛古斯之爪（法伤 / 暴击 / 爆伤）
+    EQ_240: {
+      id: 'EQ_240',
+      name: '克洛玛古斯之爪',
+      icon: 'icons/wow/vanilla/weapons/keluomagusizhizhua.png',
+      type: 'equipment',
+      slot: 'offHand',
+      rarity: 'purple',
+      level: 0,
+      maxLevel: 100,
+      baseStats: {
+        spellPower: 1050,
+        hp: 5200,
+        critRate: 18,
+        critDamage: 0.50,
+        mastery: 32,
+      },
+      growth: {
+        spellPower: 2,
+        hp: 2,
+        critRate: 2,
+        critDamage: 2,
+        mastery: 2,
+      }
+    },
+
+    // ✅ 副手：多彩之剑（攻强副手）
+    EQ_241: {
+      id: 'EQ_241',
+      name: '多彩之剑',
+      icon: 'icons/wow/vanilla/weapons/duocaizhijian.png',
+      type: 'equipment',
+      slot: 'offHand',
+      rarity: 'purple',
+      level: 0,
+      maxLevel: 100,
+      baseStats: {
+        attack: 1250,
+        hp: 3600,
+        critRate: 22,
+        haste: 24,
+        mastery: 20,
+      },
+      growth: {
+        attack: 2,
+        hp: 2,
+        critRate: 2,
+        haste: 2,
+        mastery: 2,
+      }
+    },
+
 };
 
 //赤脊山5件图鉴100级点亮效果
@@ -11231,8 +11434,15 @@ const BOSS_DATA = {
             gold: 3800000,
             exp: 2100000,
             items: [
-                // 可按需要自行补充掉落（例如：黑翼之巢装备/徽章等）
-            ]
+                // ===== 克洛玛古斯专属掉落（T2肩膀 / 源质盾 / 副手） =====
+                { id: 'EQ_235', chance: 0.10 }, // 愤怒肩铠（T2肩）
+                { id: 'EQ_236', chance: 0.10 }, // 血牙肩甲（T2肩）
+                { id: 'EQ_237', chance: 0.10 }, // 灵风衬肩（T2肩）
+                { id: 'EQ_238', chance: 0.10 }, // 卓越肩铠（T2肩）
+                { id: 'EQ_239', chance: 0.10 }, // 源质壁垒（坦克盾牌）
+                { id: 'EQ_240', chance: 0.10 }, // 克洛玛古斯之爪（法伤/暴击/爆伤 副手）
+                { id: 'EQ_241', chance: 0.10 }, // 多彩之剑（攻强副手）
+]
         }
     },
 

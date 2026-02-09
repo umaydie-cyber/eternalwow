@@ -8857,6 +8857,180 @@ const FIXED_EQUIPMENTS = {
         haste: 2,
       }
     },
+
+    // ==================== BWL世界首领：堕落的瓦拉斯塔兹（T2 腰带 / 法系爆发饰品 / 红龙副手盾） ====================
+
+    // ✅ T2：愤怒（战士）- 腰带
+    EQ_229: {
+      id: 'EQ_229',
+      name: '愤怒腰带',
+      icon: 'icons/wow/vanilla/armor/INV_Belt_09.png',
+      type: 'equipment',
+      slot: 'belt',
+      rarity: 'purple',
+      setId: 'wrath_set',
+      setName: '愤怒',
+      level: 0,
+      maxLevel: 100,
+      baseStats: {
+        hp: 7200,
+        armor: 220,
+        magicResist: 80,
+        mastery: 14,
+        blockRate: 5,
+        blockValue: 540,
+      },
+      growth: {
+        hp: 2,
+        armor: 2,
+        magicResist: 2,
+        mastery: 2,
+        blockRate: 2,
+        blockValue: 2,
+      }
+    },
+
+    // ✅ T2：血牙（盗贼）- 腰带
+    EQ_230: {
+      id: 'EQ_230',
+      name: '血牙腰带',
+      icon: 'icons/wow/vanilla/armor/INV_Belt_23.png',
+      type: 'equipment',
+      slot: 'belt',
+      rarity: 'purple',
+      setId: 'bloodfang_set',
+      setName: '血牙',
+      level: 0,
+      maxLevel: 100,
+      baseStats: {
+        attack: 600,
+        hp: 4000,
+        armor: 180,
+        magicResist: 60,
+        critRate: 14,
+        haste: 16,
+      },
+      growth: {
+        attack: 2,
+        hp: 2,
+        armor: 2,
+        magicResist: 2,
+        critRate: 2,
+        haste: 2,
+      }
+    },
+
+    // ✅ T2：灵风（法师）- 腰带
+    EQ_231: {
+      id: 'EQ_231',
+      name: '灵风腰带',
+      icon: 'icons/wow/vanilla/armor/INV_Belt_29.png',
+      type: 'equipment',
+      slot: 'belt',
+      rarity: 'purple',
+      setId: 'netherwind_set',
+      setName: '灵风',
+      level: 0,
+      maxLevel: 100,
+      baseStats: {
+        spellPower: 620,
+        hp: 4100,
+        magicResist: 80,
+        haste: 16,
+        mastery: 16,
+        critRate: 12,
+      },
+      growth: {
+        spellPower: 2,
+        hp: 2,
+        magicResist: 2,
+        haste: 2,
+        mastery: 2,
+        critRate: 2,
+      }
+    },
+
+    // ✅ T2：卓越（牧师）- 腰带
+    EQ_232: {
+      id: 'EQ_232',
+      name: '卓越腰带',
+      icon: 'icons/wow/vanilla/armor/INV_Belt_31.png',
+      type: 'equipment',
+      slot: 'belt',
+      rarity: 'purple',
+      setId: 'transcendence_set',
+      setName: '卓越',
+      level: 0,
+      maxLevel: 100,
+      baseStats: {
+        spellPower: 560,
+        hp: 5000,
+        magicResist: 80,
+        mastery: 16,
+        versatility: 16,
+        haste: 12,
+      },
+      growth: {
+        spellPower: 2,
+        hp: 2,
+        magicResist: 2,
+        mastery: 2,
+        versatility: 2,
+        haste: 2,
+      }
+    },
+
+    // ✅ 饰品2：思维加速宝石（法系爆发）
+    // 设计：常驻提供少量法强/急速；回合开始有概率触发「思维加速」临时大幅提升法术强度。
+    EQ_233: {
+      id: 'EQ_233',
+      name: '思维加速宝石',
+      icon: 'icons/wow/vanilla/items/INV_Misc_Gem_Pearl_05.png',
+      type: 'equipment',
+      slot: 'trinket2',
+      rarity: 'purple',
+      level: 0,
+      maxLevel: 100,
+      baseStats: {
+        spellPower: 950,
+        haste: 20,
+      },
+      growth: {
+        spellPower: 2,
+        haste: 2,
+      },
+      specialEffect: {
+        name: '思维加速',
+        type: 'skill_slot_buff',
+        slots: [0,1,2],
+        spellPowerBonus: 2800,
+        scaleWithLevel: true
+      }
+    },
+
+    // ✅ 副手：红龙防护者（法伤 / 血量 / 魔抗 / 全能）
+    EQ_234: {
+      id: 'EQ_234',
+      name: '红龙防护者',
+      icon: 'icons/wow/vanilla/armor/INV_Shield_10.png',
+      type: 'equipment',
+      slot: 'offHand',
+      rarity: 'purple',
+      level: 0,
+      maxLevel: 100,
+      baseStats: {
+        spellPower: 720,
+        hp: 6800,
+        magicResist: 180,
+        versatility: 50,
+      },
+      growth: {
+        spellPower: 2,
+        hp: 2,
+        magicResist: 2,
+        versatility: 2,
+      }
+    },
 };
 
 //赤脊山5件图鉴100级点亮效果
@@ -10904,7 +11078,15 @@ const BOSS_DATA = {
         rewards: {
             gold: 4000000,
             exp: 2200000,
-            items: []
+            items: [
+                // ===== 瓦拉斯塔兹专属掉落（T2 腰带 + 法系爆发饰品 + 红龙主题副手盾） =====
+                { id: 'EQ_229', chance: 0.10 }, // 愤怒腰带（T2）
+                { id: 'EQ_230', chance: 0.10 }, // 血牙腰带（T2）
+                { id: 'EQ_231', chance: 0.10 }, // 灵风腰带（T2）
+                { id: 'EQ_232', chance: 0.10 }, // 卓越腰带（T2）
+                { id: 'EQ_233', chance: 0.10 }, // 思维加速宝石（法系爆发饰品2）
+                { id: 'EQ_234', chance: 0.10 }, // 红龙防护者（法伤/血量/魔抗/全能 副手盾牌）
+            ]
         }
     },
     // ✅ 新增：团队首领 - 奥妮克希亚（5人）

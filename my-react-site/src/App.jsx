@@ -8924,7 +8924,7 @@ const FIXED_EQUIPMENTS = {
     EQ_231: {
       id: 'EQ_231',
       name: '灵风腰带',
-      icon: 'icons/wow/vanilla/armor/INV_Belt_29.png',
+      icon: 'icons/wow/vanilla/armor/INV_Belt_22.png',
       type: 'equipment',
       slot: 'belt',
       rarity: 'purple',
@@ -8954,7 +8954,7 @@ const FIXED_EQUIPMENTS = {
     EQ_232: {
       id: 'EQ_232',
       name: '卓越腰带',
-      icon: 'icons/wow/vanilla/armor/INV_Belt_31.png',
+      icon: 'icons/wow/vanilla/armor/INV_Belt_22.png',
       type: 'equipment',
       slot: 'belt',
       rarity: 'purple',
@@ -8985,7 +8985,7 @@ const FIXED_EQUIPMENTS = {
     EQ_233: {
       id: 'EQ_233',
       name: '思维加速宝石',
-      icon: 'icons/wow/vanilla/items/INV_Misc_Gem_Pearl_05.png',
+      icon: 'icons/wow/vanilla/spells/siweijiasu.png',
       type: 'equipment',
       slot: 'trinket2',
       rarity: 'purple',
@@ -9012,7 +9012,7 @@ const FIXED_EQUIPMENTS = {
     EQ_234: {
       id: 'EQ_234',
       name: '红龙防护者',
-      icon: 'icons/wow/vanilla/armor/INV_Shield_10.png',
+      icon: 'icons/wow/vanilla/armor/INV_Shield_20.png',
       type: 'equipment',
       slot: 'offHand',
       rarity: 'purple',

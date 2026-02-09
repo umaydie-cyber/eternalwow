@@ -31122,6 +31122,78 @@ const BossPrepareModal = ({ state, dispatch }) => {
                                   </>
                                 )}
 
+                                {/* 奥妮克希亚的技能（准备界面说明） */}
+                                {bossId === 'onyxia' && (
+                                  <div style={{
+                                    marginTop: 12,
+                                    padding: 12,
+                                    background: 'rgba(120,30,30,0.12)',
+                                    borderRadius: 8,
+                                    border: '1px solid rgba(255,80,80,0.25)'
+                                  }}>
+                                    <div style={{ fontSize: 12, color: '#ffb3b3', fontWeight: 700, marginBottom: 8 }}>
+                                      🐉 团队首领：奥妮克希亚（站位会改变技能效果）
+                                    </div>
+
+                                    <div style={{ display: 'grid', gap: 10, fontSize: 11, color: '#ddd', lineHeight: 1.6 }}>
+                                      <div style={{ padding: 10, background: 'rgba(0,0,0,0.25)', borderRadius: 6 }}>
+                                        <div style={{ color: '#ffd700', fontWeight: 700, marginBottom: 4 }}>技能1：龙翼打击</div>
+                                        <div>
+                                          对<span style={{ color: '#ff6b6b', fontWeight: 700 }}>1号位（坦克）</span>造成
+                                          <b> Boss攻击力×{boss.dragonWingStrikeMultiplier ?? 8}</b> 的物理伤害。
+                                        </div>
+                                      </div>
+
+                                      <div style={{ padding: 10, background: 'rgba(0,0,0,0.25)', borderRadius: 6 }}>
+                                        <div style={{ color: '#ffd700', fontWeight: 700, marginBottom: 4 }}>技能2：扫尾</div>
+                                        <div>
+                                          <span style={{ color: '#aaa' }}>分散站位：</span>随机{boss.tailSweepTargets ?? 2}名目标，
+                                          各受到 <b>Boss攻击力×{boss.tailSweepMultiplier ?? 3}</b> 的物理伤害。<br/>
+                                          <span style={{ color: '#64b5f6' }}>集中站位：</span>无事发生。
+                                        </div>
+                                      </div>
+
+                                      <div style={{ padding: 10, background: 'rgba(0,0,0,0.25)', borderRadius: 6 }}>
+                                        <div style={{ color: '#ffd700', fontWeight: 700, marginBottom: 4 }}>技能3：火息术</div>
+                                        <div>
+                                          默认对<span style={{ color: '#ff6b6b', fontWeight: 700 }}>1号位（坦克）</span>造成
+                                          <b> Boss攻击力×{boss.fireBreathMultiplier ?? 5}</b> 的法术伤害。<br/>
+                                          <span style={{ color: '#64b5f6' }}>集中站位：</span>改为对所有角色造成
+                                          <b> Boss攻击力×{boss.fireBreathMultiplier ?? 5}</b> 的法术伤害。
+                                        </div>
+                                      </div>
+
+                                      <div style={{ padding: 10, background: 'rgba(0,0,0,0.25)', borderRadius: 6 }}>
+                                        <div style={{ color: '#ffd700', fontWeight: 700, marginBottom: 4 }}>技能4：召唤雏龙</div>
+                                        <div>
+                                          召唤 <b>{boss.whelpSummonCount ?? 2}</b> 只雏龙（上限<b>{boss.whelpMaxCount ?? 8}</b>只）。<br/>
+                                          雏龙属性：HP <b>{boss.whelpMaxHp?.toLocaleString?.() ?? boss.minion?.maxHp?.toLocaleString?.() ?? 3000000}</b>，
+                                          攻击/防御与Boss相同。<br/>
+                                          雏龙会对随机目标释放火球术：造成 <b>Boss攻击力×{boss.whelpFireballMultiplier ?? 2}</b> 的法术伤害。
+                                        </div>
+                                      </div>
+
+                                      <div style={{ padding: 10, background: 'rgba(0,0,0,0.25)', borderRadius: 6 }}>
+                                        <div style={{ color: '#ffd700', fontWeight: 700, marginBottom: 4 }}>技能5：深呼吸</div>
+                                        <div>
+                                          奥妮克希亚深深吸气，并额外召唤 <b>{boss.deepBreathSummonCount ?? 4}</b> 只雏龙。<br/>
+                                          <span style={{ color: '#64b5f6' }}>集中站位：</span>对所有角色造成
+                                          <b> Boss攻击力×{boss.deepBreathMultiplier ?? 3}</b> 的法术伤害，并施加“灼烧”DOT：<br/>
+                                          每回合受到 <b>Boss攻击力×{boss.burningDotMultiplier ?? 1.5}</b> 的法术伤害，持续 <b>{boss.burningDotDuration ?? 3}</b> 回合。<br/>
+                                          <span style={{ color: '#ff9800' }}>分散站位：</span>所有角色下一回合获得“跑位”状态，无法行动。
+                                        </div>
+                                      </div>
+
+                                      <div style={{ padding: 10, background: 'rgba(0,0,0,0.25)', borderRadius: 6 }}>
+                                        <div style={{ color: '#ffd700', fontWeight: 700, marginBottom: 4 }}>技能6：恐惧低吼</div>
+                                        <div>
+                                          使所有角色陷入恐惧，持续 <b>{boss.fearDuration ?? 2}</b> 回合。
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
+
                             </div>
 
                             <div style={{

@@ -2887,10 +2887,20 @@ const BADGE_EQUIP_POOLS = {
     },
     // 火焰之王的徽章：熔火之心（含BOSS掉落/传奇）
     molten_core: {
-        // 兼容未来扩展：优先通过 setId 命中（T1/T2）
-        setIds: ['might_set', 'nightslayer_set', 'arcanist_set', 'prophecy_set', 'wrath_set', 'bloodfang_set', 'netherwind_set', 'transcendence_set'],
+        // 兼容未来扩展：优先通过 setId 命中（T1）
+        //（Molten Core 徽章只升级熔火之心装备；T2 头盔由奥妮克希亚徽章负责）
+        setIds: ['might_set', 'nightslayer_set', 'arcanist_set', 'prophecy_set'],
         // 熔火之心相关装备 ID 范围（覆盖：地图掉落 + Boss掉落 + 风剑/橙锤等传奇）
         eqIdRanges: [[146, 201]],
+    },
+
+    // ✅ 奥妮克希亚的巢穴（团队首领奥妮克希亚掉落）
+    // - 主要靠 EQ_### 区间命中（避免枚举）
+    // - 另包含 setId：onyxia_lair（用于允许“任务装备/非 EQ_###”也能被徽章升级）
+    onyxias_lair: {
+        setIds: ['onyxia_lair'],
+        // 目前奥妮克希亚固定掉落装备：EQ_202 ~ EQ_211
+        eqIdRanges: [[202, 211]],
     },
 };
 
@@ -2928,7 +2938,9 @@ function makeBadgeEquipPredicate(poolKey) {
     return (eq) => {
         if (!eq || eq.type !== 'equipment') return false;
 
-        const tpl = FIXED_EQUIPMENTS?.[eq.id];
+        // ✅ 同时支持：常规掉落装备 + 任务/剧情奖励装备
+        // 用途：允许“非 EQ_###”的装备（如某些任务披风）也能通过 setId 命中徽章升级池。
+        const tpl = getEquipmentTemplate(eq.id);
         if (tpl?.setId && setIdSet.has(tpl.setId)) return true;
 
         const n = parseEqTemplateNumber(eq.id);
@@ -3032,8 +3044,8 @@ const BADGE_UPGRADE_RULES_CONFIG = {
         zoneLabel: '奥妮克希亚的巢穴',
         inc: 2,
         cap: 100,
-        // 目前游戏内的60级装备池以【熔火之心】为主；这里先复用 molten_core，后续可单独拆出 onyxias_lair
-        equipPool: 'molten_core',
+        // ✅ 仅升级【奥妮克希亚的巢穴】掉落装备（含本BOSS掉落的T2头/项链/戒指/披风/副手/武器等）
+        equipPool: 'onyxias_lair',
         theme: { border: '#212121', title: '#b388ff', shadow: 'rgba(179,136,255,0.22)' }
     },
 
@@ -8010,6 +8022,303 @@ const FIXED_EQUIPMENTS = {
     },
 
 
+    // ==================== Onyxia's Lair（奥妮克希亚的巢穴）- 奥妮克希亚掉落 ====================
+    // 设计说明：
+    // - T2 头盔：在对应 T1 头盔基础上提升，并额外加入更高的「魔法抗性」
+    // - 其余掉落：偏向“全能/魔抗/血量”的黑龙主题装备，强度对标熔火之心后段紫装
+
+    // ✅ T2：愤怒（战士）- 头盔
+    EQ_202: {
+      id: 'EQ_202',
+      name: '愤怒头盔',
+      icon: 'icons/wow/vanilla/armor/fennutoukui.png',
+      type: 'equipment',
+      slot: 'head',
+      rarity: 'purple',
+      setId: 'wrath_set',
+      setName: '愤怒',
+
+      level: 1,
+      maxLevel: 100,
+      baseStats: {
+        hp: 8000,
+        armor: 245,
+        magicResist: 80,
+        blockRate: 6,
+        blockValue: 520,
+        mastery: 13,
+      },
+      growth: {
+        hp: 2,
+        armor: 2,
+        magicResist: 2,
+        blockRate: 2,
+        blockValue: 2,
+        mastery: 2,
+      }
+    },
+
+    // ✅ T2：血牙（盗贼）- 头巾
+    EQ_203: {
+      id: 'EQ_203',
+      name: '血牙头巾',
+      icon: 'icons/wow/vanilla/armor/INV_Helmet_41.png',
+      type: 'equipment',
+      slot: 'head',
+      rarity: 'purple',
+
+      setId: 'bloodfang_set',
+      setName: '血牙',
+
+      level: 1,
+      maxLevel: 100,
+      baseStats: {
+        attack: 600,
+        hp: 4300,
+        armor: 200,
+        magicResist: 80,
+        critRate: 14,
+        haste: 16,
+      },
+      growth: {
+        attack: 2,
+        hp: 2,
+        armor: 2,
+        magicResist: 2,
+        critRate: 2,
+        haste: 2,
+      }
+    },
+
+    // ✅ T2：灵风（法师）- 头冠
+    EQ_204: {
+      id: 'EQ_204',
+      name: '灵风头冠',
+      icon: 'icons/wow/vanilla/armor/lingfengtouguan.png',
+      type: 'equipment',
+      slot: 'head',
+      rarity: 'purple',
+
+      setId: 'netherwind_set',
+      setName: '灵风',
+
+      level: 1,
+      maxLevel: 100,
+      baseStats: {
+        spellPower: 600,
+        hp: 4300,
+        magicResist: 80,
+        critRate: 14,
+        versatility: 16,
+      },
+      growth: {
+        spellPower: 2,
+        hp: 2,
+        magicResist: 2,
+        critRate: 2,
+        versatility: 2,
+      }
+    },
+
+    // ✅ T2：卓越（牧师）- 之环
+    EQ_205: {
+      id: 'EQ_205',
+      name: '卓越之环',
+      icon: 'icons/wow/vanilla/armor/INV_Helmet_24.png',
+      type: 'equipment',
+      slot: 'head',
+      rarity: 'purple',
+
+      setId: 'transcendence_set',
+      setName: '卓越',
+
+      level: 1,
+      maxLevel: 100,
+      baseStats: {
+        spellPower: 560,
+        hp: 4800,
+        magicResist: 80,
+        mastery: 14,
+        haste: 16,
+      },
+      growth: {
+        spellPower: 2,
+        hp: 2,
+        magicResist: 2,
+        mastery: 2,
+        haste: 2,
+      }
+    },
+
+    // ✅ 奥妮克希亚龙牙坠饰（攻强/暴击/全能/魔抗/生命）
+    EQ_206: {
+      id: 'EQ_206',
+      name: '奥妮克希亚龙牙坠饰',
+      icon: 'icons/wow/vanilla/armor/INV_Jewelry_Necklace_09.png',
+      type: 'equipment',
+      slot: 'neck',
+      rarity: 'purple',
+      level: 1,
+      maxLevel: 100,
+      baseStats: {
+        attack: 700,
+        hp: 5600,
+        magicResist: 180,
+        critRate: 15,
+        versatility: 25,
+      },
+      growth: {
+        attack: 2,
+        hp: 2,
+        magicResist: 2,
+        critRate: 2,
+        versatility: 2,
+      }
+    },
+
+    // ✅ 奥妮克希亚龙血护符（坦克项链）
+    EQ_207: {
+      id: 'EQ_207',
+      name: '奥妮克希亚龙血护符',
+      icon: 'icons/wow/vanilla/spells/Spell_Shadow_LifeDrain.png',
+      type: 'equipment',
+      slot: 'neck',
+      rarity: 'purple',
+      level: 1,
+      maxLevel: 100,
+      baseStats: {
+        hp: 6500,
+        armor: 220,
+        magicResist: 200,
+        blockRate: 5,
+        blockValue: 650,
+        mastery: 24,
+      },
+      growth: {
+        hp: 2,
+        armor: 2,
+        magicResist: 2,
+        blockRate: 2,
+        blockValue: 2,
+        mastery: 2,
+      }
+    },
+
+    // ✅ 屠龙者的徽记（法伤戒指 RING1）
+    EQ_208: {
+      id: 'EQ_208',
+      name: '屠龙者的徽记',
+      icon: 'icons/wow/vanilla/armor/INV_Jewelry_Ring_27.png',
+      type: 'equipment',
+      slot: 'ring1',
+      rarity: 'purple',
+      level: 1,
+      maxLevel: 100,
+      baseStats: {
+        spellPower: 650,
+        hp: 5000,
+        critRate: 12,
+        haste: 22,
+        mastery: 22,
+      },
+      growth: {
+        spellPower: 2,
+        hp: 2,
+        critRate: 2,
+        haste: 2,
+        mastery: 2,
+      }
+    },
+
+    // ✅ 萨菲隆斗篷（血量/护甲/魔抗/全能/精通）
+    EQ_209: {
+      id: 'EQ_209',
+      name: '萨菲隆斗篷',
+      icon: 'icons/wow/vanilla/armor/INV_Misc_Cape_16.png',
+      type: 'equipment',
+      slot: 'cloak',
+      rarity: 'purple',
+      level: 1,
+      maxLevel: 100,
+      baseStats: {
+        hp: 6200,
+        armor: 200,
+        magicResist: 250,
+        versatility: 24,
+        mastery: 24,
+      },
+      growth: {
+        hp: 2,
+        armor: 2,
+        magicResist: 2,
+        versatility: 2,
+        mastery: 2,
+      }
+    },
+
+    // ✅ 上古角石魔典（血量/法强/奶妈副手）
+    EQ_210: {
+      id: 'EQ_210',
+      name: '上古角石魔典',
+      icon: 'icons/wow/vanilla/items/INV_Misc_Book_07.png',
+      type: 'equipment',
+      slot: 'offHand',
+      rarity: 'purple',
+      level: 1,
+      maxLevel: 100,
+      baseStats: {
+        spellPower: 750,
+        hp: 5200,
+        mastery: 25,
+        versatility: 20,
+        critRate: 12,
+      },
+      growth: {
+        spellPower: 2,
+        hp: 2,
+        mastery: 2,
+        versatility: 2,
+        critRate: 2,
+      }
+    },
+
+    // ✅ 奎尔塞拉（坦克武器：概率获得护甲，仅本回合）
+    EQ_211: {
+      id: 'EQ_211',
+      name: '奎尔塞拉',
+      icon: 'icons/wow/vanilla/weapons/INV_Sword_01.png',
+      type: 'equipment',
+      slot: 'mainHand',
+      rarity: 'purple',
+      level: 1,
+      maxLevel: 100,
+      baseStats: {
+        attack: 2100,
+        hp: 6500,
+        armor: 200,
+        magicResist: 200,
+        mastery: 22,
+        blockValue: 600,
+      },
+      growth: {
+        attack: 2,
+        hp: 2,
+        armor: 2,
+        magicResist: 2,
+        mastery: 2,
+        blockValue: 2,
+      },
+      specialEffect: {
+        name: '龙卫护甲',
+        type: 'proc_stat',
+        trigger: 'turn_start',
+        chance: 0.30,
+        stats: { armor: 1800 },
+        scaleWithLevel: true
+      }
+    },
+
+
 };
 
 //赤脊山5件图鉴100级点亮效果
@@ -8515,7 +8824,7 @@ const ITEMS = {
         canUse: true,
         sellPrice: 0,  // 不可出售
         icon: 'icons/wow/vanilla/items/INV_Misc_Head_Dragon_01.png',
-        description: '使用后选择一件【熔火之心】或【熔火之心BOSS】掉落装备，使其等级提升 +2（最高100级）。'
+        description: '使用后选择一件【奥妮克希亚的巢穴】掉落装备，使其等级提升 +2（最高100级）。'
     },
 
     // 火焰之王的徽章（拉格纳罗斯掉落）
@@ -9970,14 +10279,13 @@ const BOSS_DATA = {
             ]
         }
     },
-
     // ✅ 新增：团队首领 - 奥妮克希亚（5人）
     onyxia: {
         id: 'onyxia',
         name: '奥妮克希亚',
-        maxHp: 28000000,
-        attack: 17000,
-        defense: 17000,
+        maxHp: 35000000,
+        attack: 20000,
+        defense: 20000,
 
         // 技能1：龙翼打击（坦克，8×物理伤害）
         dragonWingStrikeMultiplier: 8,
@@ -10007,8 +10315,8 @@ const BOSS_DATA = {
         minion: {
             name: '雏龙',
             maxHp: 3000000,
-            attack: 17000,
-            defense: 17000,
+            attack: 20000,
+            defense: 20000,
         },
 
         // 技能循环：龙翼打击 → 扫尾 → 火息术 → 召唤雏龙 → 深呼吸 → 龙翼打击 → 恐惧低吼 → 龙翼打击
@@ -10024,10 +10332,25 @@ const BOSS_DATA = {
         ],
 
         rewards: {
-            gold: 3000000,
-            exp: 1700000,
+            gold: 3600000,
+            exp: 2000000,
             items: [
                 { id: 'IT_ONYXIA_BADGE', chance: 0.8 }, // ✅ 奥妮克希亚徽章
+                // ===== 奥妮克希亚专属掉落（T2头/饰品/披风/武器等） =====
+                { id: 'EQ_202', chance: 0.10 }, // 愤怒头盔（T2头）
+                { id: 'EQ_203', chance: 0.10 }, // 血牙头巾（T2头）
+                { id: 'EQ_204', chance: 0.10 }, // 灵风头冠（T2头）
+                { id: 'EQ_205', chance: 0.10 }, // 卓越之环（T2头）
+
+                { id: 'EQ_206', chance: 0.10 }, // 奥妮克希亚龙牙坠饰（攻强/暴击/全能/魔抗/生命）
+                { id: 'EQ_207', chance: 0.10 }, // 奥妮克希亚龙血护符（坦克项链）
+                { id: 'EQ_208', chance: 0.10 }, // 屠龙者的徽记（法伤戒指）
+                { id: 'EQ_209', chance: 0.10 }, // 萨菲隆斗篷（血量/护甲/魔抗/全能/精通）
+                { id: 'EQ_210', chance: 0.10 }, // 上古角石魔典（血量/法强/奶妈副手）
+                { id: 'EQ_211', chance: 0.05 }, // 奎尔塞拉（坦克武器，概率加护甲）
+
+                // 🔥 额外：奥妮克希亚鳞片披风（原为任务奖励，这里允许极低概率掉落）
+                { id: 'EQ_QUEST_ONYXIA_SCALE_CLOAK', chance: 0.8 },
             ]
         }
     },
@@ -16533,10 +16856,14 @@ function stepBossCombat(state) {
                 const dropChance = getEffectiveDropChance(baseDropChance, newState);
                 if (Math.random() > dropChance) return;   // 未命中则跳过
 
-                if (FIXED_EQUIPMENTS?.[dropId]) {
+                // ✅ 同时支持：常规掉落装备 + 任务/剧情奖励装备（但必须是 type==='equipment'）
+                const eqTpl = getEquipmentTemplate(dropId);
+                if (eqTpl && eqTpl.type === 'equipment') {
                     const inst = createEquipmentInstance(dropId);
-                    newState.inventory.push(inst);
-                    newState = addEquipmentIdToCodex(newState, dropId);
+                    if (inst) {
+                        newState.inventory.push(inst);
+                        newState = addEquipmentIdToCodex(newState, dropId);
+                    }
                     return;
                 }
 
@@ -19049,10 +19376,14 @@ function gameReducer(state, action) {
                         const dropChance = getEffectiveDropChance(baseDropChance, newState);
                         if (Math.random() > dropChance) return;
 
-                        if (FIXED_EQUIPMENTS?.[dropId]) {
+                        // ✅ 同时支持：常规掉落装备 + 任务/剧情奖励装备（但必须是 type==='equipment'）
+                        const eqTpl = getEquipmentTemplate(dropId);
+                        if (eqTpl && eqTpl.type === 'equipment') {
                             const inst = createEquipmentInstance(dropId);
-                            newState.inventory.push(inst);
-                            newState = addEquipmentIdToCodex(newState, dropId);
+                            if (inst) {
+                                newState.inventory.push(inst);
+                                newState = addEquipmentIdToCodex(newState, dropId);
+                            }
                             return;
                         }
 
@@ -28880,7 +29211,14 @@ const QUEST_REWARD_EQUIPMENTS = {
         type: 'equipment',
         slot: 'cloak',
         rarity: 'orange',
-        level: 0,
+
+        // ✅ 允许“黑龙女王的徽章”升级（通过 setId 命中 onyxias_lair 装备池）
+        // 说明：未在 SET_BONUSES 中定义该 setId，因此不会触发任何套装效果，只用于徽章升级池判定。
+        setId: 'onyxia_lair',
+        setName: '奥妮克希亚',
+
+        // 玩家备注：lv10
+        level: 10,
         maxLevel: 100,
         baseStats: {
             hp: 1000,

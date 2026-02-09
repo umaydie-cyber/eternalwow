@@ -2529,6 +2529,23 @@ const ZONES = {
     },
 
 
+    // ==================== 黑翼之巢（60级） ====================
+    blackwing_lair: {
+        id: 'blackwing_lair',
+        name: '黑翼之巢',
+        level: 60,
+        type: 'explore',
+        enemies: [
+            { name: '黑翼技师', hp: 4200000, attack: 18000, defense: 8800, exp: 42000, gold: 32000 },
+            { name: '死亡之爪狂乱者', hp: 4500000, attack: 19500, defense: 9000, exp: 44000, gold: 34000 },
+            { name: '黑翼龙人卫士', hp: 4800000, attack: 20000, defense: 9300, exp: 46000, gold: 36000 },
+            { name: '畸形龙兽', hp: 5200000, attack: 21000, defense: 9500, exp: 48000, gold: 38000 },
+        ],
+        resources: ['铁矿', '魔法精华'],
+        unlocked: false,
+        unlockLevel: 60
+    },
+
 };
 
 const DROP_TABLES = {
@@ -2827,6 +2844,38 @@ const DROP_TABLES = {
             { id: 'EQ_171', chance: 0.0004 },  // 不短暂能量护符
         ]
     },
+    // ==================== 黑翼之巢（60级）掉落 ====================
+    blackwing_lair: {
+        equipment: [
+            // 饰品 / 武器
+            { id: 'EQ_212', chance: 0.0004 },  // 龙牙饰物（攻强饰品1）
+            { id: 'EQ_214', chance: 0.0004 },  // 生命宝石（治疗爆发饰品2）
+            { id: 'EQ_213', chance: 0.00025 }, // 龙息手持火炮（暴击爆伤武器）
+            { id: 'EQ_215', chance: 0.00025 }, // 暗影之翼（法系主手）
+            { id: 'EQ_216', chance: 0.00025 }, // 悲哀使者（治疗/血量/法强）
+
+            // T2：愤怒（战士）
+            { id: 'EQ_217', chance: 0.00025 }, // 愤怒护手
+            { id: 'EQ_221', chance: 0.00025 }, // 愤怒护腕
+            { id: 'EQ_225', chance: 0.00025 }, // 愤怒马靴
+
+            // T2：血牙（盗贼）
+            { id: 'EQ_218', chance: 0.00025 }, // 血牙手套
+            { id: 'EQ_222', chance: 0.00025 }, // 血牙护腕
+            { id: 'EQ_226', chance: 0.00025 }, // 血牙长靴
+
+            // T2：灵风（法师）
+            { id: 'EQ_219', chance: 0.00025 }, // 灵风手套
+            { id: 'EQ_223', chance: 0.00025 }, // 灵风束腕
+            { id: 'EQ_227', chance: 0.00025 }, // 灵风长靴
+
+            // T2：卓越（牧师）
+            { id: 'EQ_220', chance: 0.00025 }, // 卓越护手
+            { id: 'EQ_224', chance: 0.00025 }, // 卓越束腕
+            { id: 'EQ_228', chance: 0.00025 }, // 卓越长靴
+        ]
+    },
+
 
 
 };
@@ -8317,6 +8366,512 @@ const FIXED_EQUIPMENTS = {
         scaleWithLevel: true
       }
     },
+    // ==================== 黑翼之巢（60级）装备 ====================
+    // 设计说明：
+    // - 强度定位：作为 60 级末期地图掉落，对标熔火之心后段紫装，并补齐更多 T2 套装部件
+    // - “生命宝石”采用 turn_start 触发的法强爆发，作为“治疗爆发”表现（治疗同样依赖法术强度）
+
+    // ✅ 饰品：龙牙饰物（攻强饰品1）
+    EQ_212: {
+      id: 'EQ_212',
+      name: '龙牙饰物',
+      icon: 'icons/wow/vanilla/items/INV_Misc_Bone_06.png',
+      type: 'equipment',
+      slot: 'trinket1',
+      rarity: 'purple',
+      level: 0,
+      maxLevel: 100,
+      baseStats: {
+        attack: 850,
+        hp: 5200,
+        critRate: 14,
+        mastery: 24,
+        versatility: 18,
+      },
+      growth: {
+        attack: 2,
+        hp: 2,
+        critRate: 2,
+        mastery: 2,
+        versatility: 2,
+      }
+    },
+
+    // ✅ 武器：龙息手持火炮（暴击爆伤武器）
+    EQ_213: {
+      id: 'EQ_213',
+      name: '龙息手持火炮',
+      icon: 'icons/wow/vanilla/weapons/INV_Weapon_Rifle_02.png',
+      type: 'equipment',
+      slot: 'mainHand',
+      rarity: 'purple',
+      level: 0,
+      maxLevel: 100,
+      baseStats: {
+        attack: 2000,
+        hp: 4200,
+        critRate: 30,
+        critDamage: 0.85,
+        haste: 22,
+        mastery: 20,
+      },
+      growth: {
+        attack: 2,
+        hp: 2,
+        critRate: 2,
+        critDamage: 2,
+        haste: 2,
+        mastery: 2,
+      }
+    },
+
+    // ✅ 饰品：生命宝石（治疗爆发饰品2）
+    EQ_214: {
+      id: 'EQ_214',
+      name: '生命宝石',
+      icon: 'icons/wow/vanilla/trade/INV_Stone_01.png',
+      type: 'equipment',
+      slot: 'trinket2',
+      rarity: 'purple',
+      level: 0,
+      maxLevel: 100,
+      baseStats: {
+        spellPower: 950,
+        hp: 6000,
+        mastery: 26,
+        versatility: 22,
+      },
+      growth: {
+        spellPower: 2,
+        hp: 2,
+        mastery: 2,
+        versatility: 2,
+      },
+      specialEffect: {
+        name: '生命涌动',
+        type: 'proc_stat',
+        trigger: 'turn_start',
+        chance: 0.25,
+        stats: { spellPower: 2000 },
+        scaleWithLevel: true
+      }
+    },
+
+    // ✅ 武器：暗影之翼（法系主手）
+    EQ_215: {
+      id: 'EQ_215',
+      name: '暗影之翼',
+      icon: 'icons/wow/vanilla/weapons/INV_Staff_13.png',
+      type: 'equipment',
+      slot: 'mainHand',
+      rarity: 'purple',
+      level: 0,
+      maxLevel: 100,
+      baseStats: {
+        spellPower: 1850,
+        hp: 4500,
+        critRate: 16,
+        haste: 22,
+        mastery: 26,
+        versatility: 20,
+      },
+      growth: {
+        spellPower: 2,
+        hp: 2,
+        critRate: 2,
+        haste: 2,
+        mastery: 2,
+        versatility: 2,
+      },
+      specialEffect: {
+        name: '暗影之翼',
+        type: 'proc_damage',
+        trigger: 'turn_start',
+        chance: 0.20,
+        school: 'shadow',
+        basedOn: 'spellPower',
+        damageMult: 0.80,
+        scaleWithLevel: true
+      }
+    },
+
+    // ✅ 武器：悲哀使者（治疗/血量/法强）
+    EQ_216: {
+      id: 'EQ_216',
+      name: '悲哀使者',
+      icon: 'icons/wow/vanilla/weapons/INV_Staff_26.png',
+      type: 'equipment',
+      slot: 'mainHand',
+      rarity: 'purple',
+      level: 0,
+      maxLevel: 100,
+      baseStats: {
+        spellPower: 1700,
+        hp: 7000,
+        mastery: 26,
+        versatility: 24,
+        critRate: 12,
+      },
+      growth: {
+        spellPower: 2,
+        hp: 2,
+        mastery: 2,
+        versatility: 2,
+        critRate: 2,
+      }
+    },
+
+    // ==================== T2：愤怒 / 血牙 / 灵风 / 卓越（补齐手套/护腕/靴子） ====================
+
+    // ✅ T2：愤怒（战士）- 护手
+    EQ_217: {
+      id: 'EQ_217',
+      name: '愤怒护手',
+      icon: 'icons/wow/vanilla/armor/INV_Gauntlets_10.png',
+      type: 'equipment',
+      slot: 'hands',
+      rarity: 'purple',
+      setId: 'wrath_set',
+      setName: '愤怒',
+      level: 0,
+      maxLevel: 100,
+      baseStats: {
+        hp: 6500,
+        armor: 220,
+        mastery: 13,
+        blockRate: 5,
+        blockValue: 520,
+        versatility: 12,
+      },
+      growth: {
+        hp: 2,
+        armor: 2,
+        mastery: 2,
+        blockRate: 2,
+        blockValue: 2,
+        versatility: 2,
+      }
+    },
+
+    // ✅ T2：血牙（盗贼）- 手套
+    EQ_218: {
+      id: 'EQ_218',
+      name: '血牙手套',
+      icon: 'icons/wow/vanilla/armor/INV_Gauntlets_21.png',
+      type: 'equipment',
+      slot: 'hands',
+      rarity: 'purple',
+      setId: 'bloodfang_set',
+      setName: '血牙',
+      level: 0,
+      maxLevel: 100,
+      baseStats: {
+        attack: 560,
+        hp: 4200,
+        armor: 190,
+        critRate: 14,
+        haste: 18,
+        mastery: 16,
+      },
+      growth: {
+        attack: 2,
+        hp: 2,
+        armor: 2,
+        critRate: 2,
+        haste: 2,
+        mastery: 2,
+      }
+    },
+
+    // ✅ T2：灵风（法师）- 手套
+    EQ_219: {
+      id: 'EQ_219',
+      name: '灵风手套',
+      icon: 'icons/wow/vanilla/armor/INV_Gauntlets_14.png',
+      type: 'equipment',
+      slot: 'hands',
+      rarity: 'purple',
+      setId: 'netherwind_set',
+      setName: '灵风',
+      level: 0,
+      maxLevel: 100,
+      baseStats: {
+        spellPower: 560,
+        hp: 4200,
+        critRate: 12,
+        haste: 16,
+        versatility: 18,
+      },
+      growth: {
+        spellPower: 2,
+        hp: 2,
+        critRate: 2,
+        haste: 2,
+        versatility: 2,
+      }
+    },
+
+    // ✅ T2：卓越（牧师）- 护手
+    EQ_220: {
+      id: 'EQ_220',
+      name: '卓越护手',
+      icon: 'icons/wow/vanilla/armor/INV_Gauntlets_14.png',
+      type: 'equipment',
+      slot: 'hands',
+      rarity: 'purple',
+      setId: 'transcendence_set',
+      setName: '卓越',
+      level: 0,
+      maxLevel: 100,
+      baseStats: {
+        spellPower: 520,
+        hp: 4800,
+        mastery: 16,
+        haste: 14,
+        versatility: 18,
+      },
+      growth: {
+        spellPower: 2,
+        hp: 2,
+        mastery: 2,
+        haste: 2,
+        versatility: 2,
+      }
+    },
+
+    // ✅ T2：愤怒（战士）- 护腕
+    EQ_221: {
+      id: 'EQ_221',
+      name: '愤怒护腕',
+      icon: 'icons/wow/vanilla/armor/INV_Bracer_19.png',
+      type: 'equipment',
+      slot: 'wrist',
+      rarity: 'purple',
+      setId: 'wrath_set',
+      setName: '愤怒',
+      level: 0,
+      maxLevel: 100,
+      baseStats: {
+        hp: 5800,
+        armor: 200,
+        mastery: 13,
+        blockRate: 4,
+        blockValue: 480,
+        versatility: 12,
+      },
+      growth: {
+        hp: 2,
+        armor: 2,
+        mastery: 2,
+        blockRate: 2,
+        blockValue: 2,
+        versatility: 2,
+      }
+    },
+
+    // ✅ T2：血牙（盗贼）- 护腕
+    EQ_222: {
+      id: 'EQ_222',
+      name: '血牙护腕',
+      icon: 'icons/wow/vanilla/armor/INV_Bracer_02.png',
+      type: 'equipment',
+      slot: 'wrist',
+      rarity: 'purple',
+      setId: 'bloodfang_set',
+      setName: '血牙',
+      level: 0,
+      maxLevel: 100,
+      baseStats: {
+        attack: 480,
+        hp: 3600,
+        armor: 170,
+        critRate: 12,
+        mastery: 16,
+        versatility: 18,
+      },
+      growth: {
+        attack: 2,
+        hp: 2,
+        armor: 2,
+        critRate: 2,
+        mastery: 2,
+        versatility: 2,
+      }
+    },
+
+    // ✅ T2：灵风（法师）- 束腕
+    EQ_223: {
+      id: 'EQ_223',
+      name: '灵风束腕',
+      icon: 'icons/wow/vanilla/armor/INV_Bracer_09.png',
+      type: 'equipment',
+      slot: 'wrist',
+      rarity: 'purple',
+      setId: 'netherwind_set',
+      setName: '灵风',
+      level: 0,
+      maxLevel: 100,
+      baseStats: {
+        spellPower: 480,
+        hp: 3600,
+        haste: 14,
+        mastery: 16,
+        versatility: 18,
+      },
+      growth: {
+        spellPower: 2,
+        hp: 2,
+        haste: 2,
+        mastery: 2,
+        versatility: 2,
+      }
+    },
+
+    // ✅ T2：卓越（牧师）- 束腕
+    EQ_224: {
+      id: 'EQ_224',
+      name: '卓越束腕',
+      icon: 'icons/wow/vanilla/armor/INV_Bracer_09.png',
+      type: 'equipment',
+      slot: 'wrist',
+      rarity: 'purple',
+      setId: 'transcendence_set',
+      setName: '卓越',
+      level: 0,
+      maxLevel: 100,
+      baseStats: {
+        spellPower: 460,
+        hp: 4200,
+        mastery: 14,
+        critRate: 12,
+        versatility: 18,
+      },
+      growth: {
+        spellPower: 2,
+        hp: 2,
+        mastery: 2,
+        critRate: 2,
+        versatility: 2,
+      }
+    },
+
+    // ✅ T2：愤怒（战士）- 马靴
+    EQ_225: {
+      id: 'EQ_225',
+      name: '愤怒马靴',
+      icon: 'icons/wow/vanilla/armor/INV_Boots_Plate_04.png',
+      type: 'equipment',
+      slot: 'feet',
+      rarity: 'purple',
+      setId: 'wrath_set',
+      setName: '愤怒',
+      level: 0,
+      maxLevel: 100,
+      baseStats: {
+        hp: 7200,
+        armor: 230,
+        mastery: 13,
+        blockRate: 5,
+        blockValue: 560,
+        versatility: 12,
+      },
+      growth: {
+        hp: 2,
+        armor: 2,
+        mastery: 2,
+        blockRate: 2,
+        blockValue: 2,
+        versatility: 2,
+      }
+    },
+
+    // ✅ T2：血牙（盗贼）- 长靴
+    EQ_226: {
+      id: 'EQ_226',
+      name: '血牙长靴',
+      icon: 'icons/wow/vanilla/armor/INV_Boots_08.png',
+      type: 'equipment',
+      slot: 'feet',
+      rarity: 'purple',
+      setId: 'bloodfang_set',
+      setName: '血牙',
+      level: 0,
+      maxLevel: 100,
+      baseStats: {
+        attack: 620,
+        hp: 4300,
+        armor: 190,
+        critRate: 14,
+        mastery: 16,
+        haste: 16,
+      },
+      growth: {
+        attack: 2,
+        hp: 2,
+        armor: 2,
+        critRate: 2,
+        mastery: 2,
+        haste: 2,
+      }
+    },
+
+    // ✅ T2：灵风（法师）- 长靴
+    EQ_227: {
+      id: 'EQ_227',
+      name: '灵风长靴',
+      icon: 'icons/wow/vanilla/armor/INV_Boots_07.png',
+      type: 'equipment',
+      slot: 'feet',
+      rarity: 'purple',
+      setId: 'netherwind_set',
+      setName: '灵风',
+      level: 0,
+      maxLevel: 100,
+      baseStats: {
+        spellPower: 620,
+        hp: 4300,
+        critRate: 12,
+        haste: 16,
+        versatility: 18,
+      },
+      growth: {
+        spellPower: 2,
+        hp: 2,
+        critRate: 2,
+        haste: 2,
+        versatility: 2,
+      }
+    },
+
+    // ✅ T2：卓越（牧师）- 长靴
+    EQ_228: {
+      id: 'EQ_228',
+      name: '卓越长靴',
+      icon: 'icons/wow/vanilla/armor/INV_Boots_07.png',
+      type: 'equipment',
+      slot: 'feet',
+      rarity: 'purple',
+      setId: 'transcendence_set',
+      setName: '卓越',
+      level: 0,
+      maxLevel: 100,
+      baseStats: {
+        spellPower: 580,
+        hp: 5200,
+        mastery: 16,
+        haste: 14,
+        versatility: 18,
+      },
+      growth: {
+        spellPower: 2,
+        hp: 2,
+        mastery: 2,
+        haste: 2,
+        versatility: 2,
+      }
+    },
+
+
 
 
 };
@@ -8372,6 +8927,15 @@ const MOLTEN_CORE_LV100_SET = [
 const ONYXIA_LV100_SET = [
     'EQ_202', 'EQ_203', 'EQ_204', 'EQ_205', 'EQ_206',
     'EQ_207', 'EQ_208', 'EQ_209', 'EQ_210', 'EQ_211'
+];
+
+
+// 黑翼之巢（60级）17 件装备全部达到过 Lv.100 → 全队暴击率 +5%，暴击伤害 +20%
+const BLACKWING_LAIR_LV100_SET = [
+    'EQ_212', 'EQ_213', 'EQ_214', 'EQ_215', 'EQ_216',
+    'EQ_217', 'EQ_218', 'EQ_219', 'EQ_220',
+    'EQ_221', 'EQ_222', 'EQ_223', 'EQ_224',
+    'EQ_225', 'EQ_226', 'EQ_227', 'EQ_228'
 ];
 
 // ==================== 图鉴集齐效果配置 ====================
@@ -8480,6 +9044,13 @@ const CODEX_SET_EFFECTS = [
         equipIds: ONYXIA_LV100_SET,
         effect: '全队全能 +10',
         color: '#5e35b1'
+    },
+    {
+        id: 'blackwing_lair',
+        name: '黑翼之巢',
+        equipIds: BLACKWING_LAIR_LV100_SET,
+        effect: '全队暴击率 +5%，暴击伤害 +20%',
+        color: '#263238'
     }
 ];
 
@@ -10140,10 +10711,10 @@ const BOSS_DATA = {
             gold: 2000000,
             exp: 1200000,
             items: [
-                { id: 'EQ_172', chance: 0.1 },  // 力量护手
-                { id: 'EQ_173', chance: 0.1 },  // 夜幕杀手手套
-                { id: 'EQ_174', chance: 0.1 },  // 奥术师手套
-                { id: 'EQ_175', chance: 0.1 },  // 预言手套
+                { id: 'EQ_172', chance: 0.2 },  // 力量护手
+                { id: 'EQ_173', chance: 0.2 },  // 夜幕杀手手套
+                { id: 'EQ_174', chance: 0.2 },  // 奥术师手套
+                { id: 'EQ_175', chance: 0.2 },  // 预言手套
                 { id: 'EQ_176', chance: 0.02 }  // 逐风者的禁锢之颅（右）
             ]
         }
@@ -10177,10 +10748,10 @@ const BOSS_DATA = {
             gold: 2200000,
             exp: 1300000,
             items: [
-                { id: 'EQ_177', chance: 0.1 },  // 力量肩铠
-                { id: 'EQ_178', chance: 0.1 },  // 夜幕杀手护肩
-                { id: 'EQ_179', chance: 0.1 },  // 奥术师衬肩
-                { id: 'EQ_180', chance: 0.1 },  // 预言衬肩
+                { id: 'EQ_177', chance: 0.2 },  // 力量肩铠
+                { id: 'EQ_178', chance: 0.2 },  // 夜幕杀手护肩
+                { id: 'EQ_179', chance: 0.2 },  // 奥术师衬肩
+                { id: 'EQ_180', chance: 0.2 },  // 预言衬肩
                 { id: 'EQ_181', chance: 0.02 }  // 逐风者的禁锢之颅（左）
             ]
         }
@@ -10285,10 +10856,10 @@ const BOSS_DATA = {
             gold: 2600000,
             exp: 1500000,
             items: [
-                { id: 'EQ_187', chance: 0.1 },  // 力量胸甲
-                { id: 'EQ_188', chance: 0.1 },  // 夜幕杀手胸甲
-                { id: 'EQ_189', chance: 0.1 },  // 奥术师长袍
-                { id: 'EQ_190', chance: 0.1 },  // 预言法袍
+                { id: 'EQ_187', chance: 0.2 },  // 力量胸甲
+                { id: 'EQ_188', chance: 0.2 },  // 夜幕杀手胸甲
+                { id: 'EQ_189', chance: 0.2 },  // 奥术师长袍
+                { id: 'EQ_190', chance: 0.2 },  // 预言法袍
             ]
         }
     },
@@ -11102,6 +11673,10 @@ function calculateTotalStats(character, partyAuras = { hpMul: 1, spellPowerMul: 
 
             // 奥妮克希亚：集齐 EQ_202 ~ EQ_211（全部曾达到过 Lv.100）→ 全队全能 +10
             { ids: ONYXIA_LV100_SET, bonus: { versatility: 10 } },
+
+            // 黑翼之巢：集齐 EQ_212 ~ EQ_228（全部曾达到过 Lv.100）→ 全队暴击率 +5%，暴击伤害 +20%
+            { ids: BLACKWING_LAIR_LV100_SET, bonus: { critRate: 5, critDamage: 0.20 } },
+
 
         ];
 

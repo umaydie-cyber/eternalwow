@@ -9241,18 +9241,6 @@ const WORLD_BOSSES = {
 // 机制复用世界首领（同一套 Boss 战斗/结算/冷却），但准备界面支持 5 人队伍。
 // 后续如需更复杂技能，只需在 BOSS_DATA 中补充对应 bossId 的配置与战斗逻辑分支。
 const TEAM_BOSSES = {
-    onyxia: {
-        id: 'onyxia',
-        name: '奥妮克希亚',
-        icon: 'icons/wow/vanilla/boss/onyxia.png', // 需要添加对应图标
-        hp: 28000000,
-        attack: 17000,
-        defense: 17000,
-        rewards: { gold: 3000000, exp: 1700000 },
-        unlockLevel: 60,
-        partySize: 5, // ✅ 团队首领：5人
-    },
-
     ragnaros: {
         id: 'ragnaros',
         name: '火焰之王拉格纳罗斯',
@@ -9261,6 +9249,17 @@ const TEAM_BOSSES = {
         attack: 18000,
         defense: 18000,
         rewards: { gold: 3200000, exp: 1800000 },
+        unlockLevel: 60,
+        partySize: 5, // ✅ 团队首领：5人
+    },
+    onyxia: {
+        id: 'onyxia',
+        name: '奥妮克希亚',
+        icon: 'icons/wow/vanilla/boss/onyxia.png', // 需要添加对应图标
+        hp: 35000000,
+        attack: 20000,
+        defense: 20000,
+        rewards: { gold: 3600000, exp: 2000000 },
         unlockLevel: 60,
         partySize: 5, // ✅ 团队首领：5人
     },

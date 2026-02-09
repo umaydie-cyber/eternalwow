@@ -7331,7 +7331,7 @@ const FIXED_EQUIPMENTS = {
         level: 0,
         maxLevel: 100,
         baseStats: {
-            spellPower: 1600,
+            spellPower: 1800,
             hp: 4500,
             mastery: 20,
             versatility: 18,

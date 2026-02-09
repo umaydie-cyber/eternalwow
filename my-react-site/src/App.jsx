@@ -9271,6 +9271,16 @@ const ITEMS = {
         rarity: 'white',
         sellPrice: 5000
     },
+    REBIRTH_INVITATION: {
+      id: 'REBIRTH_INVITATION',
+      name: '破碎时空的邀请函',
+      type: 'consumable',
+      rarity: 'purple',
+      icon: 'icons/wow/vanilla/items/INV_Misc_Note_04.png',
+      canUse: true,
+      sellPrice: 0,
+      description: '使用后解锁重生轮回'
+    },
     // 黑龙化身的证明
     IT_BLACK_DRAGON_PROOF: {
         id: 'IT_BLACK_DRAGON_PROOF',

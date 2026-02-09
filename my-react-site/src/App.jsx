@@ -85,6 +85,9 @@ const BOSS_BONUS_CONFIG = {
     // ✅ 新增：团队首领 - 奥妮克希亚
     onyxia: { name: '奥妮克希亚', bonus: 0.30 },
 
+    // ✅ 新增：团队首领 - 克洛玛古斯
+    chromaggus: { name: '克洛玛古斯', bonus: 0.30 },
+
     // ✅ 新增：团队首领 - 火焰之王拉格纳罗斯
     // 说明：团队首领与世界首领共用同一套战斗/奖励结算机制，仅在 UI/队伍人数上做区分。
     ragnaros: { name: '火焰之王拉格纳罗斯', bonus: 0.30 },
@@ -10335,6 +10338,17 @@ const TEAM_BOSSES = {
         unlockLevel: 60,
         partySize: 5, // ✅ 团队首领：5人
     },
+    chromaggus: {
+        id: 'chromaggus',
+        name: '克洛玛古斯',
+        icon: 'icons/wow/vanilla/boss/chromaggus.png', // 预留：自行补图标
+        hp: 37000000,
+        attack: 22000,
+        defense: 22000,
+        rewards: { gold: 3800000, exp: 2100000 },
+        unlockLevel: 60,
+        partySize: 5, // ✅ 团队首领：5人
+    },
 };
 
 // UI/逻辑层通用：获取 Boss 元信息
@@ -11161,6 +11175,63 @@ const BOSS_DATA = {
 
                 // 🔥 额外：奥妮克希亚鳞片披风（原为任务奖励，这里允许极低概率掉落）
                 { id: 'EQ_QUEST_ONYXIA_SCALE_CLOAK', chance: 0.8 },
+            ]
+        }
+    },
+
+
+    // ✅ 新增：团队首领 - 克洛玛古斯（5人）
+    chromaggus: {
+        id: 'chromaggus',
+        name: '克洛玛古斯',
+        maxHp: 37000000,
+        attack: 22000,
+        defense: 22000,
+
+        // 技能1：龙血之痛（随机一种：黑/绿/红）
+        broodAfflictionTargets: 3,
+        broodAfflictionBlackSpellVulnPct: 0.30,
+        broodAfflictionBlackDuration: 4,
+        broodAfflictionGreenDotMultiplier: 0.5,
+        broodAfflictionGreenDuration: 4,
+        broodAfflictionRedDotMultiplier: 1.5,
+        broodAfflictionRedDuration: 4,
+
+        // 技能3：焚烧（火焰法术伤害，吸血）
+        incinerateTargets: 2,
+        incinerateMultiplier: 3,
+
+        // 技能4：腐蚀酸液（自然法术伤害 + 护甲降低80%）
+        corrosiveAcidTargets: 2,
+        corrosiveAcidMultiplier: 1.5,
+        corrosiveAcidArmorReductionPct: 0.80,
+        corrosiveAcidDuration: 4,
+
+        // 技能5：时光流逝（物理伤害：目标50%生命 + 5×BOSS攻击，并昏迷1回合）
+        timeLapseHpPct: 0.50,
+        timeLapseAttackMultiplier: 5,
+        timeLapseStunDuration: 1,
+
+        // 技能6：狂暴（所有伤害+10%，可叠加至战斗结束）
+        enragePerStack: 0.10,
+
+        // 技能循环：龙血之痛 → 焚烧 → 龙血之痛 → 腐蚀酸液 → 龙血之痛 → 时光流逝 → 龙血之痛 → 狂暴
+        cycle: [
+            'brood_affliction',
+            'incinerate',
+            'brood_affliction',
+            'corrosive_acid',
+            'brood_affliction',
+            'time_lapse',
+            'brood_affliction',
+            'enrage',
+        ],
+
+        rewards: {
+            gold: 3800000,
+            exp: 2100000,
+            items: [
+                // 可按需要自行补充掉落（例如：黑翼之巢装备/徽章等）
             ]
         }
     },
@@ -12735,6 +12806,12 @@ function stepBossCombat(state) {
                             addLog(`位置${i + 1} ${p.char.name} 的【恐惧】效果消失`);
                         } else if (key === 'knockup') {
                             addLog(`位置${i + 1} ${p.char.name} 的【击飞】效果消失`);
+                        } else if (key === 'stun') {
+                            addLog(`位置${i + 1} ${p.char.name} 的【昏迷】效果消失`);
+                        } else if (key === 'spellVulnerability') {
+                            addLog(`位置${i + 1} ${p.char.name} 的【法术易伤】效果消失`);
+                        } else if (key === 'corrosiveAcid') {
+                            addLog(`位置${i + 1} ${p.char.name} 的【腐蚀酸液】护甲削弱效果消失`);
                         } else if (key === 'running') {
                             addLog(`位置${i + 1} ${p.char.name} 的【跑位】效果消失`);
                         } else if (key === 'shadowCurse') {
@@ -13032,6 +13109,19 @@ function stepBossCombat(state) {
             }
 
             addLog(`位置${i + 1} ${p.char.name} 因【击飞】无法行动（剩余${p.debuffs.knockup.duration}回合）`, 'debuff');
+            tickPlayerDurations(p, i);
+            continue;
+        }
+
+        // ==================== 昏迷：跳过本回合行动 ====================
+        // 说明：与击飞类似，由部分技能（如克洛玛古斯【时光流逝】）造成。
+        if (p.debuffs?.stun?.duration > 0) {
+            // 仍然推进技能轮转（表示这一回合被浪费）
+            if (Array.isArray(p.validSkills) && p.validSkills.length > 0) {
+                p.skillIndex = (p.skillIndex || 0) + 1;
+            }
+
+            addLog(`位置${i + 1} ${p.char.name} 因【昏迷】无法行动（剩余${p.debuffs.stun.duration}回合）`, 'debuff');
             tickPlayerDurations(p, i);
             continue;
         }
@@ -14609,7 +14699,21 @@ function stepBossCombat(state) {
     };
 
     const calcMitigatedAndBlockedDamage = (playerState, rawDamage, isHeavy = false) => {
-        const armor = playerState?.char?.stats?.armor || 0;
+        const baseArmor = playerState?.char?.stats?.armor || 0;
+
+        // ✅ 护甲类减益：允许通过 debuffs.*.armorMult 影响有效护甲（例如：克洛玛古斯【腐蚀酸液】）
+        let armor = baseArmor;
+        if (playerState?.debuffs) {
+            Object.keys(playerState.debuffs).forEach(k => {
+                const d = playerState.debuffs[k];
+                const m = Number(d?.armorMult);
+                if (Number.isFinite(m) && m >= 0) {
+                    armor *= m;
+                }
+            });
+        }
+        armor = Math.max(0, Math.floor(armor));
+
         const dr = getArmorDamageReduction(armor);
         let dmg = applyPhysicalMitigation(rawDamage, armor);
 
@@ -17227,6 +17331,316 @@ function stepBossCombat(state) {
                     addLog(`【${boss.name}】施放【包围之风】命中 位置${tIdx + 1} ${target.char.name}，造成 ${shieldResult.finalDamage} 点自然伤害（魔抗减伤${resPct}%${mrText}${shieldText}）`);
                 }
             }
+        }
+    }
+
+    // ==================== 团队首领：克洛玛古斯（Chromaggus）技能处理 ====================
+    else if (combat.bossId === 'chromaggus') {
+        combat.bossBuffs = combat.bossBuffs || {};
+
+        const getEnrageStacks = () => Math.max(0, Math.floor(Number(combat.bossBuffs.chromaggusEnrageStacks || 0)));
+        const enragePer = (typeof boss.enragePerStack === 'number' && Number.isFinite(boss.enragePerStack))
+            ? boss.enragePerStack
+            : 0.10;
+        const getEnrageMult = () => 1 + getEnrageStacks() * enragePer;
+
+        const pickNRandomAlivePlayers = (n) => {
+            const alive = (combat.playerStates || [])
+                .map((ps, idx) => ({ ps, idx }))
+                .filter(o => (o.ps?.currentHp ?? 0) > 0)
+                .map(o => o.idx);
+
+            if (alive.length <= 0) return [];
+
+            // Fisher–Yates shuffle
+            for (let i = alive.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [alive[i], alive[j]] = [alive[j], alive[i]];
+            }
+
+            const need = Math.max(0, Math.floor(Number(n || 0)));
+            return alive.slice(0, Math.min(need, alive.length));
+        };
+
+        // 技能1：龙血之痛（随机一种：黑/绿/红）
+        if (bossAction === 'brood_affliction') {
+            const colors = ['black', 'green', 'red'];
+            const color = colors[Math.floor(Math.random() * colors.length)];
+            const colorName = color === 'black' ? '黑' : (color === 'green' ? '绿' : '红');
+
+            const targetsCount = Math.max(1, Math.floor(Number(boss.broodAfflictionTargets || 3)));
+            const targetIdxs = pickNRandomAlivePlayers(targetsCount);
+
+            addLog(`【${boss.name}】施放【龙血之痛】（${colorName}）！`);
+
+            if (targetIdxs.length <= 0) {
+                addLog(`→ 没有存活目标`, 'warning');
+            }
+            else if (color === 'black') {
+                const dur = Math.max(1, Math.floor(Number(boss.broodAfflictionBlackDuration || 4)));
+                const pct = (typeof boss.broodAfflictionBlackSpellVulnPct === 'number' && Number.isFinite(boss.broodAfflictionBlackSpellVulnPct))
+                    ? boss.broodAfflictionBlackSpellVulnPct
+                    : 0.30;
+
+                targetIdxs.forEach((pIdx) => {
+                    const ps = combat.playerStates[pIdx];
+                    if (!ps || ps.currentHp <= 0) return;
+
+                    // 种族：先判定诅咒免疫（矮人石像形态等）
+                    if (tryFirstDebuffImmunity(ps, 'curse', pIdx, '龙血之痛·黑')) return;
+
+                    ps.debuffs = ps.debuffs || {};
+                    // 复用 spellVulnerability 机制：法术伤害承受增加（有 duration 则会自动衰减）
+                    ps.debuffs.spellVulnerability = {
+                        stacks: 1,
+                        pctPerStack: pct,
+                        duration: dur,
+                        source: '龙血之痛·黑',
+                    };
+
+                    addLog(
+                        `→ 位置${pIdx + 1} ${ps.char.name} 受到【龙血之痛·黑】：法术伤害承受 +${Math.round(pct * 100)}%（持续${dur}回合）`,
+                        'debuff'
+                    );
+                });
+            }
+            else if (color === 'green') {
+                const dur = Math.max(1, Math.floor(Number(boss.broodAfflictionGreenDuration || 4)));
+                const dotMult = (typeof boss.broodAfflictionGreenDotMultiplier === 'number' && Number.isFinite(boss.broodAfflictionGreenDotMultiplier))
+                    ? boss.broodAfflictionGreenDotMultiplier
+                    : 0.5;
+
+                const perTurnBase = Math.floor((boss.attack || 0) * dotMult * getEnrageMult());
+
+                targetIdxs.forEach((pIdx) => {
+                    const ps = combat.playerStates[pIdx];
+                    if (!ps || ps.currentHp <= 0) return;
+
+                    // 种族：先判定中毒免疫（矮人石像形态等）
+                    if (tryFirstDebuffImmunity(ps, 'poison', pIdx, '龙血之痛·绿')) return;
+
+                    ps.dots = ps.dots || [];
+                    const existing = ps.dots.find(d => d && d.name === '龙血之痛·绿');
+
+                    if (existing) {
+                        existing.stacks = Math.max(1, Math.floor(Number(existing.stacks || 1))) + 1;
+                        existing.duration = dur;
+                        existing.damagePerTurn = Math.max(0, Math.floor(perTurnBase * existing.stacks));
+                        existing.school = 'nature';
+                        existing.type = 'poison';
+                        existing.isPoison = true;
+
+                        addLog(
+                            `→ 位置${pIdx + 1} ${ps.char.name} 的【龙血之痛·绿】叠加至 ${existing.stacks} 层（持续刷新为${dur}回合）`,
+                            'debuff'
+                        );
+                    } else {
+                        ps.dots.push({
+                            name: '龙血之痛·绿',
+                            type: 'poison',
+                            isPoison: true,
+                            school: 'nature',
+                            damagePerTurn: Math.max(0, perTurnBase),
+                            duration: dur,
+                            stacks: 1,
+                        });
+
+                        addLog(
+                            `→ 位置${pIdx + 1} ${ps.char.name} 中毒：每回合 ${Math.max(0, perTurnBase)} 点自然伤害（持续${dur}回合，可叠加）`,
+                            'debuff'
+                        );
+                    }
+                });
+            }
+            else if (color === 'red') {
+                const dur = Math.max(1, Math.floor(Number(boss.broodAfflictionRedDuration || 4)));
+                const dotMult = (typeof boss.broodAfflictionRedDotMultiplier === 'number' && Number.isFinite(boss.broodAfflictionRedDotMultiplier))
+                    ? boss.broodAfflictionRedDotMultiplier
+                    : 1.5;
+
+                const perTurn = Math.floor((boss.attack || 0) * dotMult * getEnrageMult());
+
+                targetIdxs.forEach((pIdx) => {
+                    const ps = combat.playerStates[pIdx];
+                    if (!ps || ps.currentHp <= 0) return;
+
+                    ps.dots = ps.dots || [];
+                    const existing = ps.dots.find(d => d && d.name === '龙血之痛·红');
+
+                    if (existing) {
+                        existing.duration = dur;
+                        existing.damagePerTurn = Math.max(0, perTurn);
+                        existing.school = 'fire';
+                        existing.type = 'burn';
+
+                        addLog(`→ 位置${pIdx + 1} ${ps.char.name} 的【龙血之痛·红】持续刷新为${dur}回合`, 'debuff');
+                    } else {
+                        ps.dots.push({
+                            name: '龙血之痛·红',
+                            type: 'burn',
+                            school: 'fire',
+                            damagePerTurn: Math.max(0, perTurn),
+                            duration: dur,
+                        });
+
+                        addLog(
+                            `→ 位置${pIdx + 1} ${ps.char.name} 灼烧：每回合 ${Math.max(0, perTurn)} 点火焰伤害（持续${dur}回合）`,
+                            'debuff'
+                        );
+                    }
+                });
+            }
+        }
+
+        // 技能3：焚烧（随机2目标 3×火焰伤害；为BOSS回复等量实际伤害）
+        else if (bossAction === 'incinerate') {
+            const targetsCount = Math.max(1, Math.floor(Number(boss.incinerateTargets || 2)));
+            const mult = (typeof boss.incinerateMultiplier === 'number' && Number.isFinite(boss.incinerateMultiplier))
+                ? boss.incinerateMultiplier
+                : 3;
+
+            const raw = Math.floor((boss.attack || 0) * mult * getEnrageMult());
+            const targetIdxs = pickNRandomAlivePlayers(targetsCount);
+
+            if (targetIdxs.length <= 0) {
+                addLog(`【${boss.name}】施放【焚烧】，但没有存活目标`);
+            } else {
+                addLog(`【${boss.name}】施放【焚烧】！`);
+                let totalActualDamage = 0;
+
+                targetIdxs.forEach((pIdx) => {
+                    const ps = combat.playerStates[pIdx];
+                    if (!ps || ps.currentHp <= 0) return;
+
+                    const beforeHp = ps.currentHp;
+
+                    const fire = calcMagicDamage(ps, raw);
+                    const shieldResult = applyShieldAbsorb(ps, fire.damage, logs, currentRound);
+                    ps.currentHp -= shieldResult.finalDamage;
+
+                    const actualLoss = Math.min(beforeHp, Math.max(0, shieldResult.finalDamage));
+                    totalActualDamage += actualLoss;
+
+                    const resPct = Math.round(fire.resistReduction * 100);
+                    const mrText = Number(fire.magicResist) < 0 ? `（魔抗 ${Math.floor(fire.magicResist)}）` : '';
+                    const shieldText = shieldResult.absorbed > 0 ? `，护盾吸收 ${shieldResult.absorbed}` : '';
+                    addLog(`→ 位置${pIdx + 1} ${ps.char.name} 受到 ${shieldResult.finalDamage} 点火焰伤害（魔抗减伤${resPct}%${mrText}${shieldText}）`);
+                });
+
+                if (totalActualDamage > 0) {
+                    const beforeBossHp = combat.bossHp || 0;
+                    combat.bossHp = Math.min(boss.maxHp, (combat.bossHp || 0) + totalActualDamage);
+                    const realHeal = Math.max(0, combat.bossHp - beforeBossHp);
+
+                    if (realHeal > 0) {
+                        addLog(`→ 【${boss.name}】回复 ${realHeal} 点生命（等同焚烧实际伤害）`, 'heal');
+                    }
+                }
+            }
+        }
+
+        // 技能4：腐蚀酸液（随机2目标 1.5×自然伤害；护甲-80% 4回合）
+        else if (bossAction === 'corrosive_acid') {
+            const targetsCount = Math.max(1, Math.floor(Number(boss.corrosiveAcidTargets || 2)));
+            const mult = (typeof boss.corrosiveAcidMultiplier === 'number' && Number.isFinite(boss.corrosiveAcidMultiplier))
+                ? boss.corrosiveAcidMultiplier
+                : 1.5;
+
+            const raw = Math.floor((boss.attack || 0) * mult * getEnrageMult());
+            const dur = Math.max(1, Math.floor(Number(boss.corrosiveAcidDuration || 4)));
+            const pct = (typeof boss.corrosiveAcidArmorReductionPct === 'number' && Number.isFinite(boss.corrosiveAcidArmorReductionPct))
+                ? boss.corrosiveAcidArmorReductionPct
+                : 0.80;
+
+            const armorMult = Math.max(0, 1 - pct);
+            const targetIdxs = pickNRandomAlivePlayers(targetsCount);
+
+            if (targetIdxs.length <= 0) {
+                addLog(`【${boss.name}】施放【腐蚀酸液】，但没有存活目标`);
+            } else {
+                addLog(`【${boss.name}】施放【腐蚀酸液】！`);
+
+                targetIdxs.forEach((pIdx) => {
+                    const ps = combat.playerStates[pIdx];
+                    if (!ps || ps.currentHp <= 0) return;
+
+                    const nat = calcMagicDamage(ps, raw);
+                    const shieldResult = applyShieldAbsorb(ps, nat.damage, logs, currentRound);
+                    ps.currentHp -= shieldResult.finalDamage;
+
+                    const resPct = Math.round(nat.resistReduction * 100);
+                    const mrText = Number(nat.magicResist) < 0 ? `（魔抗 ${Math.floor(nat.magicResist)}）` : '';
+                    const shieldText = shieldResult.absorbed > 0 ? `，护盾吸收 ${shieldResult.absorbed}` : '';
+                    addLog(`→ 位置${pIdx + 1} ${ps.char.name} 受到 ${shieldResult.finalDamage} 点自然伤害（魔抗减伤${resPct}%${mrText}${shieldText}）`);
+
+                    if (ps.currentHp > 0) {
+                        ps.debuffs = ps.debuffs || {};
+                        ps.debuffs.corrosiveAcid = {
+                            duration: dur,
+                            armorMult,
+                            source: '腐蚀酸液',
+                        };
+
+                        addLog(`   ↳ 位置${pIdx + 1} ${ps.char.name} 护甲降低 ${Math.round(pct * 100)}%（持续${dur}回合）`, 'debuff');
+                    }
+                });
+            }
+        }
+
+        // 技能5：时光流逝（坦克：50%生命 + 5×攻击 的物理伤害；昏迷1回合）
+        else if (bossAction === 'time_lapse') {
+            const tankIdx = pickAlivePlayerIndex(combat.playerStates);
+
+            if (tankIdx < 0) {
+                addLog(`【${boss.name}】施放【时光流逝】，但没有存活坦克目标`);
+            } else {
+                const ps = combat.playerStates[tankIdx];
+
+                const hpPct = (typeof boss.timeLapseHpPct === 'number' && Number.isFinite(boss.timeLapseHpPct))
+                    ? boss.timeLapseHpPct
+                    : 0.50;
+                const atkMult = (typeof boss.timeLapseAttackMultiplier === 'number' && Number.isFinite(boss.timeLapseAttackMultiplier))
+                    ? boss.timeLapseAttackMultiplier
+                    : 5;
+                const stunDur = Math.max(1, Math.floor(Number(boss.timeLapseStunDuration || 1)));
+
+                // 这里按“最大生命值”的 50% 计算（如需改为当前生命值 50%，把 maxHp 改成 ps.currentHp 即可）
+                const maxHp = Number(ps.char?.stats?.maxHp) || 0;
+                const hpPart = Math.floor(maxHp * hpPct);
+
+                const rawBase = hpPart + Math.floor((boss.attack || 0) * atkMult);
+                const raw = Math.floor(rawBase * getEnrageMult());
+
+                addLog(`【${boss.name}】施放【时光流逝】命中坦克（位置${tankIdx + 1}）！`);
+
+                const result = calcMitigatedAndBlockedDamage(ps, raw);
+                const shieldResult = applyShieldAbsorb(ps, result.damage, logs, currentRound);
+                ps.currentHp -= shieldResult.finalDamage;
+
+                const shieldText = shieldResult.absorbed > 0 ? `，护盾吸收 ${shieldResult.absorbed}` : '';
+                const blockText = result.blocked > 0 ? `，格挡 ${result.blocked}` : '';
+                addLog(`→ 位置${tankIdx + 1} ${ps.char.name} 受到 ${shieldResult.finalDamage} 点物理伤害（护甲减伤${result.drPct}%${blockText}${shieldText}）`);
+
+                if (ps.currentHp > 0) {
+                    ps.debuffs = ps.debuffs || {};
+                    ps.debuffs.stun = { duration: stunDur, source: '时光流逝' };
+                    addLog(`   ↳ 位置${tankIdx + 1} ${ps.char.name} 昏迷 ${stunDur} 回合`, 'debuff');
+                }
+            }
+        }
+
+        // 技能6：狂暴（伤害+10%，可叠加）
+        else if (bossAction === 'enrage') {
+            const before = Math.max(0, Math.floor(Number(combat.bossBuffs.chromaggusEnrageStacks || 0)));
+            combat.bossBuffs.chromaggusEnrageStacks = before + 1;
+
+            const stacks = combat.bossBuffs.chromaggusEnrageStacks;
+            const totalPct = Math.round(stacks * enragePer * 100);
+
+            addLog(
+                `【${boss.name}】进入【狂暴】！造成的所有伤害提高${Math.round(enragePer * 100)}%（当前${stacks}层：+${totalPct}%），直到战斗结束`,
+                'debuff'
+            );
         }
     }
 
@@ -30852,6 +31266,13 @@ const BossPrepareModal = ({ state, dispatch }) => {
         deep_breath: '深呼吸',
         fearful_roar: '恐惧低吼',
 
+        // 克洛玛古斯
+        brood_affliction: '龙血之痛',
+        incinerate: '焚烧',
+        corrosive_acid: '腐蚀酸液',
+        time_lapse: '时光流逝',
+        enrage: '狂暴',
+
         // 其他boss也可以逐步补齐
         mortal_strike: '致死打击',
         summon_cannoneers: '火炮手准备',
@@ -32321,6 +32742,71 @@ const BossPrepareModal = ({ state, dispatch }) => {
                                     </div>
                                   </div>
                                 )}
+                                {/* 克洛玛古斯的技能（准备界面说明） */}
+                                {bossId === 'chromaggus' && (
+                                  <div style={{
+                                    marginTop: 12,
+                                    padding: 12,
+                                    background: 'rgba(60,40,120,0.12)',
+                                    borderRadius: 8,
+                                    border: '1px solid rgba(160,120,255,0.25)'
+                                  }}>
+                                    <div style={{ fontSize: 12, color: '#d1c4e9', fontWeight: 700, marginBottom: 8 }}>
+                                      🐉 团队首领：克洛玛古斯
+                                    </div>
+
+                                    <div style={{ display: 'grid', gap: 10, fontSize: 11, color: '#ddd', lineHeight: 1.6 }}>
+                                      <div style={{ padding: 10, background: 'rgba(0,0,0,0.25)', borderRadius: 6 }}>
+                                        <div style={{ color: '#ffd700', fontWeight: 700, marginBottom: 4 }}>技能1：龙血之痛（随机一种）</div>
+                                        <div>
+                                          每次释放随机选择 <b>黑 / 绿 / 红</b> 其中一种，对随机 <b>{boss.broodAfflictionTargets ?? 3}</b> 名目标生效，持续 <b>{boss.broodAfflictionBlackDuration ?? 4}</b> 回合：<br/>
+                                          <span style={{ color: '#b39ddb' }}>黑：</span>诅咒，目标<span style={{ color: '#ffcc80', fontWeight: 700 }}>法术伤害承受</span>提高
+                                          <b> {Math.round((boss.broodAfflictionBlackSpellVulnPct ?? 0.30) * 100)}%</b>。<br/>
+                                          <span style={{ color: '#81c784' }}>绿：</span>中毒，每回合造成 <b>Boss攻击力×{boss.broodAfflictionGreenDotMultiplier ?? 0.5}</b> 的自然伤害，<b>可叠加</b>（持续时间刷新）。<br/>
+                                          <span style={{ color: '#ff7043' }}>红：</span>灼烧，每回合造成 <b>Boss攻击力×{boss.broodAfflictionRedDotMultiplier ?? 1.5}</b> 的火焰伤害。
+                                        </div>
+                                      </div>
+
+                                      <div style={{ padding: 10, background: 'rgba(0,0,0,0.25)', borderRadius: 6 }}>
+                                        <div style={{ color: '#ffd700', fontWeight: 700, marginBottom: 4 }}>技能3：焚烧</div>
+                                        <div>
+                                          随机 <b>{boss.incinerateTargets ?? 2}</b> 名目标，造成 <b>Boss攻击力×{boss.incinerateMultiplier ?? 3}</b> 的火焰法术伤害。<br/>
+                                          并为Boss回复<span style={{ color: '#81c784', fontWeight: 700 }}>等量实际造成伤害</span>的生命。
+                                        </div>
+                                      </div>
+
+                                      <div style={{ padding: 10, background: 'rgba(0,0,0,0.25)', borderRadius: 6 }}>
+                                        <div style={{ color: '#ffd700', fontWeight: 700, marginBottom: 4 }}>技能4：腐蚀酸液</div>
+                                        <div>
+                                          随机 <b>{boss.corrosiveAcidTargets ?? 2}</b> 名目标，造成 <b>Boss攻击力×{boss.corrosiveAcidMultiplier ?? 1.5}</b> 的自然法术伤害。<br/>
+                                          并使其护甲降低 <b>{Math.round((boss.corrosiveAcidArmorReductionPct ?? 0.80) * 100)}%</b>，持续 <b>{boss.corrosiveAcidDuration ?? 4}</b> 回合。
+                                        </div>
+                                      </div>
+
+                                      <div style={{ padding: 10, background: 'rgba(0,0,0,0.25)', borderRadius: 6 }}>
+                                        <div style={{ color: '#ffd700', fontWeight: 700, marginBottom: 4 }}>技能5：时光流逝</div>
+                                        <div>
+                                          对<span style={{ color: '#ff6b6b', fontWeight: 700 }}>1号位（坦克）</span>造成
+                                          <b> 目标最大生命×{Math.round((boss.timeLapseHpPct ?? 0.50) * 100)}%</b>
+                                          + <b>Boss攻击力×{boss.timeLapseAttackMultiplier ?? 5}</b> 的物理伤害。<br/>
+                                          并使其<span style={{ color: '#90caf9', fontWeight: 700 }}>昏迷</span> <b>{boss.timeLapseStunDuration ?? 1}</b> 回合无法行动。
+                                        </div>
+                                      </div>
+
+                                      <div style={{ padding: 10, background: 'rgba(0,0,0,0.25)', borderRadius: 6 }}>
+                                        <div style={{ color: '#ffd700', fontWeight: 700, marginBottom: 4 }}>技能6：狂暴</div>
+                                        <div>
+                                          Boss造成的所有伤害提高 <b>{Math.round((boss.enragePerStack ?? 0.10) * 100)}%</b>，可叠加直到战斗结束。
+                                        </div>
+                                      </div>
+
+                                      <div style={{ fontSize: 11, color: '#aaa', marginTop: 2 }}>
+                                        伤害结算：法术伤害计算<span style={{ color: '#ffd700' }}>魔抗</span>；物理伤害计算<span style={{ color: '#ffd700' }}>护甲 / 格挡</span>等属性。
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
+
 
                             </div>
 

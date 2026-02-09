@@ -8368,6 +8368,12 @@ const MOLTEN_CORE_LV100_SET = [
     'EQ_170', 'EQ_171'
 ];
 
+// 奥妮克希亚（团队首领）10 件装备全部达到过 Lv.100 → 全队全能 +10
+const ONYXIA_LV100_SET = [
+    'EQ_202', 'EQ_203', 'EQ_204', 'EQ_205', 'EQ_206',
+    'EQ_207', 'EQ_208', 'EQ_209', 'EQ_210', 'EQ_211'
+];
+
 // ==================== 图鉴集齐效果配置 ====================
 const CODEX_SET_EFFECTS = [
     {
@@ -8467,6 +8473,13 @@ const CODEX_SET_EFFECTS = [
         equipIds: MOLTEN_CORE_LV100_SET,
         effect: '全队攻击 +800，法强 +800，魔法抗性 +200',
         color: '#ff5722'
+    },
+    {
+        id: 'onyxia',
+        name: '奥妮克希亚',
+        equipIds: ONYXIA_LV100_SET,
+        effect: '全队全能 +10',
+        color: '#5e35b1'
     }
 ];
 
@@ -11086,6 +11099,9 @@ function calculateTotalStats(character, partyAuras = { hpMul: 1, spellPowerMul: 
             { ids: ZUL_GURUB_LV100_SET, bonus: { critDamage: 0.20 } }, // 祖尔格拉布：暴击伤害 +20%
             { ids: RUINS_OF_AHNQIRAJ_LV100_SET, bonus: { armor: 300, magicResist: 100 } }, // 安琪拉废墟：全队护甲 +300，魔法抗性 +100
             { ids: MOLTEN_CORE_LV100_SET, bonus: { attack: 800, spellPower: 800, magicResist: 200 } }, // 熔火之心：全队攻击 +1000，法强 +1000，魔法抗性 +200
+
+            // 奥妮克希亚：集齐 EQ_202 ~ EQ_211（全部曾达到过 Lv.100）→ 全队全能 +10
+            { ids: ONYXIA_LV100_SET, bonus: { versatility: 10 } },
 
         ];
 

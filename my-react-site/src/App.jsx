@@ -7368,7 +7368,7 @@ const FIXED_EQUIPMENTS = {
         type: 'equipment',
         slot: 'hands',
         rarity: 'purple',
-        level: 0,
+        level: 1,
         maxLevel: 100,
         baseStats: {
             hp: 4200,
@@ -7394,7 +7394,7 @@ const FIXED_EQUIPMENTS = {
         type: 'equipment',
         slot: 'hands',
         rarity: 'purple',
-        level: 0,
+        level: 1,
         maxLevel: 100,
         baseStats: {
             attack: 420,
@@ -7420,7 +7420,7 @@ const FIXED_EQUIPMENTS = {
         type: 'equipment',
         slot: 'hands',
         rarity: 'purple',
-        level: 0,
+        level: 1,
         maxLevel: 100,
         baseStats: {
             spellPower: 420,
@@ -7444,7 +7444,7 @@ const FIXED_EQUIPMENTS = {
         type: 'equipment',
         slot: 'hands',
         rarity: 'purple',
-        level: 0,
+        level: 1,
         maxLevel: 100,
         baseStats: {
             spellPower: 400,
@@ -7485,7 +7485,7 @@ const FIXED_EQUIPMENTS = {
         type: 'equipment',
         slot: 'shoulder',
         rarity: 'purple',
-        level: 0,
+        level: 1,
         maxLevel: 100,
         baseStats: {
             hp: 5200,
@@ -7511,7 +7511,7 @@ const FIXED_EQUIPMENTS = {
         type: 'equipment',
         slot: 'shoulder',
         rarity: 'purple',
-        level: 0,
+        level: 1,
         maxLevel: 100,
         baseStats: {
             attack: 480,
@@ -7537,7 +7537,7 @@ const FIXED_EQUIPMENTS = {
         type: 'equipment',
         slot: 'shoulder',
         rarity: 'purple',
-        level: 0,
+        level: 1,
         maxLevel: 100,
         baseStats: {
             spellPower: 480,
@@ -7561,7 +7561,7 @@ const FIXED_EQUIPMENTS = {
         type: 'equipment',
         slot: 'shoulder',
         rarity: 'purple',
-        level: 0,
+        level: 1,
         maxLevel: 100,
         baseStats: {
             spellPower: 450,
@@ -7641,7 +7641,7 @@ const FIXED_EQUIPMENTS = {
         type: 'equipment',
         slot: 'legs',
         rarity: 'purple',
-        level: 0,
+        level: 1,
         maxLevel: 100,
         baseStats: {
             hp: 6800,
@@ -7667,7 +7667,7 @@ const FIXED_EQUIPMENTS = {
         type: 'equipment',
         slot: 'legs',
         rarity: 'purple',
-        level: 0,
+        level: 1,
         maxLevel: 100,
         baseStats: {
             attack: 520,
@@ -7693,7 +7693,7 @@ const FIXED_EQUIPMENTS = {
         type: 'equipment',
         slot: 'legs',
         rarity: 'purple',
-        level: 0,
+        level: 1,
         maxLevel: 100,
         baseStats: {
             spellPower: 520,
@@ -7717,7 +7717,7 @@ const FIXED_EQUIPMENTS = {
         type: 'equipment',
         slot: 'legs',
         rarity: 'purple',
-        level: 0,
+        level: 1,
         maxLevel: 100,
         baseStats: {
             spellPower: 480,
@@ -7742,7 +7742,7 @@ const FIXED_EQUIPMENTS = {
       type: 'equipment',
       slot: 'chest',
       rarity: 'purple',
-      level: 0,
+      level: 1,
       maxLevel: 100,
       baseStats: {
         hp: 7200,
@@ -7762,7 +7762,7 @@ const FIXED_EQUIPMENTS = {
       type: 'equipment',
       slot: 'chest',
       rarity: 'purple',
-      level: 0,
+      level: 1,
       maxLevel: 100,
       baseStats: {
         attack: 560,
@@ -7782,7 +7782,7 @@ const FIXED_EQUIPMENTS = {
       type: 'equipment',
       slot: 'chest',
       rarity: 'purple',
-      level: 0,
+      level: 1,
       maxLevel: 100,
       baseStats: {
         spellPower: 560,
@@ -7801,7 +7801,7 @@ const FIXED_EQUIPMENTS = {
       type: 'equipment',
       slot: 'chest',
       rarity: 'purple',
-      level: 0,
+      level: 1,
       maxLevel: 100,
       baseStats: {
         spellPower: 520,
@@ -18566,7 +18566,7 @@ function gameReducer(state, action) {
                 newState.__readyWorldBosses = readyNow; // 临时字段（仅本次 reducer 内使用）
             }
 
-            // ===== 自动击杀世界首领 =====
+            // ===== 自动击杀世界首领 / 团队首领 =====
             // 规则：每个 boss 累计击杀>=10后，可开启；当 CD 好了（或本来就没CD）就自动击杀并掉落
             // 注意：不在 bossCombat 中执行，避免打断手动挑战
             if (!newState.bossCombat) {
@@ -18574,11 +18574,11 @@ function gameReducer(state, action) {
                 const autoCfg = newState.worldBossAutoKill || {};
 
                 const canAutoKillBoss = (bossId) => {
-                    const boss = WORLD_BOSSES?.[bossId];
-                    if (!boss) return false;
+                    const bossMeta = getBossMeta(bossId); // ✅ 世界首领 + 团队首领
+                    if (!bossMeta) return false;
 
-                    // 解锁条件：等级/道具
-                    const unlockedByLevel = !boss.unlockLevel || (newState.characters || []).some(c => (c.level || 0) >= (boss.unlockLevel || 0));
+                    // 解锁条件：等级/道具（世界首领特例）
+                    const unlockedByLevel = !bossMeta.unlockLevel || (newState.characters || []).some(c => (c.level || 0) >= (bossMeta.unlockLevel || 0));
                     if (!unlockedByLevel) return false;
                     if (bossId === 'prestor_lady' && !newState.worldBossProgress?.prestor_lady) return false;
 
@@ -18596,7 +18596,7 @@ function gameReducer(state, action) {
                 };
 
                 const grantBossRewardsAuto = (bossId) => {
-                    const bossData = BOSS_DATA[bossId] || WORLD_BOSSES[bossId];
+                    const bossData = BOSS_DATA[bossId] || getBossMeta(bossId) || WORLD_BOSSES[bossId] || TEAM_BOSSES[bossId];
                     if (!bossData?.rewards) return;
 
                     // 1) 设置下一次CD
@@ -18670,11 +18670,12 @@ function gameReducer(state, action) {
                     }
 
                     // 8) 记录战斗日志（用于可追溯）
+                    const isTeam = isTeamBoss(bossId);
                     const bossLogEntry = {
                         id: `bosslog_${Date.now()}_${Math.random()}`,
                         timestamp: Date.now(),
                         characterName: '队伍',
-                        zoneName: '世界首领',
+                        zoneName: isTeam ? '团队首领' : '世界首领',
                         enemyName: bossData.name || bossId,
                         result: 'victory',
                         logs: [`【自动击杀】${bossData.name || bossId} 已被自动击杀，获得金币与掉落。`, ...extraAutoLogs],
@@ -18686,6 +18687,7 @@ function gameReducer(state, action) {
                 // 先处理“刚刚转好”的 boss，再处理“本来就没CD”的 boss（避免同 tick 内重复）
                 const readyFromCd = Array.isArray(newState.__readyWorldBosses) ? newState.__readyWorldBosses : [];
                 const processed = new Set();
+
                 readyFromCd.forEach(bid => {
                     if (processed.has(bid)) return;
                     if (!canAutoKillBoss(bid)) return;
@@ -18693,7 +18695,12 @@ function gameReducer(state, action) {
                     grantBossRewardsAuto(bid);
                 });
 
-                Object.keys(WORLD_BOSSES || {}).forEach(bid => {
+                const allBossIds = Array.from(new Set([
+                    ...Object.keys(WORLD_BOSSES || {}),
+                    ...Object.keys(TEAM_BOSSES || {}),
+                ]));
+
+                allBossIds.forEach(bid => {
                     if (processed.has(bid)) return;
                     if (!canAutoKillBoss(bid)) return;
                     processed.add(bid);
@@ -26465,6 +26472,11 @@ const WorldBossPage = ({ state, dispatch }) => {
                             ? `${String(Math.floor(cdSeconds / 60)).padStart(2, '0')}:${String(cdSeconds % 60).padStart(2, '0')}`
                             : '';
 
+                        // ===== 自动击杀（跨世累计10次解锁） =====
+                        const totalKills = state.worldBossKillCounts?.[boss.id] || 0;
+                        const autoEnabled = !!state.worldBossAutoKill?.[boss.id];
+                        const autoUnlocked = totalKills >= 10;
+
                         const partySize = getBossPartySize(boss.id);
 
                         return (
@@ -26608,6 +26620,47 @@ const WorldBossPage = ({ state, dispatch }) => {
                                 {/* 挑战按钮 / 解锁条件 */}
                                 {unlocked ? (
                                     <div>
+                                        {/* 自动击杀开关 */}
+                                        <div style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'space-between',
+                                            gap: 10,
+                                            padding: '8px 10px',
+                                            marginBottom: 10,
+                                            background: 'rgba(0,0,0,0.22)',
+                                            border: '1px solid rgba(255,255,255,0.08)',
+                                            borderRadius: 6
+                                        }}>
+                                            <div style={{ lineHeight: 1.2 }}>
+                                                <div style={{ fontSize: 12, color: '#ffd700', fontWeight: 700 }}>
+                                                    🤖 自动击杀
+                                                </div>
+                                                <div style={{ fontSize: 10, color: '#aaa' }}>
+                                                    {autoUnlocked
+                                                        ? 'CD结束后自动击杀并掉落'
+                                                        : `解锁：累计击杀 ${totalKills}/10`}
+                                                </div>
+                                            </div>
+                                            <button
+                                                onClick={() => dispatch({ type: 'TOGGLE_WORLD_BOSS_AUTOKILL', payload: { bossId: boss.id } })}
+                                                disabled={!autoUnlocked}
+                                                style={{
+                                                    border: '1px solid rgba(255,255,255,0.12)',
+                                                    background: autoEnabled ? 'rgba(76,175,80,0.18)' : 'rgba(255,255,255,0.06)',
+                                                    color: autoUnlocked ? (autoEnabled ? '#7CFF7C' : '#ddd') : '#666',
+                                                    padding: '6px 10px',
+                                                    borderRadius: 999,
+                                                    fontSize: 11,
+                                                    fontWeight: 800,
+                                                    cursor: autoUnlocked ? 'pointer' : 'not-allowed',
+                                                    opacity: autoUnlocked ? 1 : 0.7
+                                                }}
+                                            >
+                                                {autoEnabled ? '开启' : '关闭'}
+                                            </button>
+                                        </div>
+
                                         {cdSeconds > 0 && (
                                             <div style={{
                                                 textAlign: 'center',

@@ -79,6 +79,9 @@ const BOSS_BONUS_CONFIG = {
     // ✅ 新增：熔火之心 - 管理者埃克索图斯
     majordomo_executus: { name: '管理者埃克索图斯', bonus: 0.25 },
 
+    // ✅ 新增：60级世界首领 - 堕落的瓦拉斯塔兹
+    corrupted_vaelastrasz: { name: '堕落的瓦拉斯塔兹', bonus: 0.30 },
+
     // ✅ 新增：团队首领 - 奥妮克希亚
     onyxia: { name: '奥妮克希亚', bonus: 0.30 },
 
@@ -10117,6 +10120,18 @@ const WORLD_BOSSES = {
         unlockLevel: 60
     },
 
+    // ✅ 新增：60级世界首领 - 堕落的瓦拉斯塔兹
+    corrupted_vaelastrasz: {
+        id: 'corrupted_vaelastrasz',
+        name: '堕落的瓦拉斯塔兹',
+        icon: 'icons/wow/vanilla/boss/vaelastrasz.png', // 需要添加对应图标
+        hp: 40000000,
+        attack: 25000,
+        defense: 20000,
+        rewards: { gold: 4000000, exp: 2200000 },
+        unlockLevel: 60
+    },
+
 };
 
 // ==================== 团队首领（Raid Boss） ====================
@@ -10851,6 +10866,45 @@ const BOSS_DATA = {
                 { id: 'EQ_189', chance: 0.2 },  // 奥术师长袍
                 { id: 'EQ_190', chance: 0.2 },  // 预言法袍
             ]
+        }
+    },
+
+    // ✅ 新增：60级世界首领 - 堕落的瓦拉斯塔兹
+    corrupted_vaelastrasz: {
+        id: 'corrupted_vaelastrasz',
+        name: '堕落的瓦拉斯塔兹',
+        maxHp: 40000000,
+        attack: 25000,
+        defense: 20000,
+
+        // 被动：红龙精华（战斗开始时为所有角色提供 +50 急速）
+        redDragonEssenceHasteBonus: 50,
+
+        // 技能循环：堕落顺劈 → 燃烧刺激 → 堕落顺劈 → 火焰新星
+        cycle: ['corrupted_cleave', 'burning_adrenaline', 'corrupted_cleave', 'fire_nova'],
+
+        // 技能1：堕落顺劈（物理）
+        // - 分散站位：对坦克造成 10×Boss攻击 的物理伤害
+        // - 集中站位：对所有角色造成 10×Boss攻击 的物理伤害
+        corruptedCleaveMultiplier: 10,
+
+        // 技能2：燃烧刺激
+        // - 随机目标（不会对已有燃烧刺激目标释放）
+        // - 若所有存活角色均已有燃烧刺激，则改为施放【火焰新星】
+        // - DOT：每回合最大生命值降低 5%，并失去 5% 当前生命值（持续至死亡）
+        // - 同时获得 100% 伤害增幅直到死亡
+        burningAdrenalineMaxHpReducePct: 0.05,
+        burningAdrenalineCurrentHpLossPct: 0.05,
+        burningAdrenalineDamageDealtMult: 2,
+
+        // 技能3：火焰新星（法术，火焰）
+        // - 对所有角色造成 2×Boss攻击 的法术伤害（计算魔抗）
+        fireNovaMultiplier: 2,
+
+        rewards: {
+            gold: 4000000,
+            exp: 2200000,
+            items: []
         }
     },
     // ✅ 新增：团队首领 - 奥妮克希亚（5人）
@@ -12677,6 +12731,35 @@ function stepBossCombat(state) {
             if (healerCount + eliteCount > 0) {
                 addLog(`【${boss.name}】被动：固有 ${healerCount} 个【${healerName}】与 ${eliteCount} 个【${eliteName}】登场！`, 'warning');
             }
+        }
+    }
+
+    // ==================== 堕落的瓦拉斯塔兹：被动（红龙精华） ====================
+    // 使所有角色获得 +50 急速（只在战斗开始时应用一次）
+    if (combat.bossId === 'corrupted_vaelastrasz') {
+        combat.bossBuffs = combat.bossBuffs || {};
+
+        if (!combat.bossBuffs.redDragonEssenceApplied) {
+            const hasteBonus = Number.isFinite(Number(boss.redDragonEssenceHasteBonus))
+                ? Number(boss.redDragonEssenceHasteBonus)
+                : 50;
+
+            combat.playerStates.forEach(ps => {
+                if (!ps) return;
+                ps.buffs = Array.isArray(ps.buffs) ? ps.buffs : [];
+                const exists = ps.buffs.some(b => b && b.type === 'red_dragon_essence');
+                if (!exists) {
+                    ps.buffs.push({
+                        type: 'red_dragon_essence',
+                        name: '红龙精华',
+                        hasteBonus,
+                        justApplied: true,
+                    });
+                }
+            });
+
+            combat.bossBuffs.redDragonEssenceApplied = true;
+            addLog(`【${boss.name}】被动【红龙精华】：所有角色获得 +${hasteBonus} 急速`, 'buff');
         }
     }
 
@@ -16128,6 +16211,151 @@ function stepBossCombat(state) {
     }
 
 
+    // ==================== 堕落的瓦拉斯塔兹技能处理 ====================
+    // 机制：
+    // - 物理伤害：护甲/格挡（calcMitigatedAndBlockedDamage）
+    // - 火焰伤害：魔抗（calcMagicDamage）
+    // - 被动【红龙精华】：战斗开始时为所有角色提供 +50 急速（在回合开头已处理）
+    // - 技能循环：堕落顺劈 → 燃烧刺激 → 堕落顺劈 → 火焰新星
+    else if (combat.bossId === 'corrupted_vaelastrasz') {
+        const stance = combat.strategy?.stance || 'dispersed';
+
+        // 技能1：堕落顺劈（物理）
+        // - 分散站位：打坦克
+        // - 集中站位：打全体
+        if (bossAction === 'corrupted_cleave') {
+            const raw = Math.floor((boss.attack || 0) * (boss.corruptedCleaveMultiplier || 10));
+
+            if (stance === 'concentrated') {
+                addLog(`【${boss.name}】施放【堕落顺劈】（集中站位：全体受击）！`, 'warning');
+                combat.playerStates.forEach((ps, pIdx) => {
+                    if (!ps || ps.currentHp <= 0) return;
+
+                    const { damage, dr, blockedAmount } = calcMitigatedAndBlockedDamage(ps, raw, true);
+                    const shieldResult = applyShieldAbsorb(ps, damage, logs, currentRound);
+                    ps.currentHp -= shieldResult.finalDamage;
+
+                    const drPct = Math.round(dr * 100);
+                    const blockText = blockedAmount > 0 ? `，格挡 ${blockedAmount}` : '';
+                    const shieldText = shieldResult.absorbed > 0 ? `，护盾吸收 ${shieldResult.absorbed}` : '';
+                    addLog(`→ 位置${pIdx + 1} ${ps.char.name} 受到 ${shieldResult.finalDamage} 点物理伤害（护甲减伤${drPct}%${blockText}${shieldText}）`);
+                });
+            } else {
+                const tIdx = pickAlivePlayerIndex();
+                if (tIdx < 0) {
+                    addLog(`【${boss.name}】施放【堕落顺劈】，但没有存活目标`);
+                } else {
+                    const target = combat.playerStates[tIdx];
+                    const { damage, dr, blockedAmount } = calcMitigatedAndBlockedDamage(target, raw, true);
+                    const shieldResult = applyShieldAbsorb(target, damage, logs, currentRound);
+                    target.currentHp -= shieldResult.finalDamage;
+
+                    const drPct = Math.round(dr * 100);
+                    const blockText = blockedAmount > 0 ? `，格挡 ${blockedAmount}` : '';
+                    const shieldText = shieldResult.absorbed > 0 ? `，护盾吸收 ${shieldResult.absorbed}` : '';
+                    addLog(`【${boss.name}】施放【堕落顺劈】（分散站位）命中 位置${tIdx + 1} ${target.char.name}，造成 ${shieldResult.finalDamage} 点物理伤害（护甲减伤${drPct}%${blockText}${shieldText}）`);
+                }
+            }
+        }
+
+        // 技能2：燃烧刺激
+        // - 随机目标（不会对已有燃烧刺激的目标释放）
+        // - 若所有存活角色都带有燃烧刺激，则改为施放【火焰新星】
+        else if (bossAction === 'burning_adrenaline') {
+            const candidates = combat.playerStates
+                .map((ps, idx) => ({ ps, idx }))
+                .filter(o => (o.ps?.currentHp ?? 0) > 0)
+                .filter(o => {
+                    const hasBuff = Array.isArray(o.ps?.buffs) && o.ps.buffs.some(b => b && b.type === 'burning_adrenaline');
+                    const hasDot = Array.isArray(o.ps?.dots) && o.ps.dots.some(d => d && (d.type === 'burning_adrenaline' || d.name === '燃烧刺激'));
+                    return !(hasBuff || hasDot);
+                })
+                .map(o => o.idx);
+
+            // 无可选目标：改为火焰新星
+            if (candidates.length === 0) {
+                const raw = Math.floor((boss.attack || 0) * (boss.fireNovaMultiplier || 2));
+                addLog(`【${boss.name}】尝试施放【燃烧刺激】，但所有存活目标都已被影响，转而施放【火焰新星】！`, 'warning');
+
+                combat.playerStates.forEach((ps, pIdx) => {
+                    if (!ps || ps.currentHp <= 0) return;
+
+                    const fire = calcMagicDamage(ps, raw);
+                    const shieldResult = applyShieldAbsorb(ps, fire.damage, logs, currentRound);
+                    ps.currentHp -= shieldResult.finalDamage;
+
+                    const resPct = Math.round(fire.resistReduction * 100);
+                    const mrText = Number(fire.magicResist) < 0 ? `（魔抗 ${Math.floor(fire.magicResist)}）` : '';
+                    const vulnPct = Math.round((fire.spellVulnMult - 1) * 100);
+                    const vulnText = vulnPct > 0 ? `，法术易伤+${vulnPct}%` : '';
+                    const shieldText = shieldResult.absorbed > 0 ? `，护盾吸收 ${shieldResult.absorbed}` : '';
+                    addLog(`→ 位置${pIdx + 1} ${ps.char.name} 受到 ${shieldResult.finalDamage} 点火焰伤害（魔抗减伤${resPct}%${mrText}${vulnText}${shieldText}）`);
+                });
+            } else {
+                const tIdx = candidates[Math.floor(Math.random() * candidates.length)];
+                const target = combat.playerStates[tIdx];
+
+                const maxHpReducePct = Number.isFinite(Number(boss.burningAdrenalineMaxHpReducePct))
+                    ? Number(boss.burningAdrenalineMaxHpReducePct)
+                    : 0.05;
+                const currentHpLossPct = Number.isFinite(Number(boss.burningAdrenalineCurrentHpLossPct))
+                    ? Number(boss.burningAdrenalineCurrentHpLossPct)
+                    : 0.05;
+                const dmgMult = Number.isFinite(Number(boss.burningAdrenalineDamageDealtMult))
+                    ? Number(boss.burningAdrenalineDamageDealtMult)
+                    : 2;
+
+                // 增伤BUFF（直到死亡）
+                target.buffs = Array.isArray(target.buffs) ? target.buffs : [];
+                target.buffs.push({
+                    type: 'burning_adrenaline',
+                    name: '燃烧刺激',
+                    damageDealtMult: dmgMult,
+                    justApplied: true,
+                });
+
+                // DOT（直到死亡，DOT结算阶段会使用“百分比扣血”特殊逻辑）
+                target.dots = Array.isArray(target.dots) ? target.dots : [];
+                target.dots.push({
+                    name: '燃烧刺激',
+                    type: 'burning_adrenaline',
+                    school: 'fire',
+                    isPermanent: true,
+                    duration: 999,
+                    maxHpReducePct,
+                    currentHpLossPct,
+                });
+
+                addLog(
+                    `【${boss.name}】对 位置${tIdx + 1} ${target.char.name} 施放【燃烧刺激】：每回合最大生命值降低${Math.round(maxHpReducePct * 100)}%并失去${Math.round(currentHpLossPct * 100)}%当前生命值（持续至死亡），同时伤害提高 +${Math.round((dmgMult - 1) * 100)}%`,
+                    'debuff'
+                );
+            }
+        }
+
+        // 技能3：火焰新星（AOE火焰法术伤害）
+        else if (bossAction === 'fire_nova') {
+            const raw = Math.floor((boss.attack || 0) * (boss.fireNovaMultiplier || 2));
+            addLog(`【${boss.name}】施放【火焰新星】！`, 'warning');
+
+            combat.playerStates.forEach((ps, pIdx) => {
+                if (!ps || ps.currentHp <= 0) return;
+
+                const fire = calcMagicDamage(ps, raw);
+                const shieldResult = applyShieldAbsorb(ps, fire.damage, logs, currentRound);
+                ps.currentHp -= shieldResult.finalDamage;
+
+                const resPct = Math.round(fire.resistReduction * 100);
+                const mrText = Number(fire.magicResist) < 0 ? `（魔抗 ${Math.floor(fire.magicResist)}）` : '';
+                const vulnPct = Math.round((fire.spellVulnMult - 1) * 100);
+                const vulnText = vulnPct > 0 ? `，法术易伤+${vulnPct}%` : '';
+                const shieldText = shieldResult.absorbed > 0 ? `，护盾吸收 ${shieldResult.absorbed}` : '';
+                addLog(`→ 位置${pIdx + 1} ${ps.char.name} 受到 ${shieldResult.finalDamage} 点火焰伤害（魔抗减伤${resPct}%${mrText}${vulnText}${shieldText}）`);
+            });
+        }
+    }
+
+
     // ==================== 火焰之王拉格纳罗斯（团队首领）技能处理 ====================
     // 机制：
     // - 火焰伤害：计算魔抗（calcMagicDamage）
@@ -17229,6 +17457,71 @@ function stepBossCombat(state) {
             if (isPoisonDot && tryFirstDebuffImmunity(ps, 'poison', pIdx, dot?.name || '中毒')) {
                 addLog(`→ 【${dot?.name || '中毒'}】被免疫，未产生伤害`, 'debuff');
                 return false;
+            }
+
+            // ✅ 特殊DOT：燃烧刺激（百分比扣血 + 降低最大生命值，持续至死亡）
+            // 设计：
+            // - 每回合最大生命值降低 5%
+            // - 同时失去 5% 当前生命值（视为火焰DOT：吃魔抗/法术易伤/承伤乘区/护盾）
+            if (dot?.type === 'burning_adrenaline') {
+                const maxPct = Number.isFinite(Number(dot.maxHpReducePct)) ? Number(dot.maxHpReducePct) : 0.05;
+                const curPct = Number.isFinite(Number(dot.currentHpLossPct)) ? Number(dot.currentHpLossPct) : 0.05;
+
+                const oldMax = Math.max(1, Math.floor(Number(ps.char?.stats?.maxHp) || 0));
+                const reduceMax = Math.max(0, Math.floor(oldMax * maxPct));
+                const newMax = Math.max(1, oldMax - reduceMax);
+
+                // 降低最大生命值（不走护盾/减伤）
+                if (ps.char?.stats) {
+                    ps.char.stats.maxHp = newMax;
+                }
+
+                // 若当前生命值超过新的最大生命值，溢出部分直接损失（不计入护盾吸收）
+                let overflowLoss = 0;
+                if ((ps.currentHp ?? 0) > newMax) {
+                    overflowLoss = (ps.currentHp ?? 0) - newMax;
+                    ps.currentHp = newMax;
+                }
+
+                // 失去当前生命值：火焰DOT（魔抗 + 法术易伤 + 承伤乘区 + 护盾）
+                const versTakenMult = getVersatilityDamageTakenMult(ps.char?.stats?.versatility);
+
+                let baseLoss = Math.max(1, Math.floor((ps.currentHp ?? 0) * curPct));
+                const magicResist = ps.char?.stats?.magicResist || 0;
+                const resistReduction = getMagicResistDamageReduction(magicResist);
+                baseLoss = Math.floor(baseLoss * (1 - resistReduction));
+
+                const spellVulnMult = getSpellVulnerabilityMult(ps);
+                const vulnPct = Math.round((spellVulnMult - 1) * 100);
+
+                const takenMult = ps.char?.stats?.damageTakenMult ?? 1;
+                let buffTakenMult = 1;
+                if (ps.buffs) {
+                    ps.buffs.forEach(b => {
+                        if (b.damageTakenMult) buffTakenMult *= b.damageTakenMult;
+                    });
+                }
+                const demoralizingShoutMult = combat.bossDebuffs?.demoralizingShout?.damageMult ?? 1;
+
+                const dmg = Math.max(1, Math.floor(baseLoss * takenMult * buffTakenMult * getAtonementDamageTakenMult(ps) * demoralizingShoutMult * versTakenMult * spellVulnMult));
+                const shieldResult = applyShieldAbsorb(ps, dmg, logs, currentRound);
+                ps.currentHp -= shieldResult.finalDamage;
+
+                const parts = [];
+                parts.push(`魔抗减伤${Math.round(resistReduction * 100)}%`);
+                if (vulnPct > 0) parts.push(`法术易伤+${vulnPct}%`);
+                const extraText = parts.length ? `（${parts.join('，')}）` : '';
+
+                const shieldText = shieldResult.absorbed > 0 ? `，护盾吸收 ${shieldResult.absorbed}` : '';
+                const maxText = reduceMax > 0 ? `最大生命值 -${reduceMax}（${oldMax}→${newMax}）` : `最大生命值不变（${oldMax}）`;
+                const overflowText = overflowLoss > 0 ? `，溢出生命值损失 ${overflowLoss}` : '';
+                addLog(
+                    `【${dot.name || '燃烧刺激'}】对 位置${pIdx + 1} ${ps.char.name} 生效：${maxText}${overflowText}，造成 ${shieldResult.finalDamage} 点火焰伤害${extraText}${shieldText}（持续至死亡）`,
+                    'debuff'
+                );
+
+                // 持续至死亡：不减少持续时间，不自动移除
+                return true;
             }
 
             // DOT伤害类型：
@@ -30430,6 +30723,11 @@ const BossPrepareModal = ({ state, dispatch }) => {
         anti_physical_shield: '反物理护盾',
         arcane_explosion: '奥爆术',
         anti_magic_shield: '反魔法护盾',
+
+        // ✅ 堕落的瓦拉斯塔兹
+        corrupted_cleave: '堕落顺劈',
+        burning_adrenaline: '燃烧刺激',
+        fire_nova: '火焰新星',
     };
 
     const formatBossCycle = (boss) =>

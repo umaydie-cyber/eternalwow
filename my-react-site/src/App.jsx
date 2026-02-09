@@ -32051,6 +32051,82 @@ const BossPrepareModal = ({ state, dispatch }) => {
 
                                 )}
 
+                                {/* 堕落的瓦拉斯塔兹的技能 */}
+                                {bossId === 'corrupted_vaelastrasz' && (
+                                  <>
+                                    <div style={{
+                                      padding: 10,
+                                      background: 'rgba(255,152,0,0.10)',
+                                      borderRadius: 6,
+                                      borderLeft: '3px solid #ff9800'
+                                    }}>
+                                      <div style={{ fontSize: 12, color: '#ffcc80', fontWeight: 600, marginBottom: 4 }}>
+                                        🐉 被动：红龙精华
+                                      </div>
+                                      <div style={{ fontSize: 11, color: '#aaa', lineHeight: 1.5 }}>
+                                        战斗开始时，使<span style={{ color: '#ff9800' }}>所有角色</span>获得
+                                        <span style={{ color: '#ffd700' }}> +{boss.redDragonEssenceHasteBonus ?? 50}</span> 急速
+                                      </div>
+                                    </div>
+
+                                    <div style={{
+                                      padding: 10,
+                                      background: 'rgba(244,67,54,0.10)',
+                                      borderRadius: 6,
+                                      borderLeft: '3px solid #f44336'
+                                    }}>
+                                      <div style={{ fontSize: 12, color: '#ff6b6b', fontWeight: 600, marginBottom: 4 }}>
+                                        🗡️ 技能1：堕落顺劈
+                                      </div>
+                                      <div style={{ fontSize: 11, color: '#aaa', lineHeight: 1.5 }}>
+                                        <span style={{ color: '#81c784' }}>分散站位：</span>对<span style={{ color: '#ff9800' }}>坦克（1号位）</span>造成
+                                        <span style={{ color: '#ffd700' }}> Boss攻击×{boss.corruptedCleaveMultiplier || 10}</span> 的<span style={{ color: '#ffd700' }}>物理伤害</span>
+                                        <br/>
+                                        <span style={{ color: '#64b5f6' }}>集中站位：</span>对<span style={{ color: '#ff9800' }}>所有角色</span>造成相同的物理伤害
+                                        <br/>
+                                        <span style={{ color: '#888' }}>（护甲/格挡可减免）</span>
+                                      </div>
+                                    </div>
+
+                                    <div style={{
+                                      padding: 10,
+                                      background: 'rgba(255,87,34,0.10)',
+                                      borderRadius: 6,
+                                      borderLeft: '3px solid #ff5722'
+                                    }}>
+                                      <div style={{ fontSize: 12, color: '#ffab91', fontWeight: 600, marginBottom: 4 }}>
+                                        🔥 技能2：燃烧刺激
+                                      </div>
+                                      <div style={{ fontSize: 11, color: '#aaa', lineHeight: 1.5 }}>
+                                        随机目标（不会对已有<span style={{ color: '#ffd700' }}>燃烧刺激</span>的目标释放）
+                                        <br/>
+                                        若<span style={{ color: '#ff9800' }}>所有存活角色</span>都已被影响，则改为施放<span style={{ color: '#ffd700' }}>【火焰新星】</span>
+                                        <br/>
+                                        DOT：每回合<span style={{ color: '#ffd700' }}>最大生命值降低 {Math.round(((boss.burningAdrenalineMaxHpReducePct ?? 0.05) * 100))}%</span>，并失去
+                                        <span style={{ color: '#ffd700' }}> {Math.round(((boss.burningAdrenalineCurrentHpLossPct ?? 0.05) * 100))}% 当前生命值</span>（持续至死亡）
+                                        <br/>
+                                        同时获得<span style={{ color: '#ffd700' }}> +{Math.round((((boss.burningAdrenalineDamageDealtMult ?? 2) - 1) * 100))}%</span> 伤害增幅
+                                        （造成伤害×<span style={{ color: '#ffd700' }}>{boss.burningAdrenalineDamageDealtMult ?? 2}</span>）
+                                      </div>
+                                    </div>
+
+                                    <div style={{
+                                      padding: 10,
+                                      background: 'rgba(255,193,7,0.10)',
+                                      borderRadius: 6,
+                                      borderLeft: '3px solid #ffc107'
+                                    }}>
+                                      <div style={{ fontSize: 12, color: '#ffd54f', fontWeight: 600, marginBottom: 4 }}>
+                                        🌋 技能3：火焰新星
+                                      </div>
+                                      <div style={{ fontSize: 11, color: '#aaa', lineHeight: 1.5 }}>
+                                        对<span style={{ color: '#ff9800' }}>所有角色</span>造成
+                                        <span style={{ color: '#ffd700' }}> Boss攻击×{boss.fireNovaMultiplier || 2}</span> 的<span style={{ color: '#ff7043' }}>火焰法术伤害</span>（计算魔抗）
+                                      </div>
+                                    </div>
+                                  </>
+                                )}
+
                                 {/* 火焰之王拉格纳罗斯的技能 */}
                                 {bossId === 'ragnaros' && (
                                   <>

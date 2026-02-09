@@ -8408,12 +8408,12 @@ const FIXED_EQUIPMENTS = {
       level: 0,
       maxLevel: 100,
       baseStats: {
-        attack: 2000,
-        hp: 4200,
+        attack: 2300,
+        hp: 4800,
         critRate: 30,
         critDamage: 0.85,
-        haste: 22,
-        mastery: 20,
+        haste: 20,
+        mastery: 10,
       },
       growth: {
         attack: 2,
@@ -8437,15 +8437,11 @@ const FIXED_EQUIPMENTS = {
       maxLevel: 100,
       baseStats: {
         spellPower: 950,
-        hp: 6000,
-        mastery: 26,
-        versatility: 22,
+        hp: 4000,
       },
       growth: {
         spellPower: 2,
         hp: 2,
-        mastery: 2,
-        versatility: 2,
       },
       specialEffect: {
         name: '生命涌动',
@@ -8468,12 +8464,11 @@ const FIXED_EQUIPMENTS = {
       level: 0,
       maxLevel: 100,
       baseStats: {
-        spellPower: 1850,
+        spellPower: 2250,
         hp: 4500,
-        critRate: 16,
+        critRate: 18,
         haste: 22,
-        mastery: 26,
-        versatility: 20,
+        mastery: 32,
       },
       growth: {
         spellPower: 2,
@@ -8481,17 +8476,6 @@ const FIXED_EQUIPMENTS = {
         critRate: 2,
         haste: 2,
         mastery: 2,
-        versatility: 2,
-      },
-      specialEffect: {
-        name: '暗影之翼',
-        type: 'proc_damage',
-        trigger: 'turn_start',
-        chance: 0.20,
-        school: 'shadow',
-        basedOn: 'spellPower',
-        damageMult: 0.80,
-        scaleWithLevel: true
       }
     },
 
@@ -8506,7 +8490,7 @@ const FIXED_EQUIPMENTS = {
       level: 0,
       maxLevel: 100,
       baseStats: {
-        spellPower: 1700,
+        spellPower: 1900,
         hp: 7000,
         mastery: 26,
         versatility: 24,
@@ -8536,17 +8520,17 @@ const FIXED_EQUIPMENTS = {
       level: 0,
       maxLevel: 100,
       baseStats: {
-        hp: 6500,
+        hp: 7200,
         armor: 220,
-        mastery: 13,
+        magicResist: 60,
         blockRate: 5,
         blockValue: 520,
-        versatility: 12,
+        versatility: 14,
       },
       growth: {
         hp: 2,
         armor: 2,
-        mastery: 2,
+        magicResist: 2,
         blockRate: 2,
         blockValue: 2,
         versatility: 2,
@@ -8567,10 +8551,10 @@ const FIXED_EQUIPMENTS = {
       maxLevel: 100,
       baseStats: {
         attack: 560,
-        hp: 4200,
+        hp: 4000,
         armor: 190,
         critRate: 14,
-        haste: 18,
+        magicResist: 60,
         mastery: 16,
       },
       growth: {
@@ -8578,7 +8562,7 @@ const FIXED_EQUIPMENTS = {
         hp: 2,
         armor: 2,
         critRate: 2,
-        haste: 2,
+        magicResist: 2,
         mastery: 2,
       }
     },
@@ -8597,16 +8581,16 @@ const FIXED_EQUIPMENTS = {
       maxLevel: 100,
       baseStats: {
         spellPower: 560,
-        hp: 4200,
+        hp: 4000,
         critRate: 12,
-        haste: 16,
+        magicResist: 60,
         versatility: 18,
       },
       growth: {
         spellPower: 2,
         hp: 2,
         critRate: 2,
-        haste: 2,
+        magicResist: 2,
         versatility: 2,
       }
     },
@@ -8626,15 +8610,15 @@ const FIXED_EQUIPMENTS = {
       baseStats: {
         spellPower: 520,
         hp: 4800,
+        magicResist: 60,
         mastery: 16,
         haste: 14,
-        versatility: 18,
       },
       growth: {
         spellPower: 2,
         hp: 2,
+        magicResist: 2,
         mastery: 2,
-        haste: 2,
         versatility: 2,
       }
     },
@@ -8654,15 +8638,15 @@ const FIXED_EQUIPMENTS = {
       baseStats: {
         hp: 5800,
         armor: 200,
-        mastery: 13,
+        magicResist: 80,
         blockRate: 4,
         blockValue: 480,
-        versatility: 12,
+        versatility: 14,
       },
       growth: {
         hp: 2,
         armor: 2,
-        mastery: 2,
+        magicResist: 2,
         blockRate: 2,
         blockValue: 2,
         versatility: 2,
@@ -8682,20 +8666,20 @@ const FIXED_EQUIPMENTS = {
       level: 0,
       maxLevel: 100,
       baseStats: {
-        attack: 480,
+        attack: 500,
         hp: 3600,
         armor: 170,
-        critRate: 12,
+        magicResist: 60,
+        critRate: 14,
         mastery: 16,
-        versatility: 18,
       },
       growth: {
         attack: 2,
         hp: 2,
         armor: 2,
+        magicResist: 2,
         critRate: 2,
         mastery: 2,
-        versatility: 2,
       }
     },
 
@@ -8712,18 +8696,18 @@ const FIXED_EQUIPMENTS = {
       level: 0,
       maxLevel: 100,
       baseStats: {
-        spellPower: 480,
+        spellPower: 520,
         hp: 3600,
+        magicResist: 80,
         haste: 14,
         mastery: 16,
-        versatility: 18,
       },
       growth: {
         spellPower: 2,
         hp: 2,
+        magicResist: 2,
         haste: 2,
         mastery: 2,
-        versatility: 2,
       }
     },
 
@@ -8740,17 +8724,17 @@ const FIXED_EQUIPMENTS = {
       level: 0,
       maxLevel: 100,
       baseStats: {
-        spellPower: 460,
+        spellPower: 480,
         hp: 4200,
+        magicResist: 80,
         mastery: 14,
-        critRate: 12,
-        versatility: 18,
+        versatility: 16,
       },
       growth: {
         spellPower: 2,
         hp: 2,
+        magicResist: 1,
         mastery: 2,
-        critRate: 2,
         versatility: 2,
       }
     },
@@ -8770,18 +8754,18 @@ const FIXED_EQUIPMENTS = {
       baseStats: {
         hp: 7200,
         armor: 230,
-        mastery: 13,
+        magicResist: 100,
+        mastery: 14,
         blockRate: 5,
         blockValue: 560,
-        versatility: 12,
       },
       growth: {
         hp: 2,
         armor: 2,
+        magicResist: 2,
         mastery: 2,
         blockRate: 2,
         blockValue: 2,
-        versatility: 2,
       }
     },
 
@@ -8801,16 +8785,16 @@ const FIXED_EQUIPMENTS = {
         attack: 620,
         hp: 4300,
         armor: 190,
+        magicResist: 80,
         critRate: 14,
-        mastery: 16,
         haste: 16,
       },
       growth: {
         attack: 2,
         hp: 2,
         armor: 2,
+        magicResist: 2,
         critRate: 2,
-        mastery: 2,
         haste: 2,
       }
     },
@@ -8828,17 +8812,17 @@ const FIXED_EQUIPMENTS = {
       level: 0,
       maxLevel: 100,
       baseStats: {
-        spellPower: 620,
+        spellPower: 650,
         hp: 4300,
-        critRate: 12,
-        haste: 16,
-        versatility: 18,
+        magicResist: 80,
+        critRate: 14,
+        versatility: 16,
       },
       growth: {
         spellPower: 2,
         hp: 2,
+        magicResist: 80,
         critRate: 2,
-        haste: 2,
         versatility: 2,
       }
     },
@@ -8856,24 +8840,20 @@ const FIXED_EQUIPMENTS = {
       level: 0,
       maxLevel: 100,
       baseStats: {
-        spellPower: 580,
+        spellPower: 600,
         hp: 5200,
-        mastery: 16,
-        haste: 14,
-        versatility: 18,
+        magicResist: 80,
+        mastery: 14,
+        haste: 16,
       },
       growth: {
         spellPower: 2,
         hp: 2,
+        magicResist: 2,
         mastery: 2,
         haste: 2,
-        versatility: 2,
       }
     },
-
-
-
-
 };
 
 //赤脊山5件图鉴100级点亮效果

@@ -31132,7 +31132,7 @@ const BossPrepareModal = ({ state, dispatch }) => {
                                     border: '1px solid rgba(255,80,80,0.25)'
                                   }}>
                                     <div style={{ fontSize: 12, color: '#ffb3b3', fontWeight: 700, marginBottom: 8 }}>
-                                      🐉 团队首领：奥妮克希亚（站位会改变技能效果）
+                                      🐉 团队首领：奥妮克希亚
                                     </div>
 
                                     <div style={{ display: 'grid', gap: 10, fontSize: 11, color: '#ddd', lineHeight: 1.6 }}>

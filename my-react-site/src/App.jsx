@@ -11743,20 +11743,27 @@ function learnNewSkills(character) {
 
 // 计算“全队光环”倍率：只要队里有人点了，就全队吃到
 function getPartyAuraMultipliers(characters) {
-    let hpMul = 1;
-    let spellPowerMul = 1;
+    let pwtCount = 0;           // 真言术：耐（HP+10%）
+    let holyEnlightCount = 0;   // 神圣启迪（法强+5%）
+    let arcaneIntCount = 0;     // 奥术智慧（法强+10%）
 
     (characters || []).forEach(c => {
         const t = c.talents || {};
-        // 30级：真言术耐（全队HP+10%）
-        if (t[30] === 'pwt') hpMul *= 1.10;
-
-        // 30级：神圣启迪（全队法强+5%）
-        if (t[30] === 'holy_enlight') spellPowerMul *= 1.05;
-
-        // 冰霜法师40级：奥术智慧（全队法强+10%）
-        if (t[40] === 'arcane_intellect') spellPowerMul *= 1.10;
+        if (t[30] === 'pwt') pwtCount += 1;
+        if (t[30] === 'holy_enlight') holyEnlightCount += 1;
+        if (t[40] === 'arcane_intellect') arcaneIntCount += 1;
     });
+
+    const cap = 3;
+    const pwtStacks = Math.min(pwtCount, cap);
+    const holyStacks = Math.min(holyEnlightCount, cap);
+    const arcaneStacks = Math.min(arcaneIntCount, cap);
+
+    // 每层分别乘一次，但层数最多 3
+    const hpMul = Math.pow(1.10, pwtStacks);
+    const spellPowerMul =
+        Math.pow(1.05, holyStacks) *
+        Math.pow(1.10, arcaneStacks);
 
     return { hpMul, spellPowerMul };
 }

@@ -1492,6 +1492,7 @@ const SKILLS = {
         id: 'ice_spike',
         name: '冰刺',
         icon: '🧊',
+        iconUrl : 'icons/wow/vanilla/spells/Spell_Frost_Frostbolt.png',
         type: 'passive',
         description: '被动：你的寒冰箭、冰风暴以及彗星风暴会使你获得1层【冰刺】，至多存储7枚。当你使用冰枪术时，释放所有冰刺，每一枚冰刺对目标造成当前冰枪术实际造成伤害10%的真实伤害。'
     },

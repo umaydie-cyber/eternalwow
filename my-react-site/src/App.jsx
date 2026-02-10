@@ -33415,7 +33415,7 @@ const BossPrepareModal = ({ state, dispatch }) => {
                                       <div style={{ padding: 10, background: 'rgba(0,0,0,0.25)', borderRadius: 6 }}>
                                         <div style={{ color: '#ffd700', fontWeight: 700, marginBottom: 4 }}>技能4：低沉咆哮</div>
                                         <div>
-                                          使所有角色陷入恐惧，持续 <b>{boss.fearDuration ?? 2}</b> 回合无法行动（亡灵：首个恐惧免疫）。
+                                          使所有角色陷入恐惧，持续 <b>{boss.fearDuration ?? 2}</b> 回合无法行动。
                                         </div>
                                       </div>
 

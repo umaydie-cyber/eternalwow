@@ -10948,10 +10948,10 @@ const TEAM_BOSSES = {
         id: 'nefarian',
         name: '奈法利安',
         icon: 'icons/wow/vanilla/boss/nefarian.png', // 预留：自行补图标
-        hp: 40000000,
-        attack: 24000,
-        defense: 24000,
-        rewards: { gold: 4000000, exp: 2200000 },
+        hp: 50000000,
+        attack: 32000,
+        defense: 32000,
+        rewards: { gold: 4500000, exp: 3200000 },
         unlockLevel: 60,
         partySize: 5, // ✅ 团队首领：5人
     },
@@ -11888,9 +11888,9 @@ const BOSS_DATA = {
     nefarian: {
         id: 'nefarian',
         name: '奈法利安',
-        maxHp: 40000000,
-        attack: 24000,
-        defense: 24000,
+        maxHp: 50000000,
+        attack: 32000,
+        defense: 32000,
 
         // 召唤物基础属性
         drakeHp: 5000000,
@@ -11920,8 +11920,8 @@ const BOSS_DATA = {
         ],
 
         rewards: {
-            gold: 4000000,
-            exp: 2200000,
+            gold: 5000000,
+            exp: 3200000,
             items: [
                 // ===== 奈法利安专属掉落（T2胸甲 / 武器 / 饰品 / 戒指） =====
                 { id: 'EQ_242', chance: 0.10 }, // 愤怒胸甲

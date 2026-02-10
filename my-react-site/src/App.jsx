@@ -88,6 +88,9 @@ const BOSS_BONUS_CONFIG = {
     // ✅ 新增：团队首领 - 克洛玛古斯
     chromaggus: { name: '克洛玛古斯', bonus: 0.30 },
 
+    // ✅ 新增：团队首领 - 奈法利安
+    nefarian: { name: '奈法利安', bonus: 0.30 },
+
     // ✅ 新增：团队首领 - 火焰之王拉格纳罗斯
     // 说明：团队首领与世界首领共用同一套战斗/奖励结算机制，仅在 UI/队伍人数上做区分。
     ragnaros: { name: '火焰之王拉格纳罗斯', bonus: 0.30 },
@@ -272,6 +275,7 @@ const CLASSES = {
             { level: 60, skillId: 'adrenaline_rush' },
         ]
     }
+
 };
 
 // ==================== 资源建筑（不可建造，用于派遣采集） ====================
@@ -10552,6 +10556,19 @@ const TEAM_BOSSES = {
         unlockLevel: 60,
         partySize: 5, // ✅ 团队首领：5人
     },
+
+    // ✅ 新增：团队首领 - 奈法利安（60级解锁）
+    nefarian: {
+        id: 'nefarian',
+        name: '奈法利安',
+        icon: 'icons/wow/vanilla/boss/nefarian.png', // 预留：自行补图标
+        hp: 40000000,
+        attack: 24000,
+        defense: 24000,
+        rewards: { gold: 4000000, exp: 2200000 },
+        unlockLevel: 60,
+        partySize: 5, // ✅ 团队首领：5人
+    },
 };
 
 // UI/逻辑层通用：获取 Boss 元信息
@@ -11443,6 +11460,49 @@ const BOSS_DATA = {
                 { id: 'EQ_240', chance: 0.10 }, // 克洛玛古斯之爪（法伤/暴击/爆伤 副手）
                 { id: 'EQ_241', chance: 0.10 }, // 多彩之剑（攻强副手）
 ]
+        }
+    },
+
+
+    // ✅ 新增：团队首领 - 奈法利安（5人）
+    nefarian: {
+        id: 'nefarian',
+        name: '奈法利安',
+        maxHp: 40000000,
+        attack: 24000,
+        defense: 24000,
+
+        // 召唤物基础属性
+        drakeHp: 5000000,
+        drakeHeavyMultiplier: 2.5,
+        boneGolemHp: 5000000,
+        boneGolemHeavyMultiplier: 5,
+        boneGolemPerDrakeDeathBonus: 0.20, // 每死亡1只龙兽：白骨魔像血量&攻击 +20%
+
+        // 技能倍率
+        shadowflameMultiplier: 3,
+        shadowMistMultiplier: 3,
+        shadowMistHealingReduction: 0.80,
+        shadowMistDuration: 2,
+        fearDuration: 2,
+
+        // 技能循环：
+        // 召唤多彩龙兽 → 暗影烈焰 → 暗影迷雾 → 召唤青铜龙兽 → 暗影烈焰 → 暗影迷雾 → 低沉咆哮 → 召唤白骨魔像
+        cycle: [
+            'summon_chromatic_drake',
+            'shadow_flame',
+            'shadow_mist',
+            'summon_bronze_drake',
+            'shadow_flame',
+            'shadow_mist',
+            'low_roar',
+            'summon_bone_golem',
+        ],
+
+        rewards: {
+            gold: 4000000,
+            exp: 2200000,
+            items: []
         }
     },
 
@@ -12828,7 +12888,20 @@ function stepBossCombat(state) {
         return school !== 'physical';
     };
 
-    const getExecutusShieldInfo = (school) => {
+    const getExecutusShieldInfo = (school, targetType = 'boss') => {
+        // ==================== 奈法利安：龙兽存续期间，Boss获得伤害免疫（仅Boss） ====================
+        // 多彩龙兽：Boss免疫法术/非物理伤害；青铜龙兽：Boss免疫物理伤害。
+        if (combat.bossId === 'nefarian' && targetType === 'boss') {
+            const isMagic = isMagicSchool(school);
+
+            const hasChromaticDrake = (combat.minions || []).some(m => (m?.hp ?? 0) > 0 && m.isNefarianChromaticDrake);
+            const hasBronzeDrake = (combat.minions || []).some(m => (m?.hp ?? 0) > 0 && m.isNefarianBronzeDrake);
+
+            if (isMagic && hasChromaticDrake) return { immune: true, shieldName: '多彩龙兽庇护' };
+            if (!isMagic && hasBronzeDrake) return { immune: true, shieldName: '青铜龙兽庇护' };
+        }
+
+        // ==================== 管理者埃克索图斯：护盾免疫（反物理 / 反魔法） ====================
         if (combat.bossId !== 'majordomo_executus') return { immune: false, shieldName: '' };
 
         const isMagic = isMagicSchool(school);
@@ -13404,7 +13477,7 @@ function stepBossCombat(state) {
 
             // 伤害：Boss
             if ((combat.bossHp ?? 0) > 0 && !isRagnarosSubmergedThisRound) {
-                const shieldInfo = getExecutusShieldInfo('nature');
+                const shieldInfo = getExecutusShieldInfo('nature', 'boss');
                 if (shieldInfo.immune) {
                     addLog(`【${thunderfury.label}】闪电链被【${shieldInfo.shieldName}】免疫`, 'warning');
                 } else {
@@ -13424,7 +13497,7 @@ function stepBossCombat(state) {
                         return;
                     }
 
-                    const shieldInfo = getExecutusShieldInfo('nature');
+                    const shieldInfo = getExecutusShieldInfo('nature', 'minion');
                     if (shieldInfo.immune) {
                         addLog(`【${thunderfury.label}】闪电链被【${shieldInfo.shieldName}】免疫`, 'warning');
                         return;
@@ -13485,7 +13558,7 @@ function stepBossCombat(state) {
                 }
 
                 // 管理者埃克索图斯护盾判定（火焰/暗影/自然 等视为“反魔法护盾”）
-                const shieldInfo = getExecutusShieldInfo(school);
+                const shieldInfo = getExecutusShieldInfo(school, tType);
                 if (shieldInfo.immune) {
                     if (tType === 'boss') {
                         addLog(`【${pd.label}】伤害被【${shieldInfo.shieldName}】免疫（目标：${boss.name}）`, 'warning');
@@ -13691,12 +13764,14 @@ function stepBossCombat(state) {
             const minionName = boss.minion?.name || boss.cannoneer?.name || '小弟';
 
             // 复制伤害默认按“物理”处理（可被管理者埃克索图斯【反物理护盾】免疫）
-            const shieldInfo = getExecutusShieldInfo('physical');
+            // 奈法利安：免疫仅对Boss生效，因此需要分别判定 Boss / 小弟。
+            const shieldInfoBoss = getExecutusShieldInfo('physical', 'boss');
+            const shieldInfoMinion = getExecutusShieldInfo('physical', 'minion');
 
             // 主目标是小弟 -> 额外打Boss
             if (targetType !== 'boss' && combat.bossHp > 0 && !isRagnarosSubmergedThisRound) {
-                if (shieldInfo.immune) {
-                    addLog(`【剑刃乱舞】额外伤害被【${shieldInfo.shieldName}】免疫！`, 'warning');
+                if (shieldInfoBoss.immune) {
+                    addLog(`【剑刃乱舞】额外伤害被【${shieldInfoBoss.shieldName}】免疫！`, 'warning');
                 } else {
                 const bossDefRaw = Number(boss.defense) || 0;
                 const bossDef = getEffectiveTargetDefense(p.char, bossDefRaw);
@@ -13718,8 +13793,8 @@ function stepBossCombat(state) {
                         return;
                     }
 
-                    if (shieldInfo.immune) {
-                        addLog(`【剑刃乱舞】额外伤害被【${shieldInfo.shieldName}】免疫！`, 'warning');
+                    if (shieldInfoMinion.immune) {
+                        addLog(`【剑刃乱舞】额外伤害被【${shieldInfoMinion.shieldName}】免疫！`, 'warning');
                         return;
                     }
 
@@ -13791,7 +13866,7 @@ function stepBossCombat(state) {
 
                 // 管理者埃克索图斯：反物理护盾（免疫物理伤害）
                 {
-                    const shieldInfo = getExecutusShieldInfo('physical');
+                    const shieldInfo = getExecutusShieldInfo('physical', targetType);
                     if (shieldInfo.immune) {
                         const minionName = boss.minion?.name || boss.cannoneer?.name || '小弟';
                         addLog(`位置${i + 1} ${p.char.name} 的攻击被【${shieldInfo.shieldName}】免疫（目标：${targetType === 'boss' ? boss.name : minionName}）`, 'warning');
@@ -13874,7 +13949,7 @@ function stepBossCombat(state) {
 
             // 对 Boss 造成伤害
             if (combat.bossHp > 0 && !isRagnarosSubmergedThisRound) {
-                const shieldInfo = getExecutusShieldInfo(result.school);
+                const shieldInfo = getExecutusShieldInfo(result.school, 'boss');
                 if (shieldInfo.immune) {
                     addLog(`位置${i + 1} ${p.char.name} 的${skillName}被【${shieldInfo.shieldName}】免疫（目标：${boss.name}）`, 'warning');
                 } else {
@@ -13917,7 +13992,7 @@ function stepBossCombat(state) {
                     return;
                 }
 
-                const shieldInfo = getExecutusShieldInfo(result.school);
+                const shieldInfo = getExecutusShieldInfo(result.school, 'minion');
                 if (shieldInfo.immune) {
                     addLog(`位置${i + 1} ${p.char.name} 的${skillName}被【${shieldInfo.shieldName}】免疫（目标：${(m.displayName || `${(boss.minion?.name || boss.cannoneer?.name || '小弟')}${idx + 1}`)}）`, 'warning');
                     return;
@@ -13952,7 +14027,7 @@ function stepBossCombat(state) {
                 addLog(`【山丘之王】触发：雷霆一击再次释放！`);
 
                 if (combat.bossHp > 0 && !isRagnarosSubmergedThisRound) {
-                    const shieldInfo = getExecutusShieldInfo(extraResult.school);
+                    const shieldInfo = getExecutusShieldInfo(extraResult.school, 'boss');
                     if (shieldInfo.immune) {
                         addLog(`雷霆一击(山丘之王)被【${shieldInfo.shieldName}】免疫（目标：${boss.name}）`, 'warning');
                     } else {
@@ -13974,7 +14049,7 @@ function stepBossCombat(state) {
                         return;
                     }
 
-                    const shieldInfo = getExecutusShieldInfo(extraResult.school);
+                    const shieldInfo = getExecutusShieldInfo(extraResult.school, 'minion');
                     if (shieldInfo.immune) {
                         addLog(`雷霆一击(山丘之王)被【${shieldInfo.shieldName}】免疫（目标：${(m.displayName || `${(boss.minion?.name || boss.cannoneer?.name || '小弟')}${idx + 1}`)}）`, 'warning');
                         return;
@@ -14030,7 +14105,7 @@ function stepBossCombat(state) {
             const targetDefense = getEffectiveTargetDefense(p.char, targetDefenseRaw);
 
             // 检查目标是否免疫
-            const shieldInfo = getExecutusShieldInfo(result.school);
+            const shieldInfo = getExecutusShieldInfo(result.school, targetType);
             const minionName = boss.minion?.name || boss.cannoneer?.name || '小弟';
             const targetLabel = (targetType === 'boss')
                 ? boss.name
@@ -14184,7 +14259,7 @@ function stepBossCombat(state) {
                             ? (boss.defense || 0)
                             : (boss.minion?.defense || boss.cannoneer?.defense || 0);
 
-                        const shieldInfo = getExecutusShieldInfo(extraResult.school);
+                        const shieldInfo = getExecutusShieldInfo(extraResult.school, targetType);
                         const minionName = boss.minion?.name || boss.cannoneer?.name || '小弟';
                         const targetLabel = (targetType === 'boss')
                             ? boss.name
@@ -14351,7 +14426,7 @@ function stepBossCombat(state) {
                 const targetDefense = getEffectiveTargetDefense(p.char, targetDefenseRaw);
 
                     // 终极苦修视为“法术”（holy），可能被管理者埃克索图斯【反魔法护盾】免疫
-                    const shieldInfo = getExecutusShieldInfo('holy');
+                    const shieldInfo = getExecutusShieldInfo('holy', targetType);
                     const minionName = boss.minion?.name || boss.cannoneer?.name || '小弟';
                     const targetLabel = (targetType === 'boss')
                         ? boss.name
@@ -14667,18 +14742,37 @@ function stepBossCombat(state) {
                 const blockValue = (warrior.char.stats.blockValue || 0) + (warrior.talentBuffs?.blockValueFlat || 0);
                 const aoeDamage = Math.floor(blockValue * 0.8);
                 if (aoeDamage > 0) {
-                    const shieldInfo = getExecutusShieldInfo('physical');
-                    if (shieldInfo.immune) {
-                        addLog(`【包二奶羁绊】额外伤害被【${shieldInfo.shieldName}】免疫`, 'warning');
+                    // ✅ 免疫判定：管理者护盾对所有敌人都生效；奈法利安的龙兽免疫仅对 Boss 生效
+                    const shieldBoss = getExecutusShieldInfo('physical', 'boss');
+                    const shieldMinion = getExecutusShieldInfo('physical', 'minion');
+
+                    let didAny = false;
+
+                    // Boss
+                    if (shieldBoss.immune) {
+                        addLog(`【包二奶羁绊】对Boss的额外伤害被【${shieldBoss.shieldName}】免疫`, 'warning');
+                    } else if (isRagnarosSubmergedThisRound) {
+                        addLog(`【包二奶羁绊】对Boss的额外伤害被【下潜】免疫`, 'warning');
                     } else {
-                        if (!isRagnarosSubmergedThisRound) {
+                        if (!((combat.bossHp ?? 0) <= 0)) {
                             combat.bossHp -= aoeDamage;
+                            didAny = true;
                         }
-                        combat.minions.forEach(m => {
-                            if (m.hp > 0 && !m.immune) {
+                    }
+
+                    // 小弟
+                    if (shieldMinion.immune) {
+                        addLog(`【包二奶羁绊】对小弟的额外伤害被【${shieldMinion.shieldName}】免疫`, 'warning');
+                    } else {
+                        (combat.minions || []).forEach(m => {
+                            if (m && (m.hp ?? 0) > 0 && !m.immune) {
                                 m.hp -= aoeDamage;
+                                didAny = true;
                             }
                         });
+                    }
+
+                    if (didAny) {
                         addLog(`【包二奶羁绊】防护战士对所有敌人造成 ${aoeDamage} 额外伤害（基于格挡值）`);
                     }
                 }
@@ -14742,7 +14836,7 @@ function stepBossCombat(state) {
                     return;
                 }
 
-                const shieldInfo = getExecutusShieldInfo('shadow');
+                const shieldInfo = getExecutusShieldInfo('shadow', 'boss');
                 if (shieldInfo.immune) {
                     addLog(`【暗影魔】伤害被【${shieldInfo.shieldName}】免疫（目标：${boss.name}）`, 'warning');
                     return;
@@ -14762,7 +14856,7 @@ function stepBossCombat(state) {
                 const m = combat.minions[targetIndex];
                 if ((m?.hp ?? 0) <= 0 || m?.immune) return;
 
-                const shieldInfo = getExecutusShieldInfo('shadow');
+                const shieldInfo = getExecutusShieldInfo('shadow', 'minion');
                 if (shieldInfo.immune) {
                     const minionName = boss?.minion?.name || boss?.cannoneer?.name || '小弟';
                     const targetLabel = m?.displayName || `${minionName}${targetIndex + 1}`;
@@ -14798,7 +14892,7 @@ function stepBossCombat(state) {
             }
 
             // 管理者埃克索图斯：护盾免疫会使 DOT 不造成伤害（但仍消耗持续时间）
-            const shieldInfo = getExecutusShieldInfo(dot.school);
+            const shieldInfo = getExecutusShieldInfo(dot.school, 'boss');
             if (shieldInfo.immune) {
                 addLog(`【${dotName}】被【${shieldInfo.shieldName}】免疫（目标：${boss.name}，剩余${dot.duration - 1}回合）`, 'warning');
                 dot.duration -= 1;
@@ -14855,7 +14949,7 @@ function stepBossCombat(state) {
                 const targetLabel = m.displayName || `${minionName}${idx + 1}`;
 
                 // 管理者埃克索图斯：护盾免疫会使 DOT 不造成伤害（但仍消耗持续时间）
-                const shieldInfo = getExecutusShieldInfo(dot.school);
+                const shieldInfo = getExecutusShieldInfo(dot.school, 'minion');
                 if (shieldInfo.immune) {
                     addLog(`【${dotName}】被【${shieldInfo.shieldName}】免疫（目标：${targetLabel}，剩余${dot.duration - 1}回合）`, 'warning');
                     dot.duration -= 1;
@@ -15055,6 +15149,33 @@ function stepBossCombat(state) {
                     addLog(`→ 位置${pIdx + 1} ${ps.char.name} 获得【毒性之血】（每回合${perTurn}自然伤害，持续${duration}回合，不可叠层）`, 'debuff');
                 }
             });
+        }
+    }
+
+    // ==================== 奈法利安：龙兽死亡计数（用于白骨魔像强化） ====================
+    // 放在Boss行动前结算，确保同回合召唤白骨魔像时也能读到最新的死亡数量。
+    if (combat.bossId === 'nefarian') {
+        combat.bossBuffs = combat.bossBuffs || {};
+
+        const deadDrakes = (combat.minions || []).filter(m =>
+            (m?.hp ?? 0) <= 0 &&
+            (m.isNefarianChromaticDrake || m.isNefarianBronzeDrake) &&
+            !m.deathProcessed
+        );
+
+        if (deadDrakes.length > 0) {
+            deadDrakes.forEach(m => { m.deathProcessed = true; });
+
+            const prev = Math.max(0, Math.floor(Number(combat.bossBuffs.nefarianDrakeDeaths || 0)));
+            const next = prev + deadDrakes.length;
+            combat.bossBuffs.nefarianDrakeDeaths = next;
+
+            const perBonus = (typeof boss.boneGolemPerDrakeDeathBonus === 'number' && Number.isFinite(boss.boneGolemPerDrakeDeathBonus))
+                ? boss.boneGolemPerDrakeDeathBonus
+                : 0.20;
+            const pct = Math.round(next * perBonus * 100);
+
+            addLog(`【${boss.name}】的龙兽死亡（本场累计${next}只），后续【白骨魔像】生命/攻击 +${pct}%`, 'warning');
         }
     }
 
@@ -17854,6 +17975,199 @@ function stepBossCombat(state) {
         }
     }
 
+    // ==================== 团队首领：奈法利安（Nefarian）技能处理 ====================
+    else if (combat.bossId === 'nefarian') {
+        combat.bossBuffs = combat.bossBuffs || {};
+
+        const drakeHp = Math.max(1, Math.floor(Number(boss.drakeHp || 5000000)));
+        const drakeHeavyMult = (typeof boss.drakeHeavyMultiplier === 'number' && Number.isFinite(boss.drakeHeavyMultiplier))
+            ? boss.drakeHeavyMultiplier
+            : 2.5;
+
+        const boneBaseHp = Math.max(1, Math.floor(Number(boss.boneGolemHp || 5000000)));
+        const boneHeavyMult = (typeof boss.boneGolemHeavyMultiplier === 'number' && Number.isFinite(boss.boneGolemHeavyMultiplier))
+            ? boss.boneGolemHeavyMultiplier
+            : 5;
+
+        const perDeathBonus = (typeof boss.boneGolemPerDrakeDeathBonus === 'number' && Number.isFinite(boss.boneGolemPerDrakeDeathBonus))
+            ? boss.boneGolemPerDrakeDeathBonus
+            : 0.20;
+
+        const pickRandomAlivePlayerIndex = () => {
+            const alive = (combat.playerStates || [])
+                .map((ps, idx) => ({ ps, idx }))
+                .filter(o => (o.ps?.currentHp ?? 0) > 0)
+                .map(o => o.idx);
+
+            if (alive.length <= 0) return -1;
+            return alive[Math.floor(Math.random() * alive.length)];
+        };
+
+        // 技能1：召唤多彩龙兽（存续期间：仅BOSS免疫魔法伤害）
+        if (bossAction === 'summon_chromatic_drake') {
+            const serial = Math.max(0, Math.floor(Number(combat.bossBuffs.nefarianChromaticSerial || 0))) + 1;
+            combat.bossBuffs.nefarianChromaticSerial = serial;
+
+            const name = `多彩龙兽${serial}`;
+
+            combat.minions = Array.isArray(combat.minions) ? combat.minions : [];
+            combat.minions.push({
+                hp: drakeHp,
+                maxHp: drakeHp,
+                attack: Number(boss.attack) || 0,
+                defense: Number(boss.defense) || 0,
+                immune: false,
+                dots: [],
+                deathProcessed: false,
+                isNefarianChromaticDrake: true,
+                displayName: name,
+                heavyMultiplier: drakeHeavyMult,
+            });
+
+            addLog(`【${boss.name}】召唤【多彩龙兽】！${name} 现身：存续期间【${boss.name}】免疫魔法伤害`, 'warning');
+        }
+
+        // 技能2：召唤青铜龙兽（存续期间：仅BOSS免疫物理伤害）
+        else if (bossAction === 'summon_bronze_drake') {
+            const serial = Math.max(0, Math.floor(Number(combat.bossBuffs.nefarianBronzeSerial || 0))) + 1;
+            combat.bossBuffs.nefarianBronzeSerial = serial;
+
+            const name = `青铜龙兽${serial}`;
+
+            combat.minions = Array.isArray(combat.minions) ? combat.minions : [];
+            combat.minions.push({
+                hp: drakeHp,
+                maxHp: drakeHp,
+                attack: Number(boss.attack) || 0,
+                defense: Number(boss.defense) || 0,
+                immune: false,
+                dots: [],
+                deathProcessed: false,
+                isNefarianBronzeDrake: true,
+                displayName: name,
+                heavyMultiplier: drakeHeavyMult,
+            });
+
+            addLog(`【${boss.name}】召唤【青铜龙兽】！${name} 现身：存续期间【${boss.name}】免疫物理伤害`, 'warning');
+        }
+
+        // 技能3：暗影烈焰：对所有角色造成3倍BOSS攻击的暗影烈焰伤害（魔抗减伤）
+        else if (bossAction === 'shadow_flame') {
+            const mult = (typeof boss.shadowflameMultiplier === 'number' && Number.isFinite(boss.shadowflameMultiplier))
+                ? boss.shadowflameMultiplier
+                : 3;
+            const raw = Math.floor((boss.attack || 0) * mult);
+
+            addLog(`【${boss.name}】施放【暗影烈焰】！`);
+
+            combat.playerStates.forEach((ps, pIdx) => {
+                if (!ps || ps.currentHp <= 0) return;
+
+                const mg = calcMagicDamage(ps, raw);
+                const shieldResult = applyShieldAbsorb(ps, mg.damage, logs, currentRound);
+                ps.currentHp -= shieldResult.finalDamage;
+
+                const resPct = Math.round(mg.resistReduction * 100);
+                const mrText = Number(mg.magicResist) < 0 ? `（魔抗 ${Math.floor(mg.magicResist)}）` : '';
+                const shieldText = shieldResult.absorbed > 0 ? `，护盾吸收 ${shieldResult.absorbed}` : '';
+                addLog(`→ 位置${pIdx + 1} ${ps.char.name} 受到 ${shieldResult.finalDamage} 点暗影烈焰伤害（魔抗减伤${resPct}%${mrText}${shieldText}）`);
+            });
+        }
+
+        // 技能5：暗影迷雾：随机目标 3×BOSS攻击 暗影伤害 + 减疗80%（2回合）
+        else if (bossAction === 'shadow_mist') {
+            const mult = (typeof boss.shadowMistMultiplier === 'number' && Number.isFinite(boss.shadowMistMultiplier))
+                ? boss.shadowMistMultiplier
+                : 3;
+            const raw = Math.floor((boss.attack || 0) * mult);
+
+            const tIdx = pickRandomAlivePlayerIndex();
+            if (tIdx < 0) {
+                addLog(`【${boss.name}】施放【暗影迷雾】，但没有存活目标`);
+            } else {
+                const ps = combat.playerStates[tIdx];
+
+                const mg = calcMagicDamage(ps, raw);
+                const shieldResult = applyShieldAbsorb(ps, mg.damage, logs, currentRound);
+                ps.currentHp -= shieldResult.finalDamage;
+
+                const resPct = Math.round(mg.resistReduction * 100);
+                const mrText = Number(mg.magicResist) < 0 ? `（魔抗 ${Math.floor(mg.magicResist)}）` : '';
+                const shieldText = shieldResult.absorbed > 0 ? `，护盾吸收 ${shieldResult.absorbed}` : '';
+                addLog(`【${boss.name}】施放【暗影迷雾】命中 位置${tIdx + 1} ${ps.char.name}，造成 ${shieldResult.finalDamage} 点暗影伤害（魔抗减伤${resPct}%${mrText}${shieldText}）`);
+
+                if (ps.currentHp > 0) {
+                    const healRed = (typeof boss.shadowMistHealingReduction === 'number' && Number.isFinite(boss.shadowMistHealingReduction))
+                        ? boss.shadowMistHealingReduction
+                        : 0.80;
+                    const dur = Math.max(1, Math.floor(Number(boss.shadowMistDuration || 2)));
+
+                    ps.debuffs = ps.debuffs || {};
+                    // 复用【致死打击】的减疗机制
+                    ps.debuffs.mortalStrike = {
+                        healingReduction: healRed,
+                        duration: dur,
+                        source: '暗影迷雾',
+                    };
+
+                    addLog(`→ 位置${tIdx + 1} ${ps.char.name} 受到【暗影迷雾】：受到治疗效果降低 ${Math.round(healRed * 100)}%，持续 ${dur} 回合`, 'debuff');
+                }
+            }
+        }
+
+        // 技能4：低沉咆哮：全体恐惧2回合
+        else if (bossAction === 'low_roar') {
+            const dur = Math.max(1, Math.floor(Number(boss.fearDuration || 2)));
+            addLog(`【${boss.name}】发出【低沉咆哮】！所有角色陷入恐惧（${dur}回合）`, 'debuff');
+
+            combat.playerStates.forEach((ps, pIdx) => {
+                if (!ps || ps.currentHp <= 0) return;
+
+                // ✅ 亡灵：首次恐惧免疫
+                if (tryFirstFearImmunity(ps, pIdx, '低沉咆哮')) {
+                    addLog(`→ 位置${pIdx + 1} ${ps.char.name} 免疫了【低沉咆哮】`, 'debuff');
+                    return;
+                }
+
+                ps.debuffs = ps.debuffs || {};
+                ps.debuffs.fear = { duration: dur, source: '低沉咆哮' };
+            });
+        }
+
+        // 技能6：召唤白骨魔像：复活1只（龙兽每死亡1只：血量&攻击 +20%）
+        else if (bossAction === 'summon_bone_golem') {
+            const deaths = Math.max(0, Math.floor(Number(combat.bossBuffs.nefarianDrakeDeaths || 0)));
+            const mult = 1 + deaths * perDeathBonus;
+
+            const hp = Math.max(1, Math.floor(boneBaseHp * mult));
+            const atk = Math.max(0, Math.floor((boss.attack || 0) * mult));
+            const def = Math.max(0, Math.floor((boss.defense || 0)));
+
+            const serial = Math.max(0, Math.floor(Number(combat.bossBuffs.nefarianGolemSerial || 0))) + 1;
+            combat.bossBuffs.nefarianGolemSerial = serial;
+
+            const name = `白骨魔像${serial}`;
+
+            combat.minions = Array.isArray(combat.minions) ? combat.minions : [];
+            combat.minions.push({
+                hp,
+                maxHp: hp,
+                attack: atk,
+                defense: def,
+                immune: false,
+                dots: [],
+                deathProcessed: false,
+                isNefarianBoneGolem: true,
+                displayName: name,
+                heavyMultiplier: boneHeavyMult,
+            });
+
+            const pct = Math.round(deaths * perDeathBonus * 100);
+            const suffix = deaths > 0 ? `（龙兽死亡${deaths}只：生命/攻击+${pct}%）` : '';
+            addLog(`【${boss.name}】施放【召唤白骨魔像】！${name} 复活${suffix}`, 'warning');
+        }
+    }
+
 
 // ==================== 小弟行动 ====================
     for (let i = 0; i < (combat.minions || []).length; i++) {
@@ -17965,6 +18279,36 @@ function stepBossCombat(state) {
                 const label = m.displayName || `${boss.minion?.name || '雏龙'}${i + 1}`;
 
                 addLog(`【${label}】施放【火球术】命中 位置${tIdx + 1} ${target.char.name}，造成 ${shieldResult.finalDamage} 点火焰伤害（魔抗减伤${resPct}%${mrText}${shieldText}）`);
+            }
+        }
+
+        // 奈法利安：龙兽/白骨魔像（对坦克释放重击/重碾：物理伤害走护甲与格挡）
+        else if (
+            combat.bossId === 'nefarian' &&
+            (m.isNefarianChromaticDrake || m.isNefarianBronzeDrake || m.isNefarianBoneGolem)
+        ) {
+            const tIdx = pickAlivePlayerIndex(); // 默认 0号位为坦克
+            if (tIdx >= 0) {
+                const target = combat.playerStates[tIdx];
+
+                const defaultMult = m.isNefarianBoneGolem ? 5 : 2.5;
+                const mult = (typeof m.heavyMultiplier === 'number' && Number.isFinite(m.heavyMultiplier))
+                    ? m.heavyMultiplier
+                    : defaultMult;
+
+                const raw = Math.floor((m.attack || 0) * mult);
+                const { damage, dr, blockedAmount } = calcMitigatedAndBlockedDamage(target, raw, true);
+                const shieldResult = applyShieldAbsorb(target, damage, logs, currentRound);
+                target.currentHp -= shieldResult.finalDamage;
+
+                const drPct = Math.round(dr * 100);
+                const blockText = blockedAmount > 0 ? `，格挡 ${blockedAmount}` : '';
+                const shieldText = shieldResult.absorbed > 0 ? `，护盾吸收 ${shieldResult.absorbed}` : '';
+
+                const label = m.displayName || (m.isNefarianBoneGolem ? `白骨魔像${i + 1}` : `龙兽${i + 1}`);
+                const skillName = m.isNefarianBoneGolem ? '重碾' : '重击';
+
+                addLog(`【${label}】施放【${skillName}】命中坦克（位置${tIdx + 1}），造成 ${shieldResult.finalDamage} 点物理伤害（护甲减伤${drPct}%${blockText}${shieldText}）`);
             }
         }
 
@@ -31483,6 +31827,14 @@ const BossPrepareModal = ({ state, dispatch }) => {
         time_lapse: '时光流逝',
         enrage: '狂暴',
 
+        // 奈法利安
+        summon_chromatic_drake: '召唤多彩龙兽',
+        summon_bronze_drake: '召唤青铜龙兽',
+        shadow_flame: '暗影烈焰',
+        low_roar: '低沉咆哮',
+        shadow_mist: '暗影迷雾',
+        summon_bone_golem: '召唤白骨魔像',
+
         // 其他boss也可以逐步补齐
         mortal_strike: '致死打击',
         summon_cannoneers: '火炮手准备',
@@ -33007,6 +33359,83 @@ const BossPrepareModal = ({ state, dispatch }) => {
                                         <div style={{ color: '#ffd700', fontWeight: 700, marginBottom: 4 }}>技能6：狂暴</div>
                                         <div>
                                           Boss造成的所有伤害提高 <b>{Math.round((boss.enragePerStack ?? 0.10) * 100)}%</b>，可叠加直到战斗结束。
+                                        </div>
+                                      </div>
+
+                                      <div style={{ fontSize: 11, color: '#aaa', marginTop: 2 }}>
+                                        伤害结算：法术伤害计算<span style={{ color: '#ffd700' }}>魔抗</span>；物理伤害计算<span style={{ color: '#ffd700' }}>护甲 / 格挡</span>等属性。
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* 奈法利安的技能（准备界面说明） */}
+                                {bossId === 'nefarian' && (
+                                  <div style={{
+                                    marginTop: 12,
+                                    padding: 12,
+                                    background: 'rgba(20,20,20,0.12)',
+                                    borderRadius: 8,
+                                    border: '1px solid rgba(200,200,200,0.18)'
+                                  }}>
+                                    <div style={{ fontSize: 12, color: '#e0e0e0', fontWeight: 700, marginBottom: 8 }}>
+                                      🐉 团队首领：奈法利安
+                                    </div>
+
+                                    <div style={{ display: 'grid', gap: 10, fontSize: 11, color: '#ddd', lineHeight: 1.6 }}>
+                                      <div style={{ padding: 10, background: 'rgba(0,0,0,0.25)', borderRadius: 6 }}>
+                                        <div style={{ color: '#ffd700', fontWeight: 700, marginBottom: 4 }}>技能1：召唤多彩龙兽</div>
+                                        <div>
+                                          召唤 <b>1</b> 只多彩龙兽（HP <b>{boss.drakeHp?.toLocaleString?.() ?? 5000000}</b>，攻击/防御与Boss相同）。
+                                          <br/>
+                                          <span style={{ color: '#64b5f6' }}>龙兽存活期间：</span>仅<b>奈法利安</b>免疫<span style={{ color: '#ffd700', fontWeight: 700 }}>魔法伤害</span>。
+                                          <br/>
+                                          龙兽对<span style={{ color: '#ff6b6b', fontWeight: 700 }}>1号位（坦克）</span>释放<b>重击</b>：造成 <b>自身攻击×{boss.drakeHeavyMultiplier ?? 2.5}</b> 的物理伤害。
+                                        </div>
+                                      </div>
+
+                                      <div style={{ padding: 10, background: 'rgba(0,0,0,0.25)', borderRadius: 6 }}>
+                                        <div style={{ color: '#ffd700', fontWeight: 700, marginBottom: 4 }}>技能2：召唤青铜龙兽</div>
+                                        <div>
+                                          召唤 <b>1</b> 只青铜龙兽（HP <b>{boss.drakeHp?.toLocaleString?.() ?? 5000000}</b>，攻击/防御与Boss相同）。
+                                          <br/>
+                                          <span style={{ color: '#64b5f6' }}>龙兽存活期间：</span>仅<b>奈法利安</b>免疫<span style={{ color: '#ffd700', fontWeight: 700 }}>物理伤害</span>。
+                                          <br/>
+                                          龙兽对<span style={{ color: '#ff6b6b', fontWeight: 700 }}>1号位（坦克）</span>释放<b>重击</b>：造成 <b>自身攻击×{boss.drakeHeavyMultiplier ?? 2.5}</b> 的物理伤害。
+                                        </div>
+                                      </div>
+
+                                      <div style={{ padding: 10, background: 'rgba(0,0,0,0.25)', borderRadius: 6 }}>
+                                        <div style={{ color: '#ffd700', fontWeight: 700, marginBottom: 4 }}>技能3：暗影烈焰</div>
+                                        <div>
+                                          对所有角色造成 <b>Boss攻击力×{boss.shadowflameMultiplier ?? 3}</b> 的暗影烈焰伤害（法术伤害计算魔抗）。
+                                        </div>
+                                      </div>
+
+                                      <div style={{ padding: 10, background: 'rgba(0,0,0,0.25)', borderRadius: 6 }}>
+                                        <div style={{ color: '#ffd700', fontWeight: 700, marginBottom: 4 }}>技能4：低沉咆哮</div>
+                                        <div>
+                                          使所有角色陷入恐惧，持续 <b>{boss.fearDuration ?? 2}</b> 回合无法行动（亡灵：首个恐惧免疫）。
+                                        </div>
+                                      </div>
+
+                                      <div style={{ padding: 10, background: 'rgba(0,0,0,0.25)', borderRadius: 6 }}>
+                                        <div style={{ color: '#ffd700', fontWeight: 700, marginBottom: 4 }}>技能5：暗影迷雾</div>
+                                        <div>
+                                          对随机目标造成 <b>Boss攻击力×{boss.shadowMistMultiplier ?? 3}</b> 的暗影伤害，并使其受到的治疗降低
+                                          <b> {Math.round((boss.shadowMistHealingReduction ?? 0.8) * 100)}%</b>，持续 <b>{boss.shadowMistDuration ?? 2}</b> 回合。
+                                        </div>
+                                      </div>
+
+                                      <div style={{ padding: 10, background: 'rgba(0,0,0,0.25)', borderRadius: 6 }}>
+                                        <div style={{ color: '#ffd700', fontWeight: 700, marginBottom: 4 }}>技能6：召唤白骨魔像</div>
+                                        <div>
+                                          复活 <b>1</b> 只白骨魔像（基础HP <b>{boss.boneGolemHp?.toLocaleString?.() ?? 5000000}</b>，防御与Boss相同）。
+                                          <br/>
+                                          本场战斗中，每死亡过 <b>1</b> 只龙兽，白骨魔像的<span style={{ color: '#ffd700', fontWeight: 700 }}>生命与攻击</span>提高
+                                          <b> {Math.round((boss.boneGolemPerDrakeDeathBonus ?? 0.2) * 100)}%</b>。
+                                          <br/>
+                                          白骨魔像对<span style={{ color: '#ff6b6b', fontWeight: 700 }}>1号位（坦克）</span>释放<b>重碾</b>：造成 <b>自身攻击×{boss.boneGolemHeavyMultiplier ?? 5}</b> 的物理伤害。
                                         </div>
                                       </div>
 

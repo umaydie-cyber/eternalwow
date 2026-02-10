@@ -391,7 +391,21 @@ const FUNCTIONAL_BUILDINGS = {
         maxCount: 20,
         effect: { type: 'fountainEfficiency', value: 0.10 }
     },
-    warehouse: {
+
+    // ✅ 新增：火山温泉（击杀火焰之王拉格纳罗斯后解锁）
+    // 规则：每座提供每秒回复最大生命值的 0.025%（线性叠加），最多 20 座（= 每秒 0.5% 最大生命值）
+    volcanic_hot_spring: {
+        id: 'volcanic_hot_spring',
+        name: '火山温泉',
+        icon: '♨️',
+        description: '每座提供每秒0.025%最大生命值的生命回复（最多20座）',
+        unlockBoss: 'ragnaros',
+        cost: { ironIngot: 1200000, alchemyOil: 1200000 },
+        maxCount: 20,
+        effect: { type: 'hpRegenPct', value: 0.00025 }
+    },
+
+warehouse: {
         id: 'warehouse',
         name: '仓库',
         icon: '🏚️',
@@ -21744,6 +21758,15 @@ function getFountainEfficiency(state) {
     };
 }
 
+// ==================== 火山温泉：每秒最大生命值回血百分比（线性叠加） ====================
+// 每座：0.025% = 0.00025；最多 20 座
+function getVolcanicHotSpringRegenPct(state) {
+    const count = Math.max(0, Math.floor(Number(state?.functionalBuildings?.volcanic_hot_spring) || 0));
+    return Math.min(20, count) * 0.00025;
+}
+
+
+
 // ==================== GAME REDUCER ====================
 function gameReducer(state, action) {
     switch (action.type) {
@@ -22608,12 +22631,14 @@ function gameReducer(state, action) {
                 if (now - lastCombatTime < REGEN_DELAY_MS) return char;
 
                 const fountainRegen = fountainCount * 2 * fountainEfficiencyMult;
+                const hotSpringPct = getVolcanicHotSpringRegenPct(newState);
+                const hotSpringRegen = maxHp * hotSpringPct;
 
                 return {
                     ...char,
                     stats: {
                         ...char.stats,
-                        currentHp: Math.min(maxHp, curHp + REGEN_PER_SECOND + fountainRegen)
+                        currentHp: Math.min(maxHp, curHp + REGEN_PER_SECOND + fountainRegen + hotSpringRegen)
                     }
                 };
             });
@@ -27380,7 +27405,13 @@ const CharacterPage = ({ state, dispatch }) => {
                                         ? '⚔️ 战斗中'
                                         : (timeSinceCombat < regenDelayMs
                                                 ? `🕒 脱战回血 ${regenSecondsLeft} 秒后开始`
-                                                : `💚 脱战回血中：每秒 +${10 + (state.functionalBuildings?.plaza_fountain || 0) * 2}`
+                                                : `💚 脱战回血中：每秒 +${(() => {
+                                                    const { totalMult } = getFountainEfficiency(state);
+                                                    const fountainRegen = (state.functionalBuildings?.plaza_fountain || 0) * 2 * totalMult;
+                                                    const hotSpringRegen = (char?.stats?.maxHp || 0) * getVolcanicHotSpringRegenPct(state);
+                                                    const total = 10 + fountainRegen + hotSpringRegen;
+                                                    return Number.isFinite(total) ? total.toFixed(1) : '0.0';
+                                                })()}`
                                         )
                                     }
                                 </div>
@@ -28606,6 +28637,53 @@ const CityPage = ({ state, dispatch }) => {
                                         </div>
                                         <div style={{ color: '#666', fontSize: 10, marginTop: 2 }}>
                                             （仅脱战生效）
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        );
+                    })()}
+
+                    {/* ✅ 火山温泉回血汇总 */}
+                    {(() => {
+                        const hotSpringCount = state.functionalBuildings?.volcanic_hot_spring || 0;
+                        const hotSpringPct = getVolcanicHotSpringRegenPct(state); // 每秒最大生命值百分比（0.00025=0.025%）
+                        const hotSpringPctDisplay = (hotSpringPct * 100);
+
+                        return (
+                            <div style={{
+                                marginBottom: 16,
+                                padding: 14,
+                                background: 'rgba(255,87,34,0.08)',
+                                border: '1px solid rgba(255,87,34,0.35)',
+                                borderRadius: 10
+                            }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+                                    <div>
+                                        <div style={{ color: '#ff8a65', fontWeight: 700, fontSize: 13, marginBottom: 4 }}>
+                                            ♨️ 火山温泉回血
+                                        </div>
+                                        <div style={{ color: '#aaa', fontSize: 11, lineHeight: 1.5 }}>
+                                            火山温泉数量：<span style={{ color: '#fff' }}>{hotSpringCount}</span>/20（每座 +0.025% 最大生命/秒）
+                                            <br />
+                                            当前总效果：<span style={{ color: hotSpringCount > 0 ? '#4CAF50' : '#666', fontWeight: 700 }}>
+                                                +{hotSpringPctDisplay.toFixed(3)}% 最大生命/秒
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div style={{
+                                        minWidth: 140,
+                                        padding: '10px 12px',
+                                        background: 'rgba(0,0,0,0.25)',
+                                        borderRadius: 8,
+                                        border: '1px solid rgba(255,255,255,0.08)'
+                                    }}>
+                                        <div style={{ color: '#888', fontSize: 11, marginBottom: 2 }}>说明</div>
+                                        <div style={{ color: '#aaa', fontSize: 11, lineHeight: 1.4 }}>
+                                            每个角色的具体回血值 = 最大生命 × {hotSpringPctDisplay.toFixed(3)}% / 秒
+                                        </div>
+                                        <div style={{ color: '#666', fontSize: 10, marginTop: 4 }}>
+                                            （按角色最大生命值计算）
                                         </div>
                                     </div>
                                 </div>

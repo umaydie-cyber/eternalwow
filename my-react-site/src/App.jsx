@@ -247,6 +247,7 @@ const CLASSES = {
             { level: 40, skillId: 'comet_storm' },
             { level: 50, skillId: 'ice_barrier' },
             { level: 52, skillId: 'conditional_frost_strike' },
+            { level: 60, skillId: 'ice_spike' },
         ]
     },
     outlaw_rogue: {
@@ -794,6 +795,29 @@ const TALENTS = {
                     type: TALENT_TYPES.AURA,
                     name: '绝对零度',
                     description: '冰风暴的持续时间延长2回合，每回合伤害提高50%。冰风暴期间你的所有冰霜伤害额外提高25%。'
+                }
+            ]
+        },
+        {
+            tier: 60,
+            options: [
+                {
+                    id: 'deep_winter_bitter_cold',
+                    name: '深冬苦寒',
+                    description: '你的寒冰箭、冰风暴以及彗星风暴暴击会使你额外获得一层冰刺',
+                    type: 'aura'
+                },
+                {
+                    id: 'glacial_icicle',
+                    name: '冰川尖刺',
+                    description: '每一层冰刺使你的精通提高20',
+                    type: 'aura'
+                },
+                {
+                    id: 'shatter_ice',
+                    name: '碎冰',
+                    description: '你的冰枪术可以额外命中一个目标',
+                    type: 'aura'
                 }
             ]
         },
@@ -1464,6 +1488,13 @@ const SKILLS = {
         type: 'passive',
         description: '被动：冰枪术的基础技能倍率提升(精通/2)%。该数值直接加在基础120%上。'
     },
+    ice_spike: {
+        id: 'ice_spike',
+        name: '冰刺',
+        icon: '🧊',
+        type: 'passive',
+        description: '被动：你的寒冰箭、冰风暴以及彗星风暴会使你获得1层【冰刺】，至多存储7枚。当你使用冰枪术时，释放所有冰刺，每一枚冰刺对目标造成当前冰枪术实际造成伤害10%的真实伤害。'
+    },
     frostbolt: {
         id: 'frostbolt',
         name: '寒冰箭',
@@ -1540,7 +1571,8 @@ const SKILLS = {
         limit: 8,
         description: '造成1.2倍法术强度的冰霜伤害，爆击伤害额外增加200%',
         calculate: (char, combatContext) => {
-            const baseMult = char.stats.iceLanceBaseMultiplier ?? 1.2;
+            const mastery = Number(char.stats.mastery) || 0;
+            const baseMult = 1.2 + (mastery / 2) / 100;
             let damage = char.stats.spellPower * baseMult;
 
             // 冰冷血脉buff：冰霜伤害提高50%
@@ -1652,6 +1684,38 @@ const SKILLS = {
                 damagePerTurn *= 1.1;
             }
 
+            // 暴击判定（用于深冬苦寒等）
+            let critRate = char.stats.critRate || 0;
+            // 10级天赋：寒冷刺骨 - 暴击率提高10
+            if (char.talents?.[10] === 'piercing_cold') {
+                critRate += 10;
+            }
+
+            // ===== 50级天赋：寒冰突破 =====
+            let critBreakthroughBonus = 1;
+            let forcedCritConversion = false;
+
+            if (char.talents?.[50] === 'frost_crit_breakthrough') {
+                if (combatContext?.blizzardActive) {
+                    // 冰风暴期间：所有暴击率转化为伤害加成
+                    critBreakthroughBonus = 1 + (critRate / 100);
+                    forcedCritConversion = true;
+                    critRate = 0;
+                } else if (critRate > 100) {
+                    // 非冰风暴期间：超过100%的暴击转化为伤害
+                    const excessCrit = critRate - 100;
+                    critBreakthroughBonus = 1 + (excessCrit / 100);
+                    critRate = 100;
+                }
+            }
+
+            damagePerTurn *= critBreakthroughBonus;
+
+            const isCrit = !forcedCritConversion && Math.random() < critRate / 100;
+            if (isCrit) {
+                damagePerTurn *= char.stats.critDamage;
+            }
+
             return {
                 dot: {
                     school: 'frost',
@@ -1659,7 +1723,9 @@ const SKILLS = {
                     damagePerTurn: Math.floor(damagePerTurn),
                     duration: duration,
                     enableIceLanceCrit: true // 标记冰枪术必定爆击
-                }
+                },
+                isCrit,
+                critConverted: forcedCritConversion
             };
         }
     },
@@ -14033,6 +14099,15 @@ function stepBossCombat(state) {
             calcStats.critDamage = (Number(calcStats.critDamage) || 2.0) + 0.5;
         }
 
+        // ==================== 冰霜法师60级天赋：冰川尖刺 ====================
+        // 每层冰刺使精通 +20（仅本场Boss战内生效）
+        if (p.char?.classId === 'frost_mage' && p.char?.talents?.[60] === 'glacial_icicle') {
+            const stacks = Math.max(0, Math.floor(Number(p.iceSpikes) || 0));
+            if (stacks > 0) {
+                calcStats.mastery = (Number(calcStats.mastery) || 0) + stacks * 20;
+            }
+        }
+
         const charForCalc = {
             ...p.char,
             stats: calcStats
@@ -14476,6 +14551,8 @@ function stepBossCombat(state) {
                 ? boss.name
                 : (combat.minions[targetIndex]?.displayName || `${minionName}${targetIndex + 1}`);
 
+            let actualDamageDealt = 0;
+
             if (targetType === 'boss' && isRagnarosSubmergedThisRound) {
                 addLog(`位置${i + 1} ${p.char.name} 的${skill.name}被【下潜】免疫（目标：${targetLabel}）`, 'warning');
             } else if (shieldInfo.immune) {
@@ -14484,6 +14561,7 @@ function stepBossCombat(state) {
                 addLog(`位置${i + 1} ${p.char.name} 的${skill.name}被【登上甲板】免疫！`);
             } else {
                 const actualDamage = Math.max(1, damage - targetDefense);
+                actualDamageDealt = actualDamage;
 
                 if (targetType === 'boss') {
                     combat.bossHp -= actualDamage;
@@ -14572,6 +14650,84 @@ function stepBossCombat(state) {
                         }
                     }
                 }
+            }
+
+            // ==================== 冰霜法师60级天赋：碎冰（冰枪术额外命中一个目标） ====================
+            if (skillId === 'ice_lance' && p.char?.classId === 'frost_mage' && p.char?.talents?.[60] === 'shatter_ice') {
+                // 选择一个额外目标：优先选择剩余存活单位中血量最低者
+                const candidates = [];
+
+                // 候选：Boss
+                if (targetType !== 'boss' && (combat.bossHp ?? 0) > 0 && !isRagnarosSubmergedThisRound) {
+                    const bossShieldInfo = getExecutusShieldInfo(result.school, 'boss');
+                    if (!bossShieldInfo.immune) {
+                        candidates.push({
+                            type: 'boss',
+                            index: -1,
+                            hp: combat.bossHp,
+                            label: boss.name,
+                            defenseRaw: boss.defense,
+                        });
+                    }
+                }
+
+                // 候选：其他小弟
+                combat.minions.forEach((m, idx) => {
+                    if (targetType === 'minion' && idx === targetIndex) return;
+                    if ((m?.hp ?? 0) <= 0) return;
+                    if (m?.immune) return;
+
+                    const minionShieldInfo = getExecutusShieldInfo(result.school, 'minion');
+                    if (minionShieldInfo.immune) return;
+
+                    const minionName2 = boss.minion?.name || boss.cannoneer?.name || '小弟';
+                    const label = m.displayName || `${minionName2}${idx + 1}`;
+
+                    candidates.push({
+                        type: 'minion',
+                        index: idx,
+                        hp: m.hp,
+                        label,
+                        defenseRaw: (boss.minion?.defense || boss.cannoneer?.defense || 0),
+                    });
+                });
+
+                if (candidates.length > 0) {
+                    candidates.sort((a, b) => (Number(a.hp) || 0) - (Number(b.hp) || 0));
+                    const t = candidates[0];
+                    const tDefense = getEffectiveTargetDefense(p.char, t.defenseRaw);
+                    const extraActual = Math.max(1, damage - tDefense);
+
+                    if (t.type === 'boss') {
+                        combat.bossHp -= extraActual;
+                    } else {
+                        combat.minions[t.index].hp -= extraActual;
+                    }
+
+                    addLog(`【碎冰】位置${i + 1} ${p.char.name} 的冰枪术额外命中 ${t.label}，造成 ${extraActual} 伤害${result.isCrit ? '（暴击）' : ''}`);
+                }
+            }
+
+            // ==================== 冰霜法师60级被动：冰刺（冰枪术释放） ====================
+            const hasIceSpikePassive = p.char?.classId === 'frost_mage' && Array.isArray(p.char.skills) && p.char.skills.includes('ice_spike');
+            if (skillId === 'ice_lance' && hasIceSpikePassive) {
+                const stacks = Math.max(0, Math.floor(Number(p.iceSpikes) || 0));
+                if (stacks > 0) {
+                    const perSpike = (actualDamageDealt > 0) ? Math.max(1, Math.floor(actualDamageDealt * 0.10)) : 0;
+                    const totalTrue = perSpike * stacks;
+
+                    if (totalTrue > 0) {
+                        if (targetType === 'boss') {
+                            combat.bossHp -= totalTrue;
+                        } else {
+                            combat.minions[targetIndex].hp -= totalTrue;
+                        }
+                        addLog(`【冰刺】释放${stacks}枚，对${targetLabel}造成 ${totalTrue} 点真实伤害`);
+                    } else {
+                        addLog(`【冰刺】释放${stacks}枚，但本次冰枪术未造成伤害，冰刺未能命中`, 'warning');
+                    }
+                }
+                p.iceSpikes = 0;
             }
         }
 
@@ -15021,6 +15177,22 @@ function stepBossCombat(state) {
                     const blizzardSkill = SKILLS['blizzard'];
                     const blizzardResult = blizzardSkill.calculate(charForCalc, combatContext);
 
+                    // 冰霜法师60级被动：冰刺 - 由【冰冷智慧/冰冷直觉】触发的冰风暴同样生成冰刺
+                    const hasIceSpikePassive = p.char?.classId === 'frost_mage' && Array.isArray(p.char.skills) && p.char.skills.includes('ice_spike');
+                    if (hasIceSpikePassive) {
+                        const maxStacks = 7;
+                        const before = Math.max(0, Math.floor(Number(p.iceSpikes) || 0));
+                        let gain = 1;
+                        if (p.char?.talents?.[60] === 'deep_winter_bitter_cold' && blizzardResult.isCrit) {
+                            gain += 1;
+                        }
+                        p.iceSpikes = Math.min(maxStacks, before + gain);
+                        const realGain = p.iceSpikes - before;
+                        if (realGain > 0) {
+                            addLog(`【冰刺】${p.char.name} 因冰风暴触发额外获得${realGain}枚（当前${p.iceSpikes}/${maxStacks}）`);
+                        }
+                    }
+
                     if (targetType === 'boss') {
                         combat.bossDots = combat.bossDots || [];
                         combat.bossDots.push({ ...blizzardResult.dot, sourcePlayerId: p.char.id });
@@ -15037,6 +15209,27 @@ function stepBossCombat(state) {
         if (skillId === 'ice_lance' && result.consumeFingersOfFrost) {
             p.fingersOfFrost = Math.max(0, (p.fingersOfFrost || 0) - 1);
             addLog(`【寒冰指】消耗1层，${p.char.name} 剩余${p.fingersOfFrost}层`);
+        }
+
+        // ==================== 冰霜法师60级被动：冰刺（叠层） ====================
+        {
+            const hasIceSpikePassive = p.char?.classId === 'frost_mage' && Array.isArray(p.char.skills) && p.char.skills.includes('ice_spike');
+            if (hasIceSpikePassive && (skillId === 'frostbolt' || skillId === 'blizzard' || skillId === 'comet_storm')) {
+                const maxStacks = 7;
+                const before = Math.max(0, Math.floor(Number(p.iceSpikes) || 0));
+                let gain = 1;
+
+                // 60级天赋：深冬苦寒 - 暴击额外获得1层冰刺
+                if (p.char?.talents?.[60] === 'deep_winter_bitter_cold' && result?.isCrit) {
+                    gain += 1;
+                }
+
+                p.iceSpikes = Math.min(maxStacks, before + gain);
+                const realGain = p.iceSpikes - before;
+                if (realGain > 0) {
+                    addLog(`【冰刺】${p.char.name} 获得${realGain}枚（当前${p.iceSpikes}/${maxStacks}）`);
+                }
+            }
         }
 
         // ===== 50级天赋：幻想曲 - 神圣新星施放后清空层数 =====
@@ -19663,6 +19856,7 @@ function createCombatState(character, enemy, skillSlots) {
         fortuneMisfortuneStacks: 0, // 祸福相依层数
         fantasiaStacks: 0,          // 幻想曲层数（戒律牧师50级天赋，仅本场战斗）
         fingersOfFrost: 0,          // 寒冰指层数
+        iceSpikes: 0,              // 冰刺层数（冰霜法师60级被动）
         // ✅ 天赋/战斗内触发状态（每场战斗重置）
         talentFlags: {},
         logs: [],
@@ -19704,6 +19898,8 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
     let fantasiaStacks = combatState.fantasiaStacks || 0;
     // 寒冰指层数
     let fingersOfFrost = combatState.fingersOfFrost || 0;
+    // 冰刺层数（冰霜法师60级被动）
+    let iceSpikes = combatState.iceSpikes || 0;
 
     // ✅ 天赋/战斗内触发状态（仅本场战斗有效）
     let talentFlags = (combatState.talentFlags && typeof combatState.talentFlags === 'object')
@@ -20062,6 +20258,15 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
             calcStats.critDamage = (Number(calcStats.critDamage) || 2.0) + 0.5;
         }
 
+        // ==================== 冰霜法师60级天赋：冰川尖刺 ====================
+        // 每层冰刺使精通 +20（仅本场地图战斗内生效）
+        if (character?.classId === 'frost_mage' && character?.talents?.[60] === 'glacial_icicle') {
+            const stacks = Math.max(0, Math.floor(Number(iceSpikes) || 0));
+            if (stacks > 0) {
+                calcStats.mastery = (Number(calcStats.mastery) || 0) + stacks * 20;
+            }
+        }
+
         const charForCalc = {
             ...character,
             stats: calcStats
@@ -20361,6 +20566,25 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
                 type: 'damage',
                 isCrit: result.isCrit
             });
+
+            // ==================== 冰霜法师60级被动：冰刺（释放） ====================
+            if (currentSkillId === 'ice_lance' && Array.isArray(character.skills) && character.skills.includes('ice_spike')) {
+                const stacks = Math.max(0, Math.floor(Number(iceSpikes) || 0));
+                if (stacks > 0) {
+                    const perSpike = Math.max(1, Math.floor(actualDamage * 0.10));
+                    const totalTrue = perSpike * stacks;
+                    enemyHp -= totalTrue;
+                    logs.push({
+                        round,
+                        kind: 'proc',
+                        actor: character.name,
+                        proc: '冰刺',
+                        text: `【冰刺】释放${stacks}枚：对${combatState.enemy?.name}造成${totalTrue}点真实伤害`
+                    });
+                }
+                // 使用冰枪术后清空冰刺
+                iceSpikes = 0;
+            }
 
             if (character.stats.atonement) {
                 const healFromAtonement = Math.floor(actualDamage * character.stats.atonement.healingRate);
@@ -21015,6 +21239,30 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
             });
         }
 
+        // ==================== 冰霜法师60级被动：冰刺（叠层） ====================
+        const hasIceSpikePassive = character?.classId === 'frost_mage' && Array.isArray(character.skills) && character.skills.includes('ice_spike');
+        if (hasIceSpikePassive && (currentSkillId === 'frostbolt' || currentSkillId === 'blizzard' || currentSkillId === 'comet_storm')) {
+            const maxStacks = 7;
+            const before = Math.max(0, Math.floor(Number(iceSpikes) || 0));
+            let gain = 1;
+            // 60级天赋：深冬苦寒 - 暴击额外+1层
+            if (character?.talents?.[60] === 'deep_winter_bitter_cold' && result?.isCrit) {
+                gain += 1;
+            }
+            iceSpikes = Math.min(maxStacks, before + gain);
+            const realGain = iceSpikes - before;
+            if (realGain > 0) {
+                logs.push({
+                    round,
+                    kind: 'proc',
+                    actor: character.name,
+                    proc: '冰刺',
+                    value: iceSpikes,
+                    text: `【冰刺】获得${realGain}枚（当前${iceSpikes}/${maxStacks}）`
+                });
+            }
+        }
+
         // ==================== 盗贼：连击点（星）结算 ====================
         // 技能的 calculate 可返回：
         // - generateComboPoints: number
@@ -21418,6 +21666,7 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
             fortuneMisfortuneStacks,
             fantasiaStacks,
             fingersOfFrost, // 把最新层数存回去
+            iceSpikes,      // 把最新层数存回去
             talentFlags,
         }
     };
@@ -23485,6 +23734,7 @@ function gameReducer(state, action) {
                 fortuneMisfortuneStacks: 0, // 祸福相依层数
                 fantasiaStacks: 0,          // 幻想曲层数（戒律牧师50级天赋，仅本场战斗）
                 fingersOfFrost: 0, // 寒冰指层数（冰霜法师）
+                iceSpikes: 0, // 冰刺层数（冰霜法师）
                 // ✅ 种族战斗内触发状态（每场战斗重置）
                 racialFlags: {
                     stoneformCurseUsed: false,
@@ -34945,7 +35195,7 @@ const BossCombatModal = ({ combat, state }) => {
                                 </div>
 
                                 {/* 寒冰指/祸福相依/幻想曲/连击点显示 */}
-                                {!isDead && (p.fingersOfFrost > 0 || p.fortuneMisfortuneStacks > 0 || (p.fantasiaStacks || 0) > 0 || (p.comboPoints || 0) > 0) && (
+                                {!isDead && (p.fingersOfFrost > 0 || (p.iceSpikes || 0) > 0 || p.fortuneMisfortuneStacks > 0 || (p.fantasiaStacks || 0) > 0 || (p.comboPoints || 0) > 0) && (
                                     <div style={{
                                         marginTop: 8,
                                         display: 'flex',
@@ -34963,6 +35213,18 @@ const BossCombatModal = ({ combat, state }) => {
                                                 border: '1px solid rgba(33,150,243,0.3)'
                                             }}>
                                                 ❄️ 寒冰指 ×{p.fingersOfFrost}
+                                            </span>
+                                        )}
+                                        {(p.iceSpikes || 0) > 0 && (
+                                            <span style={{
+                                                padding: '2px 8px',
+                                                background: 'rgba(0,188,212,0.2)',
+                                                borderRadius: 4,
+                                                fontSize: 10,
+                                                color: '#80deea',
+                                                border: '1px solid rgba(0,188,212,0.3)'
+                                            }}>
+                                                🧊 冰刺 ×{p.iceSpikes || 0}
                                             </span>
                                         )}
                                         {p.fortuneMisfortuneStacks > 0 && (

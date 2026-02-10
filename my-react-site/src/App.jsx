@@ -3028,6 +3028,14 @@ const BADGE_EQUIP_POOLS = {
         // 目前奥妮克希亚固定掉落装备：EQ_202 ~ EQ_211
         eqIdRanges: [[202, 211]],
     },
+
+    // ✅ 黑翼之巢（含区域掉落 + BWL BOSS 掉落：堕落的瓦拉斯塔兹 / 克洛玛古斯 / 奈法利安）
+    // - 区域掉落：EQ_212 ~ EQ_228
+    // - BOSS 掉落：EQ_229 ~ EQ_251
+    blackwing_lair: {
+        // 目前黑翼之巢相关装备：EQ_212 ~ EQ_251
+        eqIdRanges: [[212, 251]],
+    },
 };
 
 // 把 'EQ_001' -> 1；不符合格式返回 null
@@ -3173,6 +3181,17 @@ const BADGE_UPGRADE_RULES_CONFIG = {
         // ✅ 仅升级【奥妮克希亚的巢穴】掉落装备（含本BOSS掉落的T2头/项链/戒指/披风/副手/武器等）
         equipPool: 'onyxias_lair',
         theme: { border: '#212121', title: '#b388ff', shadow: 'rgba(179,136,255,0.22)' }
+    },
+
+    // ✅ 新增：团队首领 - 奈法利安徽章（黑翼之巢：区域掉落 + BOSS掉落）
+    IT_ELEMENTIUM_BADGE: {
+        title: '源质徽章',
+        zoneLabel: '黑翼之巢 / 黑翼之巢BOSS掉落',
+        inc: 2,
+        cap: 100,
+        // ✅ 升级【黑翼之巢】区域掉落 + BWL BOSS（堕落的瓦拉斯塔兹 / 克洛玛古斯 / 奈法利安）掉落装备
+        equipPool: 'blackwing_lair',
+        theme: { border: '#263238', title: '#80cbc4', shadow: 'rgba(38,50,56,0.25)' }
     },
 
     // ✅ 新增：团队首领 - 火焰之王拉格纳罗斯徽章
@@ -10174,6 +10193,18 @@ const ITEMS = {
         description: '使用后选择一件【奥妮克希亚的巢穴】掉落装备，使其等级提升 +2（最高100级）。'
     },
 
+    // 源质徽章（奈法利安掉落）
+    IT_ELEMENTIUM_BADGE: {
+        id: 'IT_ELEMENTIUM_BADGE',
+        name: '源质徽章',
+        type: 'consumable',
+        rarity: 'orange',
+        canUse: true,
+        sellPrice: 0,  // 不可出售
+        icon: 'icons/wow/vanilla/items/INV_Misc_StoneTablet_05.png',
+        description: '使用后选择一件【黑翼之巢】区域或【黑翼之巢BOSS】掉落装备，使其等级提升 +2（最高100级）。适用于堕落的瓦拉斯塔兹、克洛玛古斯、奈法利安掉落装备。'
+    },
+
     // 火焰之王的徽章（拉格纳罗斯掉落）
     IT_RAGNAROS_BADGE: {
         id: 'IT_RAGNAROS_BADGE',
@@ -11923,6 +11954,7 @@ const BOSS_DATA = {
             gold: 5000000,
             exp: 3200000,
             items: [
+                { id: 'IT_ELEMENTIUM_BADGE', chance: 0.8 }, // ✅ 源质徽章（奈法利安掉落）
                 // ===== 奈法利安专属掉落（T2胸甲 / 武器 / 饰品 / 戒指） =====
                 { id: 'EQ_242', chance: 0.10 }, // 愤怒胸甲
                 { id: 'EQ_243', chance: 0.10 }, // 血牙胸甲

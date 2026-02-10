@@ -10995,7 +10995,7 @@ const SET_BONUSES = {
         ]
     }
     ,
-    // ==================== 熔火之心 · T1 套装（4件套） ====================
+    // ==================== 熔火之心 · T1 套装 ====================
     might_set: {
         name: '力量',
         tiers: [
@@ -11026,6 +11026,40 @@ const SET_BONUSES = {
             { count: 3, bonus: { spellPower: 300, mastery: 12 } },
             { count: 5, bonus: { hp: 1200, versatility: 18 } },
             { count: 8, bonus: { hp: 2500, spellPower:800 } },
+        ]
+    }
+
+    // ==================== BWL · T2 套装====================
+    might_set: {
+        name: '愤怒',
+        tiers: [
+            { count: 3, bonus: { hp: 1000, armor: 140, mastery: 14 } },
+            { count: 5, bonus: { blockRate: 7, blockValue: 420 } },
+            { count: 8, bonus: { hp: 4800, attack:960 } },
+        ]
+    },
+    nightslayer_set: {
+        name: '血牙',
+        tiers: [
+            { count: 3, bonus: { attack: 300, haste: 14 } },
+            { count: 5, bonus: { critRate: 14, critDamage: 0.40 } },
+            { count: 8, bonus: { hp: 2500, versatility: 28 } },
+        ]
+    },
+    arcanist_set: {
+        name: '灵风',
+        tiers: [
+            { count: 3, bonus: { spellPower: 360, haste: 14 } },
+            { count: 5, bonus: { critRate: 14, mastery: 14} },
+            { count: 8, bonus: { hp: 2500, versatility: 28 } },
+        ]
+    },
+    prophecy_set: {
+        name: '卓越',
+        tiers: [
+            { count: 3, bonus: { spellPower: 300, mastery: 14 } },
+            { count: 5, bonus: { hp: 1600, versatility: 21 } },
+            { count: 8, bonus: { hp: 3000, spellPower:960 } },
         ]
     }
 

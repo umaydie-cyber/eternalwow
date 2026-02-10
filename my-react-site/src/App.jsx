@@ -2627,15 +2627,33 @@ const ZONES = {
         level: 60,
         type: 'explore',
         enemies: [
-            { name: '黑翼技师', hp: 5000000, attack: 20000, defense: 8800, exp: 42000, gold: 32000 },
-            { name: '死亡之爪狂乱者', hp: 5400000, attack: 19500, defense: 9000, exp: 44000, gold: 34000 },
-            { name: '黑翼龙人卫士', hp: 5800000, attack: 22000, defense: 9300, exp: 46000, gold: 36000 },
-            { name: '畸形龙兽', hp: 6200000, attack: 24000, defense: 9500, exp: 48000, gold: 38000 },
+            { name: '黑翼技师', hp: 4600000, attack: 20000, defense: 8800, exp: 42000, gold: 32000 },
+            { name: '死亡之爪狂乱者', hp: 5000000, attack: 19500, defense: 9000, exp: 44000, gold: 34000 },
+            { name: '黑翼龙人卫士', hp: 5400000, attack: 22000, defense: 9300, exp: 46000, gold: 36000 },
+            { name: '畸形龙兽', hp: 5200000, attack: 24000, defense: 9500, exp: 48000, gold: 38000 },
         ],
         resources: ['铁矿', '魔法精华'],
         unlocked: false,
         unlockLevel: 60
     },
+
+    // ==================== 安其拉神庙（60级） ====================
+    temple_of_ahnqiraj: {
+        id: 'temple_of_ahnqiraj',
+        name: '安其拉神庙',
+        level: 60,
+        type: 'explore',
+        enemies: [
+            { name: '其拉帝王卫士', hp: 6000000, attack: 26000, defense: 9800, exp: 50000, gold: 40000 },
+            { name: '维克尼拉斯的亲卫', hp: 6300000, attack: 27000, defense: 10000, exp: 52000, gold: 42000 },
+            { name: '无面者先知', hp: 6700000, attack: 28500, defense: 10200, exp: 54000, gold: 44000 },
+            { name: '暮光预言者', hp: 7000000, attack: 30000, defense: 10500, exp: 56000, gold: 46000 },
+        ],
+        resources: ['铁矿', '魔法精华'],
+        unlocked: false,
+        unlockLevel: 60
+    },
+
 
 };
 
@@ -2966,6 +2984,43 @@ const DROP_TABLES = {
             { id: 'EQ_228', chance: 0.00025 }, // 卓越长靴
         ]
     },
+
+    // ==================== 安其拉神庙（60级）掉落 ====================
+    temple_of_ahnqiraj: {
+        equipment: [
+            { id: 'EQ_252', chance: 0.0004 },  // 维克尼拉斯的咒符
+            { id: 'EQ_253', chance: 0.00025 }, // 卡利姆多的复仇
+            { id: 'EQ_254', chance: 0.0004 },  // 安格莉丝塔的护符
+            { id: 'EQ_255', chance: 0.0004 },  // 石化甲虫
+            { id: 'EQ_256', chance: 0.0004 },  // 吞噬者之戒
+            { id: 'EQ_257', chance: 0.0004 },  // 安格莉丝塔的触摸
+            { id: 'EQ_258', chance: 0.0004 },  // 其拉贵族魔杖
+            { id: 'EQ_259', chance: 0.0004 },  // 尖刺颈饰
+            { id: 'EQ_260', chance: 0.0004 },  // 沙漠掠夺者雕像
+            { id: 'EQ_261', chance: 0.0004 },  // 沙尔图拉的力量
+            { id: 'EQ_262', chance: 0.00025 }, // 沙漠掠夺者之刺
+            { id: 'EQ_263', chance: 0.00025 }, // 上古其拉撕裂者
+            { id: 'EQ_264', chance: 0.0004 },  // 生命图腾
+            { id: 'EQ_265', chance: 0.0004 },  // 隐没秘密披风
+
+            // T2.5：征服者（战士）
+            { id: 'EQ_266', chance: 0.00025 }, // 征服者的皇冠
+            { id: 'EQ_267', chance: 0.00025 }, // 征服者的胫甲
+
+            // T2.5：死亡执行者（盗贼）
+            { id: 'EQ_268', chance: 0.00025 }, // 死亡执行者的头盔
+            { id: 'EQ_269', chance: 0.00025 }, // 死亡执行者的长靴
+
+            // T2.5：神秘（法师）
+            { id: 'EQ_270', chance: 0.00025 }, // 神秘头饰
+            { id: 'EQ_271', chance: 0.00025 }, // 神秘长靴
+
+            // T2.5：神谕者（牧师）
+            { id: 'EQ_272', chance: 0.00025 }, // 神谕者的皇冠
+            { id: 'EQ_273', chance: 0.00025 }, // 神谕者的裹足
+        ]
+    },
+
 
 
 
@@ -9659,6 +9714,645 @@ const FIXED_EQUIPMENTS = {
       }
     },
 
+    // ==================== 安其拉神庙（60级）掉落 ====================
+
+    // ✅ 维克尼拉斯的咒符（通用饰品1）
+    EQ_252: {
+      id: 'EQ_252',
+      name: '维克尼拉斯的咒符',
+      icon: 'icons/wow/vanilla/armor/weikenilasi.png',
+      type: 'equipment',
+      slot: 'neck',
+      rarity: 'purple',
+      level: 0,
+      maxLevel: 100,
+      baseStats: {
+        hp: 6500,
+        spellPower: 900,
+        critRate: 18,
+        mastery: 18,
+        versatility: 20,
+      },
+      growth: {
+        hp: 2,
+        spellPower: 2,
+        critRate: 2,
+        mastery: 2,
+        versatility: 2,
+      }
+    },
+
+    // ✅ 卡利姆多的复仇（攻强主手武器，20%概率触发2倍攻击的闪电箭）
+    EQ_253: {
+      id: 'EQ_253',
+      name: '卡利姆多的复仇',
+      icon: 'icons/wow/vanilla/weapons/kalimuduodefuchou.png',
+      type: 'equipment',
+      slot: 'mainHand',
+      rarity: 'purple',
+      level: 0,
+      maxLevel: 100,
+      baseStats: {
+        attack: 2850,
+        hp: 6000,
+        critRate: 20,
+        critDamage: 0.85,
+        haste: 24,
+        mastery: 24,
+      },
+      growth: {
+        attack: 2,
+        hp: 2,
+        critRate: 2,
+        critDamage: 2,
+        haste: 2,
+        mastery: 2,
+      },
+      specialEffect: {
+        type: 'proc_damage',
+        trigger: 'turn_start',
+        chance: 0.20,
+        name: '闪电箭',
+        school: 'nature',
+        basedOn: 'attack',
+        damageMult: 2.0,
+        scaleWithLevel: true
+      }
+    },
+
+    // ✅ 安格莉丝塔的护符（奶妈项链）
+    EQ_254: {
+      id: 'EQ_254',
+      name: '安格莉丝塔的护符',
+      icon: 'icons/wow/vanilla/armor/inv_jewelry_necklace_20.png',
+      type: 'equipment',
+      slot: 'neck',
+      rarity: 'purple',
+      level: 0,
+      maxLevel: 100,
+      baseStats: {
+        spellPower: 780,
+        hp: 6500,
+        mastery: 24,
+        versatility: 24,
+        critRate: 14,
+      },
+      growth: {
+        spellPower: 2,
+        hp: 2,
+        mastery: 2,
+        versatility: 2,
+        critRate: 2,
+      }
+    },
+
+    // ✅ 石化甲虫（坦克饰品2：魔抗 + 1、5回合护盾）
+    EQ_255: {
+      id: 'EQ_255',
+      name: '石化甲虫',
+      icon: 'icons/wow/vanilla/armor/shihuajiachong.png',
+      type: 'equipment',
+      slot: 'trinket2',
+      rarity: 'purple',
+      level: 0,
+      maxLevel: 100,
+      baseStats: {
+        hp: 8000,
+        armor: 180,
+        magicResist: 260,
+        mastery: 16,
+        versatility: 16,
+      },
+      growth: {
+        hp: 2,
+        armor: 2,
+        magicResist: 2,
+        mastery: 2,
+        versatility: 2,
+      },
+      specialEffect: {
+        type: 'skill_slot_shield',
+        slots: [0, 4],
+        shieldType: 'scarab_barrier',
+        name: '石化护盾',
+        basedOn: 'maxHp',
+        amountMult: 0.20,
+        duration: 1,
+        scaleWithLevel: true
+      }
+    },
+
+    // ✅ 吞噬者之戒（治疗 RING2）
+    EQ_256: {
+      id: 'EQ_256',
+      name: '吞噬者之戒',
+      icon: 'icons/wow/vanilla/armor/tunshizhezhijie.png',
+      type: 'equipment',
+      slot: 'ring2',
+      rarity: 'purple',
+      level: 0,
+      maxLevel: 100,
+      baseStats: {
+        spellPower: 720,
+        hp: 5500,
+        mastery: 22,
+        versatility: 22,
+        haste: 12,
+      },
+      growth: {
+        spellPower: 2,
+        hp: 2,
+        mastery: 2,
+        versatility: 2,
+        haste: 2,
+      }
+    },
+
+    // ✅ 安格莉丝塔的触摸（坦克戒指 RING2）
+    EQ_257: {
+      id: 'EQ_257',
+      name: '安格莉丝塔的触摸',
+      icon: 'icons/wow/vanilla/armor/angelisitadechumo.png',
+      type: 'equipment',
+      slot: 'ring2',
+      rarity: 'purple',
+      level: 0,
+      maxLevel: 100,
+      baseStats: {
+        hp: 9500,
+        armor: 260,
+        magicResist: 200,
+        mastery: 20,
+        versatility: 20,
+        blockValue: 800,
+      },
+      growth: {
+        hp: 2,
+        armor: 2,
+        magicResist: 2,
+        mastery: 2,
+        versatility: 2,
+        blockValue: 2,
+      }
+    },
+
+    // ✅ 其拉贵族魔杖（法强副手）
+    EQ_258: {
+      id: 'EQ_258',
+      name: '其拉贵族魔杖',
+      icon: 'icons/wow/vanilla/weapons/INV_Wand_06.png',
+      type: 'equipment',
+      slot: 'offHand',
+      rarity: 'purple',
+      level: 0,
+      maxLevel: 100,
+      baseStats: {
+        spellPower: 1150,
+        hp: 5200,
+        critRate: 12,
+        haste: 20,
+        mastery: 30,
+        versatility: 12,
+      },
+      growth: {
+        spellPower: 2,
+        hp: 2,
+        critRate: 2,
+        haste: 2,
+        mastery: 2,
+        versatility: 2,
+      }
+    },
+
+    // ✅ 尖刺颈饰（暴击/爆伤/攻强项链）
+    EQ_259: {
+      id: 'EQ_259',
+      name: '尖刺颈饰',
+      icon: 'icons/wow/vanilla/armor/jiancijingshi.png',
+      type: 'equipment',
+      slot: 'neck',
+      rarity: 'purple',
+      level: 0,
+      maxLevel: 100,
+      baseStats: {
+        attack: 950,
+        hp: 6000,
+        critRate: 28,
+        critDamage: 0.90,
+        haste: 20,
+        mastery: 15,
+      },
+      growth: {
+        attack: 2,
+        hp: 2,
+        critRate: 2,
+        critDamage: 2,
+        haste: 2,
+        mastery: 2,
+      }
+    },
+
+    // ✅ 沙虫之毒（攻强爆发饰品2：1、2、3回合攻强）
+    EQ_260: {
+      id: 'EQ_260',
+      name: '沙虫之毒',
+      icon: 'icons/wow/vanilla/armor/shachongzhidu.png',
+      type: 'equipment',
+      slot: 'trinket2',
+      rarity: 'purple',
+      level: 0,
+      maxLevel: 100,
+      baseStats: {
+        attack: 750,
+        hp: 5500,
+        critRate: 10,
+      },
+      growth: {
+        attack: 2,
+        hp: 2,
+        critRate: 2,
+      },
+      specialEffect: {
+        type: 'skill_slot_buff',
+        slots: [0, 1, 2],
+        attackBonus: 2400
+      }
+    },
+
+    // ✅ 沙尔图拉的力量（法强爆发饰品2：1、2、3回合法强）
+    EQ_261: {
+      id: 'EQ_261',
+      name: '沙尔图拉的力量',
+      icon: 'icons/wow/vanilla/armor/shaertuladeliliang.png',
+      type: 'equipment',
+      slot: 'trinket2',
+      rarity: 'purple',
+      level: 0,
+      maxLevel: 100,
+      baseStats: {
+        spellPower: 820,
+        hp: 5500,
+        critRate: 10,
+      },
+      growth: {
+        spellPower: 2,
+        hp: 2,
+        critRate: 2,
+      },
+      specialEffect: {
+        type: 'skill_slot_buff',
+        slots: [0, 1, 2],
+        spellPowerBonus: 2400
+      }
+    },
+
+    // ✅ 沙漠掠夺者之刺（攻强主手）
+    EQ_262: {
+      id: 'EQ_262',
+      name: '沙漠掠夺者之刺',
+      icon: 'icons/wow/vanilla/weapons/shamolueduozhezhici.png',
+      type: 'equipment',
+      slot: 'mainHand',
+      rarity: 'purple',
+      level: 0,
+      maxLevel: 100,
+      baseStats: {
+        attack: 2950,
+        hp: 5500,
+        critRate: 18,
+        critDamage: 0.85,
+        haste: 20,
+        mastery: 24,
+      },
+      growth: {
+        attack: 2,
+        hp: 2,
+        critRate: 2,
+        critDamage: 2,
+        haste: 2,
+        mastery: 2,
+      }
+    },
+
+    // ✅ 上古其拉撕裂者（暴击/爆伤/攻强副手）
+    EQ_263: {
+      id: 'EQ_263',
+      name: '上古其拉撕裂者',
+      icon: 'icons/wow/vanilla/weapons/shangguqilasiliezhe.png',
+      type: 'equipment',
+      slot: 'offHand',
+      rarity: 'purple',
+      level: 0,
+      maxLevel: 100,
+      baseStats: {
+        attack: 1350,
+        hp: 4000,
+        critRate: 24,
+        critDamage: 0.70,
+        haste: 12,
+        mastery: 12,
+      },
+      growth: {
+        attack: 2,
+        hp: 2,
+        critRate: 2,
+        critDamage: 2,
+        haste: 2,
+        mastery: 2,
+      }
+    },
+
+    // ✅ 生命图腾（奶妈副手）
+    EQ_264: {
+      id: 'EQ_264',
+      name: '生命图腾',
+      icon: 'icons/wow/vanilla/armor/shengmingtuteng.png',
+      type: 'equipment',
+      slot: 'offHand',
+      rarity: 'purple',
+      level: 0,
+      maxLevel: 100,
+      baseStats: {
+        spellPower: 900,
+        hp: 8000,
+        mastery: 20,
+        versatility: 24,
+        critRate: 12,
+        haste: 12,
+      },
+      growth: {
+        spellPower: 2,
+        hp: 2,
+        mastery: 2,
+        versatility: 2,
+        critRate: 2,
+        haste: 2,
+      }
+    },
+
+    // ✅ 隐没秘密披风（魔抗 / 生命 / 全能披风）
+    EQ_265: {
+      id: 'EQ_265',
+      name: '隐没秘密披风',
+      icon: 'icons/wow/vanilla/armor/INV_Misc_Cape_20.png',
+      type: 'equipment',
+      slot: 'cloak',
+      rarity: 'purple',
+      level: 0,
+      maxLevel: 100,
+      baseStats: {
+        hp: 7000,
+        armor: 300,
+        magicResist: 160,
+        versatility: 40,
+        mastery: 20,
+      },
+      growth: {
+        hp: 2,
+        armor: 2,
+        magicResist: 2,
+        versatility: 2,
+        mastery: 2,
+      }
+    },
+
+    // ✅ T2.5：征服者（战士）- 皇冠
+    EQ_266: {
+      id: 'EQ_266',
+      name: '征服者的皇冠',
+      icon: 'icons/wow/vanilla/armor/zst25tou.png',
+      type: 'equipment',
+      slot: 'head',
+      rarity: 'purple',
+      setId: 'conqueror_set',
+      setName: '征服者',
+      level: 0,
+      maxLevel: 100,
+      baseStats: {
+        hp: 9500,
+        armor: 300,
+        magicResist: 90,
+        mastery: 15,
+        blockRate: 6,
+        blockValue: 450,
+      },
+      growth: {
+        hp: 2,
+        armor: 2,
+        magicResist: 2,
+        mastery: 2,
+        blockRate: 2,
+        blockValue: 2,
+      }
+    },
+
+    // ✅ T2.5：征服者（战士）- 胫甲
+    EQ_267: {
+      id: 'EQ_267',
+      name: '征服者的胫甲',
+      icon: 'icons/wow/vanilla/armor/INV_Boots_Plate_05.png',
+      type: 'equipment',
+      slot: 'feet',
+      rarity: 'purple',
+      setId: 'conqueror_set',
+      setName: '征服者',
+      level: 0,
+      maxLevel: 100,
+      baseStats: {
+        hp: 8500,
+        armor: 260,
+        magicResist: 100,
+        versatility: 15,
+        blockRate: 5,
+        blockValue: 620,
+      },
+      growth: {
+        hp: 2,
+        armor: 2,
+        magicResist: 2,
+        versatility: 2,
+        blockRate: 2,
+        blockValue: 2,
+      }
+    },
+
+    // ✅ T2.5：死亡执行者（盗贼）- 头盔
+    EQ_268: {
+      id: 'EQ_268',
+      name: '死亡执行者的头盔',
+      icon: 'icons/wow/vanilla/armor/INV_Helmet_04.png',
+      type: 'equipment',
+      slot: 'head',
+      rarity: 'purple',
+      setId: 'deathdealer_set',
+      setName: '死亡执行者',
+      level: 0,
+      maxLevel: 100,
+      baseStats: {
+        attack: 750,
+        armor: 180,
+        hp: 5000,
+        critRate: 15,
+        critDamage: 0.2,
+        haste: 10,
+      },
+      growth: {
+        attack: 2,
+        armor: 2,
+        hp: 2,
+        critRate: 2,
+        critDamage: 2,
+        haste: 2,
+      }
+    },
+
+    // ✅ T2.5：死亡执行者（盗贼）- 长靴
+    EQ_269: {
+      id: 'EQ_269',
+      name: '死亡执行者的长靴',
+      icon: 'icons/wow/vanilla/armor/INV_Boots_08.png',
+      type: 'equipment',
+      slot: 'feet',
+      rarity: 'purple',
+      setId: 'deathdealer_set',
+      setName: '死亡执行者',
+      level: 0,
+      maxLevel: 100,
+      baseStats: {
+        attack: 750,
+        armor: 180,
+        hp: 5000,
+        critRate: 15,
+        critDamage: 0.2,
+        mastery: 10,
+      },
+      growth: {
+        attack: 2,
+        armor: 2,
+        hp: 2,
+        critRate: 2,
+        critDamage: 2,
+        mastery: 2,
+      }
+    },
+
+    // ✅ T2.5：神秘（法师）- 头饰
+    EQ_270: {
+      id: 'EQ_270',
+      name: '神秘头饰',
+      icon: 'icons/wow/vanilla/armor/INV_Helmet_06.png',
+      type: 'equipment',
+      slot: 'head',
+      rarity: 'purple',
+      setId: 'enigma_set',
+      setName: '神秘',
+      level: 0,
+      maxLevel: 100,
+      baseStats: {
+        spellPower: 800,
+        magicResist: 90,
+        hp: 5000,
+        critRate: 15,
+        critDamage: 0.2,
+        mastery: 10,
+      },
+      growth: {
+        spellPower: 2,
+        magicResist: 2,
+        hp: 2,
+        critRate: 2,
+        critDamage: 2,
+        mastery: 2,
+      }
+    },
+
+    // ✅ T2.5：神秘（法师）- 长靴
+    EQ_271: {
+      id: 'EQ_271',
+      name: '神秘长靴',
+      icon: 'icons/wow/vanilla/armor/INV_Boots_09.png',
+      type: 'equipment',
+      slot: 'feet',
+      rarity: 'purple',
+      setId: 'enigma_set',
+      setName: '神秘',
+      level: 0,
+      maxLevel: 100,
+      baseStats: {
+        spellPower: 800,
+        magicResist: 90,
+        hp: 5000,
+        critRate: 15,
+        critDamage: 0.20,
+        mastery: 10,
+      },
+      growth: {
+        spellPower: 2,
+        magicResist: 2,
+        hp: 2,
+        critRate: 2,
+        critDamage: 2,
+        mastery: 2,
+      }
+    },
+
+    // ✅ T2.5：神谕者（牧师）- 皇冠
+    EQ_272: {
+      id: 'EQ_272',
+      name: '神谕者的皇冠',
+      icon: 'icons/wow/vanilla/armor/INV_Helmet_06.png',
+      type: 'equipment',
+      slot: 'head',
+      rarity: 'purple',
+      setId: 'oracle_set',
+      setName: '神谕者',
+      level: 0,
+      maxLevel: 100,
+      baseStats: {
+        spellPower: 720,
+        magicResist: 90,
+        hp: 6000,
+        mastery: 16,
+        versatility: 16,
+      },
+      growth: {
+        spellPower: 2,
+        magicResist: 2,
+        hp: 2,
+        mastery: 2,
+        versatility: 2,
+      }
+    },
+
+    // ✅ T2.5：神谕者（牧师）- 裹足
+    EQ_273: {
+      id: 'EQ_273',
+      name: '神谕者的裹足',
+      icon: 'icons/wow/vanilla/armor/INV_Boots_09.png',
+      type: 'equipment',
+      slot: 'feet',
+      rarity: 'purple',
+      setId: 'oracle_set',
+      setName: '神谕者',
+      level: 0,
+      maxLevel: 100,
+      baseStats: {
+        spellPower: 720,
+        magicResist: 90,
+        hp: 6000,
+        versatility: 16,
+        critRate: 16,
+      },
+      growth: {
+        spellPower: 2,
+        magicResist: 2,
+        hp: 2,
+        versatility: 2,
+        critRate: 2,
+      }
+    },
+
+
 
 };
 
@@ -11174,6 +11868,33 @@ const SET_BONUSES = {
             { count: 8, bonus: { hp: 3000, spellPower:960 } },
         ]
     },
+
+    // ==================== T2.5（安其拉神庙）套装 ====================
+    conqueror_set: {
+        name: '征服者',
+        tiers: [
+            { count: 2, bonus: { hp: 600, armor: 100, mastery: 8 } },
+        ]
+    },
+    deathdealer_set: {
+        name: '死亡执行者',
+        tiers: [
+            { count: 2, bonus: { attack: 150, critRate: 6, haste: 8 } },
+        ]
+    },
+    enigma_set: {
+        name: '神秘',
+        tiers: [
+            { count: 2, bonus: { spellPower: 180, critRate: 6, haste: 8 } },
+        ]
+    },
+    oracle_set: {
+        name: '神谕者',
+        tiers: [
+            { count: 2, bonus: { spellPower: 160, mastery: 8, versatility: 8 } },
+        ]
+    },
+
 
 };
 
@@ -12962,6 +13683,71 @@ function getRacialSkillSlotStatBonus(character, slotIndex) {
     return out;
 }
 
+// ==================== 装备特效：技能格护盾（例如：石化甲虫） ====================
+// 在指定技能格释放技能时：给自己添加护盾（吸收伤害），持续若干回合。
+// - se.type === 'skill_slot_shield'
+// - se.slots: [0,4] 表示第1、5格（与现有 skill_slot_buff 规则一致）
+// - se.basedOn: 'maxHp' | 'attack' | 'spellPower' | 'armor' | 'magicResist'（默认 maxHp）
+// - se.amountMult / se.amountFlat：护盾吸收量 = 基础属性 * mult + flat
+// - se.scaleWithLevel：true 时随装备等级线性增强（lv0=1x, lv100=2x）
+function rollSkillSlotShieldEffects(character, slotIndex) {
+    const idx = Number(slotIndex);
+    if (!Number.isFinite(idx) || idx < 0) return [];
+
+    const eqList = Object.values(character?.equipment || {}).filter(Boolean);
+    const triggered = [];
+
+    eqList.forEach(eq => {
+        const effects = getEquipmentSpecialEffectList(eq);
+        effects.forEach(se => {
+            if (!se || se.type !== 'skill_slot_shield') return;
+
+            const slots = Array.isArray(se.slots)
+                ? se.slots
+                : (Number.isFinite(Number(se.slot)) ? [Number(se.slot)] : []);
+
+            if (!slots.includes(idx)) return;
+
+            // 可选：概率（默认100%）
+            const chance = (se.chance == null) ? 1 : Math.max(0, Math.min(1, Number(se.chance) || 0));
+            if (chance <= 0) return;
+            if (chance < 1 && Math.random() >= chance) return;
+
+            const basedOn = se.basedOn || 'maxHp';
+            let basis = 0;
+            if (basedOn === 'spellPower') basis = Number(character?.stats?.spellPower) || 0;
+            else if (basedOn === 'attack') basis = Number(character?.stats?.attack) || 0;
+            else if (basedOn === 'armor') basis = Number(character?.stats?.armor) || 0;
+            else if (basedOn === 'magicResist') basis = Number(character?.stats?.magicResist) || 0;
+            else basis = Number(character?.stats?.maxHp) || Number(character?.stats?.hp) || 0;
+
+            const mult = Number(se.amountMult) || 0;
+            const flat = Number(se.amountFlat) || 0;
+            let amount = basis * mult + flat;
+
+            const lv = clamp(Number(eq.currentLevel ?? eq.level) || 0, 0, 100);
+            if (se.scaleWithLevel) {
+                amount *= (1 + (lv / 100));
+            }
+
+            amount = Math.floor(amount);
+            if (amount <= 0) return;
+
+            const duration = Math.max(1, Math.floor(Number(se.duration) || 1));
+
+            triggered.push({
+                label: se.name || '护盾',
+                shieldType: se.shieldType || 'scarab_barrier',
+                amount,
+                duration,
+            });
+        });
+    });
+
+    return triggered;
+}
+
+
 // 检查角色是否有普攻重复特效，返回触发概率
 function getBasicAttackRepeatChance(character) {
     const eqList = Object.values(character?.equipment || {}).filter(Boolean);
@@ -13434,7 +14220,7 @@ function stepBossCombat(state) {
 
         // 找到有效的护盾buff
         const shieldBuff = playerState.buffs.find(b =>
-            b.type && b.amount > 0 && ['ice_barrier', 'holy_barrier'].includes(b.type)
+            b.type && b.amount > 0 && ['ice_barrier', 'holy_barrier', 'scarab_barrier'].includes(b.type)
         );
 
         if (!shieldBuff) {
@@ -13541,7 +14327,7 @@ function stepBossCombat(state) {
                 })
                 .filter(b => {
                     // 护盾：持续时间到期或吸收量耗尽都移除
-                    if (b.type && ['ice_barrier', 'holy_barrier'].includes(b.type)) {
+                    if (b.type && ['ice_barrier', 'holy_barrier', 'scarab_barrier'].includes(b.type)) {
                         if ((b.duration ?? 999) <= 0 || (b.amount ?? 0) <= 0) {
                             addLog(`位置${i + 1} ${p.char.name} 的【${b.name}】护盾消失`);
                             return false;
@@ -14077,6 +14863,40 @@ function stepBossCombat(state) {
                     const minionName = boss.minion?.name || boss.cannoneer?.name || '小弟';
                     addLog(`【${pd.label}】命中 ${minionName}${tIndex + 1}：造成 ${actual} ${getSchoolCn(school)}伤害`);
                 }
+            });
+        }
+
+        // ==================== 装备特效：技能格护盾（例如：石化甲虫） ====================
+        if (!Array.isArray(p.buffs)) p.buffs = [];
+        const slotShields = rollSkillSlotShieldEffects(p.char, slotIndex);
+        if (slotShields.length > 0) {
+            slotShields.forEach(sh => {
+                if (!sh || (sh.amount || 0) <= 0) return;
+                const buffType = sh.shieldType || 'scarab_barrier';
+                const dur = Math.max(1, Math.floor(sh.duration || 1));
+                const internalDur = Math.max(0, dur - 1);
+                const existingIdx = p.buffs.findIndex(b => b?.type === buffType);
+
+                if (existingIdx === -1) {
+                    // 插到最前，保证优先吸收
+                    p.buffs.unshift({
+                        type: buffType,
+                        name: sh.label || '护盾',
+                        amount: sh.amount,
+                        duration: internalDur,
+                        justApplied: true,
+                    });
+                } else {
+                    p.buffs[existingIdx] = {
+                        ...p.buffs[existingIdx],
+                        name: sh.label || p.buffs[existingIdx]?.name || '护盾',
+                        amount: Math.max(Number(p.buffs[existingIdx]?.amount) || 0, sh.amount),
+                        duration: Math.max(Number(p.buffs[existingIdx]?.duration) || 0, internalDur),
+                        justApplied: true,
+                    };
+                }
+
+                addLog(`【${sh.label}】触发：${p.char.name} 获得护盾 ${sh.amount}（持续${dur}回合）`, 'buff');
             });
         }
 
@@ -19828,7 +20648,7 @@ const ARMOR_K = 3000; // 你可以调参：1000/5000/10000...
 
 // ==================== 魔抗减伤（统一公式） ====================
 // 统一魔抗系数（调参只改这里）
-const magicresist_k = 800;
+const magicresist_k = 1200;
 
 // 返回 0~1 的减伤比例（允许为负，代表易伤；例如 -0.2 表示多吃20%伤害）
 function getMagicResistDamageReduction(magicResist) {
@@ -19976,7 +20796,7 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
             .map(b => ({ ...b, duration: (b.duration ?? 0) - 1 }))
             .filter(b => {
                 // 护盾：持续时间到期或吸收量耗尽都移除
-                if (b.type && ['ice_barrier', 'holy_barrier'].includes(b.type)) {
+                if (b.type && ['ice_barrier', 'holy_barrier', 'scarab_barrier'].includes(b.type)) {
                     return (b.duration ?? 0) > 0 && (b.amount ?? 0) > 0;
                 }
                 // 其他buff只看持续时间
@@ -20241,6 +21061,45 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
                     actor: character.name,
                     proc: pd.label,
                     text: `【${pd.label}】命中 ${combatState?.enemy?.name || '敌人'}：造成 ${actual} ${getSchoolCn(pd.school)}伤害`
+                });
+            });
+        }
+
+        // ==================== 装备特效：技能格护盾（例如：石化甲虫 1、5回合护盾） ====================
+        const slotShields = rollSkillSlotShieldEffects(character, slotIndex);
+        if (slotShields.length > 0) {
+            slotShields.forEach(sh => {
+                if (!sh || (sh.amount || 0) <= 0) return;
+                const buffType = sh.shieldType || 'scarab_barrier';
+                const dur = Math.max(1, Math.floor(sh.duration || 1));
+                const internalDur = Math.max(0, dur - 1);
+
+                const idx = buffs.findIndex(b => b?.type === buffType);
+                if (idx === -1) {
+                    // 插到最前，保证优先吸收
+                    buffs.unshift({
+                        type: buffType,
+                        name: sh.label || '护盾',
+                        amount: sh.amount,
+                        duration: internalDur,
+                        justApplied: true,
+                    });
+                } else {
+                    buffs[idx] = {
+                        ...buffs[idx],
+                        name: sh.label || buffs[idx]?.name || '护盾',
+                        amount: Math.max(Number(buffs[idx]?.amount) || 0, sh.amount),
+                        duration: Math.max(Number(buffs[idx]?.duration) || 0, internalDur),
+                        justApplied: true,
+                    };
+                }
+
+                logs.push({
+                    round,
+                    kind: 'buff',
+                    actor: character.name,
+                    proc: sh.label,
+                    text: `【${sh.label}】触发：获得护盾 ${sh.amount}（持续${dur}回合）`
                 });
             });
         }
@@ -21636,7 +22495,7 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
 
         // ===== 新增：护盾吸收伤害 =====
         let shieldAbsorbed = 0;
-        const shieldBuff = buffs.find(b => b.type && b.amount > 0 && ['ice_barrier', 'holy_barrier'].includes(b.type));
+        const shieldBuff = buffs.find(b => b.type && b.amount > 0 && ['ice_barrier', 'holy_barrier', 'scarab_barrier'].includes(b.type));
 
         if (shieldBuff && finalDamage > 0) {
             // 计算护盾吸收量
@@ -25884,7 +26743,26 @@ const ItemDetailsModal = ({ item, onClose, onEquip, characters, state , dispatch
                             })()}
 
                             {/* basic_attack_repeat */}
-                            {type === 'basic_attack_repeat' && (
+
+        {type === 'skill_slot_shield' && (
+            <div className="text-xs opacity-90 mt-1">
+                <div>在以下技能格释放技能时获得护盾（吸收伤害）：</div>
+                <div className="mt-0.5">
+                    技能格：{Array.isArray(effect.slots) ? effect.slots.map(s => s + 1).join('、') : '未知'}
+                </div>
+                <div className="mt-0.5">
+                    护盾：{effect.name || '护盾'}
+                </div>
+                <div className="mt-0.5">
+                    计算：{(effect.basedOn || 'maxHp')} × {(effect.amountMult ?? 0)} + {(effect.amountFlat ?? 0)}
+                </div>
+                <div className="mt-0.5">
+                    持续：{effect.duration ?? 1}回合{effect.scaleWithLevel ? '（随装备等级增强）' : ''}
+                </div>
+            </div>
+        )}
+
+{type === 'basic_attack_repeat' && (
                               <div style={{ fontSize: 12, color: '#ffb74d', lineHeight: 1.6 }}>
                                 <div style={{ marginBottom: 8, color: '#fff' }}>
                                   使用普通攻击后，有 <span style={{ color: '#ffd700', fontWeight: 600 }}>{(chance * 100).toFixed(0)}%</span> 概率再次发动一次普通攻击
@@ -25990,7 +26868,7 @@ const ItemDetailsModal = ({ item, onClose, onEquip, characters, state , dispatch
                             )}
 
                             {/* fallback */}
-                            {![ 'skill_slot_buff','basic_attack_repeat','proc_stat','proc_damage','ignore_defense','thunderfury','map_slayer' ].includes(type) && (
+                            {![ 'skill_slot_buff','skill_slot_shield','basic_attack_repeat','proc_stat','proc_damage','ignore_defense','thunderfury','map_slayer' ].includes(type) && (
                               <div style={{ fontSize: 12, color: '#aaa' }}>
                                 ⚡ 特效：{String(type || 'unknown')}
                               </div>

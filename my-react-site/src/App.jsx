@@ -11027,10 +11027,10 @@ const SET_BONUSES = {
             { count: 5, bonus: { hp: 1200, versatility: 18 } },
             { count: 8, bonus: { hp: 2500, spellPower:800 } },
         ]
-    }
+    },
 
     // ==================== BWL · T2 套装====================
-    might_set: {
+    wrath_set: {
         name: '愤怒',
         tiers: [
             { count: 3, bonus: { hp: 1000, armor: 140, mastery: 14 } },
@@ -11038,7 +11038,7 @@ const SET_BONUSES = {
             { count: 8, bonus: { hp: 4800, attack:960 } },
         ]
     },
-    nightslayer_set: {
+    bloodfang_set: {
         name: '血牙',
         tiers: [
             { count: 3, bonus: { attack: 300, haste: 14 } },
@@ -11046,7 +11046,7 @@ const SET_BONUSES = {
             { count: 8, bonus: { hp: 2500, versatility: 28 } },
         ]
     },
-    arcanist_set: {
+    netherwind_set: {
         name: '灵风',
         tiers: [
             { count: 3, bonus: { spellPower: 360, haste: 14 } },
@@ -11054,14 +11054,14 @@ const SET_BONUSES = {
             { count: 8, bonus: { hp: 2500, versatility: 28 } },
         ]
     },
-    prophecy_set: {
+    transcendence_set: {
         name: '卓越',
         tiers: [
             { count: 3, bonus: { spellPower: 300, mastery: 14 } },
             { count: 5, bonus: { hp: 1600, versatility: 21 } },
             { count: 8, bonus: { hp: 3000, spellPower:960 } },
         ]
-    }
+    },
 
 };
 

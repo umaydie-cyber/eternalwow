@@ -9241,6 +9241,329 @@ const FIXED_EQUIPMENTS = {
       }
     },
 
+    // ==================== BWL团队首领：奈法利安（T2 胸甲 / 终章掉落） ====================
+
+    // ✅ T2：愤怒（战士）- 胸甲
+    EQ_242: {
+      id: 'EQ_242',
+      name: '愤怒胸甲',
+      icon: 'icons/wow/vanilla/armor/INV_Chest_Plate16.png',
+      type: 'equipment',
+      slot: 'chest',
+      rarity: 'purple',
+      setId: 'wrath_set',
+      setName: '愤怒',
+      level: 0,
+      maxLevel: 100,
+      baseStats: {
+        hp: 8800,
+        armor: 320,
+        magicResist: 120,
+        mastery: 18,
+        blockRate: 6,
+        blockValue: 720,
+        versatility: 18,
+      },
+      growth: {
+        hp: 2,
+        armor: 2,
+        magicResist: 2,
+        mastery: 2,
+        blockRate: 2,
+        blockValue: 2,
+        versatility: 2,
+      }
+    },
+
+    // ✅ T2：血牙（盗贼）- 胸甲
+    EQ_243: {
+      id: 'EQ_243',
+      name: '血牙胸甲',
+      icon: 'icons/wow/vanilla/armor/INV_Chest_Cloth_07.png',
+      type: 'equipment',
+      slot: 'chest',
+      rarity: 'purple',
+      setId: 'bloodfang_set',
+      setName: '血牙',
+      level: 0,
+      maxLevel: 100,
+      baseStats: {
+        attack: 760,
+        hp: 5600,
+        armor: 240,
+        magicResist: 100,
+        critRate: 16,
+        haste: 20,
+        mastery: 18,
+      },
+      growth: {
+        attack: 2,
+        hp: 2,
+        armor: 2,
+        magicResist: 2,
+        critRate: 2,
+        haste: 2,
+        mastery: 2,
+      }
+    },
+
+    // ✅ T2：灵风（法师）- 长袍
+    EQ_244: {
+      id: 'EQ_244',
+      name: '灵风长袍',
+      icon: 'icons/wow/vanilla/armor/INV_Chest_Cloth_03.png',
+      type: 'equipment',
+      slot: 'chest',
+      rarity: 'purple',
+      setId: 'netherwind_set',
+      setName: '灵风',
+      level: 0,
+      maxLevel: 100,
+      baseStats: {
+        spellPower: 780,
+        hp: 5200,
+        magicResist: 120,
+        critRate: 16,
+        haste: 20,
+        mastery: 20,
+        versatility: 18,
+      },
+      growth: {
+        spellPower: 2,
+        hp: 2,
+        magicResist: 2,
+        critRate: 2,
+        haste: 2,
+        mastery: 2,
+        versatility: 2,
+      }
+    },
+
+    // ✅ T2：卓越（牧师）- 法袍
+    EQ_245: {
+      id: 'EQ_245',
+      name: '卓越法袍',
+      icon: 'icons/wow/vanilla/armor/INV_Chest_Cloth_03.png',
+      type: 'equipment',
+      slot: 'chest',
+      rarity: 'purple',
+      setId: 'transcendence_set',
+      setName: '卓越',
+      level: 0,
+      maxLevel: 100,
+      baseStats: {
+        spellPower: 720,
+        hp: 6200,
+        magicResist: 120,
+        mastery: 20,
+        haste: 20,
+        versatility: 20,
+        critRate: 14,
+      },
+      growth: {
+        spellPower: 2,
+        hp: 2,
+        magicResist: 2,
+        mastery: 2,
+        haste: 2,
+        versatility: 2,
+        critRate: 2,
+      }
+    },
+
+    // ✅ 暗影烈焰法杖（法伤武器 / 法强主手）
+    EQ_246: {
+      id: 'EQ_246',
+      name: '暗影烈焰法杖',
+      icon: 'icons/wow/vanilla/weapons/INV_Staff_13.png',
+      type: 'equipment',
+      slot: 'mainHand',
+      rarity: 'purple',
+      level: 0,
+      maxLevel: 100,
+      baseStats: {
+        spellPower: 2600,
+        hp: 5200,
+        critRate: 20,
+        critDamage: 0.75,
+        haste: 26,
+        mastery: 30,
+      },
+      growth: {
+        spellPower: 2,
+        hp: 2,
+        critRate: 2,
+        critDamage: 2,
+        haste: 2,
+        mastery: 2,
+      },
+      specialEffect: {
+        type: 'proc_damage',
+        name: '暗影烈焰灼烧',
+        trigger: 'turn_start',
+        chance: 0.25,
+        school: 'shadow',
+        basedOn: 'spellPower',
+        damageMult: 1.2,
+        scaleWithLevel: true
+      }
+    },
+
+    // ✅ 阿什坎迪，兄弟会之剑（攻强主手）
+    EQ_247: {
+      id: 'EQ_247',
+      name: '阿什坎迪，兄弟会之剑',
+      icon: 'icons/wow/vanilla/weapons/INV_Sword_48.png',
+      type: 'equipment',
+      slot: 'mainHand',
+      rarity: 'purple',
+      level: 0,
+      maxLevel: 100,
+      baseStats: {
+        attack: 2700,
+        hp: 6000,
+        critRate: 22,
+        critDamage: 0.85,
+        haste: 22,
+        mastery: 22,
+      },
+      growth: {
+        attack: 2,
+        hp: 2,
+        critRate: 2,
+        critDamage: 2,
+        haste: 2,
+        mastery: 2,
+      },
+      specialEffect: {
+        type: 'ignore_defense',
+        pct: 0.35
+      }
+    },
+
+    // ✅ 洛卡米尔·伊洛曼希斯（奶妈法伤主手）
+    EQ_248: {
+      id: 'EQ_248',
+      name: '洛卡米尔·伊洛曼希斯',
+      icon: 'icons/wow/vanilla/weapons/INV_Mace_13.png',
+      type: 'equipment',
+      slot: 'mainHand',
+      rarity: 'purple',
+      level: 0,
+      maxLevel: 100,
+      baseStats: {
+        spellPower: 2350,
+        hp: 7500,
+        mastery: 26,
+        versatility: 28,
+        haste: 18,
+        critRate: 12,
+      },
+      growth: {
+        spellPower: 2,
+        hp: 2,
+        mastery: 2,
+        versatility: 2,
+        haste: 2,
+        critRate: 2,
+      },
+      specialEffect: {
+        type: 'proc_stat',
+        name: '神圣回响',
+        trigger: 'turn_start',
+        chance: 0.25,
+        stats: { spellPower: 1800 },
+        scaleWithLevel: true
+      }
+    },
+
+    // ✅ 奈萨里奥之泪（法系属性 饰品1）
+    EQ_249: {
+      id: 'EQ_249',
+      name: '奈萨里奥之泪',
+      icon: 'icons/wow/vanilla/items/INV_Misc_Gem_Pearl_06.png',
+      type: 'equipment',
+      slot: 'trinket1',
+      rarity: 'purple',
+      level: 0,
+      maxLevel: 100,
+      baseStats: {
+        spellPower: 950,
+        hp: 4200,
+        critRate: 18,
+        haste: 18,
+        mastery: 24,
+        versatility: 20,
+      },
+      growth: {
+        spellPower: 2,
+        hp: 2,
+        critRate: 2,
+        haste: 2,
+        mastery: 2,
+        versatility: 2,
+      }
+    },
+
+    // ✅ 阿基迪罗斯的清算之戒（攻强属性 饰品1）
+    EQ_250: {
+      id: 'EQ_250',
+      name: '阿基迪罗斯的清算之戒',
+      icon: 'icons/wow/vanilla/armor/INV_Jewelry_Ring_33.png',
+      type: 'equipment',
+      slot: 'trinket1',
+      rarity: 'purple',
+      level: 0,
+      maxLevel: 100,
+      baseStats: {
+        attack: 900,
+        hp: 5200,
+        critRate: 18,
+        haste: 18,
+        mastery: 24,
+        versatility: 20,
+      },
+      growth: {
+        attack: 2,
+        hp: 2,
+        critRate: 2,
+        haste: 2,
+        mastery: 2,
+        versatility: 2,
+      }
+    },
+
+    // ✅ 纯源质戒指（坦克戒指1）
+    EQ_251: {
+      id: 'EQ_251',
+      name: '纯源质戒指',
+      icon: 'icons/wow/vanilla/armor/INV_Jewelry_Ring_46.png',
+      type: 'equipment',
+      slot: 'ring1',
+      rarity: 'purple',
+      level: 0,
+      maxLevel: 100,
+      baseStats: {
+        hp: 8800,
+        armor: 260,
+        magicResist: 220,
+        mastery: 24,
+        versatility: 24,
+        blockRate: 10,
+        blockValue: 700,
+      },
+      growth: {
+        hp: 2,
+        armor: 2,
+        magicResist: 2,
+        mastery: 2,
+        versatility: 2,
+        blockRate: 2,
+        blockValue: 2,
+      }
+    },
+
+
 };
 
 //赤脊山5件图鉴100级点亮效果
@@ -11502,7 +11825,19 @@ const BOSS_DATA = {
         rewards: {
             gold: 4000000,
             exp: 2200000,
-            items: []
+            items: [
+                // ===== 奈法利安专属掉落（T2胸甲 / 武器 / 饰品 / 戒指） =====
+                { id: 'EQ_242', chance: 0.10 }, // 愤怒胸甲
+                { id: 'EQ_243', chance: 0.10 }, // 血牙胸甲
+                { id: 'EQ_244', chance: 0.10 }, // 灵风长袍
+                { id: 'EQ_245', chance: 0.10 }, // 卓越法袍
+                { id: 'EQ_246', chance: 0.08 }, // 暗影烈焰法杖（法伤武器）
+                { id: 'EQ_247', chance: 0.08 }, // 阿什坎迪，兄弟会之剑（攻强主手）
+                { id: 'EQ_248', chance: 0.08 }, // 洛卡米尔·伊洛曼希斯（奶妈法伤主手）
+                { id: 'EQ_249', chance: 0.10 }, // 奈萨里奥之泪（法系属性饰品1）
+                { id: 'EQ_250', chance: 0.10 }, // 阿基迪罗斯的清算之戒（攻强属性饰品1）
+                { id: 'EQ_251', chance: 0.10 }, // 纯源质戒指（坦克戒指1）
+            ]
         }
     },
 

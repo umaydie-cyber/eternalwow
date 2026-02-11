@@ -10633,8 +10633,8 @@ const FIXED_EQUIPMENTS = {
         hp: 5600,
         critRate: 28,
         critDamage: 0.90,
-        haste: 22,
-        mastery: 18,
+        haste: 20,
+        mastery: 16,
       },
       growth: {
         attack: 2,
@@ -10659,9 +10659,9 @@ const FIXED_EQUIPMENTS = {
       baseStats: {
         hp: 8200,
         armor: 340,
-        magicResist: 220,
+        magicResist: 200,
         mastery: 24,
-        versatility: 28,
+        versatility: 36,
       },
       growth: {
         hp: 2,
@@ -10687,7 +10687,7 @@ const FIXED_EQUIPMENTS = {
         hp: 6000,
         mastery: 24,
         versatility: 24,
-        haste: 14,
+        haste: 10,
       },
       growth: {
         spellPower: 2,

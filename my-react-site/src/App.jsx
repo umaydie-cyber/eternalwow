@@ -10622,7 +10622,7 @@ const FIXED_EQUIPMENTS = {
     EQ_281: {
       id: 'EQ_281',
       name: '哈霍兰之刺',
-      icon: 'icons/wow/vanilla/weapons/INV_Weapon_ShortBlade_15.png',
+      icon: 'icons/wow/vanilla/weapons/hahuolanzhici.png',
       type: 'equipment',
       slot: 'mainHand',
       rarity: 'purple',
@@ -10650,7 +10650,7 @@ const FIXED_EQUIPMENTS = {
     EQ_282: {
       id: 'EQ_282',
       name: '金巢披风',
-      icon: 'icons/wow/vanilla/armor/INV_Misc_Cape_18.png',
+      icon: 'icons/wow/vanilla/armor/INV_Misc_Cape_01.png',
       type: 'equipment',
       slot: 'cloak',
       rarity: 'purple',
@@ -10676,7 +10676,7 @@ const FIXED_EQUIPMENTS = {
     EQ_283: {
       id: 'EQ_283',
       name: '殉难者之戒',
-      icon: 'icons/wow/vanilla/armor/INV_Jewelry_Ring_15.png',
+      icon: 'icons/wow/vanilla/armor/qilazhinu.png',
       type: 'equipment',
       slot: 'ring2',
       rarity: 'purple',
@@ -10732,7 +10732,7 @@ const FIXED_EQUIPMENTS = {
     EQ_285: {
       id: 'EQ_285',
       name: '死亡执行者的护肩',
-      icon: 'icons/wow/vanilla/armor/dzt25jian.png',
+      icon: 'icons/wow/vanilla/armor/INV_Shoulder_03.png',
       type: 'equipment',
       slot: 'shoulder',
       rarity: 'purple',
@@ -10762,7 +10762,7 @@ const FIXED_EQUIPMENTS = {
     EQ_286: {
       id: 'EQ_286',
       name: '神秘肩垫',
-      icon: 'icons/wow/vanilla/armor/fst25jian.png',
+      icon: 'icons/wow/vanilla/armor/INV_Shoulder_03.png',
       type: 'equipment',
       slot: 'shoulder',
       rarity: 'purple',
@@ -10792,7 +10792,7 @@ const FIXED_EQUIPMENTS = {
     EQ_287: {
       id: 'EQ_287',
       name: '神谕者的衬肩',
-      icon: 'icons/wow/vanilla/armor/mst25jian.png',
+      icon: 'icons/wow/vanilla/armor/INV_Shoulder_03.png',
       type: 'equipment',
       slot: 'shoulder',
       rarity: 'purple',

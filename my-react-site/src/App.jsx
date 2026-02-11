@@ -24911,6 +24911,21 @@ function gameReducer(state, action) {
                 }
             };
         }
+        case 'CHEAT_ADD_RESOURCE': {
+            const delta = Number(action.payload?.amount ?? 0);
+            const excluded = new Set(["gold", "spacetimeCoin", "population", "maxPopulation"]);
+            const nextResources = { ...state.resources };
+            for (const [key, value] of Object.entries(nextResources)) {
+                if (excluded.has(key)) continue;
+                if (typeof value !== "number") continue;
+                nextResources[key] = value + delta;
+            }
+
+            return {
+                ...state,
+                resources: nextResources,
+            };
+        }
         case "CHEAT_ADD_SPACETIME_COIN": {
 
             const raw = action?.payload;
@@ -38136,6 +38151,14 @@ useEffect(() => {
                     setConsoleLogs(prev => [...prev, `✓ 成功添加 ${amount} 金币`]);
                 } else {
                     setConsoleLogs(prev => [...prev, '✗ 错误：金币数量必须是正数']);
+                }
+            }else if (subCmd === 'resource' && parts[2]) {
+                const amount = parseFloat(parts[2]);
+                    if (!isNaN(amount) && amount > 0) {
+                        dispatch({ type: 'CHEAT_ADD_RESOURCE', payload: amount });
+                        setConsoleLogs(prev => [...prev, `✓ 成功添加 ${amount} 资源`]);
+                    } else {
+                        setConsoleLogs(prev => [...prev, '✗ 错误：资源数量必须是正数']);
                 }
             }else if (subCmd === 'spcoin' && parts[2]) {
                 const amount = parseFloat(parts[2]);

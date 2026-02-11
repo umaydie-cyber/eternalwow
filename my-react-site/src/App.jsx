@@ -6702,7 +6702,24 @@ const FIXED_EQUIPMENTS = {
             haste: 2
         }
     },
-
+    EQ_JUNGLE_SHOES: {
+            id: 'EQ_JUNGLE_SHOES',
+            name: '神秘丛林草鞋',
+            icon: 'icons/wow/vanilla/armor/INV_Boots_08.png',
+            type: 'equipment',
+            slot: 'feet',
+            rarity: 'purple',
+            level: 0,
+            maxLevel: 100,
+            baseStats: {
+                precision: 60,
+                perception: 60  // 采集感知
+            },
+            growth: {
+                precision: 2,
+                perception: 2
+            }
+    },
     // ==================== 安琪拉废墟（60级）装备 ====================
     EQ_139: {
         id: 'EQ_139',
@@ -6881,6 +6898,22 @@ const FIXED_EQUIPMENTS = {
             critRate: 2,
             haste: 2,
             mastery: 2,
+        }
+    },
+    EQ_ACIENT_DETECTOR: {
+        id: 'EQ_ACIENT_DETECTOR',
+        name: '上古其拉探测器',
+        icon: 'icons/wow/vanilla/items/INV_Misc_PocketWatch_02.png',
+        type: 'equipment',
+        slot: 'offHand',
+        rarity: 'purple',
+        level: 0,
+        maxLevel: 100,
+        baseStats: {
+            perception: 120  // 采集感知
+        },
+        growth: {
+            perception: 2
         }
     },
     // ==================== 熔火之心（60级）装备 ====================
@@ -12238,7 +12271,8 @@ const BOSS_DATA = {
             gold: 1400000,
             exp: 900000,
             items: [
-                { id: 'IT_HAKKAR_BADGE', chance: 0.8 }
+                { id: 'IT_HAKKAR_BADGE', chance: 0.8 },
+                { id: 'EQ_JUNGLE_SHOES', chance: 0.2 }
             ]
         }
     },
@@ -12283,7 +12317,8 @@ const BOSS_DATA = {
             gold: 1800000,
             exp: 1100000,
             items: [
-                { id: 'IT_OSSIRIAN_BADGE', chance: 0.8 }
+                { id: 'IT_OSSIRIAN_BADGE', chance: 0.8 },
+                { id: 'EQ_ACIENT_DETECTOR', chance: 0.2 }
             ]
         }
     },

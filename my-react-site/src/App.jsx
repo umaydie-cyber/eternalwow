@@ -10409,7 +10409,7 @@ const FIXED_EQUIPMENTS = {
     EQ_274: {
       id: 'EQ_274',
       name: '甲虫胸针',
-      icon: 'icons/wow/vanilla/items/INV_Misc_Idol_03.png',
+      icon: 'icons/wow/vanilla/items/jiachongxiongzhen.png',
       type: 'equipment',
       slot: 'trinket2',
       rarity: 'purple',
@@ -10442,7 +10442,7 @@ const FIXED_EQUIPMENTS = {
     EQ_275: {
       id: 'EQ_275',
       name: '其拉之怒',
-      icon: 'icons/wow/vanilla/armor/INV_Jewelry_Ring_27.png',
+      icon: 'icons/wow/vanilla/armor/qilazhinu.png',
       type: 'equipment',
       slot: 'ring1',
       rarity: 'purple',
@@ -10468,7 +10468,7 @@ const FIXED_EQUIPMENTS = {
     EQ_276: {
       id: 'EQ_276',
       name: '虫鳞阻挡者',
-      icon: 'icons/wow/vanilla/armor/INV_Shield_17.png',
+      icon: 'icons/wow/vanilla/armor/chonglinzudangzhe.png',
       type: 'equipment',
       slot: 'offHand',
       rarity: 'purple',

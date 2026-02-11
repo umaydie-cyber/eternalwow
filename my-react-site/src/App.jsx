@@ -433,6 +433,21 @@ warehouse: {
         effect: { type: 'autoMerge', value: 1 }
     },
 
+    // ✅ 新增：星界铸造所
+    // - 数量上限：2；击败拉格纳罗斯解锁上限4；击败奈法利安解锁上限6
+    // - 额外限制：星界铸造所数量不能超过机械臂数量
+    // - 功能：道具栏中被机械臂强化的前 N 格（N=星界铸造所数量）进化为“星界强化”
+    //         在星界强化格内：每秒 +1 点星界淬炼进度；累计 3600 点时该格装备等级 +1，并获得 1 次隐藏属性升级
+    astral_forge: {
+        id: 'astral_forge',
+        name: '星界铸造所',
+        icon: '🪐',
+        description: '使道具栏前 N 个“机械臂强化”格进化为星界强化（N=星界铸造所数量）。星界强化格内装备每秒获得1点淬炼进度，累计3600点时：装备等级+1，并获得1次隐藏属性升级。数量上限：2（拉格纳罗斯→4，奈法利安→6），且不超过机械臂数量。',
+        cost: { gold: 20000000, ironOre: 5000000, magicEssence: 5000000, alchemyOil: 5000000 },
+        maxCount: 2,
+        effect: { type: 'astralForge', value: 1 }
+    },
+
     glow_lighthouse: {
         id: 'glow_lighthouse',
         name: '辉光灯塔',
@@ -22600,6 +22615,36 @@ function getFunctionalBuildingCost(buildingId, state) {
     return cost;
 }
 
+// ==================== 功能建筑动态上限（用于：星界铸造所等） ====================
+function getAstralForgeBossMaxCount(state) {
+    // 设计：基础上限2；击败拉格纳罗斯 → 4；击败奈法利安 → 6
+    const defeated = state?.defeatedBosses || [];
+    if (defeated.includes('nefarian')) return 6;
+    if (defeated.includes('ragnaros')) return 4;
+    return 2;
+}
+
+function getFunctionalBuildingMaxCount(buildingId, state) {
+    const building = FUNCTIONAL_BUILDINGS?.[buildingId];
+    if (!building) return 0;
+
+    if (buildingId === 'astral_forge') {
+        return getAstralForgeBossMaxCount(state);
+    }
+
+    return Math.max(0, Math.floor(Number(building.maxCount) || 0));
+}
+
+function getFunctionalBuildingEffectiveMaxCount(buildingId, state) {
+    const maxCount = getFunctionalBuildingMaxCount(buildingId, state);
+    if (buildingId === 'astral_forge') {
+        // 额外规则：星界铸造所数量不能超过机械臂数量
+        const arms = Math.max(0, Math.floor(Number(state?.functionalBuildings?.mechanical_arm) || 0));
+        return Math.max(0, Math.min(maxCount, arms));
+    }
+    return maxCount;
+}
+
 // ==================== 喷泉效率倍率（喷泉草坪/喷泉外饰，独立乘区） ====================
 function getFountainEfficiency(state) {
     const lawnCount = Math.max(0, Math.floor(Number(state?.functionalBuildings?.fountain_lawn) || 0));
@@ -23575,10 +23620,7 @@ function gameReducer(state, action) {
 
                         // Lv100 图鉴解锁
                         if (oldLevel < 100 && target.currentLevel >= 100) {
-                            newState.lv100Codex = {
-                                ...(newState.lv100Codex || {}),
-                                [target.id]: true
-                            };
+                            newState = addEquipmentIdToLv100Codex(newState, target.id);
                             newState.combatLogs = [
                                 ...(newState.combatLogs || []),
                                 `机械臂自动合成：${target.name} 达到 Lv100，图鉴解锁！`
@@ -23592,6 +23634,69 @@ function gameReducer(state, action) {
                 newState.inventory = newInventory;
             }
             // ==================== 机械臂逻辑结束 ====================
+
+            // ==================== 新增：星界铸造所（星界强化） ====================
+            // 规则：道具栏中被机械臂强化的前 N 格（N = 星界铸造所数量）进化为“星界强化”。
+            //      在星界强化格内：每秒 +1 点星界淬炼进度；累计 3600 点时：
+            //          - 装备等级 +1（最多 Lv100）
+            //          - 装备隐藏属性升级次数 +1
+            const astralForgeCount = Math.max(0, Math.floor(Number(newState.functionalBuildings?.astral_forge) || 0));
+            const astralSlots = Math.min(autoMergeSlots, astralForgeCount);
+            const ASTRAL_FORGE_INTERVAL = 3600; // 秒
+
+            if (astralSlots > 0 && deltaSeconds > 0 && newState.inventory?.length > 0) {
+                let inv = [...newState.inventory];
+                let invChanged = false;
+
+                for (let slot = 0; slot < astralSlots && slot < inv.length; slot++) {
+                    const item = inv[slot];
+                    if (!item || item.type !== 'equipment') continue;
+
+                    const prevPoints = Math.max(0, Math.floor(Number(item.astralForgePoints) || 0));
+                    const totalPoints = prevPoints + deltaSeconds;
+                    const cycles = Math.floor(totalPoints / ASTRAL_FORGE_INTERVAL);
+                    const nextPoints = totalPoints % ASTRAL_FORGE_INTERVAL;
+
+                    // 没变化就跳过（减少无意义浅拷贝）
+                    if (cycles === 0 && nextPoints === prevPoints) continue;
+
+                    let updated = {
+                        ...item,
+                        astralForgePoints: nextPoints,
+                    };
+
+                    if (cycles > 0) {
+                        // 隐藏属性升级次数（仅记录，具体效果可后续扩展）
+                        updated.astralHiddenUpgrades = Math.max(0, Math.floor(Number(item.astralHiddenUpgrades) || 0)) + cycles;
+
+                        // 装备等级提升（最多 Lv100）
+                        const curLv = Math.max(0, Math.floor(Number(item.currentLevel ?? item.level) || 0));
+                        const newLv = Math.min(100, curLv + cycles);
+                        if (newLv !== curLv) {
+                            updated.currentLevel = newLv;
+                            updated.stats = scaleStats(
+                                updated.baseStats || {},
+                                updated.growth || {},
+                                newLv
+                            );
+
+                            // Lv100 图鉴解锁
+                            if (curLv < 100 && newLv >= 100) {
+                                newState = addEquipmentIdToLv100Codex(newState, updated.id);
+                                // 不打战斗日志，避免刷屏；如需提示可自行打开
+                            }
+                        }
+                    }
+
+                    inv[slot] = updated;
+                    invChanged = true;
+                }
+
+                if (invChanged) {
+                    newState.inventory = inv;
+                }
+            }
+            // ==================== 星界铸造所逻辑结束 ====================
 
             // 帧数累计
             newState.frame = (newState.frame || 0) + deltaSeconds;
@@ -25065,10 +25170,13 @@ function gameReducer(state, action) {
                 return state;
             }
 
-            const currentCount = state.functionalBuildings?.[buildingId] || 0;
+            const currentCount = Math.max(0, Math.floor(Number(state.functionalBuildings?.[buildingId]) || 0));
+
+            // ✅ 动态上限（含：星界铸造所 Boss 解锁上限 + 机械臂数量限制）
+            const effectiveMaxCount = getFunctionalBuildingEffectiveMaxCount(buildingId, state);
 
             // 检查是否达到上限
-            if (currentCount >= building.maxCount) return state;
+            if (currentCount >= effectiveMaxCount) return state;
 
             // ✅ 使用动态成本
             const dynamicCost = getFunctionalBuildingCost(buildingId, state);
@@ -28374,8 +28482,12 @@ const InventoryPage = ({ state, dispatch }) => {
     const longPressStartRef = useRef(null);
     const longPressTriggeredRef = useRef(false);
 
-    const mechanicalArmCount = state.functionalBuildings?.mechanical_arm ?? 0;
+    const mechanicalArmCount = Math.max(0, Math.floor(Number(state.functionalBuildings?.mechanical_arm) || 0));
     const autoMergeSlots = Math.min(10, mechanicalArmCount);
+
+    // 星界铸造所：前 N 个“机械臂强化”格进化为“星界强化”
+    const astralForgeCount = Math.max(0, Math.floor(Number(state.functionalBuildings?.astral_forge) || 0));
+    const astralSlots = Math.min(autoMergeSlots, astralForgeCount);
 
     const isThunderfuryRecipe = (aId, bId) =>
         (aId === 'EQ_176' && bId === 'EQ_181') || (aId === 'EQ_181' && bId === 'EQ_176');
@@ -28755,6 +28867,17 @@ const InventoryPage = ({ state, dispatch }) => {
                         const isMoveSource = !!moveMode && moveMode.fromIndex === index;
                         const isMergeSource = !!mergeMode && mergeMode.sourceInstanceId === item.instanceId;
 
+                        // 机械臂强化 / 星界强化标记（以“格位”为准，而非物品类型）
+                        const isAutoMergeSlot = index < autoMergeSlots;
+                        const isAstralSlot = index < astralSlots;
+                        const isAstralEquip = isAstralSlot && item?.type === 'equipment';
+
+                        // 星界淬炼进度（0~3599，仅在星界强化 + 装备时显示）
+                        const astralPoints = isAstralEquip
+                            ? Math.max(0, Math.floor(Number(item?.astralForgePoints) || 0))
+                            : 0;
+                        const astralPct = isAstralEquip ? Math.min(100, (astralPoints / 3600) * 100) : 0;
+
                         return (
                             <div
                                 key={item.instanceId || item.id || index}
@@ -28958,23 +29081,60 @@ const InventoryPage = ({ state, dispatch }) => {
                                     );
                                 })()}
 
-                                {index < autoMergeSlots && item?.type === 'equipment' && (
+                                {/* 机械臂/星界强化标记 */}
+                                {isAutoMergeSlot && (
                                     <div style={{
                                         position: 'absolute',
                                         top: 6,
                                         right: 6,
-                                        background: 'rgba(76,175,80,0.85)',
+                                        background: isAstralSlot ? 'rgba(156,39,176,0.85)' : 'rgba(76,175,80,0.85)',
                                         color: '#fff',
                                         fontSize: 10,
                                         padding: '3px 7px',
                                         borderRadius: 6,
                                         pointerEvents: 'none',
-                                        zIndex: 10,
+                                        zIndex: 12,
                                         border: '1px solid rgba(255,255,255,0.3)',
-                                        boxShadow: '0 0 8px rgba(76,175,80,0.6)',
+                                        boxShadow: isAstralSlot ? '0 0 8px rgba(156,39,176,0.65)' : '0 0 8px rgba(76,175,80,0.6)',
                                         fontWeight: 700
                                     }}>
-                                        🦾
+                                        {isAstralSlot ? '🌠' : '🦾'}
+                                    </div>
+                                )}
+
+                                {/* 星界淬炼进度条（显示在道具格内） */}
+                                {isAstralEquip && (
+                                    <div style={{
+                                        position: 'absolute',
+                                        left: 6,
+                                        right: 6,
+                                        bottom: 6,
+                                        height: 12,
+                                        background: 'rgba(0,0,0,0.35)',
+                                        borderRadius: 6,
+                                        border: '1px solid rgba(255,255,255,0.15)',
+                                        overflow: 'hidden',
+                                        pointerEvents: 'none',
+                                        zIndex: 11
+                                    }}>
+                                        <div style={{
+                                            width: `${astralPct}%`,
+                                            height: '100%',
+                                            background: 'rgba(156,39,176,0.85)'
+                                        }} />
+                                        <div style={{
+                                            position: 'absolute',
+                                            inset: 0,
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            fontSize: 9,
+                                            fontWeight: 800,
+                                            color: '#fff',
+                                            textShadow: '0 1px 2px rgba(0,0,0,0.8)'
+                                        }}>
+                                            {astralPoints}/3600
+                                        </div>
                                     </div>
                                 )}
                             </div>
@@ -29010,6 +29170,7 @@ const InventoryPage = ({ state, dispatch }) => {
                                     }
                                 }}
                                 style={{
+                                    position: 'relative',
                                     padding: 12,
                                     background: (draggedItemId || moveMode) ? 'rgba(201,162,39,0.1)' : 'rgba(0,0,0,0.2)',
                                     border: (draggedItemId || moveMode) ? '2px dashed #c9a227' : '1px dashed #333',
@@ -29024,6 +29185,31 @@ const InventoryPage = ({ state, dispatch }) => {
                                     cursor: isMobile && moveMode ? 'pointer' : 'default'
                                 }}
                             >
+                                {/* 空格位也显示机械臂/星界强化标记（以格位为准） */}
+                                {targetIndex < autoMergeSlots && (
+                                    <div style={{
+                                        position: 'absolute',
+                                        top: 6,
+                                        right: 6,
+                                        background: (targetIndex < astralSlots)
+                                            ? 'rgba(156,39,176,0.85)'
+                                            : 'rgba(76,175,80,0.85)',
+                                        color: '#fff',
+                                        fontSize: 10,
+                                        padding: '3px 7px',
+                                        borderRadius: 6,
+                                        pointerEvents: 'none',
+                                        zIndex: 12,
+                                        border: '1px solid rgba(255,255,255,0.3)',
+                                        boxShadow: (targetIndex < astralSlots)
+                                            ? '0 0 8px rgba(156,39,176,0.65)'
+                                            : '0 0 8px rgba(76,175,80,0.6)',
+                                        fontWeight: 700
+                                    }}>
+                                        {(targetIndex < astralSlots) ? '🌠' : '🦾'}
+                                    </div>
+                                )}
+
                                 <div style={{ fontSize: 28, color: (draggedItemId || moveMode) ? '#c9a227' : '#333' }}>
                                     {(draggedItemId || moveMode) ? '📥' : '∅'}
                                 </div>
@@ -29575,8 +29761,14 @@ const CityPage = ({ state, dispatch }) => {
                         gap: 16
                     }}>
                     {Object.values(FUNCTIONAL_BUILDINGS).map(building => {
-                        const currentCount = state.functionalBuildings?.[building.id] || 0;
-                        const isMaxed = currentCount >= building.maxCount;
+                        const currentCount = Math.max(0, Math.floor(Number(state.functionalBuildings?.[building.id]) || 0));
+
+                        // ✅ 动态上限（星界铸造所：Boss 解锁上限 + 机械臂数量限制）
+                        const maxCount = getFunctionalBuildingMaxCount(building.id, state);
+                        const effectiveMaxCount = getFunctionalBuildingEffectiveMaxCount(building.id, state);
+                        const mechanicalArmCount = Math.max(0, Math.floor(Number(state.functionalBuildings?.mechanical_arm) || 0));
+
+                        const isMaxed = currentCount >= effectiveMaxCount;
 
                         // ✅ 解锁条件：击败指定 Boss
                         const unlocked = !building.unlockBoss || (state.defeatedBosses || []).includes(building.unlockBoss);
@@ -29589,6 +29781,11 @@ const CityPage = ({ state, dispatch }) => {
                         Object.entries(dynamicCost).forEach(([res, amount]) => {
                             if ((state.resources[res] || 0) < amount) canBuild = false;
                         });
+
+                        // 星界铸造所：受机械臂数量限制（即便 Boss 上限更高，也不能超过机械臂）
+                        const astralNeedArms = building.id === 'astral_forge'
+                            && currentCount >= mechanicalArmCount
+                            && currentCount < maxCount;
 
                         return (
                             <div key={building.id} style={{
@@ -29624,7 +29821,12 @@ const CityPage = ({ state, dispatch }) => {
                                             fontSize: 12,
                                             color: currentCount > 0 ? '#4CAF50' : '#888'
                                         }}>
-                                            已建造: {currentCount}/{building.maxCount}
+                                            已建造: {currentCount}/{maxCount}
+                                            {building.id === 'astral_forge' && effectiveMaxCount < maxCount && (
+                                                <span style={{ color: '#ffb74d' }}>
+                                                    {' '}(受机械臂限制：{effectiveMaxCount}/{mechanicalArmCount})
+                                                </span>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
@@ -29703,7 +29905,11 @@ const CityPage = ({ state, dispatch }) => {
                                     disabled={!unlocked || !canBuild || isMaxed}
                                     style={{ width: '100%' }}
                                 >
-                                    {!unlocked ? '未解锁' : (isMaxed ? '已达上限' : '建造')}
+                                    {!unlocked
+                                        ? '未解锁'
+                                        : (astralNeedArms
+                                            ? '需要机械臂'
+                                            : (isMaxed ? '已达上限' : '建造'))}
                                 </Button>
                             </div>
                         );

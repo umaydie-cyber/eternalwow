@@ -82,6 +82,9 @@ const BOSS_BONUS_CONFIG = {
     // ✅ 新增：60级世界首领 - 堕落的瓦拉斯塔兹
     corrupted_vaelastrasz: { name: '堕落的瓦拉斯塔兹', bonus: 0.30 },
 
+    // ✅ 新增：60级世界首领 - 维希度斯
+    viscidus: { name: '维希度斯', bonus: 0.30 },
+
     // ✅ 新增：团队首领 - 奥妮克希亚
     onyxia: { name: '奥妮克希亚', bonus: 0.30 },
 
@@ -11689,6 +11692,18 @@ const WORLD_BOSSES = {
         unlockLevel: 60
     },
 
+    // ✅ 新增：60级世界首领 - 维希度斯
+    viscidus: {
+        id: 'viscidus',
+        name: '维希度斯',
+        icon: 'icons/wow/vanilla/boss/viscidus.png', // 需要添加对应图标
+        hp: 35000000,
+        attack: 32000,
+        defense: 30000,
+        rewards: { gold: 4200000, exp: 2400000 },
+        unlockLevel: 60
+    },
+
 };
 
 // ==================== 团队首领（Raid Boss） ====================
@@ -12559,6 +12574,47 @@ const BOSS_DATA = {
             ]
         }
     },
+
+    // ✅ 新增：60级世界首领 - 维希度斯
+    viscidus: {
+        id: 'viscidus',
+        name: '维希度斯',
+        maxHp: 35000000,
+        attack: 32000,
+        defense: 30000,
+
+        // 技能1：毒箭之雨（全体中毒DOT：每回合 1.2×Boss攻击，自然伤害，持续4回合，可叠加）
+        poisonArrowRainDotMultiplier: 1.2,
+        poisonArrowRainDuration: 4,
+
+        // 技能2：毒性震击（坦克：8×Boss攻击 法术伤害；并附加治疗吸收：吸收接下来 4×Boss攻击 的治疗）
+        toxicShockMultiplier: 8,
+        toxicShockHealAbsorbMultiplier: 4,
+
+        // 技能3：厚皮（获得最大生命值30%的护盾；护盾击破后召唤5个水滴）
+        thickSkinShieldPct: 0.30,
+        dropletCount: 5,
+        dropletHpPct: 0.15,
+        dropletDeathDamagePct: 0.05,
+
+        // 水滴（无技能；用于被击杀触发效果）
+        minion: {
+            name: '水滴',
+            maxHp: 5250000, // 35000000 × 15%
+            attack: 0,
+            defense: 0,
+        },
+
+        // 技能循环：厚皮 → 毒箭之雨 → 毒性震击 → 毒箭之雨
+        cycle: ['thick_skin', 'poison_arrow_rain', 'toxic_shock', 'poison_arrow_rain'],
+
+        rewards: {
+            gold: 4200000,
+            exp: 2400000,
+            items: []
+        }
+    },
+
     // ✅ 新增：团队首领 - 奥妮克希亚（5人）
     onyxia: {
         id: 'onyxia',
@@ -14228,6 +14284,61 @@ function stepBossCombat(state) {
     };
 
 
+    // ==================== 通用：治疗结算（含致死打击减疗 + 治疗吸收） ====================
+    // 约定：治疗吸收 debuff
+    // playerState.debuffs.healAbsorb = { remaining: number, source?: string }
+    const applyHealingToPlayer = (ps, rawHeal, sourceText = '治疗') => {
+        if (!ps || ps.currentHp <= 0) return { actualHeal: 0, absorbed: 0, healingMult: 1, remainingAbsorb: 0, absorbedAll: false };
+
+        ps.debuffs = ps.debuffs || {};
+        const maxHp = ps.char?.stats?.maxHp || 0;
+        if (maxHp <= 0) return { actualHeal: 0, absorbed: 0, healingMult: 1, remainingAbsorb: 0, absorbedAll: false };
+
+        let healAmount = Math.max(0, Math.floor(Number(rawHeal) || 0));
+
+        // 致死打击：减疗（如果存在 duration 约定，则仅 duration>0 生效）
+        let healingMult = 1;
+        if (ps.debuffs?.mortalStrike) {
+            const ms = ps.debuffs.mortalStrike;
+            if (ms.duration === undefined || ms.duration > 0) {
+                healingMult = Math.max(0, 1 - (ms.healingReduction || 0));
+                healAmount = Math.floor(healAmount * healingMult);
+            }
+        }
+
+        // 治疗吸收：只吸收“有效治疗”（不消耗溢出治疗）
+        const missingHp = Math.max(0, maxHp - ps.currentHp);
+        let effectiveHeal = Math.min(healAmount, missingHp);
+
+        let absorbed = 0;
+        let remainingAbsorb = 0;
+        let absorbedAll = false;
+        const ha = ps.debuffs?.healAbsorb;
+        if (ha && effectiveHeal > 0) {
+            const remain = Math.max(0, Math.floor(Number(ha.remaining) || 0));
+            if (remain > 0) {
+                absorbed = Math.min(remain, effectiveHeal);
+                remainingAbsorb = remain - absorbed;
+                effectiveHeal -= absorbed;
+                if (remainingAbsorb > 0) {
+                    ps.debuffs.healAbsorb = { ...ha, remaining: remainingAbsorb };
+                } else {
+                    delete ps.debuffs.healAbsorb;
+                }
+                if (absorbed > 0 && effectiveHeal <= 0) absorbedAll = true;
+            }
+        }
+
+        const actualHeal = Math.max(0, Math.floor(effectiveHeal));
+        if (actualHeal > 0) {
+            ps.currentHp += actualHeal;
+            if (ps.char?.stats) ps.char.stats.currentHp = ps.currentHp;
+        }
+
+        return { actualHeal, absorbed, healingMult, remainingAbsorb, absorbedAll };
+    };
+
+
     const triggerAtonementHeal = (source, damageDone) => {
         if (!source || damageDone <= 0) return;
 
@@ -14238,22 +14349,14 @@ function stepBossCombat(state) {
             if (!ps || ps.currentHp <= 0) return;
             if (!ps.char?.stats?.atonement) return;
 
-            // 每个目标自己的减疗（致死打击）应当各算各的
-            let healingMult = 1;
-            if (ps.debuffs?.mortalStrike) {
-                healingMult = 1 - (ps.debuffs.mortalStrike.healingReduction || 0);
-            }
-
             const rate = ps.char.stats.atonement.healingRate ?? 0.20;
-            const heal = Math.floor(damageDone * rate * healingMult);
-
-            const maxHp = ps.char.stats.maxHp || 0;
-            const actualHeal = Math.min(heal, maxHp - ps.currentHp);
-
-            ps.currentHp += actualHeal;
-            ps.char.stats.currentHp = ps.currentHp; // 让UI也同步
+            const rawHeal = Math.floor(damageDone * rate);
+            const { actualHeal, absorbed, healingMult } = applyHealingToPlayer(ps, rawHeal, '救赎');
 
             let healLog = `因为救赎恢复 ${actualHeal} 点生命`;
+            if (absorbed > 0) {
+                healLog += `（治疗吸收 吸收 ${absorbed}）`;
+            }
             if (healingMult < 1) {
                 healLog += `（受到致死打击减疗${Math.round((1 - healingMult) * 100)}%）`;
             }
@@ -14300,6 +14403,87 @@ function stepBossCombat(state) {
         }
 
         return { finalDamage, absorbed };
+    };
+
+    // ==================== 维希度斯：厚皮护盾（Boss护盾）与水滴召唤 ====================
+    // 约定：
+    // - combat.bossBuffs.viscidusThickSkinShield: number（当前护盾值，可叠加）
+    // - combat.bossBuffs.viscidusDropletSerial: number（用于命名水滴）
+    if (combat.bossId === 'viscidus') {
+        combat.minions = Array.isArray(combat.minions) ? combat.minions : [];
+        combat.bossBuffs.viscidusThickSkinShield = Math.max(0, Math.floor(Number(combat.bossBuffs.viscidusThickSkinShield || 0)));
+        combat.bossBuffs.viscidusDropletSerial = Math.max(0, Math.floor(Number(combat.bossBuffs.viscidusDropletSerial || 0)));
+    }
+
+    const getViscidusShield = () => {
+        if (combat.bossId !== 'viscidus') return 0;
+        return Math.max(0, Math.floor(Number(combat.bossBuffs.viscidusThickSkinShield || 0)));
+    };
+
+    const setViscidusShield = (v) => {
+        if (combat.bossId !== 'viscidus') return;
+        combat.bossBuffs.viscidusThickSkinShield = Math.max(0, Math.floor(Number(v || 0)));
+    };
+
+    const summonViscidusDroplets = (count = 5) => {
+        if (combat.bossId !== 'viscidus') return;
+        combat.minions = Array.isArray(combat.minions) ? combat.minions : [];
+
+        const pct = (typeof boss.dropletHpPct === 'number' && boss.dropletHpPct > 0) ? boss.dropletHpPct : 0.15;
+        const hp = Math.max(1, Math.floor((boss.maxHp || bossBase.maxHp || 0) * pct));
+
+        // 水滴基础属性（无技能，默认不行动；攻击/防御从 boss.minion 读取，均为 0）
+        const def = Math.max(0, Math.floor(Number(boss.minion?.defense || 0)));
+        const atk = Math.max(0, Math.floor(Number(boss.minion?.attack || 0)));
+
+        const n = Math.max(1, Math.floor(Number(count) || 5));
+        for (let i = 0; i < n; i++) {
+            combat.bossBuffs.viscidusDropletSerial = (combat.bossBuffs.viscidusDropletSerial || 0) + 1;
+            const serial = combat.bossBuffs.viscidusDropletSerial;
+            combat.minions.push({
+                id: `viscidus_droplet_${combat.round}_${serial}_${Math.random().toString(36).slice(2, 6)}`,
+                displayName: `水滴${serial}`,
+                hp,
+                maxHp: hp,
+                attack: atk,
+                defense: def,
+                dots: [],
+                immune: false,
+                deathProcessed: false,
+                isViscidusDroplet: true,
+            });
+        }
+    };
+
+    // Boss受伤统一入口（维希度斯：优先扣厚皮护盾）
+    // - bypassShield: true 表示无视厚皮护盾（用于“水滴死亡”对Boss造成的伤害）
+    const dealDamageToBoss = (rawDamage, { bypassShield = false } = {}) => {
+        const dmg = Math.max(0, Math.floor(Number(rawDamage) || 0));
+        if (dmg <= 0) return { hpDamage: 0, absorbed: 0 };
+
+        if (combat.bossId === 'viscidus' && !bypassShield) {
+            let shield = getViscidusShield();
+            if (shield > 0) {
+                const absorbed = Math.min(shield, dmg);
+                shield -= absorbed;
+                setViscidusShield(shield);
+                const remain = dmg - absorbed;
+
+                // 护盾被击破：召唤水滴（仅当确实由本次伤害将护盾打到 0）
+                if (absorbed > 0 && shield <= 0) {
+                    addLog(`【${boss.name}】的【厚皮】护盾被击破！`, 'warning');
+                    const c = Math.max(1, Math.floor(Number(boss.dropletCount || 5)));
+                    summonViscidusDroplets(c);
+                    addLog(`→ 召唤 ${c} 个【水滴】`, 'warning');
+                }
+
+                if (remain > 0) combat.bossHp -= remain;
+                return { hpDamage: remain, absorbed };
+            }
+        }
+
+        combat.bossHp -= dmg;
+        return { hpDamage: dmg, absorbed: 0 };
     };
 
     // ==================== 种族：矮人【石像形态】 ====================
@@ -14647,23 +14831,16 @@ function stepBossCombat(state) {
                     const maxHp = Number(p.char?.stats?.maxHp) || 0;
                     const baseHeal = Math.floor(maxHp * b.healPctPerTurn);
 
-                    // 致死打击：减疗
-                    let healingMult = 1;
-                    if (p.debuffs?.mortalStrike) {
-                        healingMult = 1 - (p.debuffs.mortalStrike.healingReduction || 0);
-                    }
-                    const actualHeal = Math.max(0, Math.floor(baseHeal * healingMult));
-                    if (actualHeal > 0 && p.currentHp > 0) {
-                        const before = p.currentHp;
-                        p.currentHp = Math.min(maxHp, p.currentHp + actualHeal);
-                        const realHeal = p.currentHp - before;
-                        if (realHeal > 0) {
-                            let healText = `【${b.name || '持续治疗'}】位置${i + 1} ${p.char.name} 回复 ${realHeal} 点生命`;
-                            if (healingMult < 1) {
-                                healText += `（受到致死打击减疗${Math.round((1 - healingMult) * 100)}%）`;
-                            }
-                            addLog(healText);
+                    const healRes = applyHealingToPlayer(p, baseHeal, b.name || '持续治疗');
+                    if ((healRes.actualHeal > 0 || healRes.absorbed > 0) && p.currentHp > 0) {
+                        let healText = `【${b.name || '持续治疗'}】位置${i + 1} ${p.char.name} 回复 ${healRes.actualHeal} 点生命`;
+                        if (healRes.healingMult < 1) {
+                            healText += `（受到致死打击减疗${Math.round((1 - healRes.healingMult) * 100)}%）`;
                         }
+                        if (healRes.absorbed > 0) {
+                            healText += `（治疗吸收 吸收 ${healRes.absorbed}）`;
+                        }
+                        addLog(healText);
                     }
                 }
 
@@ -14797,8 +14974,10 @@ function stepBossCombat(state) {
                 } else {
                 const defEff = getEffectiveTargetDefense(p.char, (boss.defense || 0));
                 const actual = Math.max(1, Math.floor(raw - defEff));
-                combat.bossHp -= actual;
-                addLog(`【${thunderfury.label}】闪电链命中 ${boss.name}：造成 ${actual} 自然伤害`);
+                const br = dealDamageToBoss(actual);
+                let msg = `【${thunderfury.label}】闪电链命中 ${boss.name}：造成 ${br.hpDamage} 自然伤害`;
+                if (br.absorbed > 0) msg += `（厚皮护盾吸收 ${br.absorbed}）`;
+                addLog(msg);
                 }
             }
 
@@ -14895,8 +15074,10 @@ function stepBossCombat(state) {
                     const defRaw = Number(boss.defense) || 0;
                     const def = getEffectiveTargetDefense(p.char, defRaw);
                     const actual = Math.max(1, Math.floor((Number(pd.rawDamage) || 0) - def));
-                    combat.bossHp -= actual;
-                    addLog(`【${pd.label}】命中 ${boss.name}：造成 ${actual} ${getSchoolCn(school)}伤害`);
+                    const br = dealDamageToBoss(actual);
+                    let msg = `【${pd.label}】命中 ${boss.name}：造成 ${br.hpDamage} ${getSchoolCn(school)}伤害`;
+                    if (br.absorbed > 0) msg += `（厚皮护盾吸收 ${br.absorbed}）`;
+                    addLog(msg);
                 }
 
                 // 小弟目标
@@ -15133,8 +15314,10 @@ function stepBossCombat(state) {
                 const bossDefRaw = Number(boss.defense) || 0;
                 const bossDef = getEffectiveTargetDefense(p.char, bossDefRaw);
                 const cleaveToBoss = Math.max(1, cleaveBase - bossDef);
-                combat.bossHp -= cleaveToBoss;
-                addLog(`【剑刃乱舞】${p.char.name} 的${sourceLabel} 额外对 ${boss.name} 造成 ${cleaveToBoss} 伤害`);
+                const br = dealDamageToBoss(cleaveToBoss);
+                let msg = `【剑刃乱舞】${p.char.name} 的${sourceLabel} 额外对 ${boss.name} 造成 ${br.hpDamage} 伤害`;
+                if (br.absorbed > 0) msg += `（厚皮护盾吸收 ${br.absorbed}）`;
+                addLog(msg);
                 }
             }
 
@@ -15231,8 +15414,9 @@ function stepBossCombat(state) {
                     }
                 }
 
+                let bossDamageRes = null;
                 if (targetType === 'boss') {
-                    combat.bossHp -= actualDamage;
+                    bossDamageRes = dealDamageToBoss(actualDamage);
                 } else {
                     // 检查免疫
                     if (combat.minions[targetIndex]?.immune) {
@@ -15244,7 +15428,16 @@ function stepBossCombat(state) {
 
                 const repeatText = isRepeat ? `(${repeatSource || '连击'})` : '';
                 const minionName = boss.minion?.name || boss.cannoneer?.name || '小弟';
-                addLog(`位置${i + 1} ${p.char.name} 使用 普通攻击${repeatText} 对 ${targetType === 'boss' ? boss.name : minionName} 造成 ${actualDamage} 伤害${basicResult.isCrit ? '（暴击）' : ''}`);
+                {
+                    const shownDamage = targetType === 'boss'
+                        ? (bossDamageRes?.hpDamage ?? 0)
+                        : actualDamage;
+                    let msg = `位置${i + 1} ${p.char.name} 使用 普通攻击${repeatText} 对 ${targetType === 'boss' ? boss.name : minionName} 造成 ${shownDamage} 伤害${basicResult.isCrit ? '（暴击）' : ''}`;
+                    if (targetType === 'boss' && (bossDamageRes?.absorbed || 0) > 0) {
+                        msg += `（厚皮护盾吸收 ${bossDamageRes.absorbed}）`;
+                    }
+                    addLog(msg);
+                }
 
                 // ==================== 狂徒盗贼40级天赋：深邃诡计 ====================
                 // 效果：普通攻击暴击有50%概率获得1颗星
@@ -15265,12 +15458,14 @@ function stepBossCombat(state) {
                     const holySwordActualDamage = Math.max(1, Math.floor(basicResult.holySwordDamage));
 
                     if (targetType === 'boss') {
-                        combat.bossHp -= holySwordActualDamage;
+                        const br2 = dealDamageToBoss(holySwordActualDamage);
+                        let msg = `【圣剑】触发：${p.char.name} 额外造成 ${br2.hpDamage} 点真实伤害`;
+                        if (br2.absorbed > 0) msg += `（厚皮护盾吸收 ${br2.absorbed}）`;
+                        addLog(msg);
                     } else if (!combat.minions[targetIndex]?.immune) {
                         combat.minions[targetIndex].hp -= holySwordActualDamage;
+                        addLog(`【圣剑】触发：${p.char.name} 额外造成 ${holySwordActualDamage} 点真实伤害`);
                     }
-
-                    addLog(`【圣剑】触发：${p.char.name} 额外造成 ${holySwordActualDamage} 点真实伤害`);
                 }
 
                 // 剑刃乱舞：复制伤害（普通攻击也触发）
@@ -15310,8 +15505,10 @@ function stepBossCombat(state) {
                 if (shieldInfo.immune) {
                     addLog(`位置${i + 1} ${p.char.name} 的${skillName}被【${shieldInfo.shieldName}】免疫（目标：${boss.name}）`, 'warning');
                 } else {
-                    combat.bossHp -= damage;
-                    addLog(`位置${i + 1} ${p.char.name} 的${skillName}对 ${boss.name} 造成 ${Math.floor(damage)} 伤害${result.isCrit ? '（暴击！）' : ''}`);
+                    const br = dealDamageToBoss(damage);
+                    let msg = `位置${i + 1} ${p.char.name} 的${skillName}对 ${boss.name} 造成 ${Math.floor(br.hpDamage)} 伤害${result.isCrit ? '（暴击！）' : ''}`;
+                    if (br.absorbed > 0) msg += `（厚皮护盾吸收 ${br.absorbed}）`;
+                    addLog(msg);
 
                     // 救赎机制
                     if (p.char.stats.atonement) {
@@ -15388,8 +15585,10 @@ function stepBossCombat(state) {
                     if (shieldInfo.immune) {
                         addLog(`雷霆一击(山丘之王)被【${shieldInfo.shieldName}】免疫（目标：${boss.name}）`, 'warning');
                     } else {
-                        combat.bossHp -= extraDamage;
-                        addLog(`位置${i + 1} ${p.char.name} 的雷霆一击(山丘之王)对 ${boss.name} 造成 ${Math.floor(extraDamage)} 伤害${extraResult.isCrit ? '（暴击！）' : ''}`);
+                        const br = dealDamageToBoss(extraDamage);
+                        let msg = `位置${i + 1} ${p.char.name} 的雷霆一击(山丘之王)对 ${boss.name} 造成 ${Math.floor(br.hpDamage)} 伤害${extraResult.isCrit ? '（暴击！）' : ''}`;
+                        if (br.absorbed > 0) msg += `（厚皮护盾吸收 ${br.absorbed}）`;
+                        addLog(msg);
 
                         if (extraResult.isCrit && extraResult.dotOnCrit) {
                             combat.bossDots = combat.bossDots || [];
@@ -15480,13 +15679,21 @@ function stepBossCombat(state) {
                 const actualDamage = Math.max(1, damage - targetDefense);
                 actualDamageDealt = actualDamage;
 
+                let bossAbsorbed = 0;
+                let shownDamage = actualDamage;
                 if (targetType === 'boss') {
-                    combat.bossHp -= actualDamage;
+                    const br = dealDamageToBoss(actualDamage);
+                    bossAbsorbed = br.absorbed;
+                    shownDamage = br.hpDamage;
                 } else {
                     combat.minions[targetIndex].hp -= actualDamage;
                 }
 
-                addLog(`位置${i + 1} ${p.char.name} 使用 ${skill.name} 对 ${targetLabel} 造成 ${actualDamage} 伤害${result.isCrit ? '（暴击）' : ''}`);
+                {
+                    let msg = `位置${i + 1} ${p.char.name} 使用 ${skill.name} 对 ${targetLabel} 造成 ${shownDamage} 伤害${result.isCrit ? '（暴击）' : ''}`;
+                    if (targetType === 'boss' && bossAbsorbed > 0) msg += `（厚皮护盾吸收 ${bossAbsorbed}）`;
+                    addLog(msg);
+                }
 
                 // 剑刃乱舞：复制伤害（普通攻击/刺骨/伏击/正中眉心）
                 if (['basic_attack', 'eviscerate', 'ambush', 'between_the_eyes'].includes(skillId)) {
@@ -15615,13 +15822,21 @@ function stepBossCombat(state) {
                     const tDefense = getEffectiveTargetDefense(p.char, t.defenseRaw);
                     const extraActual = Math.max(1, damage - tDefense);
 
+                    let bossAbsorbed = 0;
+                    let shownDamage = extraActual;
                     if (t.type === 'boss') {
-                        combat.bossHp -= extraActual;
+                        const br = dealDamageToBoss(extraActual);
+                        bossAbsorbed = br.absorbed;
+                        shownDamage = br.hpDamage;
                     } else {
                         combat.minions[t.index].hp -= extraActual;
                     }
 
-                    addLog(`【碎冰】位置${i + 1} ${p.char.name} 的冰枪术额外命中 ${t.label}，造成 ${extraActual} 伤害${result.isCrit ? '（暴击）' : ''}`);
+                    {
+                        let msg = `【碎冰】位置${i + 1} ${p.char.name} 的冰枪术额外命中 ${t.label}，造成 ${shownDamage} 伤害${result.isCrit ? '（暴击）' : ''}`;
+                        if (t.type === 'boss' && bossAbsorbed > 0) msg += `（厚皮护盾吸收 ${bossAbsorbed}）`;
+                        addLog(msg);
+                    }
                 }
             }
 
@@ -15635,11 +15850,14 @@ function stepBossCombat(state) {
 
                     if (totalTrue > 0) {
                         if (targetType === 'boss') {
-                            combat.bossHp -= totalTrue;
+                            const br = dealDamageToBoss(totalTrue);
+                            let msg = `【冰刺】释放${stacks}枚，对${targetLabel}造成 ${br.hpDamage} 点真实伤害`;
+                            if (br.absorbed > 0) msg += `（厚皮护盾吸收 ${br.absorbed}）`;
+                            addLog(msg);
                         } else {
                             combat.minions[targetIndex].hp -= totalTrue;
+                            addLog(`【冰刺】释放${stacks}枚，对${targetLabel}造成 ${totalTrue} 点真实伤害`);
                         }
-                        addLog(`【冰刺】释放${stacks}枚，对${targetLabel}造成 ${totalTrue} 点真实伤害`);
                     } else {
                         addLog(`【冰刺】释放${stacks}枚，但本次冰枪术未造成伤害，冰刺未能命中`, 'warning');
                     }
@@ -15711,13 +15929,21 @@ function stepBossCombat(state) {
                             addLog(`→ 额外伏击被【登上甲板】免疫！`);
                         } else {
                             const extraActual = Math.max(1, extraDamage - targetDef);
+                            let bossAbsorbed = 0;
+                            let shownDamage = extraActual;
                             if (targetType === 'boss') {
-                                combat.bossHp -= extraActual;
+                                const br = dealDamageToBoss(extraActual);
+                                bossAbsorbed = br.absorbed;
+                                shownDamage = br.hpDamage;
                             } else {
                                 combat.minions[targetIndex].hp -= extraActual;
                             }
 
-                            addLog(`→ ${p.char.name} 的伏击(藏锋寻时)对 ${targetLabel} 造成 ${extraActual} 伤害${extraResult.isCrit ? '（暴击）' : ''}`);
+                            {
+                                let msg = `→ ${p.char.name} 的伏击(藏锋寻时)对 ${targetLabel} 造成 ${shownDamage} 伤害${extraResult.isCrit ? '（暴击）' : ''}`;
+                                if (targetType === 'boss' && bossAbsorbed > 0) msg += `（厚皮护盾吸收 ${bossAbsorbed}）`;
+                                addLog(msg);
+                            }
 
                             // 剑刃乱舞：复制伤害（伏击同样触发）
                             applyBladeFlurryCleave(extraDamage, `${skill.name}(藏锋寻时)`);
@@ -15743,23 +15969,26 @@ function stepBossCombat(state) {
             }
         }
 
-        // 治疗处理 - 需要考虑减疗debuff
+        // 治疗处理 - 需要考虑减疗debuff + 治疗吸收
         if (result.healAll) {
-            let heal = Math.floor(result.healAll);
+            const healPerTarget = Math.floor(result.healAll);
+            let totalHealed = 0;
+            let totalAbsorbed = 0;
+
             combat.playerStates.forEach(ps => {
                 if (ps.currentHp > 0) {
-                    // 检查减疗debuff
-                    let healingMult = 1;
-                    if (ps.debuffs?.mortalStrike) {
-                        healingMult = 1 - (ps.debuffs.mortalStrike.healingReduction || 0);
-                    }
-                    const actualHeal = Math.floor(heal * healingMult);
-                    const newHp = Math.min(ps.char.stats.maxHp, ps.currentHp + actualHeal);
-                    ps.currentHp = newHp;
-                    ps.char.stats.currentHp = newHp;
+                    const r = applyHealingToPlayer(ps, healPerTarget, `${p.char.name}·群体治疗`);
+                    totalHealed += r.actualHeal;
+                    totalAbsorbed += r.absorbed;
                 }
             });
-            addLog(`位置${i + 1} ${p.char.name} 全队治疗 ${heal}`);
+
+            addLog(
+                `位置${i + 1} ${p.char.name} 全队治疗 ${healPerTarget}` +
+                `（实际回复 ${totalHealed}` +
+                (totalAbsorbed > 0 ? `，治疗吸收共吸收 ${totalAbsorbed}` : '') +
+                `）`
+            );
         }
 
         // 救赎处理（applyAtonement）
@@ -15803,17 +16032,10 @@ function stepBossCombat(state) {
             if (frontPlayer) {
                 const fortuneStacks = p.fortuneMisfortuneStacks || 0;
                 let healAmount = result.penanceHeal;
-
-                // 检查减疗debuff
-                let healingMult = 1;
-                if (frontPlayer.debuffs?.mortalStrike) {
-                    healingMult = 1 - (frontPlayer.debuffs.mortalStrike.healingReduction || 0);
-                }
-                healAmount = Math.floor(healAmount * healingMult);
-
-                const newHp = Math.min(frontPlayer.char.stats.maxHp, frontPlayer.currentHp + healAmount);
-                const actualHeal = newHp - frontPlayer.currentHp;
-                frontPlayer.currentHp = newHp;
+                const healRes = applyHealingToPlayer(frontPlayer, healAmount, '苦修');
+                const actualHeal = healRes.actualHeal;
+                const healingMult = healRes.healingMult;
+                const absorbedByHealAbsorb = healRes.absorbed;
 
                 let healText = `位置${i + 1} ${p.char.name} 苦修治疗 ${frontPlayer.char.name} ${actualHeal}`;
                 if (fortuneStacks > 0 && p.char.talents?.[40] === 'fortune_misfortune') {
@@ -15821,6 +16043,9 @@ function stepBossCombat(state) {
                 }
                 if (healingMult < 1) {
                     healText += `（受到致死打击减疗${Math.round((1 - healingMult) * 100)}%）`;
+                }
+                if (absorbedByHealAbsorb > 0) {
+                    healText += `（治疗吸收 吸收 ${absorbedByHealAbsorb}）`;
                 }
                 addLog(healText);
 
@@ -15877,15 +16102,21 @@ function stepBossCombat(state) {
                     } else {
                         const actualDamage = Math.max(1, Math.floor(result.penanceDamage * buffDamageDealtMult - targetDefense));
 
-                        if (targetType === 'boss') {
-                            combat.bossHp -= actualDamage;
+                        let bossAbsorbed = 0;
+                        let shownDamage = actualDamage;
+                        if (targetType === 'boss' || targetIndex < 0) {
+                            const br = dealDamageToBoss(actualDamage);
+                            bossAbsorbed = br.absorbed;
+                            shownDamage = br.hpDamage;
                         } else if (targetIndex >= 0) {
                             combat.minions[targetIndex].hp -= actualDamage;
-                        } else {
-                            combat.bossHp -= actualDamage;
                         }
 
-                        addLog(`位置${i + 1} ${p.char.name}【终极苦修】造成 ${actualDamage} 伤害${result.penanceDamageIsCrit ? '（暴击）' : ''}`);
+                        {
+                            let msg = `位置${i + 1} ${p.char.name}【终极苦修】造成 ${shownDamage} 伤害${result.penanceDamageIsCrit ? '（暴击）' : ''}`;
+                            if ((targetType === 'boss' || targetIndex < 0) && bossAbsorbed > 0) msg += `（厚皮护盾吸收 ${bossAbsorbed}）`;
+                            addLog(msg);
+                        }
 
                         // 救赎机制
                         if (p.char.stats.atonement) {
@@ -16230,8 +16461,8 @@ function stepBossCombat(state) {
                         addLog(`【包二奶羁绊】对Boss的额外伤害被【下潜】免疫`, 'warning');
                     } else {
                         if (!((combat.bossHp ?? 0) <= 0)) {
-                            combat.bossHp -= aoeDamage;
-                            didAny = true;
+                            const br = dealDamageToBoss(aoeDamage);
+                            if (br.hpDamage > 0 || br.absorbed > 0) didAny = true;
                         }
                     }
 
@@ -16320,8 +16551,10 @@ function stepBossCombat(state) {
                 const defRaw = Number(boss?.defense) || 0;
                 const def = getEffectiveTargetDefense(p.char, defRaw);
                 const actual = Math.max(1, dmg - def);
-                combat.bossHp -= actual;
-                addLog(`【暗影魔】位置${pIdx + 1} ${p.char.name} 对 ${boss.name} 造成 ${actual} 暗影伤害${isCrit ? '【暴击】' : ''}`);
+                const br = dealDamageToBoss(actual);
+                let msg = `【暗影魔】位置${pIdx + 1} ${p.char.name} 对 ${boss.name} 造成 ${br.hpDamage} 暗影伤害${isCrit ? '【暴击】' : ''}`;
+                if (br.absorbed > 0) msg += `（厚皮护盾吸收 ${br.absorbed}）`;
+                addLog(msg);
 
                 // 救赎（由该戒律牧师的伤害触发）
                 if (p.char?.stats?.atonement) {
@@ -16375,19 +16608,23 @@ function stepBossCombat(state) {
             }
 
             const dmg = Math.max(1, Math.floor(dot.damagePerTurn));
-            combat.bossHp -= dmg;
+            const br = dealDamageToBoss(dmg);
 
-            addLog(`【${dotName}】对 ${boss.name} 造成 ${dmg} DOT 伤害（剩余${dot.duration - 1}回合）`);
+            {
+                let msg = `【${dotName}】对 ${boss.name} 造成 ${br.hpDamage} DOT 伤害（剩余${dot.duration - 1}回合）`;
+                if (br.absorbed > 0) msg += `（厚皮护盾吸收 ${br.absorbed}）`;
+                addLog(msg);
+            }
 
             if (dot.sourcePlayerId) {
                 const sourcePlayer = combat.playerStates.find(p => p.char.id === dot.sourcePlayerId);
                 if (sourcePlayer && sourcePlayer.char.talents?.[30] === 'brutal_momentum' && sourcePlayer.currentHp > 0) {
                     const healAmount = Math.floor(dmg * 1.5);
-                    const maxHp = sourcePlayer.char.stats.maxHp || 0;
-                    const actualHeal = Math.min(healAmount, maxHp - sourcePlayer.currentHp);
-                    if (actualHeal > 0) {
-                        sourcePlayer.currentHp += actualHeal;
-                        addLog(`【残暴动力】触发：${sourcePlayer.char.name} 治疗 ${actualHeal} 点生命`);
+                    const hr = applyHealingToPlayer(sourcePlayer, healAmount, '残暴动力');
+                    if (hr.actualHeal > 0 || hr.absorbedByHealAbsorb > 0) {
+                        let msg = `【残暴动力】触发：${sourcePlayer.char.name} 治疗 ${hr.actualHeal} 点生命`;
+                        if (hr.absorbedByHealAbsorb > 0) msg += `（治疗吸收 ${hr.absorbedByHealAbsorb}）`;
+                        addLog(msg);
                     }
                 }
 
@@ -16440,11 +16677,17 @@ function stepBossCombat(state) {
                     const sourcePlayer = combat.playerStates.find(p => p.char.id === dot.sourcePlayerId);
                     if (sourcePlayer && sourcePlayer.char.talents?.[30] === 'brutal_momentum' && sourcePlayer.currentHp > 0) {
                         const healAmount = Math.floor(dmg * 1.5);
-                        const maxHp = sourcePlayer.char.stats.maxHp || 0;
-                        const actualHeal = Math.min(healAmount, maxHp - sourcePlayer.currentHp);
-                        if (actualHeal > 0) {
-                            sourcePlayer.currentHp += actualHeal;
-                            addLog(`【残暴动力】触发：${sourcePlayer.char.name} 治疗 ${actualHeal} 点生命`);
+                        const healRes = applyHealingToPlayer(sourcePlayer, healAmount, '残暴动力');
+                        if (healRes.actualHeal > 0 || healRes.absorbed > 0) {
+                            let healText = `【残暴动力】触发：${sourcePlayer.char.name} 治疗 ${healRes.actualHeal} 点生命`;
+                            if (healRes.healingMult < 1) {
+                                const reducePct = Math.round((1 - healRes.healingMult) * 100);
+                                healText += `（致死打击减疗${reducePct}%）`;
+                            }
+                            if (healRes.absorbed > 0) {
+                                healText += `（治疗吸收 吸收 ${healRes.absorbed}）`;
+                            }
+                            addLog(healText);
                         }
                     }
 
@@ -16540,8 +16783,10 @@ function stepBossCombat(state) {
                     if (shieldInfo.immune) {
                         addLog(`【盾刺反击】被【${shieldInfo.shieldName}】免疫（目标：${boss.name}）`, 'warning');
                     } else {
-                        combat.bossHp -= spikeDmg;
-                        addLog(`【盾刺反击】触发：${playerState.char.name} 反击 ${boss.name} 造成 ${spikeDmg} 点真实伤害`);
+                        const br = dealDamageToBoss(spikeDmg);
+                        let msg = `【盾刺反击】触发：${playerState.char.name} 反击 ${boss.name} 造成 ${br.hpDamage} 点真实伤害`;
+                        if (br.absorbed > 0) msg += `（厚皮护盾吸收 ${br.absorbed}）`;
+                        addLog(msg);
                     }
                 }
             }
@@ -16623,6 +16868,55 @@ function stepBossCombat(state) {
                     });
                     addLog(`→ 位置${pIdx + 1} ${ps.char.name} 获得【毒性之血】（每回合${perTurn}自然伤害，持续${duration}回合，不可叠层）`, 'debuff');
                 }
+            });
+        }
+    }
+
+    // ==================== 维希度斯：水滴死亡触发（伤害Boss + 驱散【毒箭之雨】1层） ====================
+    // 说明：水滴由【厚皮】护盾被击破后召唤；每个水滴死亡：
+    // - 对Boss造成“其最大生命值 5%”伤害
+    // - 对所有角色驱散 1 层【毒箭之雨】
+    if (combat.bossId === 'viscidus') {
+        const deadDroplets = (combat.minions || []).filter(m => (m?.hp ?? 0) <= 0 && m.isViscidusDroplet && !m.deathProcessed);
+        if (deadDroplets.length > 0) {
+            // 标记已处理，避免重复触发
+            deadDroplets.forEach(m => { m.deathProcessed = true; });
+
+            deadDroplets.forEach(m => {
+                if ((combat.bossHp ?? 0) <= 0) return;
+
+                const dropletMaxHp = Math.max(0, Math.floor(Number(m?.maxHp) || 0));
+                const pct = (typeof boss.dropletDeathDamagePct === 'number') ? boss.dropletDeathDamagePct : 0.05;
+                const rawDmg = Math.max(1, Math.floor(dropletMaxHp * pct));
+
+                // ✅ 水滴死亡伤害：视为“真实伤害”，并且【无视厚皮护盾】（避免再次上盾后水滴机制失效）
+                const br = dealDamageToBoss(rawDmg, { bypassShield: true });
+
+                // 驱散 1 层【毒箭之雨】
+                let affectedCount = 0;
+                combat.playerStates.forEach(ps => {
+                    if (!ps || ps.currentHp <= 0) return;
+                    ps.dots = Array.isArray(ps.dots) ? ps.dots : [];
+
+                    const dot = ps.dots.find(d => d && d.name === '毒箭之雨');
+                    if (!dot) return;
+
+                    const stacks = Math.max(1, Math.floor(Number(dot.stacks) || 1));
+                    if (stacks <= 1) {
+                        // 移除整条DOT
+                        ps.dots = ps.dots.filter(d => d !== dot);
+                    } else {
+                        dot.stacks = stacks - 1;
+                        // 重新计算每回合伤害
+                        const perStack = (Number.isFinite(dot.perStackDamage) && dot.perStackDamage > 0)
+                            ? Math.floor(dot.perStackDamage)
+                            : Math.max(1, Math.floor((Number(dot.damagePerTurn) || 0) / stacks));
+                        dot.damagePerTurn = Math.max(1, perStack * dot.stacks);
+                    }
+                    affectedCount += 1;
+                });
+
+                addLog(`【水滴死亡】对 ${boss.name} 造成 ${br.hpDamage} 伤害，并驱散全队【毒箭之雨】1层（影响${affectedCount}人）`, 'warning');
             });
         }
     }
@@ -18455,6 +18749,109 @@ function stepBossCombat(state) {
     }
 
 
+    // ==================== 维希度斯（世界首领）技能处理 ====================
+    // 机制：
+    // - 技能循环：厚皮 → 毒箭之雨 → 毒性震击 → 毒箭之雨
+    // - 厚皮：获得最大生命值 30% 护盾（可叠加）。护盾被击破时召唤 5 个水滴。
+    // - 毒箭之雨：对全体施加中毒DOT：每回合造成 1.2×Boss攻击 的自然伤害，持续4回合，可叠加。
+    // - 毒性震击：对坦克造成 8×Boss攻击 的自然法术伤害，并施加治疗吸收（4×Boss攻击）。
+    else if (combat.bossId === 'viscidus') {
+        combat.bossBuffs = combat.bossBuffs || {};
+        combat.minions = Array.isArray(combat.minions) ? combat.minions : [];
+
+        // 初始化（防止旧存档缺字段）
+        if (!Number.isFinite(Number(combat.bossBuffs.viscidusThickSkinShield))) combat.bossBuffs.viscidusThickSkinShield = 0;
+        if (!Number.isFinite(Number(combat.bossBuffs.viscidusDropletSerial))) combat.bossBuffs.viscidusDropletSerial = 0;
+
+        const tankIdx = pickAlivePlayerIndex();
+        const tank = tankIdx >= 0 ? combat.playerStates[tankIdx] : null;
+
+        // 技能3：厚皮
+        if (bossAction === 'thick_skin') {
+            const pct = (typeof boss.thickSkinShieldPct === 'number') ? boss.thickSkinShieldPct : 0.30;
+            const add = Math.max(1, Math.floor((boss.maxHp || 0) * pct));
+            const cur = getViscidusShield();
+            setViscidusShield(cur + add);
+            addLog(`【${boss.name}】施放【厚皮】：获得 ${add} 点护盾（当前护盾 ${cur + add}，可叠加）`, 'buff');
+        }
+
+        // 技能1：毒箭之雨
+        else if (bossAction === 'poison_arrow_rain') {
+            const coeff = (typeof boss.poisonArrowRainDotMultiplier === 'number') ? boss.poisonArrowRainDotMultiplier : 1.2;
+            const duration = (typeof boss.poisonArrowRainDuration === 'number') ? boss.poisonArrowRainDuration : 4;
+            const perTurnBase = Math.max(1, Math.floor((boss.attack || 0) * coeff));
+
+            addLog(`【${boss.name}】施放【毒箭之雨】：所有角色中毒（可叠加）！`, 'warning');
+
+            combat.playerStates.forEach((ps, pIdx) => {
+                if (!ps || ps.currentHp <= 0) return;
+
+                // ✅ 矮人【石像形态】：首次中毒免疫
+                if (tryFirstDebuffImmunity(ps, 'poison', pIdx, '毒箭之雨')) {
+                    addLog(`→ 位置${pIdx + 1} ${ps.char.name} 免疫了【毒箭之雨】`, 'debuff');
+                    return;
+                }
+
+                ps.dots = Array.isArray(ps.dots) ? ps.dots : [];
+                const existing = ps.dots.find(d => d && d.name === '毒箭之雨');
+
+                if (existing) {
+                    existing.stacks = Math.max(1, Math.floor(Number(existing.stacks) || 1)) + 1;
+                    existing.duration = duration;
+                    existing.type = 'poison';
+                    existing.isPoison = true;
+                    existing.school = 'nature';
+                    existing.perStackDamage = perTurnBase;
+                    existing.damagePerTurn = Math.max(1, perTurnBase * existing.stacks);
+                } else {
+                    ps.dots.push({
+                        name: '毒箭之雨',
+                        type: 'poison',
+                        isPoison: true,
+                        school: 'nature',
+                        stacks: 1,
+                        perStackDamage: perTurnBase,
+                        damagePerTurn: perTurnBase,
+                        duration: duration,
+                    });
+                }
+            });
+        }
+
+        // 技能2：毒性震击
+        else if (bossAction === 'toxic_shock') {
+            if (!tank) {
+                addLog(`【${boss.name}】施放【毒性震击】，但没有存活的坦克目标。`, 'warning');
+            } else {
+                const dmgMult = (typeof boss.toxicShockMultiplier === 'number') ? boss.toxicShockMultiplier : 8;
+                const raw = Math.max(1, Math.floor((boss.attack || 0) * dmgMult));
+
+                const nature = calcMagicDamage(tank, raw);
+                const shieldResult = applyShieldAbsorb(tank, nature.damage, logs, currentRound);
+                tank.currentHp -= shieldResult.finalDamage;
+
+                const resPct = Math.round(nature.resistReduction * 100);
+                const mrText = Number(nature.magicResist) < 0 ? `（魔抗 ${Math.floor(nature.magicResist)}）` : '';
+                const vulnPct = Math.round((nature.spellVulnMult - 1) * 100);
+                const vulnText = vulnPct > 0 ? `，法术易伤+${vulnPct}%` : '';
+                const shieldText = shieldResult.absorbed > 0 ? `，护盾吸收 ${shieldResult.absorbed}` : '';
+
+                addLog(`【${boss.name}】施放【毒性震击】：命中 坦克 位置${tankIdx + 1} ${tank.char.name}，造成 ${shieldResult.finalDamage} 点自然法术伤害（魔抗减伤${resPct}%${mrText}${vulnText}${shieldText}）`, 'warning');
+
+                // 治疗吸收：吸收接下来受到的治疗，数值 = 4×Boss攻击
+                tank.debuffs = tank.debuffs || {};
+                const absorbMult = (typeof boss.toxicShockHealAbsorbMultiplier === 'number') ? boss.toxicShockHealAbsorbMultiplier : 4;
+                const absorb = Math.max(1, Math.floor((boss.attack || 0) * absorbMult));
+                const prev = Math.max(0, Math.floor(Number(tank.debuffs.healAbsorb?.remaining) || 0));
+                tank.debuffs.healAbsorb = { remaining: absorb, source: '毒性震击' };
+                addLog(`→ 位置${tankIdx + 1} ${tank.char.name} 获得【治疗吸收】：接下来受到的治疗将被吸收 ${absorb} 点${prev > 0 ? `（覆盖原剩余${prev}）` : ''}`,
+                    'debuff'
+                );
+            }
+        }
+    }
+
+
     // ==================== 火焰之王拉格纳罗斯（团队首领）技能处理 ====================
     // 机制：
     // - 火焰伤害：计算魔抗（calcMagicDamage）
@@ -19651,6 +20048,11 @@ function stepBossCombat(state) {
 
         // 无疤者奥斯里安：汲能水晶不进行攻击行动
         if (combat.bossId === 'ossirian' && m.isEnergyCrystal) {
+            continue;
+        }
+
+        // 维希度斯：水滴无技能，不进行攻击行动
+        if (combat.bossId === 'viscidus' && m.isViscidusDroplet) {
             continue;
         }
 
@@ -33760,6 +34162,11 @@ const BossPrepareModal = ({ state, dispatch }) => {
         corrupted_cleave: '堕落顺劈',
         burning_adrenaline: '燃烧刺激',
         fire_nova: '火焰新星',
+
+        // ✅ 维希度斯
+        thick_skin: '厚皮',
+        poison_arrow_rain: '毒箭之雨',
+        toxic_shock: '毒性震击',
     };
 
     const formatBossCycle = (boss) =>
@@ -34972,6 +35379,79 @@ const BossPrepareModal = ({ state, dispatch }) => {
                                       <div style={{ fontSize: 11, color: '#aaa', lineHeight: 1.5 }}>
                                         对<span style={{ color: '#ff9800' }}>所有角色</span>造成
                                         <span style={{ color: '#ffd700' }}> Boss攻击×{boss.fireNovaMultiplier || 2}</span> 的<span style={{ color: '#ff7043' }}>火焰法术伤害</span>（计算魔抗）
+                                      </div>
+                                    </div>
+                                  </>
+                                )}
+
+                                {/* 维希度斯的技能 */}
+                                {bossId === 'viscidus' && (
+                                  <>
+                                    <div style={{
+                                      padding: 10,
+                                      background: 'rgba(76,175,80,0.10)',
+                                      borderRadius: 6,
+                                      borderLeft: '3px solid #4caf50'
+                                    }}>
+                                      <div style={{ fontSize: 12, color: '#81c784', fontWeight: 600, marginBottom: 4 }}>
+                                        🛡️ 技能1：厚皮
+                                      </div>
+                                      <div style={{ fontSize: 11, color: '#aaa', lineHeight: 1.5 }}>
+                                        获得<span style={{ color: '#ffd700' }}> 最大生命值×{Math.round(((boss.thickSkinShieldPct ?? 0.30) * 100))}%</span> 的护盾（可叠加）
+                                        <br />
+                                        护盾被击破后，召唤<span style={{ color: '#ffd700' }}> {boss.dropletCount ?? 5}</span> 个<span style={{ color: '#ff9800' }}>水滴</span>
+                                        （每个水滴生命值为 Boss最大生命值×<span style={{ color: '#ffd700' }}>{Math.round(((boss.dropletHpPct ?? 0.15) * 100))}%</span>）
+                                      </div>
+                                    </div>
+
+                                    <div style={{
+                                      padding: 10,
+                                      background: 'rgba(156,39,176,0.10)',
+                                      borderRadius: 6,
+                                      borderLeft: '3px solid #9c27b0'
+                                    }}>
+                                      <div style={{ fontSize: 12, color: '#ce93d8', fontWeight: 600, marginBottom: 4 }}>
+                                        ☠️ 技能2：毒箭之雨
+                                      </div>
+                                      <div style={{ fontSize: 11, color: '#aaa', lineHeight: 1.5 }}>
+                                        对<span style={{ color: '#ff9800' }}>所有角色</span>施加<span style={{ color: '#ffd700' }}>中毒</span>：每回合造成
+                                        <span style={{ color: '#ffd700' }}> Boss攻击×{boss.poisonArrowRainDotMultiplier ?? 1.2}</span> 的<span style={{ color: '#81c784' }}>自然伤害</span>
+                                        <br />
+                                        持续 <span style={{ color: '#ffd700' }}>{boss.poisonArrowRainDuration ?? 4}</span> 回合，<span style={{ color: '#ff9800' }}>可叠加</span>
+                                      </div>
+                                    </div>
+
+                                    <div style={{
+                                      padding: 10,
+                                      background: 'rgba(255,87,34,0.10)',
+                                      borderRadius: 6,
+                                      borderLeft: '3px solid #ff5722'
+                                    }}>
+                                      <div style={{ fontSize: 12, color: '#ffab91', fontWeight: 600, marginBottom: 4 }}>
+                                        💥 技能3：毒性震击
+                                      </div>
+                                      <div style={{ fontSize: 11, color: '#aaa', lineHeight: 1.5 }}>
+                                        对<span style={{ color: '#ff9800' }}>坦克（1号位）</span>造成
+                                        <span style={{ color: '#ffd700' }}> Boss攻击×{boss.toxicShockMultiplier ?? 8}</span> 的<span style={{ color: '#ff7043' }}>法术伤害</span>（计算魔抗）
+                                        <br />
+                                        并附加<span style={{ color: '#ffd700' }}>治疗吸收</span>：吸收接下来
+                                        <span style={{ color: '#ffd700' }}> Boss攻击×{boss.toxicShockHealAbsorbMultiplier ?? 4}</span> 的治疗量
+                                      </div>
+                                    </div>
+
+                                    <div style={{
+                                      padding: 10,
+                                      background: 'rgba(33,150,243,0.10)',
+                                      borderRadius: 6,
+                                      borderLeft: '3px solid #2196F3'
+                                    }}>
+                                      <div style={{ fontSize: 12, color: '#90caf9', fontWeight: 600, marginBottom: 4 }}>
+                                        💧 水滴死亡触发
+                                      </div>
+                                      <div style={{ fontSize: 11, color: '#aaa', lineHeight: 1.5 }}>
+                                        每个水滴死亡：对 Boss 造成该水滴<span style={{ color: '#ffd700' }}>{Math.round(((boss.dropletDeathDamagePct ?? 0.05) * 100))}%</span>生命值的伤害
+                                        <br />
+                                        并对<span style={{ color: '#ff9800' }}>所有角色</span>驱散<span style={{ color: '#ffd700' }}>1层</span>【毒箭之雨】
                                       </div>
                                     </div>
                                   </>

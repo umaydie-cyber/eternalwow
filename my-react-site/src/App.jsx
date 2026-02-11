@@ -10409,7 +10409,7 @@ const FIXED_EQUIPMENTS = {
     EQ_274: {
       id: 'EQ_274',
       name: '甲虫胸针',
-      icon: 'icons/wow/vanilla/items/jiachongxiongzhen.png',
+      icon: 'icons/wow/vanilla/armor/jiachongxiongzhen.png',
       type: 'equipment',
       slot: 'trinket2',
       rarity: 'purple',

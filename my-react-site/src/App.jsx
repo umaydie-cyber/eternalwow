@@ -13892,7 +13892,12 @@ const BOSS_DATA = {
 // ==================== 羁绊名称映射 ====================
 const BOND_NAMES = {
     baoernai: '包二奶',
-    jianyue: '简约而不简单'
+    jianyue: '简约而不简单',
+    guangtou_baoji: '光头加暴击',
+    beiweizhuru: '一个卑微的侏儒？',
+    mengduo: '蒙多想去哪就去哪',
+    wusheng: '武圣转世',
+    tianduyingcai: '天妒英才'
 };
 
 // ==================== UTILS ====================
@@ -14579,6 +14584,33 @@ function calculateTotalStats(character, partyAuras = { hpMul: 1, spellPowerMul: 
         }
     }
 
+    // 光头加暴击羁绊：全人类队伍暴击+10，爆伤+20%
+    if (gameState?.rebirthBonds?.includes('guangtou_baoji')) {
+        const allHuman =
+            (gameState?.characters?.length || 0) > 0 &&
+            gameState.characters.every(c => c.race === '人类');
+
+        if (allHuman) {
+            totalStats.critRate = (totalStats.critRate || 0) + 10;
+            totalStats.critDamage = (totalStats.critDamage || 2.0) + 0.20;
+        }
+    }
+
+    // 一个卑微的侏儒？羁绊：全侏儒队伍暴击+10，全能+10，急速+10，精通+10
+    if (gameState?.rebirthBonds?.includes('beiweizhuru')) {
+        const allGnome =
+            (gameState?.characters?.length || 0) > 0 &&
+            gameState.characters.every(c => c.race === '侏儒');
+
+        if (allGnome) {
+            totalStats.critRate = (totalStats.critRate || 0) + 10;
+            totalStats.versatility = (totalStats.versatility || 0) + 10;
+            totalStats.haste = (totalStats.haste || 0) + 10;
+            totalStats.mastery = (totalStats.mastery || 0) + 10;
+        }
+    }
+
+
     Object.values(character.equipment || {}).forEach(item => {
         if (item && item.stats) {
             Object.entries(item.stats).forEach(([stat, value]) => {
@@ -14655,6 +14687,17 @@ function calculateTotalStats(character, partyAuras = { hpMul: 1, spellPowerMul: 
 
         totalStats.iceLanceBaseMultiplier = iceLanceBaseMultiplier;
     }
+    // ==================== 羁绊：武圣转世（全队攻击强度 +15%） ====================
+    if (gameState?.rebirthBonds?.includes('wusheng')) {
+        totalStats.attack = (Number(totalStats.attack) || 0) * 1.15;
+    }
+
+    // ==================== 羁绊：天妒英才（生命 -10%，法术强度 +30%） ====================
+    if (gameState?.rebirthBonds?.includes('tianduyingcai')) {
+        totalStats.hp = (Number(totalStats.hp) || 0) * 0.90;
+        totalStats.spellPower = (Number(totalStats.spellPower) || 0) * 1.30;
+    }
+
 
 
     // ==================== 成就：全队全能加成（如【首领杀手Ⅰ~Ⅹ】） ====================
@@ -25263,7 +25306,8 @@ function gameReducer(state, action) {
             // ===== 脱战回血（喷泉加成） =====
             const BASE_REGEN_DELAY_MS = 5000;
             const REGEN_DELAY_MS = Math.max(0, BASE_REGEN_DELAY_MS - glowLighthouseCount * 1000);
-            const REGEN_PER_SECOND = 10;
+            const REGEN_BONUS_MENGDUO = (newState?.rebirthBonds?.includes('mengduo')) ? 100 : 0;
+            const REGEN_PER_SECOND = 10 + REGEN_BONUS_MENGDUO;
             const now = Date.now();
 
             const researchBonus = {};
@@ -27002,7 +27046,7 @@ function gameReducer(state, action) {
             };
 
             // 随机羁绊（羁绊仍然叠加保留）
-            const possibleBonds = ['baoernai', 'jianyue'];
+            const possibleBonds = ['baoernai', 'jianyue', 'guangtou_baoji', 'beiweizhuru', 'mengduo', 'wusheng', 'tianduyingcai'];
             const newBond = possibleBonds[Math.floor(Math.random() * possibleBonds.length)];
             newState.rebirthBonds = [...newState.rebirthBonds, newBond];
 
@@ -30627,7 +30671,8 @@ const CharacterPage = ({ state, dispatch }) => {
                                                     const { totalMult } = getFountainEfficiency(state);
                                                     const fountainRegen = (state.functionalBuildings?.plaza_fountain || 0) * 2 * totalMult;
                                                     const hotSpringRegen = (char?.stats?.maxHp || 0) * getVolcanicHotSpringRegenPct(state);
-                                                    const total = 10 + fountainRegen + hotSpringRegen;
+                                                    const extraRegen = (state.rebirthBonds || []).includes('mengduo') ? 100 : 0;
+                                                    const total = 10 + extraRegen + fountainRegen + hotSpringRegen;
                                                     return Number.isFinite(total) ? total.toFixed(1) : '0.0';
                                                 })()}`
                                         )
@@ -39439,11 +39484,31 @@ const RebirthBonusModal = ({ state, onClose }) => {
         jianyue: {
             name: '简约而不简单',
             description: '队伍全为同一职业时，普通攻击伤害提高150%'
+        },
+        guangtou_baoji: {
+            name: '光头加暴击',
+            description: '队伍全为人类种族时：全队暴击 +10，暴击伤害 +20%'
+        },
+        beiweizhuru: {
+            name: '一个卑微的侏儒？',
+            description: '队伍全为侏儒种族时：全队暴击 +10，全能 +10，急速 +10，精通 +10'
+        },
+        mengduo: {
+            name: '蒙多想去哪就去哪',
+            description: '脱战回血每秒额外 +100'
+        },
+        wusheng: {
+            name: '武圣转世',
+            description: '全队攻击强度 +15%'
+        },
+        tianduyingcai: {
+            name: '天妒英才',
+            description: '全队生命 -10%，法术强度 +30%'
         }
     };
 
     // 所有可能的羁绊池
-    const ALL_BONDS = ['baoernai', 'jianyue'];
+    const ALL_BONDS = ['baoernai', 'jianyue', 'guangtou_baoji', 'beiweizhuru', 'mengduo', 'wusheng', 'tianduyingcai'];
 
     // Boss加成配置：使用全局 BOSS_BONUS_CONFIG（单一数据源）
 

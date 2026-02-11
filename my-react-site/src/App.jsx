@@ -10616,6 +10616,209 @@ const FIXED_EQUIPMENTS = {
     },
 
 
+    // ==================== 安其拉神庙（60级）- 哈霍兰公主掉落 ====================
+
+    // ✅ 哈霍兰之刺（暴击/爆伤/攻强武器）
+    EQ_281: {
+      id: 'EQ_281',
+      name: '哈霍兰之刺',
+      icon: 'icons/wow/vanilla/weapons/INV_Weapon_ShortBlade_15.png',
+      type: 'equipment',
+      slot: 'mainHand',
+      rarity: 'purple',
+      level: 0,
+      maxLevel: 100,
+      baseStats: {
+        attack: 3100,
+        hp: 5600,
+        critRate: 28,
+        critDamage: 0.90,
+        haste: 22,
+        mastery: 18,
+      },
+      growth: {
+        attack: 2,
+        hp: 2,
+        critRate: 2,
+        critDamage: 2,
+        haste: 2,
+        mastery: 2,
+      }
+    },
+
+    // ✅ 金巢披风（坦克披风）
+    EQ_282: {
+      id: 'EQ_282',
+      name: '金巢披风',
+      icon: 'icons/wow/vanilla/armor/INV_Misc_Cape_18.png',
+      type: 'equipment',
+      slot: 'cloak',
+      rarity: 'purple',
+      level: 0,
+      maxLevel: 100,
+      baseStats: {
+        hp: 8200,
+        armor: 340,
+        magicResist: 220,
+        mastery: 24,
+        versatility: 28,
+      },
+      growth: {
+        hp: 2,
+        armor: 2,
+        magicResist: 2,
+        mastery: 2,
+        versatility: 2,
+      }
+    },
+
+    // ✅ 殉难者之戒（治疗法强戒指 RING2）
+    EQ_283: {
+      id: 'EQ_283',
+      name: '殉难者之戒',
+      icon: 'icons/wow/vanilla/armor/INV_Jewelry_Ring_15.png',
+      type: 'equipment',
+      slot: 'ring2',
+      rarity: 'purple',
+      level: 0,
+      maxLevel: 100,
+      baseStats: {
+        spellPower: 820,
+        hp: 6000,
+        mastery: 24,
+        versatility: 24,
+        haste: 14,
+      },
+      growth: {
+        spellPower: 2,
+        hp: 2,
+        mastery: 2,
+        versatility: 2,
+        haste: 2,
+      }
+    },
+
+    // ✅ T2.5：征服者（战士）- 肩铠
+    EQ_284: {
+      id: 'EQ_284',
+      name: '征服者的肩铠',
+      icon: 'icons/wow/vanilla/armor/zst25jian.png',
+      type: 'equipment',
+      slot: 'shoulder',
+      rarity: 'purple',
+      setId: 'conqueror_set',
+      setName: '征服者',
+      level: 0,
+      maxLevel: 100,
+      baseStats: {
+        hp: 8700,
+        armor: 270,
+        magicResist: 110,
+        mastery: 16,
+        blockRate: 5,
+        blockValue: 650,
+      },
+      growth: {
+        hp: 2,
+        armor: 2,
+        magicResist: 2,
+        mastery: 2,
+        blockRate: 2,
+        blockValue: 2,
+      }
+    },
+
+    // ✅ T2.5：死亡执行者（盗贼）- 护肩
+    EQ_285: {
+      id: 'EQ_285',
+      name: '死亡执行者的护肩',
+      icon: 'icons/wow/vanilla/armor/dzt25jian.png',
+      type: 'equipment',
+      slot: 'shoulder',
+      rarity: 'purple',
+      setId: 'deathdealer_set',
+      setName: '死亡执行者',
+      level: 0,
+      maxLevel: 100,
+      baseStats: {
+        attack: 760,
+        magicResist: 100,
+        hp: 5800,
+        critRate: 18,
+        mastery: 16,
+        haste: 18,
+      },
+      growth: {
+        attack: 2,
+        magicResist: 2,
+        hp: 2,
+        critRate: 2,
+        mastery: 2,
+        haste: 2,
+      }
+    },
+
+    // ✅ T2.5：神秘（法师）- 肩垫
+    EQ_286: {
+      id: 'EQ_286',
+      name: '神秘肩垫',
+      icon: 'icons/wow/vanilla/armor/fst25jian.png',
+      type: 'equipment',
+      slot: 'shoulder',
+      rarity: 'purple',
+      setId: 'enigma_set',
+      setName: '神秘',
+      level: 0,
+      maxLevel: 100,
+      baseStats: {
+        spellPower: 760,
+        magicResist: 100,
+        hp: 5700,
+        critRate: 18,
+        mastery: 16,
+        haste: 18,
+      },
+      growth: {
+        spellPower: 2,
+        magicResist: 2,
+        hp: 2,
+        critRate: 2,
+        mastery: 2,
+        haste: 2,
+      }
+    },
+
+    // ✅ T2.5：神谕者（牧师）- 衬肩
+    EQ_287: {
+      id: 'EQ_287',
+      name: '神谕者的衬肩',
+      icon: 'icons/wow/vanilla/armor/mst25jian.png',
+      type: 'equipment',
+      slot: 'shoulder',
+      rarity: 'purple',
+      setId: 'oracle_set',
+      setName: '神谕者',
+      level: 0,
+      maxLevel: 100,
+      baseStats: {
+        spellPower: 760,
+        magicResist: 100,
+        hp: 6200,
+        mastery: 18,
+        versatility: 18,
+        critRate: 16,
+      },
+      growth: {
+        spellPower: 2,
+        magicResist: 2,
+        hp: 2,
+        mastery: 2,
+        versatility: 2,
+        critRate: 2,
+      }
+    },
+
+
 
 };
 
@@ -12877,7 +13080,16 @@ const BOSS_DATA = {
         rewards: {
             gold: 4400000,
             exp: 2600000,
-            items: []
+            items: [
+                // ===== 哈霍兰公主专属掉落 =====
+                { id: 'EQ_281', chance: 0.10 }, // 哈霍兰之刺（暴击/爆伤/攻强武器）
+                { id: 'EQ_282', chance: 0.10 }, // 金巢披风（坦克披风）
+                { id: 'EQ_283', chance: 0.10 }, // 殉难者之戒（治疗法强戒指 RING2）
+                { id: 'EQ_284', chance: 0.10 }, // 征服者的肩铠（战士 T2.5 肩部）
+                { id: 'EQ_285', chance: 0.10 }, // 死亡执行者的护肩（盗贼 T2.5 肩部）
+                { id: 'EQ_286', chance: 0.10 }, // 神秘肩垫（法师 T2.5 肩部）
+                { id: 'EQ_287', chance: 0.10 }, // 神谕者的衬肩（牧师 T2.5 肩部）
+            ]
         }
     },
 

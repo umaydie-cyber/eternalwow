@@ -9979,7 +9979,7 @@ const FIXED_EQUIPMENTS = {
       maxLevel: 100,
       baseStats: {
         attack: 750,
-        hp: 5500,
+        hp: 2500,
         critRate: 10,
       },
       growth: {
@@ -10006,7 +10006,7 @@ const FIXED_EQUIPMENTS = {
       maxLevel: 100,
       baseStats: {
         spellPower: 820,
-        hp: 5500,
+        hp: 2500,
         critRate: 10,
       },
       growth: {

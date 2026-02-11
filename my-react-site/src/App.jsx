@@ -39771,7 +39771,7 @@ const RebirthBonusModal = ({ state, onClose }) => {
                     border: '1px solid #4a3c2a'
                 }}>
                     <h3 style={{ color: '#c9a227', fontSize: 14, marginBottom: 12, borderBottom: '1px solid rgba(201,162,39,0.2)', paddingBottom: 8 }}>
-                        📜 羁绊池一览
+                        📜 重生词条一览
                     </h3>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                         {ALL_BONDS.map(bondId => {

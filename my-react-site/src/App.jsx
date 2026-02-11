@@ -85,6 +85,9 @@ const BOSS_BONUS_CONFIG = {
     // ✅ 新增：60级世界首领 - 维希度斯
     viscidus: { name: '维希度斯', bonus: 0.30 },
 
+    // ✅ 新增：60级世界首领 - 哈霍兰公主
+    princess_huhuran: { name: '哈霍兰公主', bonus: 0.30 },
+
     // ✅ 新增：团队首领 - 奥妮克希亚
     onyxia: { name: '奥妮克希亚', bonus: 0.30 },
 
@@ -11913,6 +11916,19 @@ const WORLD_BOSSES = {
         unlockLevel: 60
     },
 
+    // ✅ 新增：60级世界首领 - 哈霍兰公主
+    princess_huhuran: {
+        id: 'princess_huhuran',
+        name: '哈霍兰公主',
+        icon: 'icons/wow/vanilla/boss/princess_huhuran.png', // 需要添加对应图标
+        hp: 40000000,
+        attack: 35000,
+        defense: 32000,
+        rewards: { gold: 4400000, exp: 2600000 },
+        unlockLevel: 60
+    },
+
+
 };
 
 // ==================== 团队首领（Raid Boss） ====================
@@ -12832,7 +12848,40 @@ const BOSS_DATA = {
         }
     },
 
-    // ✅ 新增：团队首领 - 奥妮克希亚（5人）
+
+    // ✅ 新增：60级世界首领 - 哈霍兰公主
+    princess_huhuran: {
+        id: 'princess_huhuran',
+        name: '哈霍兰公主',
+        maxHp: 40000000,
+        attack: 35000,
+        defense: 32000,
+
+        // 技能循环：自然喷吐 → 毒镖 → 自然喷吐 → 翼龙钉刺
+        cycle: ['nature_spit', 'poison_dart', 'nature_spit', 'wyvern_sting'],
+
+        // 技能1：翼龙钉刺（随机目标睡眠2回合，无法行动）
+        wyvernStingDuration: 2,
+
+        // 技能2：毒镖（中毒DOT：每回合 1.2×Boss攻击 的自然伤害，持续4回合，最高可叠加4层）
+        poisonDartDotMultiplier: 1.2,
+        poisonDartDuration: 4,
+        poisonDartMaxStacks: 4,
+
+        // 技能3：自然喷吐（随机目标造成 3×Boss攻击 的自然法术伤害，计算魔抗）
+        natureSpitMultiplier: 3,
+
+        // 技能4（被动）：陷入狂暴（Boss回合开始时，生命值≤20%后：毒镖/自然喷吐改为全体）
+        enrageHpPct: 0.20,
+
+        rewards: {
+            gold: 4400000,
+            exp: 2600000,
+            items: []
+        }
+    },
+
+// ✅ 新增：团队首领 - 奥妮克希亚（5人）
     onyxia: {
         id: 'onyxia',
         name: '奥妮克希亚',
@@ -14937,6 +14986,8 @@ function stepBossCombat(state) {
                             addLog(`位置${i + 1} ${p.char.name} 的【击飞】效果消失`);
                         } else if (key === 'stun') {
                             addLog(`位置${i + 1} ${p.char.name} 的【昏迷】效果消失`);
+                        } else if (key === 'sleep') {
+                            addLog(`位置${i + 1} ${p.char.name} 的【睡眠】效果消失`);
                         } else if (key === 'spellVulnerability') {
                             addLog(`位置${i + 1} ${p.char.name} 的【法术易伤】效果消失`);
                         } else if (key === 'corrosiveAcid') {
@@ -15247,6 +15298,20 @@ function stepBossCombat(state) {
             tickPlayerDurations(p, i);
             continue;
         }
+
+        // ==================== 睡眠：跳过本回合行动 ====================
+        // 说明：与昏迷类似，由哈霍兰公主【翼龙钉刺】造成。
+        if (p.debuffs?.sleep?.duration > 0) {
+            // 仍然推进技能轮转（表示这一回合被浪费）
+            if (Array.isArray(p.validSkills) && p.validSkills.length > 0) {
+                p.skillIndex = (p.skillIndex || 0) + 1;
+            }
+
+            addLog(`位置${i + 1} ${p.char.name} 因【睡眠】无法行动（剩余${p.debuffs.sleep.duration}回合）`, 'debuff');
+            tickPlayerDurations(p, i);
+            continue;
+        }
+
 
         // ==================== 跑位：跳过本回合行动 ====================
         // 说明：与击飞类似，但文案为跑位（例如：奥妮克希亚【深呼吸】分散站位触发）。
@@ -19254,7 +19319,181 @@ function stepBossCombat(state) {
     }
 
 
-    // ==================== 火焰之王拉格纳罗斯（团队首领）技能处理 ====================
+
+    // ==================== 哈霍兰公主（世界首领）技能处理 ====================
+    // 机制：
+    // - 技能循环：自然喷吐 → 毒镖 → 自然喷吐 → 翼龙钉刺
+    // - 翼龙钉刺：随机目标进入【睡眠】2回合，无法行动
+    // - 毒镖：随机目标中毒DOT：每回合 1.2×Boss攻击 自然伤害，持续4回合，最高4层
+    // - 自然喷吐：随机目标 3×Boss攻击 自然法术伤害（计算魔抗）
+    // - 被动【陷入狂暴】：Boss回合开始时，生命值<20%后，【毒镖】与【自然喷吐】改为全体目标
+    else if (combat.bossId === 'princess_huhuran') {
+        combat.bossBuffs = combat.bossBuffs || {};
+
+        // 进入狂暴判定（只提示一次）
+        const enragePct = (typeof boss.enrageHpPct === 'number') ? boss.enrageHpPct : 0.20;
+        const bossMaxHp = Number(boss.maxHp || 0);
+        const bossHpNow = Number(combat.bossHp || 0);
+
+        const shouldEnrage = bossMaxHp > 0 && bossHpNow > 0 && bossHpNow < bossMaxHp * enragePct;
+        if (shouldEnrage && !combat.bossBuffs.huhuranEnraged) {
+            combat.bossBuffs.huhuranEnraged = true;
+            addLog(`【${boss.name}】被动【陷入狂暴】触发：生命值低于${Math.round(enragePct * 100)}%，【毒镖】与【自然喷吐】将对所有目标生效！`, 'warning');
+        }
+
+        const enraged = !!combat.bossBuffs.huhuranEnraged;
+
+        const pickRandomAlivePlayerIndex = () => {
+            const alive = combat.playerStates
+                .map((ps, idx) => ((ps?.currentHp ?? 0) > 0 ? idx : -1))
+                .filter(idx => idx >= 0);
+            if (alive.length === 0) return -1;
+            return alive[Math.floor(Math.random() * alive.length)];
+        };
+
+        const dealNatureDamageToIndex = (tIdx, rawDamage, prefixText = '') => {
+            const target = combat.playerStates[tIdx];
+            if (!target || target.currentHp <= 0) return;
+
+            const nature = calcMagicDamage(target, rawDamage);
+            const shieldResult = applyShieldAbsorb(target, nature.damage, logs, currentRound);
+            target.currentHp -= shieldResult.finalDamage;
+
+            const resPct = Math.round(nature.resistReduction * 100);
+            const mrText = Number(nature.magicResist) < 0 ? `（魔抗 ${Math.floor(nature.magicResist)}）` : '';
+            const vulnPct = Math.round((nature.spellVulnMult - 1) * 100);
+            const vulnText = vulnPct > 0 ? `，法术易伤+${vulnPct}%` : '';
+            const shieldText = shieldResult.absorbed > 0 ? `，护盾吸收 ${shieldResult.absorbed}` : '';
+
+            addLog(`${prefixText}命中 位置${tIdx + 1} ${target.char.name}，造成 ${shieldResult.finalDamage} 点自然伤害（魔抗减伤${resPct}%${mrText}${vulnText}${shieldText}）`);
+        };
+
+        // 技能1：翼龙钉刺（睡眠）
+        if (bossAction === 'wyvern_sting') {
+            const tIdx = pickRandomAlivePlayerIndex();
+            if (tIdx < 0) {
+                addLog(`【${boss.name}】施放【翼龙钉刺】，但没有存活目标。`, 'warning');
+            } else {
+                const target = combat.playerStates[tIdx];
+                const dur = Math.max(1, Math.floor(Number(boss.wyvernStingDuration || 2)));
+
+                target.debuffs = target.debuffs || {};
+                target.debuffs.sleep = { duration: dur };
+
+                addLog(`【${boss.name}】施放【翼龙钉刺】！位置${tIdx + 1} ${target.char.name} 陷入【睡眠】${dur}回合，无法行动`, 'debuff');
+            }
+        }
+
+        // 技能2：毒镖（中毒DOT，可叠加至4层；狂暴时全体）
+        else if (bossAction === 'poison_dart') {
+            const coeff = (typeof boss.poisonDartDotMultiplier === 'number') ? boss.poisonDartDotMultiplier : 1.2;
+            const duration = Math.max(1, Math.floor(Number(boss.poisonDartDuration || 4)));
+            const maxStacks = Math.max(1, Math.floor(Number(boss.poisonDartMaxStacks || 4)));
+            const perStackDamage = Math.max(1, Math.floor((boss.attack || 0) * coeff));
+
+            const targetIdxList = [];
+            if (enraged) {
+                combat.playerStates.forEach((ps, idx) => {
+                    if ((ps?.currentHp ?? 0) > 0) targetIdxList.push(idx);
+                });
+            } else {
+                const tIdx = pickRandomAlivePlayerIndex();
+                if (tIdx >= 0) targetIdxList.push(tIdx);
+            }
+
+            if (targetIdxList.length === 0) {
+                addLog(`【${boss.name}】施放【毒镖】，但没有存活目标。`, 'warning');
+            } else {
+                addLog(`【${boss.name}】施放【毒镖】${enraged ? '【狂暴：全体】' : ''}：施加中毒（持续${duration}回合，最多${maxStacks}层）`, 'warning');
+
+                targetIdxList.forEach(tIdx => {
+                    const ps = combat.playerStates[tIdx];
+                    if (!ps || ps.currentHp <= 0) return;
+
+                    // ✅ 矮人【石像形态】：首次中毒免疫
+                    if (tryFirstDebuffImmunity(ps, 'poison', tIdx, '毒镖')) {
+                        addLog(`→ 位置${tIdx + 1} ${ps.char.name} 免疫了【毒镖】`, 'debuff');
+                        return;
+                    }
+
+                    ps.dots = Array.isArray(ps.dots) ? ps.dots : [];
+                    const existing = ps.dots.find(d => d && d.name === '毒镖');
+
+                    if (existing) {
+                        const beforeStacks = Math.max(1, Math.floor(Number(existing.stacks) || 1));
+                        const nextStacks = Math.min(maxStacks, beforeStacks + 1);
+
+                        existing.stacks = nextStacks;
+                        existing.duration = duration;
+                        existing.type = 'poison';
+                        existing.isPoison = true;
+                        existing.school = 'nature';
+                        existing.perStackDamage = perStackDamage;
+                        existing.damagePerTurn = Math.max(1, perStackDamage * nextStacks);
+                        existing.maxStacks = maxStacks;
+
+                        addLog(`→ 位置${tIdx + 1} ${ps.char.name} 的【毒镖】叠加至 ${nextStacks} 层（每回合${existing.damagePerTurn}自然伤害）`, 'debuff');
+                    } else {
+                        ps.dots.push({
+                            name: '毒镖',
+                            type: 'poison',
+                            isPoison: true,
+                            school: 'nature',
+                            stacks: 1,
+                            maxStacks,
+                            perStackDamage,
+                            damagePerTurn: perStackDamage,
+                            duration: duration,
+                        });
+
+                        addLog(`→ 位置${tIdx + 1} ${ps.char.name} 获得【毒镖】（1层，每回合${perStackDamage}自然伤害）`, 'debuff');
+                    }
+                });
+            }
+        }
+
+        // 技能3：自然喷吐（自然法术伤害；狂暴时全体）
+        else if (bossAction === 'nature_spit') {
+            const mult = (typeof boss.natureSpitMultiplier === 'number') ? boss.natureSpitMultiplier : 3;
+            const raw = Math.max(1, Math.floor((boss.attack || 0) * mult));
+
+            if (enraged) {
+                addLog(`【${boss.name}】施放【自然喷吐】【狂暴：全体】！`, 'warning');
+                combat.playerStates.forEach((ps, idx) => {
+                    if (!ps || ps.currentHp <= 0) return;
+                    dealNatureDamageToIndex(idx, raw, `→ `);
+                });
+            } else {
+                const tIdx = pickRandomAlivePlayerIndex();
+                if (tIdx < 0) {
+                    addLog(`【${boss.name}】施放【自然喷吐】，但没有存活目标。`, 'warning');
+                } else {
+                    dealNatureDamageToIndex(tIdx, raw, `【${boss.name}】施放【自然喷吐】`);
+                }
+            }
+        }
+
+        // 兜底：普通物理攻击
+        else {
+            const tIdx = pickRandomAlivePlayerIndex();
+            if (tIdx >= 0) {
+                const target = combat.playerStates[tIdx];
+                const raw = Math.floor(boss.attack || 0);
+                const { damage, dr, blockedAmount } = calcMitigatedAndBlockedDamage(target, raw, false);
+
+                const shieldResult = applyShieldAbsorb(target, damage, logs, currentRound);
+                target.currentHp -= shieldResult.finalDamage;
+
+                const drPct = Math.round(dr * 100);
+                const blockText = blockedAmount > 0 ? `，格挡 ${blockedAmount}` : '';
+                const shieldText = shieldResult.absorbed > 0 ? `，护盾吸收 ${shieldResult.absorbed}` : '';
+                addLog(`【${boss.name}】普通攻击命中 位置${tIdx + 1} ${target.char.name}，造成 ${shieldResult.finalDamage} 点物理伤害（护甲减伤${drPct}%${blockText}${shieldText}）`);
+            }
+        }
+    }
+
+
+// ==================== 火焰之王拉格纳罗斯（团队首领）技能处理 ====================
     // 机制：
     // - 火焰伤害：计算魔抗（calcMagicDamage）
     // - 被动【萨弗拉斯，炎魔拉格纳罗斯之手】：每回合对坦克造成 2.5×BOSS攻击 的火焰伤害
@@ -34664,6 +34903,12 @@ const BossPrepareModal = ({ state, dispatch }) => {
         thick_skin: '厚皮',
         poison_arrow_rain: '毒箭之雨',
         toxic_shock: '毒性震击',
+
+        // ✅ 哈霍兰公主
+        nature_spit: '自然喷吐',
+        poison_dart: '毒镖',
+        wyvern_sting: '翼龙钉刺',
+
     };
 
     const formatBossCycle = (boss) =>
@@ -35949,6 +36194,80 @@ const BossPrepareModal = ({ state, dispatch }) => {
                                         每个水滴死亡：对 Boss 造成该水滴<span style={{ color: '#ffd700' }}>{Math.round(((boss.dropletDeathDamagePct ?? 0.05) * 100))}%</span>生命值的伤害
                                         <br />
                                         并对<span style={{ color: '#ff9800' }}>所有角色</span>驱散<span style={{ color: '#ffd700' }}>1层</span>【毒箭之雨】
+                                      </div>
+                                    </div>
+                                  </>
+                                )}
+
+
+                                {/* 哈霍兰公主的技能 */}
+                                {bossId === 'princess_huhuran' && (
+                                  <>
+                                    <div style={{
+                                      padding: 10,
+                                      background: 'rgba(244,67,54,0.10)',
+                                      borderRadius: 6,
+                                      borderLeft: '3px solid #f44336'
+                                    }}>
+                                      <div style={{ fontSize: 12, color: '#ff6b6b', fontWeight: 600, marginBottom: 4 }}>
+                                        🔥 被动：陷入狂暴
+                                      </div>
+                                      <div style={{ fontSize: 11, color: '#aaa', lineHeight: 1.5 }}>
+                                        当 Boss 生命值低于 <span style={{ color: '#ffd700' }}>{Math.round(((boss.enrageHpPct ?? 0.20) * 100))}%</span> 时触发
+                                        <br />
+                                        <span style={{ color: '#ffd700' }}>【毒镖】</span> 与 <span style={{ color: '#ffd700' }}>【自然喷吐】</span> 将对<span style={{ color: '#ff9800' }}>所有角色</span>生效
+                                      </div>
+                                    </div>
+
+                                    <div style={{
+                                      padding: 10,
+                                      background: 'rgba(33,150,243,0.10)',
+                                      borderRadius: 6,
+                                      borderLeft: '3px solid #2196F3'
+                                    }}>
+                                      <div style={{ fontSize: 12, color: '#90caf9', fontWeight: 600, marginBottom: 4 }}>
+                                        💤 技能1：翼龙钉刺
+                                      </div>
+                                      <div style={{ fontSize: 11, color: '#aaa', lineHeight: 1.5 }}>
+                                        对<span style={{ color: '#ff9800' }}>随机目标</span>施加<span style={{ color: '#ffd700' }}>睡眠</span>：无法行动
+                                        <br />
+                                        持续 <span style={{ color: '#ffd700' }}>{boss.wyvernStingDuration ?? 2}</span> 回合
+                                      </div>
+                                    </div>
+
+                                    <div style={{
+                                      padding: 10,
+                                      background: 'rgba(156,39,176,0.10)',
+                                      borderRadius: 6,
+                                      borderLeft: '3px solid #9c27b0'
+                                    }}>
+                                      <div style={{ fontSize: 12, color: '#ce93d8', fontWeight: 600, marginBottom: 4 }}>
+                                        ☠️ 技能2：毒镖
+                                      </div>
+                                      <div style={{ fontSize: 11, color: '#aaa', lineHeight: 1.5 }}>
+                                        对<span style={{ color: '#ff9800' }}>随机目标</span>施加<span style={{ color: '#ffd700' }}>中毒</span>：每回合造成
+                                        <span style={{ color: '#ffd700' }}> Boss攻击×{boss.poisonDartDotMultiplier ?? 1.2}</span> 的<span style={{ color: '#81c784' }}>自然伤害</span>
+                                        <br />
+                                        持续 <span style={{ color: '#ffd700' }}>{boss.poisonDartDuration ?? 4}</span> 回合，最多叠加 <span style={{ color: '#ffd700' }}>{boss.poisonDartMaxStacks ?? 4}</span> 层
+                                        <br />
+                                        <span style={{ color: '#ff6b6b' }}>狂暴：</span>对<span style={{ color: '#ff9800' }}>所有角色</span>生效
+                                      </div>
+                                    </div>
+
+                                    <div style={{
+                                      padding: 10,
+                                      background: 'rgba(76,175,80,0.10)',
+                                      borderRadius: 6,
+                                      borderLeft: '3px solid #4caf50'
+                                    }}>
+                                      <div style={{ fontSize: 12, color: '#81c784', fontWeight: 600, marginBottom: 4 }}>
+                                        🌿 技能3：自然喷吐
+                                      </div>
+                                      <div style={{ fontSize: 11, color: '#aaa', lineHeight: 1.5 }}>
+                                        对<span style={{ color: '#ff9800' }}>随机目标</span>造成
+                                        <span style={{ color: '#ffd700' }}> Boss攻击×{boss.natureSpitMultiplier ?? 3}</span> 的<span style={{ color: '#81c784' }}>自然法术伤害</span>（计算魔抗）
+                                        <br />
+                                        <span style={{ color: '#ff6b6b' }}>狂暴：</span>对<span style={{ color: '#ff9800' }}>所有角色</span>生效
                                       </div>
                                     </div>
                                   </>

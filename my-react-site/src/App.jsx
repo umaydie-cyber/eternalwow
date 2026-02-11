@@ -26115,6 +26115,16 @@ function gameReducer(state, action) {
                 prepareBoss: null
             };
         }
+
+        // ✅ 紧急“逃生阀”：用于防止 Boss 战斗逻辑异常导致 UI 卡死/死循环
+        // 注意：这是“中止战斗”，不会触发胜利/失败结算（无奖励、无击杀计数、无冷却刷新）。
+        case 'FORCE_END_BOSS_COMBAT': {
+            if (!state.bossCombat) return state;
+            return {
+                ...state,
+                bossCombat: null,
+            };
+        }
         case 'CLOSE_HOGGER_PLOT': return { ...state, showHoggerPlot: false };
         case 'OPEN_REBIRTH_CONFIRM': return { ...state, showRebirthConfirm: true };
         case 'CLOSE_REBIRTH_CONFIRM': return { ...state, showRebirthConfirm: false };
@@ -37568,7 +37578,7 @@ const BossPrepareModal = ({ state, dispatch }) => {
 };
 
 // ==================== Boss战斗显示模态 ====================
-const BossCombatModal = ({ combat, state }) => {
+const BossCombatModal = ({ combat, state, dispatch }) => {
     if (!combat) return null;
     const boss = BOSS_DATA[combat.bossId];
     if (!boss) return null;
@@ -37603,9 +37613,38 @@ const BossCombatModal = ({ combat, state }) => {
             <div style={{
                 padding: '16px 24px',
                 textAlign: 'center',
+                position: 'relative',
                 background: 'linear-gradient(180deg, rgba(139,105,20,0.2) 0%, transparent 100%)',
                 borderBottom: '1px solid rgba(201,162,39,0.3)'
             }}>
+                {/* 右上角：强制结束（防止卡死/死循环） */}
+                <div style={{
+                    position: 'absolute',
+                    top: 12,
+                    right: 12,
+                    display: 'flex',
+                    gap: 8,
+                    alignItems: 'center'
+                }}>
+                    <Button
+                        variant="danger"
+                        style={{
+                            padding: '8px 10px',
+                            fontSize: 12,
+                            borderRadius: 8,
+                            whiteSpace: 'nowrap'
+                        }}
+                        onClick={() => {
+                            // ✅ 立即中止 Boss 战斗：用于修复/规避战斗逻辑异常导致的卡死
+                            // 说明：这是“中止”而非“结算胜利”，不会发放奖励/击杀计数/冷却等。
+                            const ok = window.confirm('确定要强制结束本次BOSS战斗吗？\n\n⚠️ 这将直接中止战斗（不会结算奖励/击杀）。');
+                            if (!ok) return;
+                            dispatch?.({ type: 'FORCE_END_BOSS_COMBAT' });
+                        }}
+                    >
+                        ⛔ 强制结束
+                    </Button>
+                </div>
                 <div style={{
                     fontSize: 12,
                     color: '#888',
@@ -40038,7 +40077,7 @@ useEffect(() => {
 
             {/* ===== 添加两个Boss模态 ===== */}
             {state.prepareBoss && <BossPrepareModal state={state} dispatch={dispatch} />}
-            {state.bossCombat && <BossCombatModal combat={state.bossCombat} state={state} />}
+            {state.bossCombat && <BossCombatModal combat={state.bossCombat} state={state} dispatch={dispatch} />}
 
             <HoggerPlotModal state={state} dispatch={dispatch} />
             <ScarletBadgeModal state={state} dispatch={dispatch} />

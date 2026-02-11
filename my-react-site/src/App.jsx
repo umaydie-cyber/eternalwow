@@ -10403,6 +10403,215 @@ const FIXED_EQUIPMENTS = {
       }
     },
 
+    // ==================== 安其拉神庙（60级）- 维希度斯掉落 ====================
+
+    // ✅ 甲虫胸针（治疗饰品2）：释放治疗技能时，为目标附加护盾（基于有效治疗量）
+    EQ_274: {
+      id: 'EQ_274',
+      name: '甲虫胸针',
+      icon: 'icons/wow/vanilla/items/INV_Misc_Idol_03.png',
+      type: 'equipment',
+      slot: 'trinket2',
+      rarity: 'purple',
+      level: 0,
+      maxLevel: 100,
+      baseStats: {
+        spellPower: 950,
+        mastery: 20,
+      },
+      growth: {
+        spellPower: 2,
+        mastery: 2,
+      },
+      specialEffect: {
+        type: 'heal_cast_shield',
+        name: '甲虫护盾',
+        // 复用已有护盾类型（与“石化甲虫”等一致的吸收逻辑）
+        shieldType: 'scarab_barrier',
+        // 护盾值 = 有效治疗量 * 30%（可按需要调整）
+        shieldPct: 0.30,
+        // 护盾持续回合
+        duration: 2,
+        // 护盾上限：目标最大生命值的 30%（避免极端溢出）
+        maxPctOfTargetMaxHp: 0.30,
+        scaleWithLevel: true,
+      }
+    },
+
+    // ✅ 其拉之怒（攻强戒指1）
+    EQ_275: {
+      id: 'EQ_275',
+      name: '其拉之怒',
+      icon: 'icons/wow/vanilla/armor/INV_Jewelry_Ring_27.png',
+      type: 'equipment',
+      slot: 'ring1',
+      rarity: 'purple',
+      level: 0,
+      maxLevel: 100,
+      baseStats: {
+        attack: 950,
+        hp: 5800,
+        critRate: 20,
+        haste: 20,
+        versatility: 20,
+      },
+      growth: {
+        attack: 2,
+        hp: 2,
+        critRate: 2,
+        haste: 2,
+        versatility: 2,
+      }
+    },
+
+    // ✅ 虫鳞阻挡者（治疗法强副手）
+    EQ_276: {
+      id: 'EQ_276',
+      name: '虫鳞阻挡者',
+      icon: 'icons/wow/vanilla/armor/INV_Shield_17.png',
+      type: 'equipment',
+      slot: 'offHand',
+      rarity: 'purple',
+      level: 0,
+      maxLevel: 100,
+      baseStats: {
+        spellPower: 1100,
+        hp: 7000,
+        mastery: 22,
+        versatility: 22,
+        critRate: 16,
+        haste: 16,
+      },
+      growth: {
+        spellPower: 2,
+        hp: 2,
+        mastery: 2,
+        versatility: 2,
+        critRate: 2,
+        haste: 2,
+      }
+    },
+
+    // ✅ 征服者的腿铠（战士 T2.5 腿部）
+    EQ_277: {
+      id: 'EQ_277',
+      name: '征服者的腿铠',
+      icon: 'icons/wow/vanilla/armor/zst25tui.png',
+      type: 'equipment',
+      slot: 'legs',
+      rarity: 'purple',
+      setId: 'conqueror_set',
+      setName: '征服者',
+      level: 0,
+      maxLevel: 100,
+      baseStats: {
+        hp: 9000,
+        armor: 290,
+        magicResist: 110,
+        mastery: 16,
+        blockRate: 6,
+        blockValue: 680,
+      },
+      growth: {
+        hp: 2,
+        armor: 2,
+        magicResist: 2,
+        mastery: 2,
+        blockRate: 2,
+        blockValue: 2,
+      }
+    },
+
+    // ✅ 死亡执行者的护腿（盗贼 T2.5 腿部）
+    EQ_278: {
+      id: 'EQ_278',
+      name: '死亡执行者的护腿',
+      icon: 'icons/wow/vanilla/armor/dzt25tui.png',
+      type: 'equipment',
+      slot: 'legs',
+      rarity: 'purple',
+      setId: 'deathdealer_set',
+      setName: '死亡执行者',
+      level: 0,
+      maxLevel: 100,
+      baseStats: {
+        attack: 760,
+        magicResist: 100,
+        hp: 6500,
+        critRate: 18,
+        mastery: 16,
+        haste: 18,
+      },
+      growth: {
+        attack: 2,
+        magicResist: 2,
+        hp: 2,
+        critRate: 2,
+        mastery: 2,
+        haste: 2,
+      }
+    },
+
+    // ✅ 神秘护腿（法师 T2.5 腿部）
+    EQ_279: {
+      id: 'EQ_279',
+      name: '神秘护腿',
+      icon: 'icons/wow/vanilla/armor/fst25tui.png',
+      type: 'equipment',
+      slot: 'legs',
+      rarity: 'purple',
+      setId: 'enigma_set',
+      setName: '神秘',
+      level: 0,
+      maxLevel: 100,
+      baseStats: {
+        spellPower: 760,
+        magicResist: 100,
+        hp: 6400,
+        critRate: 18,
+        mastery: 16,
+        haste: 18,
+      },
+      growth: {
+        spellPower: 2,
+        magicResist: 2,
+        hp: 2,
+        critRate: 2,
+        mastery: 2,
+        haste: 2,
+      }
+    },
+
+    // ✅ 神谕者的长裤（牧师 T2.5 腿部）
+    EQ_280: {
+      id: 'EQ_280',
+      name: '神谕者的长裤',
+      icon: 'icons/wow/vanilla/armor/mst25tui.png',
+      type: 'equipment',
+      slot: 'legs',
+      rarity: 'purple',
+      setId: 'oracle_set',
+      setName: '神谕者',
+      level: 0,
+      maxLevel: 100,
+      baseStats: {
+        spellPower: 760,
+        magicResist: 100,
+        hp: 6500,
+        mastery: 18,
+        versatility: 18,
+        haste: 16,
+      },
+      growth: {
+        spellPower: 2,
+        magicResist: 2,
+        hp: 2,
+        mastery: 2,
+        versatility: 2,
+        haste: 2,
+      }
+    },
+
 
 
 };
@@ -12611,7 +12820,15 @@ const BOSS_DATA = {
         rewards: {
             gold: 4200000,
             exp: 2400000,
-            items: []
+            items: [
+                { id: 'EQ_274', chance: 0.10 },
+                { id: 'EQ_275', chance: 0.10 },
+                { id: 'EQ_276', chance: 0.10 },
+                { id: 'EQ_277', chance: 0.10 },
+                { id: 'EQ_278', chance: 0.10 },
+                { id: 'EQ_279', chance: 0.10 },
+                { id: 'EQ_280', chance: 0.10 },
+            ]
         }
     },
 
@@ -13851,6 +14068,137 @@ function rollSkillSlotShieldEffects(character, slotIndex) {
     });
 
     return triggered;
+}
+
+// ==================== 装备特效：治疗施法护盾（例如：甲虫胸针） ====================
+// 触发条件：施放「治疗技能」并产生有效治疗时，为目标附加护盾（吸收伤害），持续若干回合。
+// 数据约定：
+// specialEffect: {
+//   type: 'heal_cast_shield',
+//   name: '甲虫护盾',
+//   shieldType: 'scarab_barrier',
+//   shieldPct: 0.30,
+//   shieldFlat: 0,                 // 可选
+//   duration: 2,
+//   maxPctOfTargetMaxHp: 0.30,     // 可选，护盾上限=目标最大生命值*该比例
+//   chance: 1,                     // 可选，默认 1 (100%)
+//   scaleWithLevel: true           // 可选，lv0=1x, lv100=2x
+// }
+// 返回：[{ label, shieldType, amount, duration }]
+function rollHealCastShieldEffects(casterCharacter, effectiveHeal, targetMaxHp) {
+    const heal = Number(effectiveHeal) || 0;
+    if (!casterCharacter || heal <= 0) return [];
+
+    const eqList = Object.values(casterCharacter?.equipment || {}).filter(Boolean);
+    if (eqList.length === 0) return [];
+
+    const tMaxHp = Math.max(0, Number(targetMaxHp) || 0);
+    const triggered = [];
+
+    eqList.forEach(eq => {
+        const effects = getEquipmentSpecialEffectList(eq);
+        effects.forEach(se => {
+            if (!se || se.type !== 'heal_cast_shield') return;
+
+            const chance = (se.chance == null) ? 1 : Math.max(0, Math.min(1, Number(se.chance) || 0));
+            if (chance <= 0) return;
+            if (chance < 1 && Math.random() >= chance) return;
+
+            const pct = Number(se.shieldPct) || 0;
+            const flat = Number(se.shieldFlat) || 0;
+            if (pct <= 0 && flat <= 0) return;
+
+            let amount = heal * pct + flat;
+
+            const lv = clamp(Number(eq.currentLevel ?? eq.level) || 0, 0, 100);
+            if (se.scaleWithLevel) {
+                amount *= (1 + (lv / 100));
+            }
+
+            // 上限：目标最大生命的一定比例（可选）
+            const capPct = Number(se.maxPctOfTargetMaxHp) || 0;
+            if (capPct > 0 && tMaxHp > 0) {
+                amount = Math.min(amount, tMaxHp * capPct);
+            }
+
+            amount = Math.floor(amount);
+            if (amount <= 0) return;
+
+            const duration = Math.max(1, Math.floor(Number(se.duration) || 1));
+
+            triggered.push({
+                label: se.name || '护盾',
+                shieldType: se.shieldType || 'scarab_barrier',
+                amount,
+                duration,
+            });
+        });
+    });
+
+    return triggered;
+}
+
+// 在 buffs 数组上写入/刷新护盾（统一逻辑，便于 boss 战 / 地图战共用）
+// - 默认采用「刷新为更高吸收量」的逻辑（与现有护盾一致）
+// - duration：每次触发会刷新持续回合
+function upsertShieldBuff(buffs, shieldType, name, amount, duration, opts = {}) {
+    if (!Array.isArray(buffs)) return { delta: 0, finalAmount: 0 };
+
+    const a = Math.max(0, Math.floor(Number(amount) || 0));
+    if (a <= 0) return { delta: 0, finalAmount: 0 };
+    const d = Math.max(1, Math.floor(Number(duration) || 1));
+
+    const idx = buffs.findIndex(b => b?.type === shieldType);
+    const extra = (opts && opts.justApplied) ? { justApplied: true } : {};
+
+    if (idx === -1) {
+        buffs.push({
+            type: shieldType,
+            name: name || '护盾',
+            amount: a,
+            maxAmount: a,
+            duration: d,
+            ...extra,
+        });
+        return { delta: a, finalAmount: a };
+    }
+
+    const prev = buffs[idx] || {};
+    const prevAmt = Math.max(0, Math.floor(Number(prev.amount) || 0));
+    const finalAmount = Math.max(prevAmt, a);
+    const prevMax = Math.max(0, Math.floor(Number(prev.maxAmount) || 0));
+    const finalMax = Math.max(prevMax, finalAmount);
+
+    buffs[idx] = {
+        ...prev,
+        type: shieldType,
+        name: name || prev.name || '护盾',
+        amount: finalAmount,
+        maxAmount: finalMax,
+        duration: d,
+        ...extra,
+    };
+
+    return { delta: Math.max(0, finalAmount - prevAmt), finalAmount };
+}
+
+// 便捷：对目标应用「治疗施法护盾」特效，并返回本次新增的护盾量（用于日志）
+function applyHealCastShieldProcs(casterCharacter, targetBuffs, effectiveHeal, targetMaxHp, opts = {}) {
+    const shields = rollHealCastShieldEffects(casterCharacter, effectiveHeal, targetMaxHp);
+    if (!shields.length) return [];
+
+    const results = [];
+    for (const sh of shields) {
+        const r = upsertShieldBuff(targetBuffs, sh.shieldType, sh.label, sh.amount, sh.duration, opts);
+        if (r.delta > 0) {
+            results.push({
+                ...sh,
+                delta: r.delta,
+                finalAmount: r.finalAmount,
+            });
+        }
+    }
+    return results;
 }
 
 
@@ -15980,6 +16328,18 @@ function stepBossCombat(state) {
                     const r = applyHealingToPlayer(ps, healPerTarget, `${p.char.name}·群体治疗`);
                     totalHealed += r.actualHeal;
                     totalAbsorbed += r.absorbed;
+
+                    // ✅ 甲虫胸针等：治疗施法护盾
+                    const shieldProcs = applyHealCastShieldProcs(
+                        p.char,
+                        ps.buffs,
+                        r.actualHeal,
+                        ps.maxHp,
+                        { justApplied: ps === p }
+                    );
+                    shieldProcs.forEach(sp => {
+                        addLog(`【${sp.label}】${p.char.name} 的治疗为 ${ps.char.name} 生成护盾 +${sp.delta}（护盾吸收量 ${sp.finalAmount}，持续${sp.duration}回合）`);
+                    });
                 }
             });
 
@@ -15989,6 +16349,36 @@ function stepBossCombat(state) {
                 (totalAbsorbed > 0 ? `，治疗吸收共吸收 ${totalAbsorbed}` : '') +
                 `）`
             );
+        }
+
+        // 单体/自疗处理（例如：休息） - 需要考虑减疗debuff + 治疗吸收
+        if (result.heal) {
+            const healAmount = Math.floor(result.heal);
+            const healRes = applyHealingToPlayer(p, healAmount, `${p.char.name}·${skill.name}`);
+            const actualHeal = healRes.actualHeal;
+            const healingMult = healRes.healingMult;
+            const absorbedByHealAbsorb = healRes.absorbed;
+
+            let healText = `位置${i + 1} ${p.char.name} ${skill.name} 治疗 ${actualHeal}`;
+            if (healingMult < 1) {
+                healText += `（受到致死打击减疗${Math.round((1 - healingMult) * 100)}%）`;
+            }
+            if (absorbedByHealAbsorb > 0) {
+                healText += `（治疗吸收 吸收 ${absorbedByHealAbsorb}）`;
+            }
+            addLog(healText);
+
+            // ✅ 甲虫胸针等：治疗施法护盾（自疗需要 justApplied，避免本回合结算时被立刻扣时长）
+            const shieldProcs = applyHealCastShieldProcs(
+                p.char,
+                p.buffs,
+                actualHeal,
+                p.maxHp,
+                { justApplied: true }
+            );
+            shieldProcs.forEach(sp => {
+                addLog(`【${sp.label}】${p.char.name} 的治疗为自己生成护盾 +${sp.delta}（护盾吸收量 ${sp.finalAmount}，持续${sp.duration}回合）`);
+            });
         }
 
         // 救赎处理（applyAtonement）
@@ -16048,6 +16438,18 @@ function stepBossCombat(state) {
                     healText += `（治疗吸收 吸收 ${absorbedByHealAbsorb}）`;
                 }
                 addLog(healText);
+
+                // ✅ 甲虫胸针等：治疗施法护盾
+                const shieldProcs = applyHealCastShieldProcs(
+                    p.char,
+                    frontPlayer.buffs,
+                    actualHeal,
+                    frontPlayer.maxHp,
+                    { justApplied: frontPlayer === p }
+                );
+                shieldProcs.forEach(sp => {
+                    addLog(`【${sp.label}】${p.char.name} 的治疗为 ${frontPlayer.char.name} 生成护盾 +${sp.delta}（护盾吸收量 ${sp.finalAmount}，持续${sp.duration}回合）`);
+                });
 
                 // ==================== 戒律牧师60级天赋：痛苦压制 ====================
                 // 苦修使当前目标获得30%减伤（buff乘算），持续2回合
@@ -22240,6 +22642,20 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
                 value: actualHeal,
                 type: 'heal'
             });
+
+            // ✅ 甲虫胸针等：治疗施法护盾
+            const shieldProcs = applyHealCastShieldProcs(character, buffs, actualHeal, maxHp);
+            shieldProcs.forEach(sp => {
+                logs.push({
+                    round,
+                    actor: character.name,
+                    action: `${skill.name}·${sp.label}`,
+                    target: character.name,
+                    type: 'shield',
+                    value: sp.delta,
+                    text: `【${sp.label}】治疗产生护盾 +${sp.delta}（当前吸收量 ${sp.finalAmount}，持续${sp.duration}回合）`
+                });
+            });
         }
         else if (result.buff) {
             buffs.push({ ...result.buff });
@@ -22360,6 +22776,20 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
                 value: actualHeal,
                 type: 'heal'
             });
+
+            // ✅ 甲虫胸针等：治疗施法护盾
+            const shieldProcs = applyHealCastShieldProcs(character, buffs, actualHeal, maxHp);
+            shieldProcs.forEach(sp => {
+                logs.push({
+                    round,
+                    actor: character.name,
+                    action: `${skill.name}·${sp.label}`,
+                    target: character.name,
+                    type: 'shield',
+                    value: sp.delta,
+                    text: `【${sp.label}】治疗产生护盾 +${sp.delta}（当前吸收量 ${sp.finalAmount}，持续${sp.duration}回合）`
+                });
+            });
         }
         // ===== 苦修技能处理 =====
         else if (result.penanceHeal) {
@@ -22381,6 +22811,20 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
                 value: actualHeal,
                 type: 'heal',
                 text: healText
+            });
+
+            // ✅ 甲虫胸针等：治疗施法护盾
+            const shieldProcs = applyHealCastShieldProcs(character, buffs, actualHeal, maxHp);
+            shieldProcs.forEach(sp => {
+                logs.push({
+                    round,
+                    actor: character.name,
+                    action: `${skill.name}·${sp.label}`,
+                    target: character.name,
+                    type: 'shield',
+                    value: sp.delta,
+                    text: `【${sp.label}】治疗产生护盾 +${sp.delta}（当前吸收量 ${sp.finalAmount}，持续${sp.duration}回合）`
+                });
             });
 
             // ==================== 戒律牧师60级天赋：痛苦压制 ====================
@@ -27302,25 +27746,78 @@ const ItemDetailsModal = ({ item, onClose, onEquip, characters, state , dispatch
                               );
                             })()}
 
-                            {/* basic_attack_repeat */}
+                            {/* skill_slot_shield：技能格护盾 */}
+                            {type === 'skill_slot_shield' && (() => {
+                              const slots = Array.isArray(se.slots)
+                                ? se.slots
+                                : (Number.isFinite(Number(se.slot)) ? [Number(se.slot)] : []);
+                              const slotText = slots.length ? slots.map(s => s + 1).join('、') : '？';
 
-        {type === 'skill_slot_shield' && (
-            <div className="text-xs opacity-90 mt-1">
-                <div>在以下技能格释放技能时获得护盾（吸收伤害）：</div>
-                <div className="mt-0.5">
-                    技能格：{Array.isArray(effect.slots) ? effect.slots.map(s => s + 1).join('、') : '未知'}
-                </div>
-                <div className="mt-0.5">
-                    护盾：{effect.name || '护盾'}
-                </div>
-                <div className="mt-0.5">
-                    计算：{(effect.basedOn || 'maxHp')} × {(effect.amountMult ?? 0)} + {(effect.amountFlat ?? 0)}
-                </div>
-                <div className="mt-0.5">
-                    持续：{effect.duration ?? 1}回合{effect.scaleWithLevel ? '（随装备等级增强）' : ''}
-                </div>
-            </div>
-        )}
+                              const basedOn = String(se.basedOn || 'maxHp');
+                              const mult = Number(se.amountMult ?? 0);
+                              const flat = Number(se.amountFlat ?? 0);
+                              const dur = Math.max(1, Math.floor(Number(se.duration) || 1));
+
+                              const basedOnText =
+                                basedOn === 'spellPower' ? '法术强度'
+                                : basedOn === 'attack' ? '攻击强度'
+                                : '最大生命';
+
+                              return (
+                                <div style={{ fontSize: 12, color: '#ffb74d', lineHeight: 1.6 }}>
+                                  <div style={{ marginBottom: 8, color: '#fff' }}>
+                                    在第 <span style={{ color: '#ffd700', fontWeight: 600 }}>{slotText}</span> 技能格释放技能时获得护盾（吸收伤害）：
+                                  </div>
+                                  <div style={{ marginTop: 8, color: '#fff' }}>
+                                    • 护盾：<span style={{ color: '#ffd700', fontWeight: 600 }}>{se.name || '护盾'}</span>
+                                  </div>
+                                  <div style={{ marginTop: 8, color: '#fff' }}>
+                                    • 计算：{basedOnText} × <span style={{ color: '#ffd700', fontWeight: 600 }}>{mult}</span>{flat ? ` + ${Math.floor(flat)}` : ''}
+                                  </div>
+                                  <div style={{ marginTop: 8, color: '#fff' }}>
+                                    • 持续：<span style={{ color: '#ffd700', fontWeight: 600 }}>{dur}</span> 回合{se.scaleWithLevel ? '（随装备等级增强）' : ''}
+                                  </div>
+                                </div>
+                              );
+                            })()}
+
+                            {/* heal_cast_shield：治疗施法护盾（例如：甲虫胸针） */}
+                            {type === 'heal_cast_shield' && (() => {
+                              const pct = Number(se.shieldPct) || 0;
+                              const flat = Math.floor(Number(se.shieldFlat) || 0);
+                              const dur = Math.max(1, Math.floor(Number(se.duration) || 1));
+                              const capPct = Number(se.maxPctOfTargetMaxHp) || 0;
+                              const chance = (se.chance == null) ? 1 : Math.max(0, Math.min(1, Number(se.chance) || 0));
+
+                              return (
+                                <div style={{ fontSize: 12, color: '#ffb74d', lineHeight: 1.6 }}>
+                                  <div style={{ marginBottom: 8, color: '#fff' }}>
+                                    施放治疗技能并产生有效治疗时，为目标附加护盾（吸收伤害）：
+                                  </div>
+                                  <div style={{ marginTop: 8, color: '#fff' }}>
+                                    • 护盾：<span style={{ color: '#ffd700', fontWeight: 600 }}>{se.name || '护盾'}</span>
+                                  </div>
+                                  <div style={{ marginTop: 8, color: '#fff' }}>
+                                    • 吸收量：有效治疗 × <span style={{ color: '#ffd700', fontWeight: 600 }}>{fmtPct(pct)}</span>{flat ? ` + ${flat}` : ''}{se.scaleWithLevel ? '（随装备等级增强）' : ''}
+                                  </div>
+                                  <div style={{ marginTop: 8, color: '#fff' }}>
+                                    • 持续：<span style={{ color: '#ffd700', fontWeight: 600 }}>{dur}</span> 回合
+                                  </div>
+                                  {capPct > 0 && (
+                                    <div style={{ marginTop: 8, color: '#fff' }}>
+                                      • 上限：目标最大生命的 <span style={{ color: '#ffd700', fontWeight: 600 }}>{fmtPct(capPct)}</span>
+                                    </div>
+                                  )}
+                                  {chance < 1 && (
+                                    <div style={{ marginTop: 8, color: '#fff' }}>
+                                      • 触发率：<span style={{ color: '#ffd700', fontWeight: 600 }}>{(chance * 100).toFixed(0)}%</span>
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })()}
+
+                            {/* basic_attack_repeat */}
 
 {type === 'basic_attack_repeat' && (
                               <div style={{ fontSize: 12, color: '#ffb74d', lineHeight: 1.6 }}>
@@ -27428,7 +27925,7 @@ const ItemDetailsModal = ({ item, onClose, onEquip, characters, state , dispatch
                             )}
 
                             {/* fallback */}
-                            {![ 'skill_slot_buff','skill_slot_shield','basic_attack_repeat','proc_stat','proc_damage','ignore_defense','thunderfury','map_slayer' ].includes(type) && (
+                            {![ 'skill_slot_buff','skill_slot_shield','heal_cast_shield','basic_attack_repeat','proc_stat','proc_damage','ignore_defense','thunderfury','map_slayer' ].includes(type) && (
                               <div style={{ fontSize: 12, color: '#aaa' }}>
                                 ⚡ 特效：{String(type || 'unknown')}
                               </div>

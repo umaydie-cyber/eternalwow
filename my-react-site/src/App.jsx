@@ -100,6 +100,9 @@ const BOSS_BONUS_CONFIG = {
     // ✅ 新增：团队首领 - 火焰之王拉格纳罗斯
     // 说明：团队首领与世界首领共用同一套战斗/奖励结算机制，仅在 UI/队伍人数上做区分。
     ragnaros: { name: '火焰之王拉格纳罗斯', bonus: 0.30 },
+
+    // ✅ 新增：团队首领 - 克苏恩（60级解锁）
+    cthun: { name: '克苏恩', bonus: 0.30 },
 };
 
 // 兼容旧代码：派生出 names / bossBonus 两个对象（不再手写维护）
@@ -12182,6 +12185,19 @@ const TEAM_BOSSES = {
         unlockLevel: 60,
         partySize: 5, // ✅ 团队首领：5人
     },
+
+    // ✅ 新增：团队首领 - 克苏恩（60级解锁）
+    cthun: {
+        id: 'cthun',
+        name: '克苏恩',
+        icon: 'icons/wow/vanilla/boss/cthun.png', // 预留：自行补图标
+        hp: 60000000,
+        attack: 40000,
+        defense: 35000,
+        rewards: { gold: 6000000, exp: 4000000 },
+        unlockLevel: 60,
+        partySize: 5, // ✅ 团队首领：5人
+    },
 };
 
 // UI/逻辑层通用：获取 Boss 元信息
@@ -13283,6 +13299,57 @@ const BOSS_DATA = {
                 { id: 'EQ_250', chance: 0.10 }, // 阿基迪罗斯的清算之戒（攻强属性饰品1）
                 { id: 'EQ_251', chance: 0.10 }, // 纯源质戒指（坦克戒指1）
             ]
+        }
+    },
+
+
+    // ✅ 新增：团队首领 - 克苏恩（5人）
+    cthun: {
+        id: 'cthun',
+        name: '克苏恩',
+        maxHp: 60000000,
+        attack: 40000,
+        defense: 35000,
+
+        // 技能1：眼棱（随机目标：3×法术；集中站位：全体 6×法术）
+        eyeBeamSingleMultiplier: 3,
+        eyeBeamAoeMultiplier: 6,
+
+        // 技能2：召唤眼柄（每次2根，上限12根；眼柄每回合对随机目标造成1.5×BOSS攻击的法术伤害）
+        eyeStalkHp: 3000000,
+        eyeStalkMaxCount: 12,
+        eyeStalkSummonCount: 2,
+        eyeStalkAttackMultiplier: 1.5,
+
+        // 技能3：召唤巨型眼柄（每次1根，上限4根；巨型眼柄每回合对坦克造成5×BOSS攻击的物理伤害）
+        giantEyeStalkHp: 9000000,
+        giantEyeStalkMaxCount: 4,
+        giantEyeStalkSummonCount: 1,
+        giantEyeStalkAttackMultiplier: 5,
+
+        // 技能4：巨型爪触（坦克：10×物理，并昏迷2回合）
+        giantClawMultiplier: 10,
+        giantClawStunDuration: 2,
+
+        // 技能5：吞噬（持续4回合；每回合对全体造成 (1 + 0.5*眼柄数 + 巨型眼柄数)×BOSS攻击 的自然伤害）
+        devourDuration: 4,
+
+        // 技能循环：眼棱 → 召唤眼柄 → 巨型爪触 → 召唤巨型眼柄 → 眼棱 → 召唤眼柄 → 吞噬 → 召唤巨型眼柄
+        cycle: [
+            'eye_beam',
+            'summon_eye_stalk',
+            'giant_claw_tentacle',
+            'summon_giant_eye_stalk',
+            'eye_beam',
+            'summon_eye_stalk',
+            'devour',
+            'summon_giant_eye_stalk',
+        ],
+
+        rewards: {
+            gold: 6000000,
+            exp: 4000000,
+            items: []
         }
     },
 
@@ -20890,6 +20957,223 @@ function stepBossCombat(state) {
         }
     }
 
+    // ==================== 团队首领：克苏恩（C'Thun）技能处理 ====================
+    // 机制：
+    // - 法术伤害：计算魔抗（calcMagicDamage）
+    // - 物理伤害：计算护甲与格挡（calcMitigatedAndBlockedDamage）
+    // - 站位：集中站位会触发【眼棱】的全体伤害
+    // - 技能循环：眼棱 → 召唤眼柄 → 巨型爪触 → 召唤巨型眼柄 → 眼棱 → 召唤眼柄 → 吞噬 → 召唤巨型眼柄
+    else if (combat.bossId === 'cthun') {
+        combat.bossBuffs = combat.bossBuffs || {};
+        combat.minions = Array.isArray(combat.minions) ? combat.minions : [];
+
+        const stance = combat.strategy?.stance || 'dispersed';
+        const isConcentrated = stance === 'concentrated';
+
+        const pickRandomAlivePlayerIndex = () => {
+            const alive = (combat.playerStates || [])
+                .map((ps, idx) => ({ idx, hp: ps?.currentHp ?? 0 }))
+                .filter(x => x.hp > 0)
+                .map(x => x.idx);
+            if (alive.length <= 0) return -1;
+            return alive[Math.floor(Math.random() * alive.length)];
+        };
+
+        const getStalkCounts = () => {
+            const eyeStalks = (combat.minions || []).filter(mm => (mm?.hp ?? 0) > 0 && mm.isCthunEyeStalk).length;
+            const giantStalks = (combat.minions || []).filter(mm => (mm?.hp ?? 0) > 0 && mm.isCthunGiantEyeStalk).length;
+            return { eyeStalks, giantStalks };
+        };
+
+        const dealSpellDamageToPlayer = (tIdx, rawDamage, skillName = '法术', dmgLabel = '法术') => {
+            const target = combat.playerStates[tIdx];
+            if (!target || target.currentHp <= 0) return;
+
+            const mg = calcMagicDamage(target, rawDamage);
+            const shieldResult = applyShieldAbsorb(target, mg.damage, logs, currentRound);
+            target.currentHp -= shieldResult.finalDamage;
+
+            const resPct = Math.round(mg.resistReduction * 100);
+            const mrText = mg.magicResist ? `，魔抗 ${mg.magicResist}` : '';
+            const shieldText = shieldResult.absorbed > 0 ? `，护盾吸收 ${shieldResult.absorbed}` : '';
+            addLog(`→ 【${skillName}】命中 位置${tIdx + 1} ${target.char.name}，造成 ${shieldResult.finalDamage} 点${dmgLabel}伤害（魔抗减伤${resPct}%${mrText}${shieldText}）`);
+        };
+
+        // 技能1：眼棱
+        if (bossAction === 'eye_beam') {
+            if (isConcentrated) {
+                const mult = (typeof boss.eyeBeamAoeMultiplier === 'number') ? boss.eyeBeamAoeMultiplier : 6;
+                const raw = Math.max(1, Math.floor((boss.attack || 0) * mult));
+                addLog(`【${boss.name}】施放【眼棱】（集中站位：全体受击）`, 'warning');
+                combat.playerStates.forEach((ps, idx) => {
+                    if (!ps || ps.currentHp <= 0) return;
+                    dealSpellDamageToPlayer(idx, raw, '眼棱', '法术');
+                });
+            } else {
+                const mult = (typeof boss.eyeBeamSingleMultiplier === 'number') ? boss.eyeBeamSingleMultiplier : 3;
+                const raw = Math.max(1, Math.floor((boss.attack || 0) * mult));
+                const tIdx = pickRandomAlivePlayerIndex();
+                if (tIdx < 0) {
+                    addLog(`【${boss.name}】施放【眼棱】，但没有存活目标。`, 'warning');
+                } else {
+                    addLog(`【${boss.name}】施放【眼棱】（随机目标）`, 'warning');
+                    dealSpellDamageToPlayer(tIdx, raw, '眼棱', '法术');
+                }
+            }
+        }
+
+        // 技能2：召唤眼柄（每次2根，上限12根）
+        else if (bossAction === 'summon_eye_stalk') {
+            const hp = Math.max(1, Math.floor(Number(boss.eyeStalkHp || 3000000)));
+            const maxCount = Math.max(0, Math.floor(Number(boss.eyeStalkMaxCount || 12)));
+            const want = Math.max(0, Math.floor(Number(boss.eyeStalkSummonCount || 2)));
+
+            const alive = (combat.minions || []).filter(mm => (mm?.hp ?? 0) > 0 && mm.isCthunEyeStalk).length;
+            const canAdd = Math.max(0, maxCount - alive);
+            const addCount = Math.min(want, canAdd);
+
+            if (!Number.isFinite(Number(combat.bossBuffs.cthunEyeStalkSerial))) {
+                combat.bossBuffs.cthunEyeStalkSerial = 0;
+            }
+
+            if (want > 0 && addCount <= 0) {
+                addLog(`【${boss.name}】尝试召唤【眼柄】，但眼柄已达上限（${maxCount}根存活）`, 'warning');
+            } else {
+                addLog(`【${boss.name}】施放【召唤眼柄】！`, 'warning');
+                for (let k = 0; k < addCount; k++) {
+                    const serial = ++combat.bossBuffs.cthunEyeStalkSerial;
+                    combat.minions.push({
+                        hp,
+                        maxHp: hp,
+                        attack: Number(boss.attack) || 0,
+                        defense: Number(boss.defense) || 0,
+                        immune: false,
+                        dots: [],
+                        isCthunEyeStalk: true,
+                        displayName: `眼柄${serial}`,
+                    });
+                }
+                if (addCount > 0) {
+                    addLog(`→ 召唤 ${addCount} 根【眼柄】（当前存活：${alive + addCount}/${maxCount}）`, 'warning');
+                }
+            }
+        }
+
+        // 技能4：巨型爪触（坦克：10×物理，并昏迷2回合）
+        else if (bossAction === 'giant_claw_tentacle') {
+            const tIdx = pickAlivePlayerIndex();
+            if (tIdx < 0) {
+                addLog(`【${boss.name}】施放【巨型爪触】，但没有存活坦克目标`, 'warning');
+            } else {
+                const target = combat.playerStates[tIdx];
+                const mult = (typeof boss.giantClawMultiplier === 'number') ? boss.giantClawMultiplier : 10;
+                const raw = Math.max(1, Math.floor((boss.attack || 0) * mult));
+                const stunDur = Math.max(1, Math.floor(Number(boss.giantClawStunDuration || 2)));
+
+                addLog(`【${boss.name}】施放【巨型爪触】命中坦克（位置${tIdx + 1}）！`, 'warning');
+
+                const { damage, dr, blockedAmount } = calcMitigatedAndBlockedDamage(target, raw, true);
+                const shieldResult = applyShieldAbsorb(target, damage, logs, currentRound);
+                target.currentHp -= shieldResult.finalDamage;
+
+                const drPct = Math.round(dr * 100);
+                const blockText = blockedAmount > 0 ? `，格挡 ${blockedAmount}` : '';
+                const shieldText = shieldResult.absorbed > 0 ? `，护盾吸收 ${shieldResult.absorbed}` : '';
+                addLog(`→ 位置${tIdx + 1} ${target.char.name} 受到 ${shieldResult.finalDamage} 点物理伤害（护甲减伤${drPct}%${blockText}${shieldText}）`);
+
+                if (target.currentHp > 0) {
+                    target.debuffs = target.debuffs || {};
+                    target.debuffs.stun = { duration: stunDur, source: '巨型爪触' };
+                    addLog(`   ↳ 位置${tIdx + 1} ${target.char.name} 昏迷 ${stunDur} 回合`, 'debuff');
+                }
+            }
+        }
+
+        // 技能3：召唤巨型眼柄（每次1根，上限4根）
+        else if (bossAction === 'summon_giant_eye_stalk') {
+            const hp = Math.max(1, Math.floor(Number(boss.giantEyeStalkHp || 9000000)));
+            const maxCount = Math.max(0, Math.floor(Number(boss.giantEyeStalkMaxCount || 4)));
+            const want = Math.max(0, Math.floor(Number(boss.giantEyeStalkSummonCount || 1)));
+
+            const alive = (combat.minions || []).filter(mm => (mm?.hp ?? 0) > 0 && mm.isCthunGiantEyeStalk).length;
+            const canAdd = Math.max(0, maxCount - alive);
+            const addCount = Math.min(want, canAdd);
+
+            if (!Number.isFinite(Number(combat.bossBuffs.cthunGiantEyeStalkSerial))) {
+                combat.bossBuffs.cthunGiantEyeStalkSerial = 0;
+            }
+
+            if (want > 0 && addCount <= 0) {
+                addLog(`【${boss.name}】尝试召唤【巨型眼柄】，但巨型眼柄已达上限（${maxCount}根存活）`, 'warning');
+            } else {
+                addLog(`【${boss.name}】施放【召唤巨型眼柄】！`, 'warning');
+                for (let k = 0; k < addCount; k++) {
+                    const serial = ++combat.bossBuffs.cthunGiantEyeStalkSerial;
+                    combat.minions.push({
+                        hp,
+                        maxHp: hp,
+                        attack: Number(boss.attack) || 0,
+                        defense: Number(boss.defense) || 0,
+                        immune: false,
+                        dots: [],
+                        isCthunGiantEyeStalk: true,
+                        displayName: `巨型眼柄${serial}`,
+                    });
+                }
+                if (addCount > 0) {
+                    addLog(`→ 召唤 ${addCount} 根【巨型眼柄】（当前存活：${alive + addCount}/${maxCount}）`, 'warning');
+                }
+            }
+        }
+
+        // 技能5：吞噬（持续4回合）
+        else if (bossAction === 'devour') {
+            const dur = Math.max(1, Math.floor(Number(boss.devourDuration || 4)));
+            const { eyeStalks, giantStalks } = getStalkCounts();
+            const mult = 1 + 0.5 * eyeStalks + giantStalks;
+
+            addLog(`【${boss.name}】施放【吞噬】！持续 ${dur} 回合（系数：1 + 0.5×眼柄(${eyeStalks}) + 巨型眼柄(${giantStalks}) = ×${mult.toFixed(1)}；每回合动态计算）`, 'warning');
+
+            combat.playerStates.forEach((ps, pIdx) => {
+                if (!ps) return;
+                if (ps.currentHp <= 0) return;
+
+                ps.dots = ps.dots || [];
+                const existing = ps.dots.find(d => d && d.type === 'cthun_devour');
+                if (existing) {
+                    existing.duration = dur;
+                    existing.name = '吞噬';
+                    existing.school = 'nature';
+                } else {
+                    ps.dots.push({
+                        type: 'cthun_devour',
+                        name: '吞噬',
+                        duration: dur,
+                        school: 'nature',
+                    });
+                }
+            });
+        }
+
+        // 兜底：普通物理攻击（锁定坦克）
+        else {
+            const tIdx = pickAlivePlayerIndex();
+            if (tIdx >= 0) {
+                const target = combat.playerStates[tIdx];
+                const raw = Math.floor(boss.attack || 0);
+                const { damage, dr, blockedAmount } = calcMitigatedAndBlockedDamage(target, raw, false);
+
+                const shieldResult = applyShieldAbsorb(target, damage, logs, currentRound);
+                target.currentHp -= shieldResult.finalDamage;
+
+                const drPct = Math.round(dr * 100);
+                const blockText = blockedAmount > 0 ? `，格挡 ${blockedAmount}` : '';
+                const shieldText = shieldResult.absorbed > 0 ? `，护盾吸收 ${shieldResult.absorbed}` : '';
+                addLog(`【${boss.name}】普通攻击命中 坦克 位置${tIdx + 1} ${target.char.name}，造成 ${shieldResult.finalDamage} 点物理伤害（护甲减伤${drPct}%${blockText}${shieldText}）`);
+            }
+        }
+    }
+
 
 // ==================== 小弟行动 ====================
     for (let i = 0; i < (combat.minions || []).length; i++) {
@@ -21006,6 +21290,59 @@ function stepBossCombat(state) {
                 const label = m.displayName || `${boss.minion?.name || '雏龙'}${i + 1}`;
 
                 addLog(`【${label}】施放【火球术】命中 位置${tIdx + 1} ${target.char.name}，造成 ${shieldResult.finalDamage} 点火焰伤害（魔抗减伤${resPct}%${mrText}${shieldText}）`);
+            }
+        }
+
+        // 克苏恩：眼柄（每回合对随机目标造成 1.5×BOSS攻击 的法术伤害）
+        else if (combat.bossId === 'cthun' && m.isCthunEyeStalk) {
+            const aliveIdx = (combat.playerStates || [])
+                .map((ps, idx) => ({ idx, hp: ps?.currentHp ?? 0 }))
+                .filter(x => x.hp > 0)
+                .map(x => x.idx);
+
+            if (aliveIdx.length > 0) {
+                const tIdx = aliveIdx[Math.floor(Math.random() * aliveIdx.length)];
+                const target = combat.playerStates[tIdx];
+
+                const mult = (typeof boss.eyeStalkAttackMultiplier === 'number' && Number.isFinite(boss.eyeStalkAttackMultiplier))
+                    ? boss.eyeStalkAttackMultiplier
+                    : 1.5;
+                const raw = Math.floor((boss.attack || 0) * mult);
+
+                const mg = calcMagicDamage(target, raw);
+                const shieldResult = applyShieldAbsorb(target, mg.damage, logs, currentRound);
+                target.currentHp -= shieldResult.finalDamage;
+
+                const resPct = Math.round(mg.resistReduction * 100);
+                const mrText = Number(mg.magicResist) < 0 ? `（魔抗 ${Math.floor(mg.magicResist)}）` : '';
+                const shieldText = shieldResult.absorbed > 0 ? `，护盾吸收 ${shieldResult.absorbed}` : '';
+                const label = m.displayName || `眼柄${i + 1}`;
+
+                addLog(`【${label}】释放【眼柄射线】命中 位置${tIdx + 1} ${target.char.name}，造成 ${shieldResult.finalDamage} 点法术伤害（魔抗减伤${resPct}%${mrText}${shieldText}）`);
+            }
+        }
+
+        // 克苏恩：巨型眼柄（每回合对坦克造成 5×BOSS攻击 的物理伤害）
+        else if (combat.bossId === 'cthun' && m.isCthunGiantEyeStalk) {
+            const tIdx = pickAlivePlayerIndex();
+            if (tIdx >= 0) {
+                const target = combat.playerStates[tIdx];
+
+                const mult = (typeof boss.giantEyeStalkAttackMultiplier === 'number' && Number.isFinite(boss.giantEyeStalkAttackMultiplier))
+                    ? boss.giantEyeStalkAttackMultiplier
+                    : 5;
+                const raw = Math.floor((boss.attack || 0) * mult);
+
+                const { damage, dr, blockedAmount } = calcMitigatedAndBlockedDamage(target, raw, true);
+                const shieldResult = applyShieldAbsorb(target, damage, logs, currentRound);
+                target.currentHp -= shieldResult.finalDamage;
+
+                const drPct = Math.round(dr * 100);
+                const blockText = blockedAmount > 0 ? `，格挡 ${blockedAmount}` : '';
+                const shieldText = shieldResult.absorbed > 0 ? `，护盾吸收 ${shieldResult.absorbed}` : '';
+                const label = m.displayName || `巨型眼柄${i + 1}`;
+
+                addLog(`【${label}】猛击坦克（位置${tIdx + 1}）造成 ${shieldResult.finalDamage} 点物理伤害（护甲减伤${drPct}%${blockText}${shieldText}）`);
             }
         }
 
@@ -21406,6 +21743,34 @@ function stepBossCombat(state) {
 
                 // 持续至死亡：不减少持续时间，不自动移除
                 return true;
+            }
+
+            // ✅ 特殊DOT：克苏恩【吞噬】（自然伤害，倍率随眼柄/巨型眼柄数量动态变化）
+            // 公式：每回合伤害 = (1 + 0.5*当前眼柄数量 + 当前巨型眼柄数量) × BOSS攻击
+            // 说明：
+            // - 使用 calcMagicDamage 走魔抗/法术易伤/承伤乘区
+            // - DOT 结算前已清理死亡小弟，因此“当前数量”仅统计存活
+            if (dot?.type === 'cthun_devour') {
+                const eyeStalks = (combat.minions || []).filter(mm => (mm?.hp ?? 0) > 0 && mm.isCthunEyeStalk).length;
+                const giantStalks = (combat.minions || []).filter(mm => (mm?.hp ?? 0) > 0 && mm.isCthunGiantEyeStalk).length;
+                const mult = 1 + 0.5 * eyeStalks + giantStalks;
+                const raw = Math.max(1, Math.floor((boss.attack || 0) * mult));
+
+                const mg = calcMagicDamage(ps, raw);
+                const shieldResult = applyShieldAbsorb(ps, mg.damage, logs, currentRound);
+                ps.currentHp -= shieldResult.finalDamage;
+
+                const resPct = Math.round(mg.resistReduction * 100);
+                const mrText = Number(mg.magicResist) < 0 ? `（魔抗 ${Math.floor(mg.magicResist)}）` : '';
+                const shieldText = shieldResult.absorbed > 0 ? `，护盾吸收 ${shieldResult.absorbed}` : '';
+
+                addLog(
+                    `【${dot.name || '吞噬'}】对 位置${pIdx + 1} ${ps.char.name} 造成 ${shieldResult.finalDamage} 点自然伤害（×${mult.toFixed(1)}；魔抗减伤${resPct}%${mrText}${shieldText}）（剩余${dot.duration - 1}回合）`,
+                    'debuff'
+                );
+
+                dot.duration -= 1;
+                return dot.duration > 0;
             }
 
             // DOT伤害类型：
@@ -35052,6 +35417,13 @@ const BossPrepareModal = ({ state, dispatch }) => {
         shadow_mist: '暗影迷雾',
         summon_bone_golem: '召唤白骨魔像',
 
+        // 克苏恩
+        eye_beam: '眼棱',
+        summon_eye_stalk: '召唤眼柄',
+        giant_claw_tentacle: '巨型爪触',
+        summon_giant_eye_stalk: '召唤巨型眼柄',
+        devour: '吞噬',
+
         // 其他boss也可以逐步补齐
         mortal_strike: '致死打击',
         summon_cannoneers: '火炮手准备',
@@ -36816,6 +37188,67 @@ const BossPrepareModal = ({ state, dispatch }) => {
 
                                       <div style={{ fontSize: 11, color: '#aaa', marginTop: 2 }}>
                                         伤害结算：法术伤害计算<span style={{ color: '#ffd700' }}>魔抗</span>；物理伤害计算<span style={{ color: '#ffd700' }}>护甲 / 格挡</span>等属性。
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* 克苏恩的技能（准备界面说明） */}
+                                {bossId === 'cthun' && (
+                                  <div style={{
+                                    marginTop: 12,
+                                    padding: 12,
+                                    background: 'rgba(80,50,120,0.12)',
+                                    borderRadius: 8,
+                                    border: '1px solid rgba(180,130,255,0.25)'
+                                  }}>
+                                    <div style={{ fontSize: 12, color: '#e0d7ff', fontWeight: 700, marginBottom: 8 }}>
+                                      👁️ 团队首领：克苏恩
+                                    </div>
+
+                                    <div style={{ display: 'grid', gap: 10, fontSize: 11, color: '#ddd', lineHeight: 1.6 }}>
+                                      <div style={{ padding: 10, background: 'rgba(0,0,0,0.25)', borderRadius: 6 }}>
+                                        <div style={{ color: '#ffd700', fontWeight: 700, marginBottom: 4 }}>技能1：眼棱</div>
+                                        <div>
+                                          <span style={{ color: '#ff9800' }}>分散站位：</span>随机目标受到 <b>Boss攻击力×{boss.eyeBeamSingleMultiplier ?? 3}</b> 的法术伤害（计算魔抗）。<br/>
+                                          <span style={{ color: '#64b5f6' }}>集中站位：</span>改为对<span style={{ color: '#ff6b6b', fontWeight: 700 }}>所有角色</span>造成 <b>Boss攻击力×{boss.eyeBeamAoeMultiplier ?? 6}</b> 的法术伤害。
+                                        </div>
+                                      </div>
+
+                                      <div style={{ padding: 10, background: 'rgba(0,0,0,0.25)', borderRadius: 6 }}>
+                                        <div style={{ color: '#ffd700', fontWeight: 700, marginBottom: 4 }}>技能2：召唤眼柄</div>
+                                        <div>
+                                          召唤 <b>{boss.eyeStalkSummonCount ?? 2}</b> 根眼柄（每根HP <b>{Number(boss.eyeStalkHp || 3000000).toLocaleString()}</b>，上限 <b>{boss.eyeStalkMaxCount ?? 12}</b> 根）。<br/>
+                                          眼柄每回合对随机目标造成 <b>Boss攻击力×{boss.eyeStalkAttackMultiplier ?? 1.5}</b> 的法术伤害（计算魔抗）。
+                                        </div>
+                                      </div>
+
+                                      <div style={{ padding: 10, background: 'rgba(0,0,0,0.25)', borderRadius: 6 }}>
+                                        <div style={{ color: '#ffd700', fontWeight: 700, marginBottom: 4 }}>技能3：召唤巨型眼柄</div>
+                                        <div>
+                                          召唤 <b>{boss.giantEyeStalkSummonCount ?? 1}</b> 根巨型眼柄（每根HP <b>{Number(boss.giantEyeStalkHp || 9000000).toLocaleString()}</b>，上限 <b>{boss.giantEyeStalkMaxCount ?? 4}</b> 根）。<br/>
+                                          巨型眼柄每回合对<span style={{ color: '#ff6b6b', fontWeight: 700 }}>坦克（1号位）</span>造成 <b>Boss攻击力×{boss.giantEyeStalkAttackMultiplier ?? 5}</b> 的物理伤害（护甲/格挡）。
+                                        </div>
+                                      </div>
+
+                                      <div style={{ padding: 10, background: 'rgba(0,0,0,0.25)', borderRadius: 6 }}>
+                                        <div style={{ color: '#ffd700', fontWeight: 700, marginBottom: 4 }}>技能4：巨型爪触</div>
+                                        <div>
+                                          对<span style={{ color: '#ff6b6b', fontWeight: 700 }}>坦克（1号位）</span>造成 <b>Boss攻击力×{boss.giantClawMultiplier ?? 10}</b> 的物理伤害，并使其昏迷 <b>{boss.giantClawStunDuration ?? 2}</b> 回合。
+                                        </div>
+                                      </div>
+
+                                      <div style={{ padding: 10, background: 'rgba(0,0,0,0.25)', borderRadius: 6 }}>
+                                        <div style={{ color: '#ffd700', fontWeight: 700, marginBottom: 4 }}>技能5：吞噬</div>
+                                        <div>
+                                          持续 <b>{boss.devourDuration ?? 4}</b> 回合。每回合对<span style={{ color: '#ff6b6b', fontWeight: 700 }}>所有角色</span>造成：<br/>
+                                          <b>(1 + 0.5×当前眼柄数量 + 当前巨型眼柄数量) × Boss攻击力</b> 的自然伤害（计算魔抗）。<br/>
+                                          <span style={{ color: '#aaa' }}>倍率会随小弟存活数量动态变化。</span>
+                                        </div>
+                                      </div>
+
+                                      <div style={{ fontSize: 11, color: '#aaa', marginTop: 2 }}>
+                                        伤害结算：法术/自然伤害计算<span style={{ color: '#ffd700' }}>魔抗</span>；物理伤害计算<span style={{ color: '#ffd700' }}>护甲 / 格挡</span>等属性。
                                       </div>
                                     </div>
                                   </div>

@@ -12800,8 +12800,8 @@ const BOSS_DATA = {
         toxicShockMultiplier: 8,
         toxicShockHealAbsorbMultiplier: 4,
 
-        // 技能3：厚皮（获得最大生命值30%的护盾；护盾击破后召唤5个水滴）
-        thickSkinShieldPct: 0.30,
+        // 技能3：厚皮（获得最大生命值20%的护盾；护盾击破后召唤5个水滴）
+        thickSkinShieldPct: 0.20,
         dropletCount: 5,
         dropletHpPct: 0.15,
         dropletDeathDamagePct: 0.05,

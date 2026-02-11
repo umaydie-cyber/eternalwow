@@ -24912,7 +24912,7 @@ function gameReducer(state, action) {
             };
         }
         case 'CHEAT_ADD_RESOURCE': {
-            const delta = Number(action.payload?.amount ?? 0);
+            const delta = Number(action.payload || 0);
             const excluded = new Set(["gold", "spacetimeCoin", "population", "maxPopulation"]);
             const nextResources = { ...state.resources };
             for (const [key, value] of Object.entries(nextResources)) {

@@ -3129,6 +3129,14 @@ const BADGE_EQUIP_POOLS = {
         // 目前黑翼之巢相关装备：EQ_212 ~ EQ_251
         eqIdRanges: [[212, 251]],
     },
+
+    // ✅ 安其拉神庙（含区域掉落 + 世界首领 + 团队首领）
+    temple_of_ahnqiraj: {
+        // 兼容未来扩展：如果后续出现非 EQ_### 的任务/剧情装备，也可以通过 setId 命中
+        setIds: ['temple_of_ahnqiraj', 'conqueror_set', 'deathdealer_set', 'enigma_set', 'oracle_set'],
+        // 安其拉神庙相关装备：EQ_252 ~ EQ_301（区域掉落 + 维希度斯 + 哈霍兰公主 + 克苏恩）
+        eqIdRanges: [[252, 301]],
+    },
 };
 
 // 把 'EQ_001' -> 1；不符合格式返回 null
@@ -3295,6 +3303,17 @@ const BADGE_UPGRADE_RULES_CONFIG = {
         cap: 100,
         equipPool: 'molten_core',
         theme: { border: '#ff6f00', title: '#ffcc80', shadow: 'rgba(255,111,0,0.28)' }
+    },
+
+    // ✅ 新增：团队首领 - 克苏恩的徽章（安其拉神庙：区域掉落 + 世界首领 + 团队首领）
+    IT_CTHUN_BADGE: {
+        title: '克苏恩的徽章',
+        zoneLabel: '安其拉神庙 / 世界首领 / 团队首领 / 区域掉落',
+        inc: 2,
+        cap: 100,
+        // ✅ 升级【安其拉神庙】相关装备（含区域掉落 + 维希度斯 + 哈霍兰公主 + 克苏恩掉落）
+        equipPool: 'temple_of_ahnqiraj',
+        theme: { border: '#4a148c', title: '#e1bee7', shadow: 'rgba(74,20,140,0.28)' }
     },
 
 };
@@ -9994,7 +10013,7 @@ const FIXED_EQUIPMENTS = {
       baseStats: {
         attack: 950,
         hp: 6000,
-        critRate: 28,
+        critRate: 25,
         critDamage: 0.90,
         haste: 20,
         mastery: 15,
@@ -10419,7 +10438,7 @@ const FIXED_EQUIPMENTS = {
       type: 'equipment',
       slot: 'trinket2',
       rarity: 'purple',
-      level: 0,
+      level: 1,
       maxLevel: 100,
       baseStats: {
         spellPower: 950,
@@ -10452,7 +10471,7 @@ const FIXED_EQUIPMENTS = {
       type: 'equipment',
       slot: 'ring1',
       rarity: 'purple',
-      level: 0,
+      level: 1,
       maxLevel: 100,
       baseStats: {
         attack: 950,
@@ -10478,7 +10497,7 @@ const FIXED_EQUIPMENTS = {
       type: 'equipment',
       slot: 'offHand',
       rarity: 'purple',
-      level: 0,
+      level: 1,
       maxLevel: 100,
       baseStats: {
         spellPower: 1100,
@@ -10508,7 +10527,7 @@ const FIXED_EQUIPMENTS = {
       rarity: 'purple',
       setId: 'conqueror_set',
       setName: '征服者',
-      level: 0,
+      level: 1,
       maxLevel: 100,
       baseStats: {
         hp: 9000,
@@ -10538,7 +10557,7 @@ const FIXED_EQUIPMENTS = {
       rarity: 'purple',
       setId: 'deathdealer_set',
       setName: '死亡执行者',
-      level: 0,
+      level: 1,
       maxLevel: 100,
       baseStats: {
         attack: 760,
@@ -10568,7 +10587,7 @@ const FIXED_EQUIPMENTS = {
       rarity: 'purple',
       setId: 'enigma_set',
       setName: '神秘',
-      level: 0,
+      level: 1,
       maxLevel: 100,
       baseStats: {
         spellPower: 760,
@@ -10598,7 +10617,7 @@ const FIXED_EQUIPMENTS = {
       rarity: 'purple',
       setId: 'oracle_set',
       setName: '神谕者',
-      level: 0,
+      level: 1,
       maxLevel: 100,
       baseStats: {
         spellPower: 760,
@@ -10629,7 +10648,7 @@ const FIXED_EQUIPMENTS = {
       type: 'equipment',
       slot: 'mainHand',
       rarity: 'purple',
-      level: 0,
+      level: 1,
       maxLevel: 100,
       baseStats: {
         attack: 3100,
@@ -10657,7 +10676,7 @@ const FIXED_EQUIPMENTS = {
       type: 'equipment',
       slot: 'cloak',
       rarity: 'purple',
-      level: 0,
+      level: 1,
       maxLevel: 100,
       baseStats: {
         hp: 8200,
@@ -10683,7 +10702,7 @@ const FIXED_EQUIPMENTS = {
       type: 'equipment',
       slot: 'ring2',
       rarity: 'purple',
-      level: 0,
+      level: 1,
       maxLevel: 100,
       baseStats: {
         spellPower: 820,
@@ -10711,7 +10730,7 @@ const FIXED_EQUIPMENTS = {
       rarity: 'purple',
       setId: 'conqueror_set',
       setName: '征服者',
-      level: 0,
+      level: 1,
       maxLevel: 100,
       baseStats: {
         hp: 8700,
@@ -10743,7 +10762,7 @@ const FIXED_EQUIPMENTS = {
       rarity: 'purple',
       setId: 'deathdealer_set',
       setName: '死亡执行者',
-      level: 0,
+      level: 1,
       maxLevel: 100,
       baseStats: {
         attack: 760,
@@ -10772,7 +10791,7 @@ const FIXED_EQUIPMENTS = {
       rarity: 'purple',
       setId: 'enigma_set',
       setName: '神秘',
-      level: 0,
+      level: 1,
       maxLevel: 100,
       baseStats: {
         spellPower: 760,
@@ -10800,7 +10819,7 @@ const FIXED_EQUIPMENTS = {
       rarity: 'purple',
       setId: 'oracle_set',
       setName: '神谕者',
-      level: 0,
+      level: 1,
       maxLevel: 100,
       baseStats: {
         spellPower: 700,
@@ -10817,6 +10836,413 @@ const FIXED_EQUIPMENTS = {
         critRate: 2,
       }
     },
+    // ==================== 安其拉神庙（60级）- 克苏恩掉落 ====================
+
+    // ✅ T2.5：征服者（战士）- 胸甲
+    EQ_288: {
+      id: 'EQ_288',
+      name: '征服者的胸甲',
+      icon: 'icons/wow/vanilla/armor/INV_Chest_Plate13.png',
+      type: 'equipment',
+      slot: 'chest',
+      rarity: 'purple',
+      setId: 'conqueror_set',
+      setName: '征服者',
+      level: 1,
+      maxLevel: 100,
+      baseStats: {
+        hp: 10000,
+        attack: 520,
+        armor: 340,
+        magicResist: 100,
+        mastery: 13,
+        blockRate: 7,
+        blockValue: 680,
+        versatility: 12,
+      },
+      growth: {
+        hp: 2,
+        attack: 2,
+        armor: 2,
+        magicResist: 2,
+        mastery: 2,
+        blockRate: 2,
+        blockValue: 2,
+        versatility: 2,
+      }
+    },
+
+    // ✅ T2.5：死亡执行者（盗贼）- 胸甲
+    EQ_289: {
+      id: 'EQ_289',
+      name: '死亡执行者的胸甲',
+      icon: 'icons/wow/vanilla/armor/INV_Chest_Leather_08.png',
+      type: 'equipment',
+      slot: 'chest',
+      rarity: 'purple',
+      setId: 'deathdealer_set',
+      setName: '死亡执行者',
+      level: 1,
+      maxLevel: 100,
+      baseStats: {
+        attack: 820,
+        hp: 6000,
+        armor: 260,
+        magicResist: 110,
+        critRate: 18,
+        critDamage: 0.25,
+        mastery: 18,
+      },
+      growth: {
+        attack: 2,
+        hp: 2,
+        armor: 2,
+        magicResist: 2,
+        critRate: 2,
+        critDamage: 2,
+        mastery: 2,
+      }
+    },
+
+    // ✅ T2.5：神秘（法师）- 长袍
+    EQ_290: {
+      id: 'EQ_290',
+      name: '神秘长袍',
+      icon: 'icons/wow/vanilla/armor/INV_Chest_Cloth_11.png',
+      type: 'equipment',
+      slot: 'chest',
+      rarity: 'purple',
+      setId: 'enigma_set',
+      setName: '神秘',
+      level: 1,
+      maxLevel: 100,
+      baseStats: {
+        spellPower: 820,
+        hp: 6000,
+        armor: 240,
+        magicResist: 110,
+        critRate: 18,
+        critDamage: 0.25,
+        mastery: 18,
+      },
+      growth: {
+        spellPower: 2,
+        hp: 2,
+        armor: 2,
+        magicResist: 2,
+        critRate: 2,
+        critDamage: 2,
+        haste: 2,
+        mastery: 2,
+      }
+    },
+
+    // ✅ T2.5：神谕者（牧师）- 外套
+    EQ_291: {
+      id: 'EQ_291',
+      name: '神谕者的外套',
+      icon: 'icons/wow/vanilla/armor/INV_Chest_Cloth_10.png',
+      type: 'equipment',
+      slot: 'chest',
+      rarity: 'purple',
+      setId: 'oracle_set',
+      setName: '神谕者',
+      level: 1,
+      maxLevel: 100,
+      baseStats: {
+        spellPower: 750,
+        hp: 6800,
+        armor: 240,
+        magicResist: 110,
+        mastery: 12,
+        haste: 14,
+        critRate: 12,
+      },
+      growth: {
+        spellPower: 2,
+        hp: 2,
+        armor: 2,
+        magicResist: 2,
+        mastery: 2,
+        haste: 2,
+        critRate: 2,
+      }
+    },
+
+    // ✅ 黑暗风暴护手（法强手）
+    EQ_292: {
+      id: 'EQ_292',
+      name: '黑暗风暴护手',
+      icon: 'icons/wow/vanilla/armor/INV_Gauntlets_17.png',
+      type: 'equipment',
+      slot: 'hands',
+      rarity: 'purple',
+      level: 1,
+      maxLevel: 100,
+      baseStats: {
+        spellPower: 950,
+        hp: 5000,
+        magicResist: 100,
+        critRate: 20,
+        mastery: 15,
+      },
+      growth: {
+        spellPower: 2,
+        hp: 2,
+        magicResist: 2,
+        critRate: 2,
+        mastery: 2,
+      }
+    },
+
+    // ✅ 毁灭护手（攻强手）
+    EQ_293: {
+      id: 'EQ_293',
+      name: '毁灭护手',
+      icon: 'icons/wow/vanilla/armor/INV_Gauntlets_31.png',
+      type: 'equipment',
+      slot: 'hands',
+      rarity: 'purple',
+      level: 1,
+      maxLevel: 100,
+      baseStats: {
+        attack: 950,
+        hp: 5000,
+        magicResist: 100,
+        critRate: 15,
+        critDamage: 0.25,
+        mastery: 15,
+      },
+      growth: {
+        attack: 2,
+        hp: 2,
+        magicResist: 2,
+        critRate: 2,
+        critDamage: 2,
+        mastery: 2,
+      }
+    },
+
+    // ✅ 克苏恩的印记（攻强坦克项链）
+    EQ_294: {
+      id: 'EQ_294',
+      name: '克苏恩的印记',
+      icon: 'icons/wow/vanilla/armor/kesuendeyinji.png',
+      type: 'equipment',
+      slot: 'neck',
+      rarity: 'purple',
+      level: 1,
+      maxLevel: 100,
+      baseStats: {
+        attack: 1000,
+        hp: 9000,
+        armor: 260,
+        magicResist: 120,
+        mastery: 20,
+        versatility: 30,
+        blockValue: 650,
+      },
+      growth: {
+        attack: 2,
+        hp: 2,
+        armor: 2,
+        magicResist: 2,
+        mastery: 2,
+        versatility: 2,
+        blockValue: 2,
+      }
+    },
+
+    // ✅ 明晰披风（奶妈披风）
+    EQ_295: {
+      id: 'EQ_295',
+      name: '明晰披风',
+      icon: 'icons/wow/vanilla/armor/INV_Misc_Cape_02.png',
+      type: 'equipment',
+      slot: 'cloak',
+      rarity: 'purple',
+      level: 1,
+      maxLevel: 100,
+      baseStats: {
+        spellPower: 800,
+        hp: 7200,
+        armor: 260,
+        magicResist: 120,
+        mastery: 24,
+        versatility: 24,
+      },
+      growth: {
+        spellPower: 2,
+        hp: 2,
+        armor: 2,
+        magicResist: 2,
+        mastery: 2,
+        versatility: 2,
+      }
+    },
+
+    // ✅ 死亡之钉（攻强武器）
+    EQ_296: {
+      id: 'EQ_296',
+      name: '死亡之钉',
+      icon: 'icons/wow/vanilla/weapons/siwangzhiding.png',
+      type: 'equipment',
+      slot: 'mainHand',
+      rarity: 'purple',
+      level: 1,
+      maxLevel: 100,
+      baseStats: {
+        attack: 3300,
+        hp: 5600,
+        critRate: 20,
+        critDamage: 0.90,
+        haste: 15,
+        mastery: 15,
+        versatility: 20,
+      },
+      growth: {
+        attack: 2,
+        hp: 2,
+        critRate: 2,
+        critDamage: 2,
+        haste: 2,
+        mastery: 2,
+        versatility: 2,
+      }
+    },
+
+    // ✅ 屠神者之戒（攻强戒指 RING2）
+    EQ_297: {
+      id: 'EQ_297',
+      name: '屠神者之戒',
+      icon: 'icons/wow/vanilla/armor/tushenzhezhijie.png',
+      type: 'equipment',
+      slot: 'ring2',
+      rarity: 'purple',
+      level: 1,
+      maxLevel: 100,
+      baseStats: {
+        attack: 800,
+        hp: 6000,
+        critRate: 16,
+        haste: 16,
+        mastery: 16,
+        versatility: 16,
+      },
+      growth: {
+        attack: 2,
+        hp: 2,
+        critRate: 2,
+        haste: 2,
+        mastery: 2,
+        versatility: 2,
+      }
+    },
+
+    // ✅ 虚妄预言者节杖（奶妈武器）
+    EQ_298: {
+      id: 'EQ_298',
+      name: '虚妄预言者节杖',
+      icon: 'icons/wow/vanilla/weapons/xuwangyuyanzhejiezhang.png',
+      type: 'equipment',
+      slot: 'mainHand',
+      rarity: 'purple',
+      level: 1,
+      maxLevel: 100,
+      baseStats: {
+        spellPower: 2850,
+        hp: 7800,
+        mastery: 20,
+        versatility: 30,
+        critRate: 30,
+      },
+      growth: {
+        spellPower: 2,
+        hp: 2,
+        mastery: 2,
+        versatility: 2,
+        critRate: 2,
+      },
+      specialEffect: {
+        type: 'proc_stat',
+        name: '虚妄预言',
+        trigger: 'turn_start',
+        chance: 0.25,
+        stats: { spellPower: 2000 },
+        scaleWithLevel: true
+      }
+    },
+
+    // ✅ 无尽痛苦腰带（法强）
+    EQ_299: {
+      id: 'EQ_299',
+      name: '无尽痛苦腰带',
+      icon: 'icons/wow/vanilla/armor/INV_Belt_26.png',
+      type: 'equipment',
+      slot: 'belt',
+      rarity: 'purple',
+      level: 1,
+      maxLevel: 100,
+      baseStats: {
+        spellPower: 780,
+        hp: 5000,
+        magicResist: 80,
+        mastery: 16,
+        critRate: 16,
+        versatility: 16,
+      },
+      growth: {
+        spellPower: 2,
+        hp: 2,
+        magicResist: 2,
+        mastery: 2,
+        critRate: 2,
+        versatility: 2,
+      }
+    },
+
+    // ✅ 眼柄腰带（攻强）
+    EQ_300: {
+      id: 'EQ_300',
+      name: '眼柄腰带',
+      icon: 'icons/wow/vanilla/armor/INV_Belt_12.png',
+      type: 'equipment',
+      slot: 'belt',
+      rarity: 'purple',
+      level: 1,
+      maxLevel: 100,
+      baseStats: {
+        attack: 780,
+        hp: 5000,
+        magicResist: 80,
+        haste: 16,
+        mastery: 16,
+        versatility: 16,
+      },
+      growth: {
+        attack: 2,
+        hp: 2,
+        magicResist: 2,
+        haste: 2,
+        mastery: 2,
+        versatility: 2,
+      }
+    },
+
+    // ✅ 埃提耶什法杖末端（主手无属性）
+    EQ_301: {
+      id: 'EQ_301',
+      name: '埃提耶什法杖末端',
+      icon: 'icons/wow/vanilla/weapons/INV_Staff_20.png',
+      type: 'equipment',
+      slot: 'mainHand',
+      rarity: 'orange',
+      level: 0,
+      maxLevel: 100,
+      baseStats: {},
+      growth: {},
+    },
+
 
 
 
@@ -11389,6 +11815,18 @@ const ITEMS = {
         sellPrice: 0,  // 不可出售
         icon: 'icons/wow/vanilla/items/INV_Misc_Rune_06.png',
         description: '使用后选择一件【熔火之心】或【熔火之心BOSS】掉落装备，使其等级提升 +2（最高100级）。可用于风剑/橙锤等传奇装备。'
+    },
+
+    // 克苏恩的徽章（克苏恩掉落）
+    IT_CTHUN_BADGE: {
+        id: 'IT_CTHUN_BADGE',
+        name: '克苏恩的徽章',
+        type: 'consumable',
+        rarity: 'orange',
+        canUse: true,
+        sellPrice: 0,  // 不可出售
+        icon: 'icons/wow/vanilla/items/INV_Misc_Idol_02.png',
+        description: '使用后选择一件【安其拉神庙】区域/世界首领/团队首领掉落装备，使其等级提升 +2（最高100级）。可用于维希度斯、哈霍兰公主、克苏恩等掉落装备。'
     }
 
 
@@ -13349,7 +13787,29 @@ const BOSS_DATA = {
         rewards: {
             gold: 6000000,
             exp: 4000000,
-            items: []
+            items: [
+                { id: 'IT_CTHUN_BADGE', chance: 0.8 },  // 克苏恩的徽章（可升级安其拉神庙全部相关装备）
+
+                // ===== T2.5 胸甲（克苏恩专属）=====
+                { id: 'EQ_288', chance: 0.10 }, // 征服者的胸甲
+                { id: 'EQ_289', chance: 0.10 }, // 死亡执行者的胸甲
+                { id: 'EQ_290', chance: 0.10 }, // 神秘长袍
+                { id: 'EQ_291', chance: 0.10 }, // 神谕者的外套
+
+                // ===== 克苏恩散件 =====
+                { id: 'EQ_292', chance: 0.08 }, // 黑暗风暴护手（法强手）
+                { id: 'EQ_293', chance: 0.08 }, // 毁灭护手（攻强手）
+                { id: 'EQ_294', chance: 0.08 }, // 克苏恩的印记（攻强坦克项链）
+                { id: 'EQ_295', chance: 0.08 }, // 明晰披风（奶妈披风）
+                { id: 'EQ_296', chance: 0.08 }, // 死亡之钉（攻强武器）
+                { id: 'EQ_297', chance: 0.08 }, // 屠神者之戒（攻强 RING2）
+                { id: 'EQ_298', chance: 0.08 }, // 虚妄预言者节杖（奶妈武器）
+                { id: 'EQ_299', chance: 0.08 }, // 无尽痛苦腰带（法强）
+                { id: 'EQ_300', chance: 0.08 }, // 眼柄腰带（攻强）
+
+                // ===== 特殊掉落（主手无属性，可用于后续合成/剧情扩展）=====
+                { id: 'EQ_301', chance: 0.02 }, // 埃提耶什法杖末端
+            ]
         }
     },
 
@@ -37245,6 +37705,10 @@ const BossPrepareModal = ({ state, dispatch }) => {
                                           <b>(1 + 0.5×当前眼柄数量 + 当前巨型眼柄数量) × Boss攻击力</b> 的自然伤害（计算魔抗）。<br/>
                                           <span style={{ color: '#aaa' }}>倍率会随小弟存活数量动态变化。</span>
                                         </div>
+                                      </div>
+
+                                      <div style={{ fontSize: 11, color: '#aaa', marginTop: 2 }}>
+                                        伤害结算：法术/自然伤害计算<span style={{ color: '#ffd700' }}>魔抗</span>；物理伤害计算<span style={{ color: '#ffd700' }}>护甲 / 格挡</span>等属性。
                                       </div>
                                     </div>
                                   </div>

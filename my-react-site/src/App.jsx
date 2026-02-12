@@ -40737,6 +40737,86 @@ const BossPrepareModal = ({ state, dispatch }) => {
                                 )}
 
 
+
+                                {/* 洛欧塞布的技能 */}
+                                {bossId === 'loatheb' && (
+                                  <>
+                                    <div style={{
+                                      padding: 10,
+                                      background: 'rgba(76,175,80,0.10)',
+                                      borderRadius: 6,
+                                      borderLeft: '3px solid #4caf50'
+                                    }}>
+                                      <div style={{ fontSize: 12, color: '#a5d6a7', fontWeight: 600, marginBottom: 4 }}>
+                                        ☠️ 被动：剧毒光环
+                                      </div>
+                                      <div style={{ fontSize: 11, color: '#aaa', lineHeight: 1.5 }}>
+                                        每回合对<span style={{ color: '#ff9800' }}>所有角色</span>造成
+                                        <span style={{ color: '#ffd700' }}> Boss攻击×{boss.poisonAuraMultiplier ?? 1}</span> 的<span style={{ color: '#a5d6a7' }}>自然伤害</span>（计算魔抗），持续到战斗结束。
+                                      </div>
+                                    </div>
+
+                                    <div style={{
+                                      padding: 10,
+                                      background: 'rgba(255,193,7,0.10)',
+                                      borderRadius: 6,
+                                      borderLeft: '3px solid #ffc107'
+                                    }}>
+                                      <div style={{ fontSize: 12, color: '#ffd54f', fontWeight: 600, marginBottom: 4 }}>
+                                        🍄 技能2：召唤孢子
+                                      </div>
+                                      <div style={{ fontSize: 11, color: '#aaa', lineHeight: 1.5 }}>
+                                        召唤 <span style={{ color: '#ff9800' }}>1</span> 个孢子（无技能）。<br/>
+                                        孢子生命值：<span style={{ color: '#ffd700' }}>{Number(boss.sporeBaseHp ?? 4000000).toLocaleString()}</span>（每次召唤额外
+                                        <span style={{ color: '#ffd700' }}> +{Number(boss.sporeHpIncreasePerSummon ?? 1000000).toLocaleString()}</span>）。<br/>
+                                        <span style={{ color: '#64b5f6' }}>孢子死亡：</span>使<span style={{ color: '#ff9800' }}>所有角色</span>获得
+                                        <span style={{ color: '#ffd700' }}> +{boss.sporeBuffCritRateBonus ?? 50}%</span> 暴击率、
+                                        <span style={{ color: '#ffd700' }}> +{Math.round(((boss.sporeBuffCritDamageBonus ?? 0.8) * 100))}%</span> 爆伤，持续
+                                        <span style={{ color: '#ffd700' }}> {boss.sporeBuffDuration ?? 4}</span> 回合。<br/>
+                                        <span style={{ color: '#ff6b6b' }}>若召唤前场上有存活孢子：</span>召唤瞬间对<span style={{ color: '#ff9800' }}>所有角色</span>造成
+                                        <span style={{ color: '#ffd700' }}>（存活孢子数量×{boss.sporeSummonAoEMultiplierPerAliveSpore ?? 2}×Boss攻击）</span> 的<span style={{ color: '#a5d6a7' }}>自然伤害</span>（计算魔抗）。
+                                      </div>
+                                    </div>
+
+                                    <div style={{
+                                      padding: 10,
+                                      background: 'rgba(156,39,176,0.10)',
+                                      borderRadius: 6,
+                                      borderLeft: '3px solid #9c27b0'
+                                    }}>
+                                      <div style={{ fontSize: 12, color: '#ce93d8', fontWeight: 600, marginBottom: 4 }}>
+                                        🌑 技能3：必然的厄运
+                                      </div>
+                                      <div style={{ fontSize: 11, color: '#aaa', lineHeight: 1.5 }}>
+                                        对<span style={{ color: '#ff9800' }}>所有角色</span>施加<span style={{ color: '#ffd700' }}>暗影DOT</span>：每回合造成
+                                        <span style={{ color: '#ffd700' }}> Boss攻击×{boss.doomDotMultiplier ?? 0.5}</span> 的暗影伤害，持续
+                                        <span style={{ color: '#ffd700' }}> {boss.doomDuration ?? 3}</span> 回合。<br/>
+                                        DOT结束时额外造成 <span style={{ color: '#ffd700' }}>Boss攻击×{boss.doomExpireMultiplier ?? 3}</span> 的暗影伤害；并使本场战斗【必然的厄运】造成的伤害提高
+                                        <span style={{ color: '#ffd700' }}> +{Math.round(((boss.doomIncreasePerExpire ?? 0.2) * 100))}%</span>（可叠加，持续到战斗结束）。
+                                      </div>
+                                    </div>
+
+                                    <div style={{
+                                      padding: 10,
+                                      background: 'rgba(76,175,80,0.08)',
+                                      borderRadius: 6,
+                                      borderLeft: '3px solid #66bb6a'
+                                    }}>
+                                      <div style={{ fontSize: 12, color: '#c8e6c9', fontWeight: 600, marginBottom: 4 }}>
+                                        🌿 技能4：死亡之花
+                                      </div>
+                                      <div style={{ fontSize: 11, color: '#aaa', lineHeight: 1.5 }}>
+                                        对<span style={{ color: '#ff9800' }}>所有角色</span>施加<span style={{ color: '#ffd700' }}>自然DOT</span>：每回合造成
+                                        <span style={{ color: '#ffd700' }}> Boss攻击×{boss.deathFlowerDotMultiplier ?? 0.5}</span> 的自然伤害，持续
+                                        <span style={{ color: '#ffd700' }}> {boss.deathFlowerDuration ?? 3}</span> 回合。<br/>
+                                        DOT结束时额外造成 <span style={{ color: '#ffd700' }}>Boss攻击×{boss.deathFlowerExpireMultiplier ?? 3}</span> 的自然伤害；并使本场战斗【死亡之花】造成的伤害提高
+                                        <span style={{ color: '#ffd700' }}> +{Math.round(((boss.deathFlowerIncreasePerExpire ?? 0.2) * 100))}%</span>（可叠加，持续到战斗结束）。
+                                      </div>
+                                    </div>
+                                  </>
+                                )}
+
+
                                 {/* 火焰之王拉格纳罗斯的技能 */}
                                 {bossId === 'ragnaros' && (
                                   <>

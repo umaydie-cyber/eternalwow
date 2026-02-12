@@ -41224,9 +41224,6 @@ const BossPrepareModal = ({ state, dispatch }) => {
                                         </div>
                                       </div>
 
-                                      <div style={{ fontSize: 11, color: '#aaa', marginTop: 2 }}>
-                                        伤害结算：法术伤害计算<span style={{ color: '#ffd700' }}>魔抗</span>；物理伤害计算<span style={{ color: '#ffd700' }}>护甲 / 格挡</span>等属性。
-                                      </div>
                                     </div>
                                   </div>
                                 )}

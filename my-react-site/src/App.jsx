@@ -11396,7 +11396,7 @@ const FIXED_EQUIPMENTS = {
     EQ_305: {
       id: 'EQ_305',
       name: '死亡的契约',
-      icon: 'icons/wow/vanilla/items/INV_Misc_Book_09.png',
+      icon: 'icons/wow/vanilla/items/siwangdeqiyue.png',
       type: 'equipment',
       slot: 'offHand',
       rarity: 'purple',
@@ -11426,7 +11426,7 @@ const FIXED_EQUIPMENTS = {
     EQ_306: {
       id: 'EQ_306',
       name: '黑女巫的悔恨',
-      icon: 'icons/wow/vanilla/weapons/INV_Sword_27.png',
+      icon: 'icons/wow/vanilla/weapons/heinvwudehuiheng.png',
       type: 'equipment',
       slot: 'mainHand',
       rarity: 'purple',
@@ -11456,7 +11456,7 @@ const FIXED_EQUIPMENTS = {
     EQ_307: {
       id: 'EQ_307',
       name: '黑女巫的拥抱',
-      icon: 'icons/wow/vanilla/weapons/INV_Mace_14.png',
+      icon: 'icons/wow/vanilla/weapons/heinvwudeyongbao.png',
       type: 'equipment',
       slot: 'mainHand',
       rarity: 'purple',
@@ -11486,7 +11486,7 @@ const FIXED_EQUIPMENTS = {
     EQ_308: {
       id: 'EQ_308',
       name: '仇恨石坠',
-      icon: 'icons/wow/vanilla/armor/INV_Jewelry_Amulet_01.png',
+      icon: 'icons/wow/vanilla/armor/chouhengshizhui.png',
       type: 'equipment',
       slot: 'neck',
       rarity: 'purple',
@@ -11522,7 +11522,7 @@ const FIXED_EQUIPMENTS = {
     EQ_309: {
       id: 'EQ_309',
       name: '伊普利斯，堕落炽天使之刃',
-      icon: 'icons/wow/vanilla/weapons/INV_Sword_39.png',
+      icon: 'icons/wow/vanilla/weapons/yipulisi.png',
       type: 'equipment',
       slot: 'mainHand',
       rarity: 'purple',
@@ -11563,7 +11563,7 @@ const FIXED_EQUIPMENTS = {
     EQ_310: {
       id: 'EQ_310',
       name: '日蚀之幕',
-      icon: 'icons/wow/vanilla/armor/INV_Misc_Cape_13.png',
+      icon: 'icons/wow/vanilla/armor/rishizhimu.png',
       type: 'equipment',
       slot: 'cloak',
       rarity: 'purple',
@@ -11590,7 +11590,7 @@ const FIXED_EQUIPMENTS = {
         name: '日蚀遮蔽',
         trigger: 'turn_start',
         chance: 0.25,
-        stats: { versatility: 30 },
+        stats: { versatility: 40 },
         scaleWithLevel: true
       }
     },
@@ -11599,7 +11599,7 @@ const FIXED_EQUIPMENTS = {
     EQ_311: {
       id: 'EQ_311',
       name: '教官的腰带',
-      icon: 'icons/wow/vanilla/armor/INV_Belt_16.png',
+      icon: 'icons/wow/vanilla/armor/INV_Belt_13.png',
       type: 'equipment',
       slot: 'belt',
       rarity: 'purple',
@@ -11627,7 +11627,7 @@ const FIXED_EQUIPMENTS = {
     EQ_312: {
       id: 'EQ_312',
       name: '地穴恶魔丝质披风',
-      icon: 'icons/wow/vanilla/armor/INV_Misc_Cape_18.png',
+      icon: 'icons/wow/vanilla/armor/dixueemo.png',
       type: 'equipment',
       slot: 'cloak',
       rarity: 'purple',
@@ -11689,7 +11689,7 @@ const FIXED_EQUIPMENTS = {
     EQ_314: {
       id: 'EQ_314',
       name: '无畏护腕',
-      icon: 'icons/wow/vanilla/armor/INV_Bracer_19.png',
+      icon: 'icons/wow/vanilla/armor/INV_Bracer_15.png',
       type: 'equipment',
       slot: 'wrist',
       rarity: 'purple',
@@ -11721,7 +11721,7 @@ const FIXED_EQUIPMENTS = {
     EQ_315: {
       id: 'EQ_315',
       name: '无畏腰带',
-      icon: 'icons/wow/vanilla/armor/INV_Belt_12.png',
+      icon: 'icons/wow/vanilla/armor/INV_Belt_28.png',
       type: 'equipment',
       slot: 'belt',
       rarity: 'purple',
@@ -11755,7 +11755,7 @@ const FIXED_EQUIPMENTS = {
     EQ_316: {
       id: 'EQ_316',
       name: '骨镰马靴',
-      icon: 'icons/wow/vanilla/armor/INV_Boots_08.png',
+      icon: 'icons/wow/vanilla/armor/INV_Boots_Plate_06.png',
       type: 'equipment',
       slot: 'feet',
       rarity: 'purple',
@@ -11789,7 +11789,7 @@ const FIXED_EQUIPMENTS = {
     EQ_317: {
       id: 'EQ_317',
       name: '骨镰护腕',
-      icon: 'icons/wow/vanilla/armor/INV_Bracer_03.png',
+      icon: 'icons/wow/vanilla/armor/INV_Bracer_15.png',
       type: 'equipment',
       slot: 'wrist',
       rarity: 'purple',
@@ -11819,7 +11819,7 @@ const FIXED_EQUIPMENTS = {
     EQ_318: {
       id: 'EQ_318',
       name: '骨镰护腰',
-      icon: 'icons/wow/vanilla/armor/INV_Belt_18.png',
+      icon: 'icons/wow/vanilla/armor/INV_Belt_28.png',
       type: 'equipment',
       slot: 'belt',
       rarity: 'purple',
@@ -11851,7 +11851,7 @@ const FIXED_EQUIPMENTS = {
     EQ_319: {
       id: 'EQ_319',
       name: '霜火便鞋',
-      icon: 'icons/wow/vanilla/armor/INV_Boots_05.png',
+      icon: 'icons/wow/vanilla/armor/fst3xie.png',
       type: 'equipment',
       slot: 'feet',
       rarity: 'purple',
@@ -11881,7 +11881,7 @@ const FIXED_EQUIPMENTS = {
     EQ_320: {
       id: 'EQ_320',
       name: '霜火腕轮',
-      icon: 'icons/wow/vanilla/armor/INV_Bracer_13.png',
+      icon: 'icons/wow/vanilla/armor/INV_Bracer_10.png',
       type: 'equipment',
       slot: 'wrist',
       rarity: 'purple',
@@ -11911,7 +11911,7 @@ const FIXED_EQUIPMENTS = {
     EQ_321: {
       id: 'EQ_321',
       name: '霜火腰带',
-      icon: 'icons/wow/vanilla/armor/INV_Belt_30.png',
+      icon: 'icons/wow/vanilla/armor/INV_Belt_03.png',
       type: 'equipment',
       slot: 'belt',
       rarity: 'purple',
@@ -11943,7 +11943,7 @@ const FIXED_EQUIPMENTS = {
     EQ_322: {
       id: 'EQ_322',
       name: '信仰便鞋',
-      icon: 'icons/wow/vanilla/armor/INV_Boots_07.png',
+      icon: 'icons/wow/vanilla/armor/fst3xie.png',
       type: 'equipment',
       slot: 'feet',
       rarity: 'purple',
@@ -11975,7 +11975,7 @@ const FIXED_EQUIPMENTS = {
     EQ_323: {
       id: 'EQ_323',
       name: '信仰腕轮',
-      icon: 'icons/wow/vanilla/armor/INV_Bracer_14.png',
+      icon: 'icons/wow/vanilla/armor/INV_Bracer_10.png',
       type: 'equipment',
       slot: 'wrist',
       rarity: 'purple',
@@ -12005,7 +12005,7 @@ const FIXED_EQUIPMENTS = {
     EQ_324: {
       id: 'EQ_324',
       name: '信仰腰带',
-      icon: 'icons/wow/vanilla/armor/INV_Belt_31.png',
+      icon: 'icons/wow/vanilla/armor/INV_Belt_03.png',
       type: 'equipment',
       slot: 'belt',
       rarity: 'purple',

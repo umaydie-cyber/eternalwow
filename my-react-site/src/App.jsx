@@ -24155,7 +24155,7 @@ function calculateOfflineRewards(state, offlineSeconds) {
 }
 
 const ARMOR_DR_CAP = 0.99;
-const ARMOR_K = 3000; // 你可以调参：1000/5000/10000...
+const ARMOR_K = 4000; // 你可以调参：1000/5000/10000...
 
 // ==================== 魔抗减伤（统一公式） ====================
 // 统一魔抗系数（调参只改这里）

@@ -12694,6 +12694,279 @@ const FIXED_EQUIPMENTS = {
       }
     },
 
+    // ==================== 纳克萨玛斯：洛欧塞布掉落 ====================
+
+    // ✅ 硫磺法杖（法强主手）
+    EQ_348: {
+      id: 'EQ_348',
+      name: '硫磺法杖',
+      icon: 'icons/wow/vanilla/weapons/INV_Staff_13.png',
+      type: 'equipment',
+      slot: 'mainHand',
+      rarity: 'purple',
+      level: 1,
+      maxLevel: 100,
+      baseStats: {
+        spellPower: 3900,
+        hp: 9000,
+        critRate: 10,
+        critDamage: 0.30,
+        haste: 40,
+        mastery: 30,
+        versatility: 10,
+      },
+      growth: {
+        spellPower: 2,
+        hp: 2,
+        critRate: 2,
+        critDamage: 2,
+        haste: 2,
+        mastery: 2,
+        versatility: 2,
+      }
+    },
+
+    // ✅ 洛欧塞布之影（魔抗饰品2：爆发魔抗）
+    EQ_349: {
+      id: 'EQ_349',
+      name: '洛欧塞布之影',
+      icon: 'icons/wow/vanilla/armor/luoousaibuzhiying.png',
+      type: 'equipment',
+      slot: 'trinket2',
+      rarity: 'purple',
+      level: 1,
+      maxLevel: 100,
+      baseStats: {
+        hp: 9000,
+        magicResist: 300,
+        mastery: 18,
+        versatility: 18,
+      },
+      growth: {
+        hp: 2,
+        magicResist: 2,
+        mastery: 2,
+        versatility: 2,
+      },
+      specialEffect: {
+        type: 'proc_stat',
+        name: '暗影抗性爆发',
+        trigger: 'turn_start',
+        chance: 0.25,
+        stats: { magicResist: 800 },
+        scaleWithLevel: true
+      }
+    },
+
+    // ✅ 蛛魔之眼（攻强/暴击/爆伤武器）
+    EQ_350: {
+      id: 'EQ_350',
+      name: '蛛魔之眼',
+      icon: 'icons/wow/vanilla/weapons/zhumozhiyan.png',
+      type: 'equipment',
+      slot: 'mainHand',
+      rarity: 'purple',
+      level: 1,
+      maxLevel: 100,
+      baseStats: {
+        attack: 4200,
+        hp: 8000,
+        critRate: 30,
+        critDamage: 0.85,
+        haste: 20,
+        mastery: 30,
+      },
+      growth: {
+        attack: 2,
+        hp: 2,
+        critRate: 2,
+        critDamage: 2,
+        haste: 2,
+        mastery: 2,
+      }
+    },
+
+    // ✅ 灵魂热情之戒（治疗法强 RING2）
+    EQ_351: {
+      id: 'EQ_351',
+      name: '灵魂热情之戒',
+      icon: 'icons/wow/vanilla/armor/linghunreqingzhijie.png',
+      type: 'equipment',
+      slot: 'ring2',
+      rarity: 'purple',
+      level: 1,
+      maxLevel: 100,
+      baseStats: {
+        spellPower: 950,
+        hp: 6500,
+        mastery: 22,
+        versatility: 22,
+        haste: 12,
+        critRate: 12,
+      },
+      growth: {
+        spellPower: 2,
+        hp: 2,
+        mastery: 2,
+        versatility: 2,
+        haste: 2,
+        critRate: 2,
+      }
+    },
+
+    // ✅ 超自然能量指环（攻强 RING2）
+    EQ_352: {
+      id: 'EQ_352',
+      name: '超自然能量指环',
+      icon: 'icons/wow/vanilla/armor/chaozirannengliangzhihuan.png',
+      type: 'equipment',
+      slot: 'ring2',
+      rarity: 'purple',
+      level: 1,
+      maxLevel: 100,
+      baseStats: {
+        attack: 950,
+        hp: 6500,
+        critRate: 17,
+        haste: 17,
+        mastery: 17,
+        versatility: 17,
+      },
+      growth: {
+        attack: 2,
+        hp: 2,
+        critRate: 2,
+        haste: 2,
+        mastery: 2,
+        versatility: 2,
+      }
+    },
+
+    // ===== T3：无畏（战士）- 腿部 =====
+    EQ_353: {
+      id: 'EQ_353',
+      name: '无畏腿铠',
+      icon: 'icons/wow/vanilla/armor/zst3tui.png',
+      type: 'equipment',
+      slot: 'legs',
+      rarity: 'purple',
+      setId: 'dreadnaught_set',
+      setName: '无畏',
+      level: 1,
+      maxLevel: 100,
+      baseStats: {
+        hp: 13000,
+        attack: 500,
+        armor: 380,
+        magicResist: 110,
+        mastery: 16,
+        blockRate: 7,
+        blockValue: 1000,
+      },
+      growth: {
+        hp: 2,
+        attack: 2,
+        armor: 2,
+        magicResist: 2,
+        mastery: 2,
+        blockRate: 2,
+        blockValue: 2,
+      }
+    },
+
+    // ===== T3：骨镰（盗贼）- 腿部 =====
+    EQ_354: {
+      id: 'EQ_354',
+      name: '骨镰腿甲',
+      icon: 'icons/wow/vanilla/armor/zst3tui.png',
+      type: 'equipment',
+      slot: 'legs',
+      rarity: 'purple',
+      setId: 'bonescythe_set',
+      setName: '骨镰',
+      level: 1,
+      maxLevel: 100,
+      baseStats: {
+        attack: 1150,
+        hp: 7800,
+        armor: 280,
+        magicResist: 110,
+        critRate: 16,
+        critDamage: 0.40,
+        haste: 10,
+      },
+      growth: {
+        attack: 2,
+        hp: 2,
+        armor: 2,
+        magicResist: 2,
+        critRate: 2,
+        critDamage: 2,
+        haste: 2,
+        mastery: 2,
+      }
+    },
+
+    // ===== T3：霜火（法师）- 腿部 =====
+    EQ_355: {
+      id: 'EQ_355',
+      name: '霜火护腿',
+      icon: 'icons/wow/vanilla/armor/shuanghuohutui.png',
+      type: 'equipment',
+      slot: 'legs',
+      rarity: 'purple',
+      setId: 'frostfire_set',
+      setName: '霜火',
+      level: 1,
+      maxLevel: 100,
+      baseStats: {
+        spellPower: 1150,
+        hp: 7800,
+        magicResist: 110,
+        critRate: 16,
+        critDamage: 0.40,
+        mastery: 10,
+      },
+      growth: {
+        spellPower: 2,
+        hp: 2,
+        magicResist: 2,
+        critRate: 2,
+        critDamage: 2,
+        mastery: 2,
+      }
+    },
+
+    // ===== T3：信仰（牧师）- 腿部 =====
+    EQ_356: {
+      id: 'EQ_356',
+      name: '信仰护腿',
+      icon: 'icons/wow/vanilla/armor/shuanghuohutui.png',
+      type: 'equipment',
+      slot: 'legs',
+      rarity: 'purple',
+      setId: 'faith_set',
+      setName: '信仰',
+      level: 1,
+      maxLevel: 100,
+      baseStats: {
+        spellPower: 1050,
+        hp: 9600,
+        armor: 280,
+        magicResist: 110,
+        mastery: 16,
+        versatility: 16,
+      },
+      growth: {
+        spellPower: 2,
+        hp: 2,
+        armor: 2,
+        magicResist: 2,
+        mastery: 2,
+        versatility: 2,
+      }
+    },
+
 };
 
 //赤脊山5件图鉴100级点亮效果
@@ -15324,7 +15597,18 @@ const BOSS_DATA = {
             gold: 5800000,
             exp: 3800000,
             items: [
-                // 预留：后续可补充洛欧塞布专属掉落
+                // ===== 洛欧塞布专属掉落（纳克萨玛斯）=====
+                { id: 'EQ_348', chance: 0.10 }, // 硫磺法杖（法强主手）
+                { id: 'EQ_349', chance: 0.10 }, // 洛欧塞布之影（魔抗饰品2：爆发魔抗）
+                { id: 'EQ_350', chance: 0.10 }, // 蛛魔之眼（攻强/暴击/爆伤武器）
+                { id: 'EQ_351', chance: 0.10 }, // 灵魂热情之戒（治疗法强 RING2）
+                { id: 'EQ_352', chance: 0.10 }, // 超自然能量指环（攻强 RING2）
+
+                // T3 腿部
+                { id: 'EQ_353', chance: 0.10 }, // 无畏腿铠
+                { id: 'EQ_354', chance: 0.10 }, // 骨镰腿甲
+                { id: 'EQ_355', chance: 0.10 }, // 霜火护腿
+                { id: 'EQ_356', chance: 0.10 }, // 信仰护腿
             ]
         }
     },

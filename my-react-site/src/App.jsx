@@ -2679,6 +2679,24 @@ const ZONES = {
     },
 
 
+    // ==================== 纳克萨玛斯（60级） ====================
+    naxxramas: {
+        id: 'naxxramas',
+        name: '纳克萨玛斯',
+        level: 60,
+        type: 'explore',
+        enemies: [
+            { name: '死亡骑士', hp: 7800000, attack: 33000, defense: 11200, exp: 62000, gold: 52000 },
+            { name: '瘟疫憎恶', hp: 8200000, attack: 34000, defense: 11800, exp: 64000, gold: 54000 },
+            { name: '蛛魔守卫', hp: 7600000, attack: 32000, defense: 11000, exp: 60000, gold: 50000 },
+            { name: '冰霜女巫', hp: 7400000, attack: 35000, defense: 10800, exp: 63000, gold: 53000 },
+        ],
+        resources: ['铁矿', '魔法精华'],
+        unlocked: false,
+        unlockLevel: 60
+    },
+
+
 };
 
 const DROP_TABLES = {
@@ -3045,6 +3063,46 @@ const DROP_TABLES = {
         ]
     },
 
+    // ==================== 纳克萨玛斯（60级）掉落 ====================
+    naxxramas: {
+        equipment: [
+            { id: 'EQ_302', chance: 0.0003 },  // 萨迪斯的项圈
+            { id: 'EQ_303', chance: 0.00025 }, // 冰雹指环（RING2）
+            { id: 'EQ_304', chance: 0.0003 },  // 格拉斯的项圈
+            { id: 'EQ_305', chance: 0.0003 },  // 死亡的契约
+            { id: 'EQ_306', chance: 0.00025 }, // 黑女巫的悔恨
+            { id: 'EQ_307', chance: 0.00025 }, // 黑女巫的拥抱
+            { id: 'EQ_308', chance: 0.00025 }, // 仇恨石坠
+            { id: 'EQ_309', chance: 0.0002 },  // 伊普利斯，堕落炽天使之刃
+            { id: 'EQ_310', chance: 0.0003 },  // 日蚀之幕
+            { id: 'EQ_311', chance: 0.00025 }, // 教官的腰带
+            { id: 'EQ_312', chance: 0.0003 },  // 地穴恶魔丝质披风
+
+            // T3：无畏（战士）
+            { id: 'EQ_313', chance: 0.00025 }, // 无畏马靴
+            { id: 'EQ_314', chance: 0.00025 }, // 无畏护腕
+            { id: 'EQ_315', chance: 0.00025 }, // 无畏腰带
+
+            // T3：骨镰（盗贼）
+            { id: 'EQ_316', chance: 0.00025 }, // 骨镰马靴
+            { id: 'EQ_317', chance: 0.00025 }, // 骨镰护腕
+            { id: 'EQ_318', chance: 0.00025 }, // 骨镰护腰
+
+            // T3：霜火（法师）
+            { id: 'EQ_319', chance: 0.00025 }, // 霜火便鞋
+            { id: 'EQ_320', chance: 0.00025 }, // 霜火腕轮
+            { id: 'EQ_321', chance: 0.00025 }, // 霜火腰带
+
+            // T3：信仰（牧师）
+            { id: 'EQ_322', chance: 0.00025 }, // 信仰便鞋
+            { id: 'EQ_323', chance: 0.00025 }, // 信仰腕轮
+            { id: 'EQ_324', chance: 0.00025 }, // 信仰腰带
+
+            // 特殊掉落：主手无属性（可用于后续合成/剧情扩展）
+            { id: 'EQ_325', chance: 0.00015 }, // 埃提耶什碎片
+        ]
+    },
+
 
 
 
@@ -3287,7 +3345,7 @@ const BADGE_UPGRADE_RULES_CONFIG = {
     // ✅ 新增：团队首领 - 奈法利安徽章（黑翼之巢：区域掉落 + BOSS掉落）
     IT_ELEMENTIUM_BADGE: {
         title: '源质徽章',
-        zoneLabel: '黑翼之巢 / 黑翼之巢BOSS掉落',
+        zoneLabel: '黑翼之巢 掉落',
         inc: 2,
         cap: 100,
         // ✅ 升级【黑翼之巢】区域掉落 + BWL BOSS（堕落的瓦拉斯塔兹 / 克洛玛古斯 / 奈法利安）掉落装备
@@ -3298,7 +3356,7 @@ const BADGE_UPGRADE_RULES_CONFIG = {
     // ✅ 新增：团队首领 - 火焰之王拉格纳罗斯徽章
     IT_RAGNAROS_BADGE: {
         title: '火焰之王的徽章',
-        zoneLabel: '熔火之心 / 熔火之心BOSS掉落',
+        zoneLabel: '熔火之心 掉落',
         inc: 2,
         cap: 100,
         equipPool: 'molten_core',
@@ -3308,7 +3366,7 @@ const BADGE_UPGRADE_RULES_CONFIG = {
     // ✅ 新增：团队首领 - 克苏恩的徽章（安其拉神庙：区域掉落 + 世界首领 + 团队首领）
     IT_CTHUN_BADGE: {
         title: '克苏恩的徽章',
-        zoneLabel: '安其拉神庙 / 世界首领 / 团队首领 / 区域掉落',
+        zoneLabel: '安其拉神庙 掉落',
         inc: 2,
         cap: 100,
         // ✅ 升级【安其拉神庙】相关装备（含区域掉落 + 维希度斯 + 哈霍兰公主 + 克苏恩掉落）
@@ -11244,6 +11302,752 @@ const FIXED_EQUIPMENTS = {
     },
 
 
+    // ==================== 纳克萨玛斯（60级）掉落 ====================
+
+    // ✅ 萨迪斯的项圈（攻强 / 暴击 / 爆伤 项链）
+    EQ_302: {
+      id: 'EQ_302',
+      name: '萨迪斯的项圈',
+      icon: 'icons/wow/vanilla/armor/INV_Jewelry_Necklace_03.png',
+      type: 'equipment',
+      slot: 'neck',
+      rarity: 'purple',
+      level: 1,
+      maxLevel: 100,
+      baseStats: {
+        attack: 1100,
+        hp: 6500,
+        critRate: 20,
+        critDamage: 0.35,
+        mastery: 18,
+        haste: 18,
+      },
+      growth: {
+        attack: 2,
+        hp: 2,
+        critRate: 2,
+        critDamage: 2,
+        mastery: 2,
+        haste: 2,
+      }
+    },
+
+    // ✅ 冰雹指环（坦克：攻强 / 魔抗，RING2）
+    EQ_303: {
+      id: 'EQ_303',
+      name: '冰雹指环',
+      icon: 'icons/wow/vanilla/armor/INV_Jewelry_Ring_35.png',
+      type: 'equipment',
+      slot: 'ring2',
+      rarity: 'purple',
+      level: 1,
+      maxLevel: 100,
+      baseStats: {
+        attack: 850,
+        hp: 7500,
+        magicResist: 160,
+        mastery: 20,
+        versatility: 20,
+        blockValue: 650,
+      },
+      growth: {
+        attack: 2,
+        hp: 2,
+        magicResist: 2,
+        mastery: 2,
+        versatility: 2,
+        blockValue: 2,
+      }
+    },
+
+    // ✅ 格拉斯的项圈（坦克：攻强项链）
+    EQ_304: {
+      id: 'EQ_304',
+      name: '格拉斯的项圈',
+      icon: 'icons/wow/vanilla/armor/INV_Jewelry_Necklace_08.png',
+      type: 'equipment',
+      slot: 'neck',
+      rarity: 'purple',
+      level: 1,
+      maxLevel: 100,
+      baseStats: {
+        attack: 1100,
+        hp: 10000,
+        armor: 320,
+        magicResist: 160,
+        mastery: 25,
+        versatility: 30,
+        blockRate: 7,
+        blockValue: 800,
+      },
+      growth: {
+        attack: 2,
+        hp: 2,
+        armor: 2,
+        magicResist: 2,
+        mastery: 2,
+        versatility: 2,
+        blockRate: 2,
+        blockValue: 2,
+      }
+    },
+
+    // ✅ 死亡的契约（治疗：法强副手）
+    EQ_305: {
+      id: 'EQ_305',
+      name: '死亡的契约',
+      icon: 'icons/wow/vanilla/items/INV_Misc_Book_09.png',
+      type: 'equipment',
+      slot: 'offHand',
+      rarity: 'purple',
+      level: 1,
+      maxLevel: 100,
+      baseStats: {
+        spellPower: 950,
+        hp: 9000,
+        magicResist: 120,
+        mastery: 22,
+        versatility: 28,
+        critRate: 18,
+        haste: 18,
+      },
+      growth: {
+        spellPower: 2,
+        hp: 2,
+        magicResist: 2,
+        mastery: 2,
+        versatility: 2,
+        critRate: 2,
+        haste: 2,
+      }
+    },
+
+    // ✅ 黑女巫的悔恨（坦克：攻强主手）
+    EQ_306: {
+      id: 'EQ_306',
+      name: '黑女巫的悔恨',
+      icon: 'icons/wow/vanilla/weapons/INV_Sword_27.png',
+      type: 'equipment',
+      slot: 'mainHand',
+      rarity: 'purple',
+      level: 1,
+      maxLevel: 100,
+      baseStats: {
+        attack: 3600,
+        hp: 10000,
+        magicResist: 200,
+        mastery: 25,
+        versatility: 30,
+        critRate: 15,
+        blockValue: 800,
+      },
+      growth: {
+        attack: 2,
+        hp: 2,
+        magicResist: 2,
+        mastery: 2,
+        versatility: 2,
+        critRate: 2,
+        blockValue: 2,
+      }
+    },
+
+    // ✅ 黑女巫的拥抱（治疗：法强主手）
+    EQ_307: {
+      id: 'EQ_307',
+      name: '黑女巫的拥抱',
+      icon: 'icons/wow/vanilla/weapons/INV_Mace_14.png',
+      type: 'equipment',
+      slot: 'mainHand',
+      rarity: 'purple',
+      level: 1,
+      maxLevel: 100,
+      baseStats: {
+        spellPower: 3400,
+        hp: 10000,
+        magicResist: 150,
+        mastery: 28,
+        versatility: 32,
+        critRate: 24,
+        haste: 20,
+      },
+      growth: {
+        spellPower: 2,
+        hp: 2,
+        magicResist: 2,
+        mastery: 2,
+        versatility: 2,
+        critRate: 2,
+        haste: 2,
+      }
+    },
+
+    // ✅ 仇恨石坠（法强项链，特效：触发法强）
+    EQ_308: {
+      id: 'EQ_308',
+      name: '仇恨石坠',
+      icon: 'icons/wow/vanilla/armor/INV_Jewelry_Amulet_01.png',
+      type: 'equipment',
+      slot: 'neck',
+      rarity: 'purple',
+      level: 1,
+      maxLevel: 100,
+      baseStats: {
+        spellPower: 1100,
+        hp: 7000,
+        critRate: 18,
+        haste: 18,
+        mastery: 18,
+        versatility: 18,
+      },
+      growth: {
+        spellPower: 2,
+        hp: 2,
+        critRate: 2,
+        haste: 2,
+        mastery: 2,
+        versatility: 2,
+      },
+      specialEffect: {
+        type: 'proc_stat',
+        name: '仇恨汲取',
+        trigger: 'turn_start',
+        chance: 0.25,
+        stats: { spellPower: 2500 },
+        scaleWithLevel: true
+      }
+    },
+
+    // ✅ 伊普利斯，堕落炽天使之刃（攻强主手，特效：暗影追击）
+    EQ_309: {
+      id: 'EQ_309',
+      name: '伊普利斯，堕落炽天使之刃',
+      icon: 'icons/wow/vanilla/weapons/INV_Sword_39.png',
+      type: 'equipment',
+      slot: 'mainHand',
+      rarity: 'purple',
+      level: 1,
+      maxLevel: 100,
+      baseStats: {
+        attack: 3900,
+        hp: 7500,
+        critRate: 22,
+        critDamage: 0.85,
+        haste: 20,
+        mastery: 20,
+        versatility: 20,
+      },
+      growth: {
+        attack: 2,
+        hp: 2,
+        critRate: 2,
+        critDamage: 2,
+        haste: 2,
+        mastery: 2,
+        versatility: 2,
+      },
+      specialEffect: {
+        type: 'proc_damage',
+        name: '暗影追击',
+        trigger: 'turn_start',
+        chance: 0.25,
+        school: 'shadow',
+        basedOn: 'attack',
+        damageMult: 2.2,
+        damageFlat: 0,
+        scaleWithLevel: true
+      }
+    },
+
+    // ✅ 日蚀之幕（通用披风：攻强 / 法强 / 全能 / 精通；特效：触发全能）
+    EQ_310: {
+      id: 'EQ_310',
+      name: '日蚀之幕',
+      icon: 'icons/wow/vanilla/armor/INV_Misc_Cape_13.png',
+      type: 'equipment',
+      slot: 'cloak',
+      rarity: 'purple',
+      level: 1,
+      maxLevel: 100,
+      baseStats: {
+        attack: 550,
+        spellPower: 550,
+        hp: 7800,
+        magicResist: 150,
+        mastery: 24,
+        versatility: 24,
+      },
+      growth: {
+        attack: 2,
+        spellPower: 2,
+        hp: 2,
+        magicResist: 2,
+        mastery: 2,
+        versatility: 2,
+      },
+      specialEffect: {
+        type: 'proc_stat',
+        name: '日蚀遮蔽',
+        trigger: 'turn_start',
+        chance: 0.25,
+        stats: { versatility: 30 },
+        scaleWithLevel: true
+      }
+    },
+
+    // ✅ 教官的腰带（攻强 / 暴击 / 爆伤 腰带）
+    EQ_311: {
+      id: 'EQ_311',
+      name: '教官的腰带',
+      icon: 'icons/wow/vanilla/armor/INV_Belt_16.png',
+      type: 'equipment',
+      slot: 'belt',
+      rarity: 'purple',
+      level: 1,
+      maxLevel: 100,
+      baseStats: {
+        attack: 900,
+        hp: 6500,
+        critRate: 20,
+        critDamage: 0.35,
+        mastery: 16,
+        haste: 16,
+      },
+      growth: {
+        attack: 2,
+        hp: 2,
+        critRate: 2,
+        critDamage: 2,
+        mastery: 2,
+        haste: 2,
+      }
+    },
+
+    // ✅ 地穴恶魔丝质披风（坦克披风）
+    EQ_312: {
+      id: 'EQ_312',
+      name: '地穴恶魔丝质披风',
+      icon: 'icons/wow/vanilla/armor/INV_Misc_Cape_18.png',
+      type: 'equipment',
+      slot: 'cloak',
+      rarity: 'purple',
+      level: 1,
+      maxLevel: 100,
+      baseStats: {
+        hp: 11000,
+        armor: 360,
+        magicResist: 200,
+        mastery: 24,
+        versatility: 24,
+        blockRate: 7,
+        blockValue: 900,
+      },
+      growth: {
+        hp: 2,
+        armor: 2,
+        magicResist: 2,
+        mastery: 2,
+        versatility: 2,
+        blockRate: 2,
+        blockValue: 2,
+      }
+    },
+
+    // ===== T3：无畏（战士） =====
+    EQ_313: {
+      id: 'EQ_313',
+      name: '无畏马靴',
+      icon: 'icons/wow/vanilla/armor/INV_Boots_Plate_06.png',
+      type: 'equipment',
+      slot: 'feet',
+      rarity: 'purple',
+      setId: 'dreadnaught_set',
+      setName: '无畏',
+      level: 1,
+      maxLevel: 100,
+      baseStats: {
+        hp: 9000,
+        attack: 450,
+        armor: 320,
+        magicResist: 150,
+        mastery: 18,
+        versatility: 16,
+        blockRate: 6,
+        blockValue: 750,
+      },
+      growth: {
+        hp: 2,
+        attack: 2,
+        armor: 2,
+        magicResist: 2,
+        mastery: 2,
+        versatility: 2,
+        blockRate: 2,
+        blockValue: 2,
+      }
+    },
+    EQ_314: {
+      id: 'EQ_314',
+      name: '无畏护腕',
+      icon: 'icons/wow/vanilla/armor/INV_Bracer_19.png',
+      type: 'equipment',
+      slot: 'wrist',
+      rarity: 'purple',
+      setId: 'dreadnaught_set',
+      setName: '无畏',
+      level: 1,
+      maxLevel: 100,
+      baseStats: {
+        hp: 8000,
+        attack: 400,
+        armor: 300,
+        magicResist: 140,
+        mastery: 16,
+        versatility: 14,
+        blockRate: 5,
+        blockValue: 650,
+      },
+      growth: {
+        hp: 2,
+        attack: 2,
+        armor: 2,
+        magicResist: 2,
+        mastery: 2,
+        versatility: 2,
+        blockRate: 2,
+        blockValue: 2,
+      }
+    },
+    EQ_315: {
+      id: 'EQ_315',
+      name: '无畏腰带',
+      icon: 'icons/wow/vanilla/armor/INV_Belt_12.png',
+      type: 'equipment',
+      slot: 'belt',
+      rarity: 'purple',
+      setId: 'dreadnaught_set',
+      setName: '无畏',
+      level: 1,
+      maxLevel: 100,
+      baseStats: {
+        hp: 8500,
+        attack: 420,
+        armor: 310,
+        magicResist: 145,
+        mastery: 17,
+        versatility: 15,
+        blockRate: 5,
+        blockValue: 700,
+      },
+      growth: {
+        hp: 2,
+        attack: 2,
+        armor: 2,
+        magicResist: 2,
+        mastery: 2,
+        versatility: 2,
+        blockRate: 2,
+        blockValue: 2,
+      }
+    },
+
+    // ===== T3：骨镰（盗贼） =====
+    EQ_316: {
+      id: 'EQ_316',
+      name: '骨镰马靴',
+      icon: 'icons/wow/vanilla/armor/INV_Boots_08.png',
+      type: 'equipment',
+      slot: 'feet',
+      rarity: 'purple',
+      setId: 'bonescythe_set',
+      setName: '骨镰',
+      level: 1,
+      maxLevel: 100,
+      baseStats: {
+        attack: 950,
+        hp: 6500,
+        armor: 220,
+        magicResist: 120,
+        critRate: 20,
+        critDamage: 0.35,
+        haste: 18,
+        mastery: 18,
+        versatility: 14,
+      },
+      growth: {
+        attack: 2,
+        hp: 2,
+        armor: 2,
+        magicResist: 2,
+        critRate: 2,
+        critDamage: 2,
+        haste: 2,
+        mastery: 2,
+        versatility: 2,
+      }
+    },
+    EQ_317: {
+      id: 'EQ_317',
+      name: '骨镰护腕',
+      icon: 'icons/wow/vanilla/armor/INV_Bracer_03.png',
+      type: 'equipment',
+      slot: 'wrist',
+      rarity: 'purple',
+      setId: 'bonescythe_set',
+      setName: '骨镰',
+      level: 1,
+      maxLevel: 100,
+      baseStats: {
+        attack: 850,
+        hp: 6000,
+        magicResist: 110,
+        critRate: 18,
+        critDamage: 0.30,
+        haste: 16,
+        mastery: 16,
+      },
+      growth: {
+        attack: 2,
+        hp: 2,
+        magicResist: 2,
+        critRate: 2,
+        critDamage: 2,
+        haste: 2,
+        mastery: 2,
+      }
+    },
+    EQ_318: {
+      id: 'EQ_318',
+      name: '骨镰护腰',
+      icon: 'icons/wow/vanilla/armor/INV_Belt_18.png',
+      type: 'equipment',
+      slot: 'belt',
+      rarity: 'purple',
+      setId: 'bonescythe_set',
+      setName: '骨镰',
+      level: 1,
+      maxLevel: 100,
+      baseStats: {
+        attack: 900,
+        hp: 6200,
+        magicResist: 115,
+        critRate: 19,
+        critDamage: 0.32,
+        haste: 17,
+        mastery: 17,
+      },
+      growth: {
+        attack: 2,
+        hp: 2,
+        magicResist: 2,
+        critRate: 2,
+        critDamage: 2,
+        haste: 2,
+        mastery: 2,
+      }
+    },
+
+    // ===== T3：霜火（法师） =====
+    EQ_319: {
+      id: 'EQ_319',
+      name: '霜火便鞋',
+      icon: 'icons/wow/vanilla/armor/INV_Boots_05.png',
+      type: 'equipment',
+      slot: 'feet',
+      rarity: 'purple',
+      setId: 'frostfire_set',
+      setName: '霜火',
+      level: 1,
+      maxLevel: 100,
+      baseStats: {
+        spellPower: 950,
+        hp: 6500,
+        magicResist: 120,
+        critRate: 20,
+        critDamage: 0.35,
+        haste: 18,
+        mastery: 18,
+      },
+      growth: {
+        spellPower: 2,
+        hp: 2,
+        magicResist: 2,
+        critRate: 2,
+        critDamage: 2,
+        haste: 2,
+        mastery: 2,
+      }
+    },
+    EQ_320: {
+      id: 'EQ_320',
+      name: '霜火腕轮',
+      icon: 'icons/wow/vanilla/armor/INV_Bracer_13.png',
+      type: 'equipment',
+      slot: 'wrist',
+      rarity: 'purple',
+      setId: 'frostfire_set',
+      setName: '霜火',
+      level: 1,
+      maxLevel: 100,
+      baseStats: {
+        spellPower: 850,
+        hp: 6000,
+        magicResist: 110,
+        critRate: 18,
+        critDamage: 0.30,
+        haste: 16,
+        mastery: 16,
+      },
+      growth: {
+        spellPower: 2,
+        hp: 2,
+        magicResist: 2,
+        critRate: 2,
+        critDamage: 2,
+        haste: 2,
+        mastery: 2,
+      }
+    },
+    EQ_321: {
+      id: 'EQ_321',
+      name: '霜火腰带',
+      icon: 'icons/wow/vanilla/armor/INV_Belt_30.png',
+      type: 'equipment',
+      slot: 'belt',
+      rarity: 'purple',
+      setId: 'frostfire_set',
+      setName: '霜火',
+      level: 1,
+      maxLevel: 100,
+      baseStats: {
+        spellPower: 900,
+        hp: 6200,
+        magicResist: 115,
+        critRate: 19,
+        critDamage: 0.32,
+        haste: 17,
+        mastery: 17,
+      },
+      growth: {
+        spellPower: 2,
+        hp: 2,
+        magicResist: 2,
+        critRate: 2,
+        critDamage: 2,
+        haste: 2,
+        mastery: 2,
+      }
+    },
+
+    // ===== T3：信仰（牧师） =====
+    EQ_322: {
+      id: 'EQ_322',
+      name: '信仰便鞋',
+      icon: 'icons/wow/vanilla/armor/INV_Boots_07.png',
+      type: 'equipment',
+      slot: 'feet',
+      rarity: 'purple',
+      setId: 'faith_set',
+      setName: '信仰',
+      level: 1,
+      maxLevel: 100,
+      baseStats: {
+        spellPower: 900,
+        hp: 7800,
+        armor: 220,
+        magicResist: 140,
+        mastery: 20,
+        versatility: 20,
+        haste: 18,
+        critRate: 14,
+      },
+      growth: {
+        spellPower: 2,
+        hp: 2,
+        armor: 2,
+        magicResist: 2,
+        mastery: 2,
+        versatility: 2,
+        haste: 2,
+        critRate: 2,
+      }
+    },
+    EQ_323: {
+      id: 'EQ_323',
+      name: '信仰腕轮',
+      icon: 'icons/wow/vanilla/armor/INV_Bracer_14.png',
+      type: 'equipment',
+      slot: 'wrist',
+      rarity: 'purple',
+      setId: 'faith_set',
+      setName: '信仰',
+      level: 1,
+      maxLevel: 100,
+      baseStats: {
+        spellPower: 820,
+        hp: 7200,
+        magicResist: 130,
+        mastery: 18,
+        versatility: 18,
+        haste: 16,
+        critRate: 12,
+      },
+      growth: {
+        spellPower: 2,
+        hp: 2,
+        magicResist: 2,
+        mastery: 2,
+        versatility: 2,
+        haste: 2,
+        critRate: 2,
+      }
+    },
+    EQ_324: {
+      id: 'EQ_324',
+      name: '信仰腰带',
+      icon: 'icons/wow/vanilla/armor/INV_Belt_31.png',
+      type: 'equipment',
+      slot: 'belt',
+      rarity: 'purple',
+      setId: 'faith_set',
+      setName: '信仰',
+      level: 1,
+      maxLevel: 100,
+      baseStats: {
+        spellPower: 850,
+        hp: 7500,
+        magicResist: 135,
+        mastery: 19,
+        versatility: 19,
+        haste: 17,
+        critRate: 13,
+      },
+      growth: {
+        spellPower: 2,
+        hp: 2,
+        magicResist: 2,
+        mastery: 2,
+        versatility: 2,
+        haste: 2,
+        critRate: 2,
+      }
+    },
+
+    // ✅ 埃提耶什碎片（主手无属性，可用于后续合成/剧情扩展）
+    EQ_325: {
+      id: 'EQ_325',
+      name: '埃提耶什碎片',
+      icon: 'icons/wow/vanilla/weapons/INV_Staff_21.png',
+      type: 'equipment',
+      slot: 'mainHand',
+      rarity: 'orange',
+      level: 0,
+      maxLevel: 100,
+      baseStats: {},
+      growth: {},
+    },
+
+
 
 
 };
@@ -11308,6 +12112,14 @@ const BLACKWING_LAIR_LV100_SET = [
     'EQ_217', 'EQ_218', 'EQ_219', 'EQ_220',
     'EQ_221', 'EQ_222', 'EQ_223', 'EQ_224',
     'EQ_225', 'EQ_226', 'EQ_227', 'EQ_228'
+];
+
+// 纳克萨玛斯（60级）24 件装备全部达到过 Lv.100 → 全队攻击 +1200，法强 +1200，全能 +15，精通 +15，魔法抗性 +300
+const NAXXRAMAS_LV100_SET = [
+    'EQ_302', 'EQ_303', 'EQ_304', 'EQ_305', 'EQ_306', 'EQ_307',
+    'EQ_308', 'EQ_309', 'EQ_310', 'EQ_311', 'EQ_312', 'EQ_313',
+    'EQ_314', 'EQ_315', 'EQ_316', 'EQ_317', 'EQ_318', 'EQ_319',
+    'EQ_320', 'EQ_321', 'EQ_322', 'EQ_323', 'EQ_324', 'EQ_325'
 ];
 
 // ==================== 图鉴集齐效果配置 ====================
@@ -11423,6 +12235,13 @@ const CODEX_SET_EFFECTS = [
         equipIds: BLACKWING_LAIR_LV100_SET,
         effect: '全队暴击率 +5%，暴击伤害 +20%',
         color: '#263238'
+    },
+    {
+        id: 'naxxramas',
+        name: '纳克萨玛斯',
+        equipIds: NAXXRAMAS_LV100_SET,
+        effect: '全队攻击 +1200，法强 +1200，全能 +15，精通 +15，魔法抗性 +300',
+        color: '#7e57c2'
     }
 ];
 
@@ -12834,6 +13653,32 @@ const SET_BONUSES = {
         name: '神谕者',
         tiers: [
             { count: 2, bonus: { spellPower: 160, mastery: 8, versatility: 8 } },
+        ]
+    },
+
+    // ==================== 纳克萨玛斯 · T3 套装（本次先实现：腰/腕/鞋 3件） ====================
+    dreadnaught_set: {
+        name: '无畏',
+        tiers: [
+            { count: 3, bonus: { hp: 2000, armor: 250, mastery: 15, blockRate: 5, blockValue: 500 } },
+        ]
+    },
+    bonescythe_set: {
+        name: '骨镰',
+        tiers: [
+            { count: 3, bonus: { attack: 420, haste: 15, critRate: 15, critDamage: 0.30 } },
+        ]
+    },
+    frostfire_set: {
+        name: '霜火',
+        tiers: [
+            { count: 3, bonus: { spellPower: 420, haste: 15, critRate: 15, critDamage: 0.30 } },
+        ]
+    },
+    faith_set: {
+        name: '信仰',
+        tiers: [
+            { count: 3, bonus: { spellPower: 380, mastery: 15, versatility: 15, hp: 1200 } },
         ]
     },
 
@@ -14562,6 +15407,9 @@ function calculateTotalStats(character, partyAuras = { hpMul: 1, spellPowerMul: 
 
             // 黑翼之巢：集齐 EQ_212 ~ EQ_228（全部曾达到过 Lv.100）→ 全队暴击率 +5%，暴击伤害 +20%
             { ids: BLACKWING_LAIR_LV100_SET, bonus: { critRate: 5, critDamage: 0.20 } },
+
+            // 纳克萨玛斯：集齐 EQ_302 ~ EQ_325（全部曾达到过 Lv.100）→ 全队攻击 +1200，法强 +1200，全能 +15，精通 +15，魔法抗性 +300
+            { ids: NAXXRAMAS_LV100_SET, bonus: { attack: 1200, spellPower: 1200, versatility: 15, mastery: 15, magicResist: 300 } },
 
 
         ];

@@ -40947,16 +40947,26 @@ const BossPrepareModal = ({ state, dispatch }) => {
                                     </div>
 
                                     <div style={{ display: 'grid', gap: 10, fontSize: 11, color: '#ddd', lineHeight: 1.6 }}>
-                                      <div style={{ padding: 10, background: 'rgba(0,0,0,0.25)', borderRadius: 6 }}>
-                                        <div style={{ color: '#ffd700', fontWeight: 700, marginBottom: 4 }}>技能1：龙翼打击</div>
+                                      <div style={{
+                                          padding: 10,
+                                          background: 'rgba(158,158,158,0.10)',
+                                          borderRadius: 6,
+                                          borderLeft: '3px solid #9e9e9e'
+                                        }>
+                                        <div style={{ fontSize: 12, color: '#e0e0e0', fontWeight: 600, marginBottom: 4  }}>技能1：龙翼打击</div>
                                         <div>
                                           对<span style={{ color: '#ff6b6b', fontWeight: 700 }}>1号位（坦克）</span>造成
                                           <b> Boss攻击力×{boss.dragonWingStrikeMultiplier ?? 8}</b> 的物理伤害。
                                         </div>
                                       </div>
 
-                                      <div style={{ padding: 10, background: 'rgba(0,0,0,0.25)', borderRadius: 6 }}>
-                                        <div style={{ color: '#ffd700', fontWeight: 700, marginBottom: 4 }}>技能2：扫尾</div>
+                                      <div style={{
+                                          padding: 10,
+                                          background: 'rgba(158,158,158,0.10)',
+                                          borderRadius: 6,
+                                          borderLeft: '3px solid #9e9e9e'
+                                        }>
+                                        <div style={{ fontSize: 12, color: '#e0e0e0', fontWeight: 600, marginBottom: 4  }}>技能2：扫尾</div>
                                         <div>
                                           <span style={{ color: '#aaa' }}>分散站位：</span>随机{boss.tailSweepTargets ?? 2}名目标，
                                           各受到 <b>Boss攻击力×{boss.tailSweepMultiplier ?? 3}</b> 的物理伤害。<br/>
@@ -40964,8 +40974,13 @@ const BossPrepareModal = ({ state, dispatch }) => {
                                         </div>
                                       </div>
 
-                                      <div style={{ padding: 10, background: 'rgba(0,0,0,0.25)', borderRadius: 6 }}>
-                                        <div style={{ color: '#ffd700', fontWeight: 700, marginBottom: 4 }}>技能3：火息术</div>
+                                      <div style={{
+                                          padding: 10,
+                                          background: 'rgba(244,67,54,0.10)',
+                                          borderRadius: 6,
+                                          borderLeft: '3px solid #f44336'
+                                        }>
+                                        <div style={{ fontSize: 12, color: '#ff6b6b', fontWeight: 600, marginBottom: 4  }}>技能3：火息术</div>
                                         <div>
                                           默认对<span style={{ color: '#ff6b6b', fontWeight: 700 }}>1号位（坦克）</span>造成
                                           <b> Boss攻击力×{boss.fireBreathMultiplier ?? 5}</b> 的法术伤害。<br/>
@@ -40974,8 +40989,13 @@ const BossPrepareModal = ({ state, dispatch }) => {
                                         </div>
                                       </div>
 
-                                      <div style={{ padding: 10, background: 'rgba(0,0,0,0.25)', borderRadius: 6 }}>
-                                        <div style={{ color: '#ffd700', fontWeight: 700, marginBottom: 4 }}>技能4：召唤雏龙</div>
+                                      <div style={{
+                                          padding: 10,
+                                          background: 'rgba(255,193,7,0.10)',
+                                          borderRadius: 6,
+                                          borderLeft: '3px solid #ffc107'
+                                        }>
+                                        <div style={{ fontSize: 12, color: '#ffd54f', fontWeight: 600, marginBottom: 4  }}>技能4：召唤雏龙</div>
                                         <div>
                                           召唤 <b>{boss.whelpSummonCount ?? 2}</b> 只雏龙（上限<b>{boss.whelpMaxCount ?? 8}</b>只）。<br/>
                                           雏龙属性：HP <b>{boss.whelpMaxHp?.toLocaleString?.() ?? boss.minion?.maxHp?.toLocaleString?.() ?? 3000000}</b>，
@@ -40984,8 +41004,13 @@ const BossPrepareModal = ({ state, dispatch }) => {
                                         </div>
                                       </div>
 
-                                      <div style={{ padding: 10, background: 'rgba(0,0,0,0.25)', borderRadius: 6 }}>
-                                        <div style={{ color: '#ffd700', fontWeight: 700, marginBottom: 4 }}>技能5：深呼吸</div>
+                                      <div style={{
+                                          padding: 10,
+                                          background: 'rgba(244,67,54,0.10)',
+                                          borderRadius: 6,
+                                          borderLeft: '3px solid #f44336'
+                                        }>
+                                        <div style={{ fontSize: 12, color: '#ff6b6b', fontWeight: 600, marginBottom: 4  }}>技能5：深呼吸</div>
                                         <div>
                                           奥妮克希亚深深吸气，并额外召唤 <b>{boss.deepBreathSummonCount ?? 4}</b> 只雏龙。<br/>
                                           <span style={{ color: '#64b5f6' }}>集中站位：</span>对所有角色造成
@@ -40995,8 +41020,13 @@ const BossPrepareModal = ({ state, dispatch }) => {
                                         </div>
                                       </div>
 
-                                      <div style={{ padding: 10, background: 'rgba(0,0,0,0.25)', borderRadius: 6 }}>
-                                        <div style={{ color: '#ffd700', fontWeight: 700, marginBottom: 4 }}>技能6：恐惧低吼</div>
+                                      <div style={{
+                                          padding: 10,
+                                          background: 'rgba(156,39,176,0.10)',
+                                          borderRadius: 6,
+                                          borderLeft: '3px solid #9c27b0'
+                                        }>
+                                        <div style={{ fontSize: 12, color: '#ce93d8', fontWeight: 600, marginBottom: 4  }}>技能6：恐惧低吼</div>
                                         <div>
                                           使所有角色陷入恐惧，持续 <b>{boss.fearDuration ?? 2}</b> 回合。
                                         </div>
@@ -41018,8 +41048,13 @@ const BossPrepareModal = ({ state, dispatch }) => {
                                     </div>
 
                                     <div style={{ display: 'grid', gap: 10, fontSize: 11, color: '#ddd', lineHeight: 1.6 }}>
-                                      <div style={{ padding: 10, background: 'rgba(0,0,0,0.25)', borderRadius: 6 }}>
-                                        <div style={{ color: '#ffd700', fontWeight: 700, marginBottom: 4 }}>技能1：龙血之痛（随机一种）</div>
+                                      <div style={{
+                                          padding: 10,
+                                          background: 'rgba(126,87,194,0.10)',
+                                          borderRadius: 6,
+                                          borderLeft: '3px solid #7e57c2'
+                                        }>
+                                        <div style={{ fontSize: 12, color: '#d1c4e9', fontWeight: 600, marginBottom: 4  }}>技能1：龙血之痛（随机一种）</div>
                                         <div>
                                           每次释放随机选择 <b>黑 / 绿 / 红</b> 其中一种，对随机 <b>{boss.broodAfflictionTargets ?? 3}</b> 名目标生效，持续 <b>{boss.broodAfflictionBlackDuration ?? 4}</b> 回合：<br/>
                                           <span style={{ color: '#b39ddb' }}>黑：</span>诅咒，目标<span style={{ color: '#ffcc80', fontWeight: 700 }}>法术伤害承受</span>提高
@@ -41029,24 +41064,39 @@ const BossPrepareModal = ({ state, dispatch }) => {
                                         </div>
                                       </div>
 
-                                      <div style={{ padding: 10, background: 'rgba(0,0,0,0.25)', borderRadius: 6 }}>
-                                        <div style={{ color: '#ffd700', fontWeight: 700, marginBottom: 4 }}>技能3：焚烧</div>
+                                      <div style={{
+                                          padding: 10,
+                                          background: 'rgba(244,67,54,0.10)',
+                                          borderRadius: 6,
+                                          borderLeft: '3px solid #f44336'
+                                        }>
+                                        <div style={{ fontSize: 12, color: '#ff6b6b', fontWeight: 600, marginBottom: 4  }}>技能3：焚烧</div>
                                         <div>
                                           随机 <b>{boss.incinerateTargets ?? 2}</b> 名目标，造成 <b>Boss攻击力×{boss.incinerateMultiplier ?? 3}</b> 的火焰法术伤害。<br/>
                                           并为Boss回复<span style={{ color: '#81c784', fontWeight: 700 }}>等量实际造成伤害</span>的生命。
                                         </div>
                                       </div>
 
-                                      <div style={{ padding: 10, background: 'rgba(0,0,0,0.25)', borderRadius: 6 }}>
-                                        <div style={{ color: '#ffd700', fontWeight: 700, marginBottom: 4 }}>技能4：腐蚀酸液</div>
+                                      <div style={{
+                                          padding: 10,
+                                          background: 'rgba(76,175,80,0.10)',
+                                          borderRadius: 6,
+                                          borderLeft: '3px solid #4caf50'
+                                        }>
+                                        <div style={{ fontSize: 12, color: '#81c784', fontWeight: 600, marginBottom: 4  }}>技能4：腐蚀酸液</div>
                                         <div>
                                           随机 <b>{boss.corrosiveAcidTargets ?? 2}</b> 名目标，造成 <b>Boss攻击力×{boss.corrosiveAcidMultiplier ?? 1.5}</b> 的自然法术伤害。<br/>
                                           并使其护甲降低 <b>{Math.round((boss.corrosiveAcidArmorReductionPct ?? 0.80) * 100)}%</b>，持续 <b>{boss.corrosiveAcidDuration ?? 4}</b> 回合。
                                         </div>
                                       </div>
 
-                                      <div style={{ padding: 10, background: 'rgba(0,0,0,0.25)', borderRadius: 6 }}>
-                                        <div style={{ color: '#ffd700', fontWeight: 700, marginBottom: 4 }}>技能5：时光流逝</div>
+                                      <div style={{
+                                          padding: 10,
+                                          background: 'rgba(33,150,243,0.10)',
+                                          borderRadius: 6,
+                                          borderLeft: '3px solid #2196f3'
+                                        }>
+                                        <div style={{ fontSize: 12, color: '#90caf9', fontWeight: 600, marginBottom: 4  }}>技能5：时光流逝</div>
                                         <div>
                                           对<span style={{ color: '#ff6b6b', fontWeight: 700 }}>1号位（坦克）</span>造成
                                           <b> 目标最大生命×{Math.round((boss.timeLapseHpPct ?? 0.50) * 100)}%</b>
@@ -41055,8 +41105,13 @@ const BossPrepareModal = ({ state, dispatch }) => {
                                         </div>
                                       </div>
 
-                                      <div style={{ padding: 10, background: 'rgba(0,0,0,0.25)', borderRadius: 6 }}>
-                                        <div style={{ color: '#ffd700', fontWeight: 700, marginBottom: 4 }}>技能6：狂暴</div>
+                                      <div style={{
+                                          padding: 10,
+                                          background: 'rgba(255,152,0,0.10)',
+                                          borderRadius: 6,
+                                          borderLeft: '3px solid #ff9800'
+                                        }>
+                                        <div style={{ fontSize: 12, color: '#ffcc80', fontWeight: 600, marginBottom: 4  }}>技能6：狂暴</div>
                                         <div>
                                           Boss造成的所有伤害提高 <b>{Math.round((boss.enragePerStack ?? 0.10) * 100)}%</b>，可叠加直到战斗结束。
                                         </div>
@@ -41083,8 +41138,13 @@ const BossPrepareModal = ({ state, dispatch }) => {
                                     </div>
 
                                     <div style={{ display: 'grid', gap: 10, fontSize: 11, color: '#ddd', lineHeight: 1.6 }}>
-                                      <div style={{ padding: 10, background: 'rgba(0,0,0,0.25)', borderRadius: 6 }}>
-                                        <div style={{ color: '#ffd700', fontWeight: 700, marginBottom: 4 }}>技能1：召唤多彩龙兽</div>
+                                      <div style={{
+                                          padding: 10,
+                                          background: 'rgba(255,193,7,0.10)',
+                                          borderRadius: 6,
+                                          borderLeft: '3px solid #ffc107'
+                                        }>
+                                        <div style={{ fontSize: 12, color: '#ffd54f', fontWeight: 600, marginBottom: 4  }}>技能1：召唤多彩龙兽</div>
                                         <div>
                                           召唤 <b>1</b> 只多彩龙兽（HP <b>{boss.drakeHp?.toLocaleString?.() ?? 5000000}</b>，攻击/防御与Boss相同）。
                                           <br/>
@@ -41094,8 +41154,13 @@ const BossPrepareModal = ({ state, dispatch }) => {
                                         </div>
                                       </div>
 
-                                      <div style={{ padding: 10, background: 'rgba(0,0,0,0.25)', borderRadius: 6 }}>
-                                        <div style={{ color: '#ffd700', fontWeight: 700, marginBottom: 4 }}>技能2：召唤青铜龙兽</div>
+                                      <div style={{
+                                          padding: 10,
+                                          background: 'rgba(255,193,7,0.10)',
+                                          borderRadius: 6,
+                                          borderLeft: '3px solid #ffc107'
+                                        }>
+                                        <div style={{ fontSize: 12, color: '#ffd54f', fontWeight: 600, marginBottom: 4  }}>技能2：召唤青铜龙兽</div>
                                         <div>
                                           召唤 <b>1</b> 只青铜龙兽（HP <b>{boss.drakeHp?.toLocaleString?.() ?? 5000000}</b>，攻击/防御与Boss相同）。
                                           <br/>
@@ -41105,30 +41170,50 @@ const BossPrepareModal = ({ state, dispatch }) => {
                                         </div>
                                       </div>
 
-                                      <div style={{ padding: 10, background: 'rgba(0,0,0,0.25)', borderRadius: 6 }}>
-                                        <div style={{ color: '#ffd700', fontWeight: 700, marginBottom: 4 }}>技能3：暗影烈焰</div>
+                                      <div style={{
+                                          padding: 10,
+                                          background: 'rgba(156,39,176,0.10)',
+                                          borderRadius: 6,
+                                          borderLeft: '3px solid #9c27b0'
+                                        }>
+                                        <div style={{ fontSize: 12, color: '#ce93d8', fontWeight: 600, marginBottom: 4  }}>技能3：暗影烈焰</div>
                                         <div>
                                           对所有角色造成 <b>Boss攻击力×{boss.shadowflameMultiplier ?? 3}</b> 的暗影烈焰伤害（法术伤害计算魔抗）。
                                         </div>
                                       </div>
 
-                                      <div style={{ padding: 10, background: 'rgba(0,0,0,0.25)', borderRadius: 6 }}>
-                                        <div style={{ color: '#ffd700', fontWeight: 700, marginBottom: 4 }}>技能4：低沉咆哮</div>
+                                      <div style={{
+                                          padding: 10,
+                                          background: 'rgba(156,39,176,0.10)',
+                                          borderRadius: 6,
+                                          borderLeft: '3px solid #9c27b0'
+                                        }>
+                                        <div style={{ fontSize: 12, color: '#ce93d8', fontWeight: 600, marginBottom: 4  }}>技能4：低沉咆哮</div>
                                         <div>
                                           使所有角色陷入恐惧，持续 <b>{boss.fearDuration ?? 2}</b> 回合无法行动。
                                         </div>
                                       </div>
 
-                                      <div style={{ padding: 10, background: 'rgba(0,0,0,0.25)', borderRadius: 6 }}>
-                                        <div style={{ color: '#ffd700', fontWeight: 700, marginBottom: 4 }}>技能5：暗影迷雾</div>
+                                      <div style={{
+                                          padding: 10,
+                                          background: 'rgba(156,39,176,0.10)',
+                                          borderRadius: 6,
+                                          borderLeft: '3px solid #9c27b0'
+                                        }>
+                                        <div style={{ fontSize: 12, color: '#ce93d8', fontWeight: 600, marginBottom: 4  }}>技能5：暗影迷雾</div>
                                         <div>
                                           对随机目标造成 <b>Boss攻击力×{boss.shadowMistMultiplier ?? 3}</b> 的暗影伤害，并使其受到的治疗降低
                                           <b> {Math.round((boss.shadowMistHealingReduction ?? 0.8) * 100)}%</b>，持续 <b>{boss.shadowMistDuration ?? 2}</b> 回合。
                                         </div>
                                       </div>
 
-                                      <div style={{ padding: 10, background: 'rgba(0,0,0,0.25)', borderRadius: 6 }}>
-                                        <div style={{ color: '#ffd700', fontWeight: 700, marginBottom: 4 }}>技能6：召唤白骨魔像</div>
+                                      <div style={{
+                                          padding: 10,
+                                          background: 'rgba(96,125,139,0.10)',
+                                          borderRadius: 6,
+                                          borderLeft: '3px solid #607d8b'
+                                        }>
+                                        <div style={{ fontSize: 12, color: '#b0bec5', fontWeight: 600, marginBottom: 4  }}>技能6：召唤白骨魔像</div>
                                         <div>
                                           复活 <b>1</b> 只白骨魔像（基础HP <b>{boss.boneGolemHp?.toLocaleString?.() ?? 5000000}</b>，防御与Boss相同）。
                                           <br/>
@@ -41160,39 +41245,64 @@ const BossPrepareModal = ({ state, dispatch }) => {
                                     </div>
 
                                     <div style={{ display: 'grid', gap: 10, fontSize: 11, color: '#ddd', lineHeight: 1.6 }}>
-                                      <div style={{ padding: 10, background: 'rgba(0,0,0,0.25)', borderRadius: 6 }}>
-                                        <div style={{ color: '#ffd700', fontWeight: 700, marginBottom: 4 }}>技能1：眼棱</div>
+                                      <div style={{
+                                          padding: 10,
+                                          background: 'rgba(126,87,194,0.10)',
+                                          borderRadius: 6,
+                                          borderLeft: '3px solid #7e57c2'
+                                        }>
+                                        <div style={{ fontSize: 12, color: '#d1c4e9', fontWeight: 600, marginBottom: 4  }}>技能1：眼棱</div>
                                         <div>
                                           <span style={{ color: '#ff9800' }}>分散站位：</span>随机目标受到 <b>Boss攻击力×{boss.eyeBeamSingleMultiplier ?? 3}</b> 的法术伤害（计算魔抗）。<br/>
                                           <span style={{ color: '#64b5f6' }}>集中站位：</span>改为对<span style={{ color: '#ff6b6b', fontWeight: 700 }}>所有角色</span>造成 <b>Boss攻击力×{boss.eyeBeamAoeMultiplier ?? 6}</b> 的法术伤害。
                                         </div>
                                       </div>
 
-                                      <div style={{ padding: 10, background: 'rgba(0,0,0,0.25)', borderRadius: 6 }}>
-                                        <div style={{ color: '#ffd700', fontWeight: 700, marginBottom: 4 }}>技能2：召唤眼柄</div>
+                                      <div style={{
+                                          padding: 10,
+                                          background: 'rgba(255,193,7,0.10)',
+                                          borderRadius: 6,
+                                          borderLeft: '3px solid #ffc107'
+                                        }>
+                                        <div style={{ fontSize: 12, color: '#ffd54f', fontWeight: 600, marginBottom: 4  }}>技能2：召唤眼柄</div>
                                         <div>
                                           召唤 <b>{boss.eyeStalkSummonCount ?? 2}</b> 根眼柄（每根HP <b>{Number(boss.eyeStalkHp || 3000000).toLocaleString()}</b>，上限 <b>{boss.eyeStalkMaxCount ?? 12}</b> 根）。<br/>
                                           眼柄每回合对随机目标造成 <b>Boss攻击力×{boss.eyeStalkAttackMultiplier ?? 1.5}</b> 的法术伤害（计算魔抗）。
                                         </div>
                                       </div>
 
-                                      <div style={{ padding: 10, background: 'rgba(0,0,0,0.25)', borderRadius: 6 }}>
-                                        <div style={{ color: '#ffd700', fontWeight: 700, marginBottom: 4 }}>技能3：召唤巨型眼柄</div>
+                                      <div style={{
+                                          padding: 10,
+                                          background: 'rgba(255,193,7,0.10)',
+                                          borderRadius: 6,
+                                          borderLeft: '3px solid #ffc107'
+                                        }>
+                                        <div style={{ fontSize: 12, color: '#ffd54f', fontWeight: 600, marginBottom: 4  }}>技能3：召唤巨型眼柄</div>
                                         <div>
                                           召唤 <b>{boss.giantEyeStalkSummonCount ?? 1}</b> 根巨型眼柄（每根HP <b>{Number(boss.giantEyeStalkHp || 9000000).toLocaleString()}</b>，上限 <b>{boss.giantEyeStalkMaxCount ?? 4}</b> 根）。<br/>
                                           巨型眼柄每回合对<span style={{ color: '#ff6b6b', fontWeight: 700 }}>坦克（1号位）</span>造成 <b>Boss攻击力×{boss.giantEyeStalkAttackMultiplier ?? 5}</b> 的物理伤害（护甲/格挡）。
                                         </div>
                                       </div>
 
-                                      <div style={{ padding: 10, background: 'rgba(0,0,0,0.25)', borderRadius: 6 }}>
-                                        <div style={{ color: '#ffd700', fontWeight: 700, marginBottom: 4 }}>技能4：巨型爪触</div>
+                                      <div style={{
+                                          padding: 10,
+                                          background: 'rgba(158,158,158,0.10)',
+                                          borderRadius: 6,
+                                          borderLeft: '3px solid #9e9e9e'
+                                        }>
+                                        <div style={{ fontSize: 12, color: '#e0e0e0', fontWeight: 600, marginBottom: 4  }}>技能4：巨型爪触</div>
                                         <div>
                                           对<span style={{ color: '#ff6b6b', fontWeight: 700 }}>坦克（1号位）</span>造成 <b>Boss攻击力×{boss.giantClawMultiplier ?? 10}</b> 的物理伤害，并使其昏迷 <b>{boss.giantClawStunDuration ?? 2}</b> 回合。
                                         </div>
                                       </div>
 
-                                      <div style={{ padding: 10, background: 'rgba(0,0,0,0.25)', borderRadius: 6 }}>
-                                        <div style={{ color: '#ffd700', fontWeight: 700, marginBottom: 4 }}>技能5：吞噬</div>
+                                      <div style={{
+                                          padding: 10,
+                                          background: 'rgba(76,175,80,0.10)',
+                                          borderRadius: 6,
+                                          borderLeft: '3px solid #4caf50'
+                                        }>
+                                        <div style={{ fontSize: 12, color: '#81c784', fontWeight: 600, marginBottom: 4  }}>技能5：吞噬</div>
                                         <div>
                                           持续 <b>{boss.devourDuration ?? 4}</b> 回合。每回合对<span style={{ color: '#ff6b6b', fontWeight: 700 }}>所有角色</span>造成：<br/>
                                           <b>(1 + 0.5×当前眼柄数量 + 当前巨型眼柄数量) × Boss攻击力</b> 的自然伤害（计算魔抗）。<br/>

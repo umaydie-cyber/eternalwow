@@ -11318,7 +11318,7 @@ const FIXED_EQUIPMENTS = {
         attack: 1100,
         hp: 6500,
         critRate: 20,
-        critDamage: 0.35,
+        critDamage: 0.45,
         mastery: 18,
         haste: 18,
       },
@@ -11343,12 +11343,12 @@ const FIXED_EQUIPMENTS = {
       level: 1,
       maxLevel: 100,
       baseStats: {
-        attack: 850,
-        hp: 7500,
-        magicResist: 160,
+        attack: 750,
+        hp: 10000,
+        magicResist: 180,
         mastery: 20,
         versatility: 20,
-        blockValue: 650,
+        blockValue: 800,
       },
       growth: {
         attack: 2,
@@ -11374,10 +11374,9 @@ const FIXED_EQUIPMENTS = {
         attack: 1100,
         hp: 10000,
         armor: 320,
-        magicResist: 160,
+        magicResist: 140,
         mastery: 25,
         versatility: 30,
-        blockRate: 7,
         blockValue: 800,
       },
       growth: {
@@ -11387,7 +11386,6 @@ const FIXED_EQUIPMENTS = {
         magicResist: 2,
         mastery: 2,
         versatility: 2,
-        blockRate: 2,
         blockValue: 2,
       }
     },
@@ -11396,20 +11394,19 @@ const FIXED_EQUIPMENTS = {
     EQ_305: {
       id: 'EQ_305',
       name: '死亡的契约',
-      icon: 'icons/wow/vanilla/items/siwangdeqiyue.png',
+      icon: 'icons/wow/vanilla/armor/siwangdeqiyue.png',
       type: 'equipment',
       slot: 'offHand',
       rarity: 'purple',
       level: 1,
       maxLevel: 100,
       baseStats: {
-        spellPower: 950,
+        spellPower: 1050,
         hp: 9000,
         magicResist: 120,
         mastery: 22,
         versatility: 28,
-        critRate: 18,
-        haste: 18,
+        critRate: 20,
       },
       growth: {
         spellPower: 2,
@@ -11418,7 +11415,6 @@ const FIXED_EQUIPMENTS = {
         mastery: 2,
         versatility: 2,
         critRate: 2,
-        haste: 2,
       }
     },
 
@@ -11426,7 +11422,7 @@ const FIXED_EQUIPMENTS = {
     EQ_306: {
       id: 'EQ_306',
       name: '黑女巫的悔恨',
-      icon: 'icons/wow/vanilla/weapons/heinvwudehuiheng.png',
+      icon: 'icons/wow/vanilla/armor/heinvwudehuiheng.png',
       type: 'equipment',
       slot: 'mainHand',
       rarity: 'purple',
@@ -11456,7 +11452,7 @@ const FIXED_EQUIPMENTS = {
     EQ_307: {
       id: 'EQ_307',
       name: '黑女巫的拥抱',
-      icon: 'icons/wow/vanilla/weapons/heinvwudeyongbao.png',
+      icon: 'icons/wow/vanilla/armor/heinvwudeyongbao.png',
       type: 'equipment',
       slot: 'mainHand',
       rarity: 'purple',
@@ -11522,7 +11518,7 @@ const FIXED_EQUIPMENTS = {
     EQ_309: {
       id: 'EQ_309',
       name: '伊普利斯，堕落炽天使之刃',
-      icon: 'icons/wow/vanilla/weapons/yipulisi.png',
+      icon: 'icons/wow/vanilla/armor/yipulisi.png',
       type: 'equipment',
       slot: 'mainHand',
       rarity: 'purple',

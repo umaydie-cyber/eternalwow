@@ -11308,7 +11308,7 @@ const FIXED_EQUIPMENTS = {
     EQ_302: {
       id: 'EQ_302',
       name: '萨迪斯的项圈',
-      icon: 'icons/wow/vanilla/armor/INV_Jewelry_Necklace_03.png',
+      icon: 'icons/wow/vanilla/armor/sadisidexiangquan.png',
       type: 'equipment',
       slot: 'neck',
       rarity: 'purple',
@@ -11336,7 +11336,7 @@ const FIXED_EQUIPMENTS = {
     EQ_303: {
       id: 'EQ_303',
       name: '冰雹指环',
-      icon: 'icons/wow/vanilla/armor/INV_Jewelry_Ring_35.png',
+      icon: 'icons/wow/vanilla/armor/bingbaozhihuan.png',
       type: 'equipment',
       slot: 'ring2',
       rarity: 'purple',
@@ -11364,7 +11364,7 @@ const FIXED_EQUIPMENTS = {
     EQ_304: {
       id: 'EQ_304',
       name: '格拉斯的项圈',
-      icon: 'icons/wow/vanilla/armor/INV_Jewelry_Necklace_08.png',
+      icon: 'icons/wow/vanilla/armor/gelasidexiangquan.png',
       type: 'equipment',
       slot: 'neck',
       rarity: 'purple',
@@ -12289,6 +12289,24 @@ const MOUNT_CODEX = [
         dropChance: 0.0005, // 0.05%
         bonus: { resourceMult: 1.10 }, // 资源生产速度 x1.10
     },
+    {
+        id: 'MOUNT_GUANGYILONGYING',
+        name: '光翼龙鹰',
+        icon: '🦅',
+        imageUrl: 'icons/wow/vanilla/rider/guangyilongying.png',
+        source: '时空商城',
+        // 商城坐骑：购买后直接点亮图鉴（不进背包），无掉落率
+        bonus: { bossAttackMult: 1.02 }, // BOSS战：攻击强度 x1.02
+    },
+    {
+        id: 'MOUNT_MORIZHIYU',
+        name: '末日之羽',
+        icon: '🪶',
+        imageUrl: 'icons/wow/vanilla/rider/morizhiyu.png',
+        source: '时空商城',
+        // 商城坐骑：购买后直接点亮图鉴（不进背包），无掉落率
+        bonus: { bossSpellMult: 1.02 }, // BOSS战：法术强度 x1.02
+    },
 ];
 
 // ==================== 时空商城（使用时空币） ====================
@@ -12308,6 +12326,36 @@ const SPACETIME_SHOP_ITEMS = [
         description: '圣光穿越时空而来。购买后将直接点亮【坐骑图鉴】，并永久获得金币掉落加成。',
         flavor: '“即便世界破碎，圣光亦将照耀前路。”',
         rarity: 'legendary'
+    },
+    {
+        id: 'SHOP_MOUNT_GUANGYILONGYING',
+        type: 'mount',
+        name: '光翼龙鹰',
+        icon: '🦅',
+        imageUrl: 'icons/wow/vanilla/rider/guangyilongying.png',
+        price: 3000,
+        currencyKey: 'spacetimeCoin',
+        currencyIcon: '🌀',
+        mountId: 'MOUNT_GUANGYILONGYING',
+        bonus: { bossAttackMult: 1.02 }, // BOSS战：攻击强度 +2%
+        description: '光翼划破长夜。购买后将直接点亮【坐骑图鉴】，并在BOSS战中永久获得攻击强度加成。',
+        flavor: '“光翼一振，群星皆暗。”',
+        rarity: 'epic'
+    },
+    {
+        id: 'SHOP_MOUNT_MORIZHIYU',
+        type: 'mount',
+        name: '末日之羽',
+        icon: '🪶',
+        imageUrl: 'icons/wow/vanilla/rider/morizhiyu.png',
+        price: 3000,
+        currencyKey: 'spacetimeCoin',
+        currencyIcon: '🌀',
+        mountId: 'MOUNT_MORIZHIYU',
+        bonus: { bossSpellMult: 1.02 }, // BOSS战：法术强度 +2%
+        description: '终末的羽落无声。购买后将直接点亮【坐骑图鉴】，并在BOSS战中永久获得法术强度加成。',
+        flavor: '“当最后一片羽毛落下，世界将归于寂静。”',
+        rarity: 'epic'
     },
 ];
 
@@ -14916,6 +14964,8 @@ function formatBonusText(bonusObj) {
         expMult: '经验获取',
         goldMult: '金币掉落',
         resourceMult: '资源生产速度',
+        bossAttackMult: 'BOSS战攻击强度',
+        bossSpellMult: 'BOSS战法术强度',
     };
 
     return entries.map(([k, v]) => {
@@ -15046,6 +15096,8 @@ function getMountMultipliers(state) {
     let expMult = 1;
     let goldMult = 1;
     let resourceMult = 1;
+    let bossAttackMult = 1;
+    let bossSpellMult = 1;
 
     (Array.isArray(MOUNT_CODEX) ? MOUNT_CODEX : []).forEach(m => {
         if (!m?.id) return;
@@ -15054,9 +15106,12 @@ function getMountMultipliers(state) {
         if (typeof b.expMult === 'number' && b.expMult > 0) expMult *= b.expMult;
         if (typeof b.goldMult === 'number' && b.goldMult > 0) goldMult *= b.goldMult;
         if (typeof b.resourceMult === 'number' && b.resourceMult > 0) resourceMult *= b.resourceMult;
+        // ✅ 仅BOSS战生效：攻击强度 / 法术强度
+        if (typeof b.bossAttackMult === 'number' && b.bossAttackMult > 0) bossAttackMult *= b.bossAttackMult;
+        if (typeof b.bossSpellMult === 'number' && b.bossSpellMult > 0) bossSpellMult *= b.bossSpellMult;
     });
 
-    return { expMult, goldMult, resourceMult };
+    return { expMult, goldMult, resourceMult, bossAttackMult, bossSpellMult };
 }
 
 // 基础金币 baseGold，应用金币获取加成：effective = floor(baseGold * (1 + bonus))
@@ -27791,7 +27846,29 @@ function gameReducer(state, action) {
                 : recalcedTeam;
 
 
-            const playerStates = recalcedTeamForBoss.map(char => ({
+            // ✅ 坐骑图鉴：仅BOSS战加成（攻击强度/法术强度）
+            const { bossAttackMult, bossSpellMult } = getMountMultipliers(state);
+            const recalcedTeamForBossWithMount = (Number.isFinite(bossAttackMult) || Number.isFinite(bossSpellMult))
+                ? recalcedTeamForBoss.map(char => {
+                    const atk = Math.max(0, Math.floor(Number(char?.stats?.attack) || 0));
+                    const sp = Math.max(0, Math.floor(Number(char?.stats?.spellPower) || 0));
+
+                    const nextAtk = Math.floor(atk * ((Number.isFinite(bossAttackMult) && bossAttackMult > 0) ? bossAttackMult : 1));
+                    const nextSp = Math.floor(sp * ((Number.isFinite(bossSpellMult) && bossSpellMult > 0) ? bossSpellMult : 1));
+
+                    return {
+                        ...char,
+                        stats: {
+                            ...char.stats,
+                            attack: nextAtk,
+                            spellPower: nextSp,
+                        }
+                    };
+                })
+                : recalcedTeamForBoss;
+
+
+            const playerStates = recalcedTeamForBossWithMount.map(char => ({
                 char,
                 currentHp: char.stats.maxHp,
                 currentMp: char.stats.maxMp,

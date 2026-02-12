@@ -88,6 +88,9 @@ const BOSS_BONUS_CONFIG = {
     // ✅ 新增：60级世界首领 - 哈霍兰公主
     princess_huhuran: { name: '哈霍兰公主', bonus: 0.30 },
 
+    // ✅ 新增：60级世界首领 - 塔迪乌斯
+    thaddius: { name: '塔迪乌斯', bonus: 0.30 },
+
     // ✅ 新增：团队首领 - 奥妮克希亚
     onyxia: { name: '奥妮克希亚', bonus: 0.30 },
 
@@ -13395,6 +13398,19 @@ const WORLD_BOSSES = {
         unlockLevel: 60
     },
 
+    // ✅ 新增：60级世界首领 - 塔迪乌斯
+    thaddius: {
+        id: 'thaddius',
+        name: '塔迪乌斯',
+        icon: 'icons/wow/vanilla/boss/thaddius.png', // 需要添加对应图标
+        hp: 50000000,
+        attack: 38000,
+        defense: 35000,
+        rewards: { gold: 4800000, exp: 3000000 },
+        unlockLevel: 60
+    },
+
+
 
 };
 
@@ -14393,6 +14409,49 @@ const BOSS_DATA = {
                 { id: 'EQ_286', chance: 0.10 }, // 神秘肩垫（法师 T2.5 肩部）
                 { id: 'EQ_287', chance: 0.10 }, // 神谕者的衬肩（牧师 T2.5 肩部）
             ]
+        }
+    },
+
+
+    // ✅ 新增：60级世界首领 - 塔迪乌斯
+    thaddius: {
+        id: 'thaddius',
+        name: '塔迪乌斯',
+        maxHp: 50000000,
+        attack: 38000,
+        defense: 35000,
+
+        // 技能循环：极性转换 → 连锁闪电 → 闪电链 → 球状闪电
+        cycle: ['polarity_shift', 'chain_lightning', 'lightning_chain', 'ball_lightning'],
+
+        // 技能1：极性转换
+        // - 全体：伤害提高 +30%（持续4回合）
+        // - 分散站位：全体获得【跑位】1回合，无法行动
+        // - 集中站位：全体获得自然DOT：每回合 3×Boss攻击，持续3回合
+        polarityDamageDealtMult: 1.3,
+        polarityBuffDuration: 4,
+        polarityRunningDuration: 1,
+        polarityDotMultiplier: 3,
+        polarityDotDuration: 3,
+
+        // 技能2：连锁闪电（随机2目标：3×Boss攻击，自然法术伤害）
+        chainLightningMultiplier: 3,
+        chainLightningTargets: 2,
+
+        // 技能3：闪电链（全体：2×Boss攻击，自然法术伤害）
+        lightningChainMultiplier: 2,
+
+        // 技能4：球状闪电
+        // - 分散站位：坦克 15×Boss攻击，自然法术伤害，并昏迷1回合
+        // - 集中站位：全体 3×Boss攻击，自然法术伤害
+        ballLightningTankMultiplier: 15,
+        ballLightningStunDuration: 1,
+        ballLightningAoEMultiplier: 3,
+
+        rewards: {
+            gold: 4800000,
+            exp: 3000000,
+            items: []
         }
     },
 
@@ -21132,6 +21191,205 @@ function stepBossCombat(state) {
             }
         }
     }
+
+
+    // ==================== 塔迪乌斯（世界首领）技能处理 ====================
+    // 机制：
+    // - 技能循环：极性转换 → 连锁闪电 → 闪电链 → 球状闪电
+    // - 极性转换：
+    //   * 全体：伤害提高 +30%（持续4回合）
+    //   * 分散站位：全体获得【跑位】1回合，无法行动
+    //   * 集中站位：全体获得自然DOT：每回合 3×Boss攻击，持续3回合
+    // - 连锁闪电：随机2目标 3×Boss攻击 自然法术伤害
+    // - 闪电链：全体 2×Boss攻击 自然法术伤害
+    // - 球状闪电：
+    //   * 分散站位：坦克 15×Boss攻击 自然法术伤害，并昏迷1回合
+    //   * 集中站位：全体 3×Boss攻击 自然法术伤害
+    else if (combat.bossId === 'thaddius') {
+        const stance = (combat.strategy?.stance === 'concentrated') ? 'concentrated' : 'dispersed';
+
+        // 工具：随机抽取 n 个存活玩家（不重复）
+        const pickNRandomAlivePlayers = (n) => {
+            const alive = combat.playerStates
+                .map((ps, idx) => ({ idx, hp: ps.currentHp }))
+                .filter(x => x.hp > 0)
+                .map(x => x.idx);
+
+            const result = [];
+            const need = Math.min(Math.max(0, Math.floor(n)), alive.length);
+
+            for (let k = 0; k < need; k++) {
+                const r = Math.floor(Math.random() * alive.length);
+                result.push(alive[r]);
+                alive.splice(r, 1);
+            }
+            return result;
+        };
+
+        // 工具：对指定玩家造成自然法术伤害（魔抗 + 法术易伤 + 承伤 + 护盾）
+        const dealNatureDamageToPlayer = (tIdx, rawDamage, prefixText = '') => {
+            const target = combat.playerStates[tIdx];
+            if (!target || target.currentHp <= 0) return;
+
+            const nature = calcMagicDamage(target, rawDamage);
+            const shieldResult = applyShieldAbsorb(target, nature.damage, logs, currentRound);
+            target.currentHp -= shieldResult.finalDamage;
+
+            const resPct = Math.round(nature.resistReduction * 100);
+            const mrText = Number(nature.magicResist) < 0 ? `（魔抗 ${Math.floor(nature.magicResist)}）` : '';
+            const vulnPct = Math.round((nature.spellVulnMult - 1) * 100);
+            const vulnText = vulnPct > 0 ? `，法术易伤+${vulnPct}%` : '';
+            const shieldText = shieldResult.absorbed > 0 ? `，护盾吸收 ${shieldResult.absorbed}` : '';
+
+            addLog(`${prefixText}命中 位置${tIdx + 1} ${target.char.name}，造成 ${shieldResult.finalDamage} 点自然伤害（魔抗减伤${resPct}%${mrText}${vulnText}${shieldText}）`);
+        };
+
+        // 技能1：极性转换
+        if (bossAction === 'polarity_shift') {
+            const dmgMult = Number.isFinite(Number(boss.polarityDamageDealtMult)) ? Number(boss.polarityDamageDealtMult) : 1.3;
+            const buffDur = Math.max(1, Math.floor(Number(boss.polarityBuffDuration || 4)));
+
+            // 全体增伤BUFF（刷新持续时间）
+            combat.playerStates.forEach((ps) => {
+                if (!ps || ps.currentHp <= 0) return;
+
+                ps.buffs = Array.isArray(ps.buffs) ? ps.buffs : [];
+                const existing = ps.buffs.find(b => b && b.type === 'polarity_shift');
+                if (existing) {
+                    existing.damageDealtMult = dmgMult;
+                    existing.duration = buffDur;
+                } else {
+                    ps.buffs.push({
+                        type: 'polarity_shift',
+                        name: '极性转换',
+                        damageDealtMult: dmgMult,
+                        duration: buffDur,
+                    });
+                }
+            });
+
+            addLog(`【${boss.name}】施放【极性转换】：全体伤害提高 +${Math.round((dmgMult - 1) * 100)}%（持续${buffDur}回合）`, 'buff');
+
+            if (stance === 'dispersed') {
+                // 分散站位：跑位（下一回合无法行动）
+                const runDur = Math.max(1, Math.floor(Number(boss.polarityRunningDuration || 1)));
+                combat.playerStates.forEach(ps => {
+                    if (!ps || ps.currentHp <= 0) return;
+                    ps.debuffs = ps.debuffs || {};
+                    ps.debuffs.running = { duration: runDur };
+                });
+                addLog(`→ 分散站位触发【跑位】：全体下一回合无法行动（${runDur}回合）`, 'debuff');
+            } else {
+                // 集中站位：全体自然DOT（3回合）
+                const dotDur = Math.max(1, Math.floor(Number(boss.polarityDotDuration || 3)));
+                const dotMult = Number.isFinite(Number(boss.polarityDotMultiplier)) ? Number(boss.polarityDotMultiplier) : 3;
+                const dotDmg = Math.max(1, Math.floor((boss.attack || 0) * dotMult));
+
+                addLog(`→ 集中站位触发【极性电荷】：全体每回合受到 ${dotDmg} 点自然伤害，持续${dotDur}回合`, 'debuff');
+
+                combat.playerStates.forEach((ps) => {
+                    if (!ps || ps.currentHp <= 0) return;
+
+                    ps.dots = Array.isArray(ps.dots) ? ps.dots : [];
+                    const existingDot = ps.dots.find(d => d && d.name === '极性电荷');
+
+                    if (existingDot) {
+                        existingDot.damagePerTurn = dotDmg;
+                        existingDot.duration = dotDur;
+                        existingDot.school = 'nature';
+                    } else {
+                        ps.dots.push({
+                            name: '极性电荷',
+                            damagePerTurn: dotDmg,
+                            duration: dotDur,
+                            school: 'nature',
+                        });
+                    }
+                });
+            }
+        }
+
+        // 技能2：连锁闪电（随机2目标）
+        else if (bossAction === 'chain_lightning') {
+            const mult = Number.isFinite(Number(boss.chainLightningMultiplier)) ? Number(boss.chainLightningMultiplier) : 3;
+            const cnt = Math.max(1, Math.floor(Number(boss.chainLightningTargets || 2)));
+            const raw = Math.max(1, Math.floor((boss.attack || 0) * mult));
+
+            const targets = pickNRandomAlivePlayers(cnt);
+            if (targets.length === 0) {
+                addLog(`【${boss.name}】施放【连锁闪电】，但没有存活目标。`, 'warning');
+            } else {
+                addLog(`【${boss.name}】施放【连锁闪电】！随机命中 ${targets.length} 名目标`, 'warning');
+                targets.forEach(tIdx => {
+                    dealNatureDamageToPlayer(tIdx, raw, `→ `);
+                });
+            }
+        }
+
+        // 技能3：闪电链（全体）
+        else if (bossAction === 'lightning_chain') {
+            const mult = Number.isFinite(Number(boss.lightningChainMultiplier)) ? Number(boss.lightningChainMultiplier) : 2;
+            const raw = Math.max(1, Math.floor((boss.attack || 0) * mult));
+
+            addLog(`【${boss.name}】施放【闪电链】！`, 'warning');
+            combat.playerStates.forEach((ps, pIdx) => {
+                if (!ps || ps.currentHp <= 0) return;
+                dealNatureDamageToPlayer(pIdx, raw, `→ `);
+            });
+        }
+
+        // 技能4：球状闪电
+        else if (bossAction === 'ball_lightning') {
+            if (stance === 'dispersed') {
+                const tIdx = pickAlivePlayerIndex(); // 坦克
+                if (tIdx < 0) {
+                    addLog(`【${boss.name}】施放【球状闪电】，但没有存活的坦克目标。`, 'warning');
+                } else {
+                    const mult = Number.isFinite(Number(boss.ballLightningTankMultiplier)) ? Number(boss.ballLightningTankMultiplier) : 15;
+                    const raw = Math.max(1, Math.floor((boss.attack || 0) * mult));
+
+                    addLog(`【${boss.name}】施放【球状闪电】（分散站位：轰击坦克并昏迷）！`, 'warning');
+                    dealNatureDamageToPlayer(tIdx, raw, `→ `);
+
+                    const target = combat.playerStates[tIdx];
+                    if (target && target.currentHp > 0) {
+                        const dur = Math.max(1, Math.floor(Number(boss.ballLightningStunDuration || 1)));
+                        target.debuffs = target.debuffs || {};
+                        target.debuffs.stun = { duration: dur };
+                        addLog(`   ↳ 位置${tIdx + 1} ${target.char.name} 陷入【昏迷】${dur}回合，无法行动`, 'debuff');
+                    }
+                }
+            } else {
+                const mult = Number.isFinite(Number(boss.ballLightningAoEMultiplier)) ? Number(boss.ballLightningAoEMultiplier) : 3;
+                const raw = Math.max(1, Math.floor((boss.attack || 0) * mult));
+
+                addLog(`【${boss.name}】施放【球状闪电】（集中站位：全体受击）！`, 'warning');
+                combat.playerStates.forEach((ps, pIdx) => {
+                    if (!ps || ps.currentHp <= 0) return;
+                    dealNatureDamageToPlayer(pIdx, raw, `→ `);
+                });
+            }
+        }
+
+        // 兜底：普通物理攻击
+        else {
+            const tIdx = pickRandomAlivePlayerIndex();
+            if (tIdx >= 0) {
+                const target = combat.playerStates[tIdx];
+                const raw = Math.floor(boss.attack || 0);
+                const { damage, dr, blockedAmount } = calcMitigatedAndBlockedDamage(target, raw, false);
+
+                const shieldResult = applyShieldAbsorb(target, damage, logs, currentRound);
+                target.currentHp -= shieldResult.finalDamage;
+
+                const drPct = Math.round(dr * 100);
+                const blockText = blockedAmount > 0 ? `，格挡 ${blockedAmount}` : '';
+                const shieldText = shieldResult.absorbed > 0 ? `，护盾吸收 ${shieldResult.absorbed}` : '';
+                addLog(`【${boss.name}】普通攻击命中 位置${tIdx + 1} ${target.char.name}，造成 ${shieldResult.finalDamage} 点物理伤害（护甲减伤${drPct}%${blockText}${shieldText}）`);
+            }
+        }
+    }
+
 
 
 // ==================== 火焰之王拉格纳罗斯（团队首领）技能处理 ====================
@@ -36889,6 +37147,12 @@ const BossPrepareModal = ({ state, dispatch }) => {
         poison_dart: '毒镖',
         wyvern_sting: '翼龙钉刺',
 
+        // ✅ 塔迪乌斯
+        polarity_shift: '极性转换',
+        chain_lightning: '连锁闪电',
+        lightning_chain: '闪电链',
+        ball_lightning: '球状闪电',
+
     };
 
     const formatBossCycle = (boss) =>
@@ -38248,6 +38512,91 @@ const BossPrepareModal = ({ state, dispatch }) => {
                                         <span style={{ color: '#ffd700' }}> Boss攻击×{boss.natureSpitMultiplier ?? 3}</span> 的<span style={{ color: '#81c784' }}>自然法术伤害</span>（计算魔抗）
                                         <br />
                                         <span style={{ color: '#ff6b6b' }}>狂暴：</span>对<span style={{ color: '#ff9800' }}>所有角色</span>生效
+                                      </div>
+                                    </div>
+                                  </>
+                                )}
+
+
+                                {/* 塔迪乌斯的技能 */}
+                                {bossId === 'thaddius' && (
+                                  <>
+                                    <div style={{
+                                      padding: 10,
+                                      background: 'rgba(33,150,243,0.10)',
+                                      borderRadius: 6,
+                                      borderLeft: '3px solid #2196f3'
+                                    }}>
+                                      <div style={{ fontSize: 12, color: '#90caf9', fontWeight: 600, marginBottom: 4 }}>
+                                        ⚡ 技能1：极性转换
+                                      </div>
+                                      <div style={{ fontSize: 11, color: '#aaa', lineHeight: 1.5 }}>
+                                        全体角色造成的伤害提高
+                                        <span style={{ color: '#ffd700' }}> +{Math.round((((boss.polarityDamageDealtMult ?? 1.3) - 1) * 100))}%</span>，
+                                        持续 <span style={{ color: '#ffd700' }}>{boss.polarityBuffDuration ?? 4}</span> 回合
+                                        <br />
+                                        <span style={{ color: '#4fc3f7' }}>分散站位：</span>全体获得<span style={{ color: '#ffd700' }}>【跑位】</span>，
+                                        下回合无法行动（{boss.polarityRunningDuration ?? 1}回合）
+                                        <br />
+                                        <span style={{ color: '#ffb74d' }}>集中站位：</span>全体获得<span style={{ color: '#ffd700' }}>【极性电荷】</span>：
+                                        每回合 <span style={{ color: '#ffd700' }}>{boss.polarityDotMultiplier ?? 3}倍</span> Boss攻击 的
+                                        <span style={{ color: '#a5d6a7' }}>自然伤害</span>（计算魔抗），持续
+                                        <span style={{ color: '#ffd700' }}> {boss.polarityDotDuration ?? 3}</span> 回合
+                                      </div>
+                                    </div>
+
+                                    <div style={{
+                                      padding: 10,
+                                      background: 'rgba(33,150,243,0.08)',
+                                      borderRadius: 6,
+                                      borderLeft: '3px solid #64b5f6'
+                                    }}>
+                                      <div style={{ fontSize: 12, color: '#bbdefb', fontWeight: 600, marginBottom: 4 }}>
+                                        ⚡ 技能2：连锁闪电
+                                      </div>
+                                      <div style={{ fontSize: 11, color: '#aaa', lineHeight: 1.5 }}>
+                                        随机命中 <span style={{ color: '#ffd700' }}>{boss.chainLightningTargets ?? 2}</span> 名目标，
+                                        每个目标受到 <span style={{ color: '#ffd700' }}>{boss.chainLightningMultiplier ?? 3}倍</span> Boss攻击 的
+                                        <span style={{ color: '#a5d6a7' }}>自然法术伤害</span>（计算魔抗）
+                                      </div>
+                                    </div>
+
+                                    <div style={{
+                                      padding: 10,
+                                      background: 'rgba(33,150,243,0.06)',
+                                      borderRadius: 6,
+                                      borderLeft: '3px solid #90caf9'
+                                    }}>
+                                      <div style={{ fontSize: 12, color: '#e3f2fd', fontWeight: 600, marginBottom: 4 }}>
+                                        ⚡ 技能3：闪电链
+                                      </div>
+                                      <div style={{ fontSize: 11, color: '#aaa', lineHeight: 1.5 }}>
+                                        对<span style={{ color: '#ff9800' }}>所有角色</span>造成
+                                        <span style={{ color: '#ffd700' }}> {boss.lightningChainMultiplier ?? 2}倍</span> Boss攻击 的
+                                        <span style={{ color: '#a5d6a7' }}>自然法术伤害</span>（计算魔抗）
+                                      </div>
+                                    </div>
+
+                                    <div style={{
+                                      padding: 10,
+                                      background: 'rgba(156,39,176,0.10)',
+                                      borderRadius: 6,
+                                      borderLeft: '3px solid #9c27b0'
+                                    }}>
+                                      <div style={{ fontSize: 12, color: '#ce93d8', fontWeight: 600, marginBottom: 4 }}>
+                                        ⚡ 技能4：球状闪电
+                                      </div>
+                                      <div style={{ fontSize: 11, color: '#aaa', lineHeight: 1.5 }}>
+                                        <span style={{ color: '#4fc3f7' }}>分散站位：</span>对<span style={{ color: '#ff9800' }}>坦克</span>造成
+                                        <span style={{ color: '#ffd700' }}> {boss.ballLightningTankMultiplier ?? 15}倍</span> Boss攻击 的
+                                        <span style={{ color: '#a5d6a7' }}>自然法术伤害</span>（计算魔抗），并<span style={{ color: '#ffd700' }}>昏迷</span>
+                                        <span style={{ color: '#ffd700' }}> {boss.ballLightningStunDuration ?? 1}</span> 回合
+                                        <br />
+                                        <span style={{ color: '#ffb74d' }}>集中站位：</span>对<span style={{ color: '#ff9800' }}>所有角色</span>造成
+                                        <span style={{ color: '#ffd700' }}> {boss.ballLightningAoEMultiplier ?? 3}倍</span> Boss攻击 的
+                                        <span style={{ color: '#a5d6a7' }}>自然法术伤害</span>（计算魔抗）
+                                        <br />
+                                        技能循环：<span style={{ color: '#ffd700' }}>极性转换 → 连锁闪电 → 闪电链 → 球状闪电</span>
                                       </div>
                                     </div>
                                   </>

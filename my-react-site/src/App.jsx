@@ -40965,7 +40965,7 @@ const BossPrepareModal = ({ state, dispatch }) => {
                                           background: 'rgba(158,158,158,0.10)',
                                           borderRadius: 6,
                                           borderLeft: '3px solid #9e9e9e'
-                                        }>
+                                        }}>
                                         <div style={{ fontSize: 12, color: '#e0e0e0', fontWeight: 600, marginBottom: 4  }}>技能2：扫尾</div>
                                         <div>
                                           <span style={{ color: '#aaa' }}>分散站位：</span>随机{boss.tailSweepTargets ?? 2}名目标，

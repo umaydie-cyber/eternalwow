@@ -12002,7 +12002,7 @@ const FIXED_EQUIPMENTS = {
     EQ_325: {
       id: 'EQ_325',
       name: '埃提耶什碎片',
-      icon: 'icons/wow/vanilla/weapons/INV_Staff_21.png',
+      icon: 'icons/wow/vanilla/weapons/aitiyeshisuipian.png',
       type: 'equipment',
       slot: 'mainHand',
       rarity: 'orange',
@@ -12051,7 +12051,7 @@ const FIXED_EQUIPMENTS = {
       level: 1,
       maxLevel: 100,
       baseStats: {
-        attack: 1500,
+        attack: 1600,
         hp: 6500,
         critRate: 20,
         critDamage: 0.35,
@@ -12224,6 +12224,254 @@ const FIXED_EQUIPMENTS = {
 
 
 
+
+
+    // ==================== 纳克萨玛斯：麦克斯纳掉落 ====================
+
+    // ✅ 迈克斯纳之牙（攻强副手，带特效）
+    EQ_333: {
+      id: 'EQ_333',
+      name: '迈克斯纳之牙',
+      icon: 'icons/wow/vanilla/weapons/maikesinazhiya.png',
+      type: 'equipment',
+      slot: 'offHand',
+      rarity: 'purple',
+      level: 1,
+      maxLevel: 100,
+      baseStats: {
+        attack: 1700,
+        hp: 6800,
+        critRate: 22,
+        haste: 22,
+        mastery: 22,
+      },
+      growth: {
+        attack: 2,
+        hp: 2,
+        critRate: 2,
+        haste: 2,
+        mastery: 2,
+      },
+      specialEffect: {
+        type: 'proc_damage',
+        name: '剧毒之牙',
+        trigger: 'turn_start',
+        chance: 0.25,
+        school: 'nature',
+        basedOn: 'attack',
+        damageMult: 1.2,
+        scaleWithLevel: true
+      }
+    },
+
+    // ✅ 怨灵之刃（法强主手，暴击 / 爆伤）
+    EQ_334: {
+      id: 'EQ_334',
+      name: '怨灵之刃',
+      icon: 'icons/wow/vanilla/weapons/INV_Sword_11.png',
+      type: 'equipment',
+      slot: 'mainHand',
+      rarity: 'purple',
+      level: 1,
+      maxLevel: 100,
+      baseStats: {
+        spellPower: 3800,
+        hp: 9000,
+        critRate: 30,
+        critDamage: 0.85,
+        haste: 20,
+        mastery: 30,
+      },
+      growth: {
+        spellPower: 2,
+        hp: 2,
+        critRate: 2,
+        critDamage: 2,
+        haste: 2,
+        mastery: 2,
+      }
+    },
+
+    // ✅ 遗忘之名（治疗法强项链）
+    EQ_335: {
+      id: 'EQ_335',
+      name: '遗忘之名',
+      icon: 'icons/wow/vanilla/armor/yiwangzhiming.png',
+      type: 'equipment',
+      slot: 'neck',
+      rarity: 'purple',
+      level: 1,
+      maxLevel: 100,
+      baseStats: {
+        spellPower: 1400,
+        hp: 8000,
+        magicResist: 100,
+        mastery: 25,
+        versatility: 25,
+        haste: 18,
+      },
+      growth: {
+        spellPower: 2,
+        hp: 2,
+        magicResist: 2,
+        mastery: 2,
+        versatility: 2,
+        haste: 2,
+      }
+    },
+
+    // ✅ 蜘蛛之吻（攻强饰品1）
+    EQ_336: {
+      id: 'EQ_336',
+      name: '蜘蛛之吻',
+      icon: 'icons/wow/vanilla/armor/zhizhuzhiwen.png',
+      type: 'equipment',
+      slot: 'trinket1',
+      rarity: 'purple',
+      level: 1,
+      maxLevel: 100,
+      baseStats: {
+        attack: 1200,
+        hp: 6500,
+        critRate: 20,
+        critDamage: 0.35,
+        haste: 20,
+        mastery: 18,
+      },
+      growth: {
+        attack: 2,
+        hp: 2,
+        critRate: 2,
+        critDamage: 2,
+        haste: 2,
+        mastery: 2,
+      }
+    },
+
+    // ===== T3：无畏（战士）- 护手 =====
+    EQ_337: {
+      id: 'EQ_337',
+      name: '无畏护手',
+      icon: 'icons/wow/vanilla/armor/INV_Gauntlets_23.png',
+      type: 'equipment',
+      slot: 'hands',
+      rarity: 'purple',
+      setId: 'dreadnaught_set',
+      setName: '无畏',
+      level: 1,
+      maxLevel: 100,
+      baseStats: {
+        hp: 9000,
+        attack: 350,
+        armor: 300,
+        magicResist: 100,
+        mastery: 16,
+        blockRate: 5,
+        blockValue: 650,
+      },
+      growth: {
+        hp: 2,
+        attack: 2,
+        armor: 2,
+        magicResist: 2,
+        mastery: 2,
+        blockRate: 2,
+        blockValue: 2,
+      }
+    },
+
+    // ===== T3：骨镰（盗贼）- 护手 =====
+    EQ_338: {
+      id: 'EQ_338',
+      name: '骨镰护手',
+      icon: 'icons/wow/vanilla/armor/INV_Gauntlets_23.png',
+      type: 'equipment',
+      slot: 'hands',
+      rarity: 'purple',
+      setId: 'bonescythe_set',
+      setName: '骨镰',
+      level: 1,
+      maxLevel: 100,
+      baseStats: {
+        attack: 950,
+        hp: 6500,
+        armor: 220,
+        magicResist: 90,
+        critRate: 16,
+        critDamage: 0.30,
+        mastery: 10,
+      },
+      growth: {
+        attack: 2,
+        hp: 2,
+        armor: 2,
+        magicResist: 2,
+        critRate: 2,
+        critDamage: 2,
+        haste: 2,
+        mastery: 2,
+      }
+    },
+
+    // ===== T3：霜火（法师）- 手套 =====
+    EQ_339: {
+      id: 'EQ_339',
+      name: '霜火手套',
+      icon: 'icons/wow/vanilla/armor/INV_Gauntlets_17.png',
+      type: 'equipment',
+      slot: 'hands',
+      rarity: 'purple',
+      setId: 'frostfire_set',
+      setName: '霜火',
+      level: 1,
+      maxLevel: 100,
+      baseStats: {
+        spellPower: 950,
+        hp: 6500,
+        magicResist: 90,
+        critRate: 16,
+        critDamage: 0.30,
+        mastery: 10,
+      },
+      growth: {
+        spellPower: 2,
+        hp: 2,
+        magicResist: 2,
+        critRate: 2,
+        critDamage: 2,
+        mastery: 2,
+      }
+    },
+
+    // ===== T3：信仰（牧师）- 手套 =====
+    EQ_340: {
+      id: 'EQ_340',
+      name: '信仰手套',
+      icon: 'icons/wow/vanilla/armor/INV_Gauntlets_17.png',
+      type: 'equipment',
+      slot: 'hands',
+      rarity: 'purple',
+      setId: 'faith_set',
+      setName: '信仰',
+      level: 1,
+      maxLevel: 100,
+      baseStats: {
+        spellPower: 900,
+        hp: 8000,
+        armor: 220,
+        magicResist: 100,
+        mastery: 16,
+        versatility: 16,
+      },
+      growth: {
+        spellPower: 2,
+        hp: 2,
+        armor: 2,
+        magicResist: 2,
+        mastery: 2,
+        versatility: 2,
+      }
+    },
 
 };
 
@@ -14731,7 +14979,19 @@ const BOSS_DATA = {
         rewards: {
             gold: 5200000,
             exp: 3300000,
-            items: []
+            items: [
+                // ===== 麦克斯纳专属掉落（纳克萨玛斯）=====
+                { id: 'EQ_333', chance: 0.10 }, // 迈克斯纳之牙（攻强副手，带特效）
+                { id: 'EQ_334', chance: 0.10 }, // 怨灵之刃（法强主手，暴击/爆伤）
+                { id: 'EQ_335', chance: 0.10 }, // 遗忘之名（治疗法强项链）
+                { id: 'EQ_336', chance: 0.10 }, // 蜘蛛之吻（攻强饰品1）
+
+                // T3 手部
+                { id: 'EQ_337', chance: 0.10 }, // 无畏护手
+                { id: 'EQ_338', chance: 0.10 }, // 骨镰护手
+                { id: 'EQ_339', chance: 0.10 }, // 霜火手套
+                { id: 'EQ_340', chance: 0.10 }, // 信仰手套
+            ]
         }
     },
 

@@ -94,6 +94,9 @@ const BOSS_BONUS_CONFIG = {
     // ✅ 新增：60级世界首领 - 麦克斯纳
     maexxna: { name: '麦克斯纳', bonus: 0.30 },
 
+    // ✅ 新增：60级世界首领 - 帕奇维克
+    patchwerk: { name: '帕奇维克', bonus: 0.30 },
+
     // ✅ 新增：团队首领 - 奥妮克希亚
     onyxia: { name: '奥妮克希亚', bonus: 0.30 },
 
@@ -13885,6 +13888,19 @@ const WORLD_BOSSES = {
 
 
 
+
+    // ✅ 新增：60级世界首领 - 帕奇维克
+    patchwerk: {
+        id: 'patchwerk',
+        name: '帕奇维克',
+        icon: 'icons/wow/vanilla/boss/patchwerk.png', // 需要添加对应图标
+        hp: 50000000,
+        attack: 42000,
+        defense: 36000,
+        rewards: { gold: 5400000, exp: 3500000 },
+        unlockLevel: 60
+    },
+
 };
 
 // ==================== 团队首领（Raid Boss） ====================
@@ -14992,6 +15008,37 @@ const BOSS_DATA = {
                 { id: 'EQ_339', chance: 0.10 }, // 霜火手套
                 { id: 'EQ_340', chance: 0.10 }, // 信仰手套
             ]
+        }
+    },
+
+    // ✅ 新增：60级世界首领 - 帕奇维克
+    patchwerk: {
+        id: 'patchwerk',
+        name: '帕奇维克',
+        maxHp: 50000000,
+        attack: 42000,
+        defense: 36000,
+
+        // 技能循环：仇恨打击 → 软泥之箭 → 仇恨打击 → 激怒
+        cycle: ['hateful_strike', 'slime_arrow', 'hateful_strike', 'patchwerk_enrage'],
+
+        // 技能1：仇恨打击（坦克 10×物理伤害）
+        // 每次施放后，本场战斗【仇恨打击】伤害提高 +5%，可叠加
+        hatefulStrikeMultiplier: 10,
+        hatefulStrikeBonusPerCast: 0.05,
+
+        // 技能2：激怒（造成的物理伤害提高30%，持续4回合）
+        enragePhysicalDamageMult: 1.3,
+        enrageDuration: 4,
+
+        // 技能3：软泥之箭（随机目标 1.5×自然伤害，并使其急速/暴击=0，持续4回合）
+        slimeArrowMultiplier: 1.5,
+        slimeArrowDebuffDuration: 4,
+
+        rewards: {
+            gold: 5400000,
+            exp: 3500000,
+            items: []
         }
     },
 
@@ -16823,6 +16870,9 @@ function stepBossCombat(state) {
     const ragnarosSubmergeStart = Number(combat.bossBuffs.ragnarosSubmergeTurns || 0);
     const isRagnarosSubmergedThisRound = (combat.bossId === 'ragnaros' && ragnarosSubmergeStart > 0);
 
+    // 帕奇维克：激怒在本回合开始时的剩余回合数（用于回合末递减/刷新）
+    const patchwerkEnrageStart = Number(combat.bossBuffs.patchwerkEnrageTurns || 0);
+
     combat.round += 1;
     // ✅ 添加辅助函数，创建带回合数的日志对象
     const currentRound = combat.round;
@@ -17236,6 +17286,8 @@ function stepBossCombat(state) {
                             addLog(`位置${i + 1} ${p.char.name} 的【跑位】效果消失`);
                         } else if (key === 'shadowCurse') {
                             addLog(`位置${i + 1} ${p.char.name} 的【暗影诅咒】效果消失`);
+                        } else if (key === 'slimeArrow') {
+                            addLog(`位置${i + 1} ${p.char.name} 的【软泥之箭】效果消失`);
                         } else if (key === 'tongueCurse') {
                             addLog(`位置${i + 1} ${p.char.name} 的【结舌诅咒】效果消失`);
                         } else {
@@ -17878,8 +17930,8 @@ function stepBossCombat(state) {
             });
         }
 
-        // ==================== Boss Debuff：结舌诅咒（急速/暴击归零） ====================
-        if (p.debuffs?.tongueCurse?.duration > 0) {
+        // ==================== Boss Debuff：急速/暴击归零（结舌诅咒 / 软泥之箭） ====================
+        if (p.debuffs?.tongueCurse?.duration > 0 || p.debuffs?.slimeArrow?.duration > 0) {
             calcStats.haste = 0;
             calcStats.critRate = 0;
         }
@@ -22188,6 +22240,146 @@ function stepBossCombat(state) {
     }
 
 
+// ==================== 帕奇维克（世界首领）技能处理 ====================
+    else if (combat.bossId === 'patchwerk') {
+        combat.bossBuffs = combat.bossBuffs || {};
+
+        // 初始化战斗内计数器
+        if (!Number.isFinite(Number(combat.bossBuffs.patchwerkHatefulStacks))) {
+            combat.bossBuffs.patchwerkHatefulStacks = 0;
+        }
+        if (!Number.isFinite(Number(combat.bossBuffs.patchwerkEnrageTurns))) {
+            combat.bossBuffs.patchwerkEnrageTurns = 0;
+        }
+
+        const getEnrageTurns = () => Math.max(0, Math.floor(Number(combat.bossBuffs.patchwerkEnrageTurns || 0)));
+        const getPhysicalMult = () => {
+            const turns = getEnrageTurns();
+            if (turns <= 0) return 1;
+            const m = (typeof boss.enragePhysicalDamageMult === 'number' && Number.isFinite(boss.enragePhysicalDamageMult))
+                ? boss.enragePhysicalDamageMult
+                : 1.3;
+            return m;
+        };
+
+        const pickRandomAlivePlayerIndex = () => {
+            const alive = (combat.playerStates || [])
+                .map((ps, idx) => ({ ps, idx }))
+                .filter(o => (o.ps?.currentHp ?? 0) > 0)
+                .map(o => o.idx);
+
+            if (alive.length <= 0) return -1;
+            return alive[Math.floor(Math.random() * alive.length)];
+        };
+
+        // 技能1：仇恨打击（坦克 10×物理；每次施放后，本场战斗仇恨打击伤害 +5% 可叠加）
+        if (bossAction === 'hateful_strike') {
+            const tIdx = pickAlivePlayerIndex();
+            if (tIdx >= 0) {
+                const target = combat.playerStates[tIdx];
+
+                const stacks = Math.max(0, Math.floor(Number(combat.bossBuffs.patchwerkHatefulStacks || 0)));
+                const baseMult = (typeof boss.hatefulStrikeMultiplier === 'number' && Number.isFinite(boss.hatefulStrikeMultiplier))
+                    ? boss.hatefulStrikeMultiplier
+                    : 10;
+                const per = (typeof boss.hatefulStrikeBonusPerCast === 'number' && Number.isFinite(boss.hatefulStrikeBonusPerCast))
+                    ? boss.hatefulStrikeBonusPerCast
+                    : 0.05;
+
+                const hateMult = baseMult * (1 + stacks * per);
+                const physMult = getPhysicalMult();
+
+                const raw = Math.floor((boss.attack || 0) * hateMult * physMult);
+                const { damage, dr, blockedAmount } = calcMitigatedAndBlockedDamage(target, raw, true);
+
+                const shieldResult = applyShieldAbsorb(target, damage, logs, currentRound);
+                target.currentHp -= shieldResult.finalDamage;
+
+                const drPct = Math.round(dr * 100);
+                const blockText = blockedAmount > 0 ? `，格挡 ${blockedAmount}` : '';
+                const shieldText = shieldResult.absorbed > 0 ? `，护盾吸收 ${shieldResult.absorbed}` : '';
+                const enrageText = physMult > 1 ? `【激怒：+${Math.round((physMult - 1) * 100)}%物理】` : '';
+
+                addLog(`【${boss.name}】施放【仇恨打击】${enrageText}命中 坦克 位置${tIdx + 1} ${target.char.name}，造成 ${shieldResult.finalDamage} 点物理伤害（倍率×${hateMult.toFixed(2)}，护甲减伤${drPct}%${blockText}${shieldText}）`);
+
+                // 叠层：下次仇恨打击更疼
+                combat.bossBuffs.patchwerkHatefulStacks = stacks + 1;
+                const nextIncPct = Math.round((stacks + 1) * per * 100);
+                addLog(`→ 【仇恨打击】伤害提高 +${Math.round(per * 100)}%（当前${stacks + 1}层，总提升${nextIncPct}%）`, 'debuff');
+            } else {
+                addLog(`【${boss.name}】施放【仇恨打击】，但没有存活目标`);
+            }
+        }
+
+        // 技能3：软泥之箭（随机目标 1.5×自然伤害；急速/暴击降为0 持续4回合）
+        else if (bossAction === 'slime_arrow') {
+            const tIdx = pickRandomAlivePlayerIndex();
+            if (tIdx >= 0) {
+                const target = combat.playerStates[tIdx];
+
+                const mult = (typeof boss.slimeArrowMultiplier === 'number' && Number.isFinite(boss.slimeArrowMultiplier))
+                    ? boss.slimeArrowMultiplier
+                    : 1.5;
+                const raw = Math.max(1, Math.floor((boss.attack || 0) * mult));
+                const nat = calcMagicDamage(target, raw);
+
+                const shieldResult = applyShieldAbsorb(target, nat.damage, logs, currentRound);
+                target.currentHp -= shieldResult.finalDamage;
+
+                const resPct = Math.round(nat.resistReduction * 100);
+                const mrText = Number(nat.magicResist) < 0 ? `（魔抗 ${Math.floor(nat.magicResist)}）` : '';
+                const shieldText = shieldResult.absorbed > 0 ? `，护盾吸收 ${shieldResult.absorbed}` : '';
+
+                addLog(`【${boss.name}】施放【软泥之箭】命中 位置${tIdx + 1} ${target.char.name}，造成 ${shieldResult.finalDamage} 点自然伤害（魔抗减伤${resPct}%${mrText}${shieldText}）`);
+
+                if (target.currentHp > 0) {
+                    const dur = Math.max(1, Math.floor(Number(boss.slimeArrowDebuffDuration || 4)));
+                    target.debuffs = target.debuffs || {};
+                    target.debuffs.slimeArrow = { duration: dur, source: '软泥之箭' };
+                    addLog(`   ↳ 位置${tIdx + 1} ${target.char.name} 急速与暴击降为0（持续${dur}回合）`, 'debuff');
+                }
+            } else {
+                addLog(`【${boss.name}】施放【软泥之箭】，但没有存活目标`);
+            }
+        }
+
+        // 技能2：激怒（物理伤害 +30%，持续4回合）
+        else if (bossAction === 'patchwerk_enrage') {
+            const dur = Math.max(1, Math.floor(Number(boss.enrageDuration || 4)));
+            combat.bossBuffs.patchwerkEnrageTurns = dur;
+            // ✅ 标记：避免本回合刚刷新/刚施放就被回合末扣掉持续时间
+            combat.bossBuffs.patchwerkEnrageJustApplied = true;
+
+            const m = (typeof boss.enragePhysicalDamageMult === 'number' && Number.isFinite(boss.enragePhysicalDamageMult))
+                ? boss.enragePhysicalDamageMult
+                : 1.3;
+            addLog(`【${boss.name}】施放【激怒】：造成的物理伤害提高${Math.round((m - 1) * 100)}%，持续${dur}回合`, 'buff');
+        }
+
+        // 兜底：普通物理攻击（锁定坦克，受【激怒】影响）
+        else {
+            const tIdx = pickAlivePlayerIndex();
+            if (tIdx >= 0) {
+                const target = combat.playerStates[tIdx];
+                const physMult = getPhysicalMult();
+                const raw = Math.floor((boss.attack || 0) * physMult);
+                const { damage, dr, blockedAmount } = calcMitigatedAndBlockedDamage(target, raw, false);
+
+                const shieldResult = applyShieldAbsorb(target, damage, logs, currentRound);
+                target.currentHp -= shieldResult.finalDamage;
+
+                const drPct = Math.round(dr * 100);
+                const blockText = blockedAmount > 0 ? `，格挡 ${blockedAmount}` : '';
+                const shieldText = shieldResult.absorbed > 0 ? `，护盾吸收 ${shieldResult.absorbed}` : '';
+                const enrageText = physMult > 1 ? `【激怒】` : '';
+
+                addLog(`【${boss.name}】${enrageText}普通攻击命中 坦克 位置${tIdx + 1} ${target.char.name}，造成 ${shieldResult.finalDamage} 点物理伤害（护甲减伤${drPct}%${blockText}${shieldText}）`);
+            }
+        }
+    }
+
+
+
 // ==================== 火焰之王拉格纳罗斯（团队首领）技能处理 ====================
     // 机制：
     // - 火焰伤害：计算魔抗（calcMagicDamage）
@@ -24376,6 +24568,20 @@ function stepBossCombat(state) {
 
             if (next <= 0) {
                 addLog(`【${boss.name}】从岩浆中浮出，结束【下潜】！`, 'warning');
+            }
+        }
+    }
+
+    // ==================== 帕奇维克：激怒倒计时（回合末） ====================
+    // 说明：使用 patchwerkEnrageJustApplied 来避免“本回合刚刷新/刚施放”就被扣掉持续时间。
+    if (combat.bossId === 'patchwerk') {
+        if (combat.bossBuffs.patchwerkEnrageJustApplied) {
+            delete combat.bossBuffs.patchwerkEnrageJustApplied;
+        } else if (patchwerkEnrageStart > 0) {
+            const next = Math.max(0, Math.floor(Number(combat.bossBuffs.patchwerkEnrageTurns || 0)) - 1);
+            combat.bossBuffs.patchwerkEnrageTurns = next;
+            if (next <= 0 && patchwerkEnrageStart > 0) {
+                addLog(`【${boss.name}】的【激怒】结束`, 'warning');
             }
         }
     }
@@ -38035,6 +38241,11 @@ const BossPrepareModal = ({ state, dispatch }) => {
         summon_spiderlings: '召唤小蜘蛛',
         web_spray: '蛛网喷溅',
 
+        // ✅ 帕奇维克
+        hateful_strike: '仇恨打击',
+        slime_arrow: '软泥之箭',
+        patchwerk_enrage: '激怒',
+
     };
 
     const formatBossCycle = (boss) =>
@@ -39568,6 +39779,67 @@ const BossPrepareModal = ({ state, dispatch }) => {
                                   </>
                                 )}
 
+                                {/* 帕奇维克的技能 */}
+                                {bossId === 'patchwerk' && (
+                                  <>
+                                    <div style={{
+                                      padding: 10,
+                                      background: 'rgba(255,152,0,0.10)',
+                                      borderRadius: 6,
+                                      borderLeft: '3px solid #ff9800'
+                                    }}>
+                                      <div style={{ fontSize: 12, color: '#ffcc80', fontWeight: 600, marginBottom: 4 }}>
+                                        💢 技能1：仇恨打击
+                                      </div>
+                                      <div style={{ fontSize: 11, color: '#aaa', lineHeight: 1.5 }}>
+                                        对<span style={{ color: '#ff9800' }}>当前坦克</span>造成
+                                        <span style={{ color: '#ffd700' }}> Boss攻击×{boss.hatefulStrikeMultiplier ?? 10}</span> 的<span style={{ color: '#ffd700' }}>物理伤害</span>
+                                        <span style={{ color: '#888' }}>（护甲/格挡可减免）</span>
+                                        <br />
+                                        并使本场战斗【仇恨打击】伤害提高
+                                        <span style={{ color: '#ffd700' }}> +{Math.round(((boss.hatefulStrikeBonusPerCast ?? 0.05) * 100))}%</span>，可叠加
+                                      </div>
+                                    </div>
+
+                                    <div style={{
+                                      padding: 10,
+                                      background: 'rgba(244,67,54,0.10)',
+                                      borderRadius: 6,
+                                      borderLeft: '3px solid #f44336'
+                                    }}>
+                                      <div style={{ fontSize: 12, color: '#ff8a80', fontWeight: 600, marginBottom: 4 }}>
+                                        😡 技能2：激怒
+                                      </div>
+                                      <div style={{ fontSize: 11, color: '#aaa', lineHeight: 1.5 }}>
+                                        帕奇维克陷入狂怒，造成的<span style={{ color: '#ffd700' }}>物理伤害</span>提高
+                                        <span style={{ color: '#ffd700' }}> +{Math.round((((boss.enragePhysicalDamageMult ?? 1.3) - 1) * 100))}%</span>，持续
+                                        <span style={{ color: '#ffd700' }}> {boss.enrageDuration ?? 4}</span> 回合
+                                      </div>
+                                    </div>
+
+                                    <div style={{
+                                      padding: 10,
+                                      background: 'rgba(76,175,80,0.10)',
+                                      borderRadius: 6,
+                                      borderLeft: '3px solid #4caf50'
+                                    }}>
+                                      <div style={{ fontSize: 12, color: '#a5d6a7', fontWeight: 600, marginBottom: 4 }}>
+                                        🧪 技能3：软泥之箭
+                                      </div>
+                                      <div style={{ fontSize: 11, color: '#aaa', lineHeight: 1.5 }}>
+                                        对<span style={{ color: '#ff9800' }}>随机目标</span>造成
+                                        <span style={{ color: '#ffd700' }}> Boss攻击×{boss.slimeArrowMultiplier ?? 1.5}</span> 的<span style={{ color: '#a5d6a7' }}>自然伤害</span>（计算魔抗）
+                                        <br />
+                                        并使其<span style={{ color: '#ffd700' }}>急速与暴击</span>降为0，持续
+                                        <span style={{ color: '#ffd700' }}> {boss.slimeArrowDebuffDuration ?? 4}</span> 回合
+                                        <br />
+                                        技能循环：<span style={{ color: '#ffd700' }}>仇恨打击 → 软泥之箭 → 仇恨打击 → 激怒</span>
+                                      </div>
+                                    </div>
+                                  </>
+                                )}
+
+
                                 {/* 火焰之王拉格纳罗斯的技能 */}
                                 {bossId === 'ragnaros' && (
                                   <>
@@ -41032,6 +41304,20 @@ const BossCombatModal = ({ combat, state, dispatch }) => {
                                                         border: '1px solid rgba(33,150,243,0.26)'
                                                     }}>
                                                         🗣️ 结舌 ({p.debuffs.tongueCurse.duration}回合)
+                                                    </span>
+                                                )}
+
+                                                {/* 软泥之箭debuff */}
+                                                {p.debuffs?.slimeArrow && (
+                                                    <span style={{
+                                                        padding: '3px 8px',
+                                                        background: 'rgba(76,175,80,0.16)',
+                                                        borderRadius: 4,
+                                                        fontSize: 10,
+                                                        color: '#a5d6a7',
+                                                        border: '1px solid rgba(76,175,80,0.26)'
+                                                    }}>
+                                                        🧪 软泥 ({p.debuffs.slimeArrow.duration}回合)
                                                     </span>
                                                 )}
 

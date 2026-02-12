@@ -12015,7 +12015,7 @@ const FIXED_EQUIPMENTS = {
     EQ_326: {
       id: 'EQ_326',
       name: '衰落之眼',
-      icon: 'icons/wow/vanilla/items/shuailuozhiyan.png',
+      icon: 'icons/wow/vanilla/armor/shuailuozhiyan.png',
       type: 'equipment',
       slot: 'trinket1',
       rarity: 'purple',

@@ -91,6 +91,9 @@ const BOSS_BONUS_CONFIG = {
     // ✅ 新增：60级世界首领 - 塔迪乌斯
     thaddius: { name: '塔迪乌斯', bonus: 0.30 },
 
+    // ✅ 新增：60级世界首领 - 麦克斯纳
+    maexxna: { name: '麦克斯纳', bonus: 0.30 },
+
     // ✅ 新增：团队首领 - 奥妮克希亚
     onyxia: { name: '奥妮克希亚', bonus: 0.30 },
 
@@ -11999,7 +12002,7 @@ const FIXED_EQUIPMENTS = {
     EQ_325: {
       id: 'EQ_325',
       name: '埃提耶什碎片',
-      icon: 'icons/wow/vanilla/weapons/aitiyeshisuipian.png',
+      icon: 'icons/wow/vanilla/weapons/INV_Staff_21.png',
       type: 'equipment',
       slot: 'mainHand',
       rarity: 'orange',
@@ -12015,7 +12018,7 @@ const FIXED_EQUIPMENTS = {
     EQ_326: {
       id: 'EQ_326',
       name: '衰落之眼',
-      icon: 'icons/wow/vanilla/armor/shuailuozhiyan.png',
+      icon: 'icons/wow/vanilla/items/shuailuozhiyan.png',
       type: 'equipment',
       slot: 'trinket1',
       rarity: 'purple',
@@ -13620,6 +13623,18 @@ const WORLD_BOSSES = {
         unlockLevel: 60
     },
 
+    // ✅ 新增：60级世界首领 - 麦克斯纳
+    maexxna: {
+        id: 'maexxna',
+        name: '麦克斯纳',
+        icon: 'icons/wow/vanilla/boss/maexxna.png', // 需要添加对应图标
+        hp: 50000000,
+        attack: 40000,
+        defense: 36000,
+        rewards: { gold: 5200000, exp: 3300000 },
+        unlockLevel: 60
+    },
+
 
 
 };
@@ -14673,6 +14688,50 @@ const BOSS_DATA = {
                 { id: 'EQ_331', chance: 0.10 }, // 霜火头饰
                 { id: 'EQ_332', chance: 0.10 }, // 信仰头环
             ]
+        }
+    },
+
+    // ✅ 新增：60级世界首领 - 麦克斯纳
+    maexxna: {
+        id: 'maexxna',
+        name: '麦克斯纳',
+        maxHp: 50000000,
+        attack: 40000,
+        defense: 36000,
+
+        // 技能循环：蛛网裹体 → 剧毒震击 → 召唤小蜘蛛 → 蛛网喷溅
+        cycle: ['web_wrap', 'venom_shock', 'summon_spiderlings', 'web_spray'],
+
+        // 技能1：蛛网裹体
+        // 对除坦克外的随机目标释放裹网（4000000血量）。
+        // 目标每回合行动时若裹网未被消灭：无法行动，并受到 2.5×Boss攻击 的自然伤害。
+        webWrapHp: 4000000,
+        webWrapDamageMultiplier: 2.5,
+
+        // 技能2：剧毒震击
+        // 对当前坦克造成 12×Boss攻击 的物理伤害（可被格挡/护甲减免），
+        // 并对所有角色造成一次等同于“坦克实际承伤”的自然伤害（各自计算魔抗）。
+        venomShockPhysicalMultiplier: 12,
+
+        // 技能3：召唤小蜘蛛
+        // 召唤4只小蜘蛛（2000000血量），每回合对坦克造成 1×Boss攻击 的物理伤害，
+        // 并使坦克受到的治疗降低1%（可叠加，持续3回合；持续时间刷新到3回合）。
+        spiderlingCount: 4,
+        spiderlingHp: 2000000,
+        spiderlingAttackMultiplier: 1,
+        spiderlingHealReductionPerHit: 0.01,
+        spiderlingHealReductionDuration: 3,
+        spiderlingDuration: 3,
+
+        // 技能4：蛛网喷溅
+        // 对所有角色造成 2×Boss攻击 的自然伤害，并昏迷1回合。
+        webSprayMultiplier: 2,
+        webSprayStunDuration: 1,
+
+        rewards: {
+            gold: 5200000,
+            exp: 3300000,
+            items: []
         }
     },
 
@@ -17180,6 +17239,47 @@ function stepBossCombat(state) {
             });
         }
 
+        // ==================== 麦克斯纳：蛛网裹体（裹网存在则跳过行动并受伤） ====================
+        // 说明：当角色回合开始时，若其身上存在 webWrap 且对应裹网仍存活，则：
+        // - 本回合无法行动（技能轮转仍然前进）
+        // - 受到 2.5×Boss攻击 的自然伤害（计算魔抗/护盾）
+        // 若裹网已被击破，则移除该 debuff，恢复行动。
+        if (p.debuffs?.webWrap) {
+            const wrap = p.debuffs.webWrap;
+            const wrapId = wrap?.minionId;
+            const wrapMinion = (combat.minions || []).find(mm => mm && mm.id === wrapId && (mm.hp ?? 0) > 0);
+
+            if (combat.bossId === 'maexxna' && wrapMinion) {
+                // 推进技能轮转（表示这一回合被浪费）
+                if (Array.isArray(p.validSkills) && p.validSkills.length > 0) {
+                    p.skillIndex = (p.skillIndex || 0) + 1;
+                }
+
+                const mult = (typeof boss.webWrapDamageMultiplier === 'number' && Number.isFinite(boss.webWrapDamageMultiplier))
+                    ? boss.webWrapDamageMultiplier
+                    : 2.5;
+                const raw = Math.max(1, Math.floor((boss.attack || 0) * mult));
+
+                const nat = calcMagicDamage(p, raw);
+                const shieldResult = applyShieldAbsorb(p, nat.damage, logs, currentRound);
+                p.currentHp -= shieldResult.finalDamage;
+
+                const resPct = Math.round(nat.resistReduction * 100);
+                const mrText = Number(nat.magicResist) < 0 ? `（魔抗 ${Math.floor(nat.magicResist)}）` : '';
+                const shieldText = shieldResult.absorbed > 0 ? `，护盾吸收 ${shieldResult.absorbed}` : '';
+                addLog(`位置${i + 1} ${p.char.name} 被【蛛网裹体】束缚无法行动，并受到 ${shieldResult.finalDamage} 点自然伤害（魔抗减伤${resPct}%${mrText}${shieldText}）`, 'debuff');
+
+                tickPlayerDurations(p, i);
+                continue;
+            }
+
+            // 裹网已被清除（或不在麦克斯纳战斗中）
+            if (combat.bossId === 'maexxna') {
+                addLog(`位置${i + 1} ${p.char.name} 的【蛛网裹体】已解除，恢复行动`, 'buff');
+            }
+            if (p.debuffs) delete p.debuffs.webWrap;
+        }
+
         // ==================== 恐惧：跳过本回合行动 ====================
         // 说明：每次 stepBossCombat 视为“1回合”，恐惧期间该角色不释放技能；
         // 但仍然会消耗本回合（技能轮转继续前进），并正常结算 buff/debuff 持续时间。
@@ -17584,7 +17684,20 @@ function stepBossCombat(state) {
             .filter(m => m.hp > 0 && !m.immune);
 
         if (((isRagnarosSubmergedThisRound && attackableMinions.length > 0) || (!combat.strategy.priorityBoss && attackableMinions.length > 0))) {
-            attackableMinions.sort((a, b) => a.hp - b.hp);
+            // ✅ 麦克斯纳：若需要打小弟，则优先击破【裹网】（否则可能导致队友无法行动）
+            if (combat.bossId === 'maexxna') {
+                attackableMinions.sort((a, b) => {
+                    const ma = combat.minions?.[a.idx];
+                    const mb = combat.minions?.[b.idx];
+                    const pa = ma?.isMaexxnaWebWrap ? 0 : 1;
+                    const pb = mb?.isMaexxnaWebWrap ? 0 : 1;
+                    if (pa !== pb) return pa - pb;
+                    return a.hp - b.hp;
+                });
+            } else {
+                attackableMinions.sort((a, b) => a.hp - b.hp);
+            }
+
             targetIndex = attackableMinions[0].idx;
             targetType = 'minion';
         }
@@ -21612,6 +21725,208 @@ function stepBossCombat(state) {
     }
 
 
+    // ==================== 麦克斯纳（世界首领）技能处理 ====================
+    // 机制：
+    // - 技能循环：蛛网裹体 → 剧毒震击 → 召唤小蜘蛛 → 蛛网喷溅
+    // - 蛛网裹体：随机非坦克目标获得【蛛网裹体】并生成可被击破的裹网（4,000,000生命）；
+    //   目标回合开始时若裹网仍存活，则无法行动并受到 2.5×Boss攻击 的自然伤害
+    // - 剧毒震击：坦克受到 12×Boss攻击 的物理伤害（护甲/格挡/护盾生效）；然后全队受到等同于“坦克实际承伤”的自然伤害（各自魔抗计算）
+    // - 召唤小蜘蛛：召唤4只小蜘蛛（2,000,000生命，持续3回合），每回合攻击坦克造成 1×Boss攻击 物理伤害，并使坦克受到治疗降低1%（可叠加，持续3回合，持续时间刷新）
+    // - 蛛网喷溅：全体受到 2×Boss攻击 的自然伤害，并昏迷1回合
+    else if (combat.bossId === 'maexxna') {
+        combat.bossBuffs = combat.bossBuffs || {};
+        combat.minions = Array.isArray(combat.minions) ? combat.minions : [];
+
+        if (!Number.isFinite(Number(combat.bossBuffs.maexxnaWebSerial))) combat.bossBuffs.maexxnaWebSerial = 0;
+        if (!Number.isFinite(Number(combat.bossBuffs.maexxnaSpiderSerial))) combat.bossBuffs.maexxnaSpiderSerial = 0;
+
+        const pickRandomAliveNonTankIndex = (preferNotWrapped = true) => {
+            const tankIdx = pickAlivePlayerIndex();
+            const list = combat.playerStates
+                .map((ps, idx) => ({ ps, idx }))
+                .filter(o => (o.ps?.currentHp ?? 0) > 0 && o.idx !== tankIdx);
+
+            const filtered = preferNotWrapped
+                ? list.filter(o => !o.ps?.debuffs?.webWrap)
+                : list;
+
+            const pool = (filtered.length > 0 ? filtered : list).map(o => o.idx);
+            if (pool.length === 0) return -1;
+            return pool[Math.floor(Math.random() * pool.length)];
+        };
+
+        const dealNatureDamageToPlayer = (tIdx, rawDamage, prefixText = '') => {
+            const target = combat.playerStates[tIdx];
+            if (!target || target.currentHp <= 0) return;
+
+            const nature = calcMagicDamage(target, rawDamage);
+            const shieldResult = applyShieldAbsorb(target, nature.damage, logs, currentRound);
+            target.currentHp -= shieldResult.finalDamage;
+
+            const resPct = Math.round(nature.resistReduction * 100);
+            const mrText = Number(nature.magicResist) < 0 ? `（魔抗 ${Math.floor(nature.magicResist)}）` : '';
+            const shieldText = shieldResult.absorbed > 0 ? `，护盾吸收 ${shieldResult.absorbed}` : '';
+            addLog(`${prefixText}位置${tIdx + 1} ${target.char.name} 受到 ${shieldResult.finalDamage} 点自然伤害（魔抗减伤${resPct}%${mrText}${shieldText}）`);
+        };
+
+        // 技能1：蛛网裹体
+        if (bossAction === 'web_wrap') {
+            const tIdx = pickRandomAliveNonTankIndex(true);
+            if (tIdx < 0) {
+                addLog(`【${boss.name}】施放【蛛网裹体】，但没有存活的非坦克目标。`, 'warning');
+            } else {
+                const target = combat.playerStates[tIdx];
+                const wrapHp = Math.max(1, Math.floor(Number(boss.webWrapHp || 4000000)));
+
+                target.debuffs = target.debuffs || {};
+
+                // 如果目标已被裹体且裹网仍存活，则刷新裹网血量
+                let existingWrapMinion = null;
+                if (target.debuffs.webWrap?.minionId) {
+                    existingWrapMinion = (combat.minions || []).find(mm => mm && mm.isMaexxnaWebWrap && mm.id === target.debuffs.webWrap.minionId && (mm.hp ?? 0) > 0);
+                }
+
+                if (existingWrapMinion) {
+                    existingWrapMinion.hp = wrapHp;
+                    existingWrapMinion.maxHp = wrapHp;
+                    addLog(`【${boss.name}】再次施放【蛛网裹体】！刷新 位置${tIdx + 1} ${target.char.name} 的裹网生命值至 ${wrapHp.toLocaleString()}`, 'debuff');
+                } else {
+                    const serial = ++combat.bossBuffs.maexxnaWebSerial;
+                    const id = `maexxna_web_${currentRound}_${serial}_${Math.random().toString(16).slice(2, 8)}`;
+                    const displayName = `裹网${serial}（${target.char.name}）`;
+
+                    combat.minions.push({
+                        id,
+                        hp: wrapHp,
+                        maxHp: wrapHp,
+                        attack: 0,
+                        defense: 0,
+                        immune: false,
+                        dots: [],
+                        isMaexxnaWebWrap: true,
+                        webWrapTargetIndex: tIdx,
+                        displayName,
+                    });
+
+                    target.debuffs.webWrap = { minionId: id, source: '蛛网裹体' };
+                    addLog(`【${boss.name}】施放【蛛网裹体】！位置${tIdx + 1} ${target.char.name} 被裹网束缚（裹网生命值 ${wrapHp.toLocaleString()}）`, 'debuff');
+                }
+            }
+        }
+
+        // 技能2：剧毒震击
+        else if (bossAction === 'venom_shock') {
+            const tankIdx = pickAlivePlayerIndex();
+            if (tankIdx < 0) {
+                addLog(`【${boss.name}】施放【剧毒震击】，但没有存活坦克目标。`, 'warning');
+            } else {
+                const tank = combat.playerStates[tankIdx];
+                const mult = (typeof boss.venomShockPhysicalMultiplier === 'number' && Number.isFinite(boss.venomShockPhysicalMultiplier))
+                    ? boss.venomShockPhysicalMultiplier
+                    : 12;
+                const rawPhysical = Math.max(1, Math.floor((boss.attack || 0) * mult));
+                const hpBefore = Math.max(0, Math.floor(tank.currentHp || 0));
+
+                addLog(`【${boss.name}】施放【剧毒震击】！`, 'warning');
+
+                const { damage, dr, blockedAmount } = calcMitigatedAndBlockedDamage(tank, rawPhysical, true);
+                const shieldResult = applyShieldAbsorb(tank, damage, logs, currentRound);
+                tank.currentHp -= shieldResult.finalDamage;
+
+                const actualTaken = Math.max(0, Math.min(hpBefore, shieldResult.finalDamage));
+
+                const drPct = Math.round(dr * 100);
+                const blockText = blockedAmount > 0 ? `，格挡 ${blockedAmount}` : '';
+                const shieldText = shieldResult.absorbed > 0 ? `，护盾吸收 ${shieldResult.absorbed}` : '';
+                addLog(`→ 坦克 位置${tankIdx + 1} ${tank.char.name} 受到 ${shieldResult.finalDamage} 点物理伤害（护甲减伤${drPct}%${blockText}${shieldText}）`);
+
+                if (actualTaken > 0) {
+                    addLog(`→ 溅射：以坦克实际承伤 ${actualTaken} 为基准，对全体造成自然伤害（各自计算魔抗）`, 'warning');
+                    combat.playerStates.forEach((ps, pIdx) => {
+                        if (!ps || ps.currentHp <= 0) return;
+                        dealNatureDamageToPlayer(pIdx, actualTaken, `   ↳ `);
+                    });
+                } else {
+                    addLog(`→ 溅射：坦克未产生实际承伤，本次不造成自然溅射伤害`, 'buff');
+                }
+            }
+        }
+
+        // 技能3：召唤小蜘蛛
+        else if (bossAction === 'summon_spiderlings') {
+            const count = Math.max(1, Math.floor(Number(boss.spiderlingCount || 4)));
+            const hp = Math.max(1, Math.floor(Number(boss.spiderlingHp || 2000000)));
+            const dur = Math.max(1, Math.floor(Number(boss.spiderlingDuration || 3)));
+
+            addLog(`【${boss.name}】施放【召唤小蜘蛛】！召唤 ${count} 只小蜘蛛（持续${dur}回合）`, 'warning');
+
+            for (let k = 0; k < count; k++) {
+                const serial = ++combat.bossBuffs.maexxnaSpiderSerial;
+                const id = `maexxna_spider_${currentRound}_${serial}_${Math.random().toString(16).slice(2, 8)}`;
+                combat.minions.push({
+                    id,
+                    hp,
+                    maxHp: hp,
+                    attack: Number(boss.attack) || 0,
+                    defense: 0,
+                    immune: false,
+                    dots: [],
+                    isMaexxnaSpiderling: true,
+                    displayName: `小蜘蛛${serial}`,
+                    maexxnaTurnsLeft: dur,
+                });
+            }
+        }
+
+        // 技能4：蛛网喷溅
+        else if (bossAction === 'web_spray') {
+            const mult = (typeof boss.webSprayMultiplier === 'number' && Number.isFinite(boss.webSprayMultiplier))
+                ? boss.webSprayMultiplier
+                : 2;
+            const raw = Math.max(1, Math.floor((boss.attack || 0) * mult));
+            const stunDur = Math.max(1, Math.floor(Number(boss.webSprayStunDuration || 1)));
+
+            addLog(`【${boss.name}】施放【蛛网喷溅】！全体昏迷 ${stunDur} 回合`, 'warning');
+
+            combat.playerStates.forEach((ps, pIdx) => {
+                if (!ps || ps.currentHp <= 0) return;
+
+                const nature = calcMagicDamage(ps, raw);
+                const shieldResult = applyShieldAbsorb(ps, nature.damage, logs, currentRound);
+                ps.currentHp -= shieldResult.finalDamage;
+
+                const resPct = Math.round(nature.resistReduction * 100);
+                const mrText = Number(nature.magicResist) < 0 ? `（魔抗 ${Math.floor(nature.magicResist)}）` : '';
+                const shieldText = shieldResult.absorbed > 0 ? `，护盾吸收 ${shieldResult.absorbed}` : '';
+                addLog(`→ 位置${pIdx + 1} ${ps.char.name} 受到 ${shieldResult.finalDamage} 点自然伤害（魔抗减伤${resPct}%${mrText}${shieldText}）`);
+
+                if (ps.currentHp > 0) {
+                    ps.debuffs = ps.debuffs || {};
+                    ps.debuffs.stun = { duration: stunDur, source: '蛛网喷溅' };
+                    addLog(`   ↳ 位置${pIdx + 1} ${ps.char.name} 昏迷 ${stunDur} 回合`, 'debuff');
+                }
+            });
+        }
+
+        // 兜底：普通物理攻击（锁定坦克）
+        else {
+            const tIdx = pickAlivePlayerIndex();
+            if (tIdx >= 0) {
+                const target = combat.playerStates[tIdx];
+                const raw = Math.floor(boss.attack || 0);
+                const { damage, dr, blockedAmount } = calcMitigatedAndBlockedDamage(target, raw, false);
+
+                const shieldResult = applyShieldAbsorb(target, damage, logs, currentRound);
+                target.currentHp -= shieldResult.finalDamage;
+
+                const drPct = Math.round(dr * 100);
+                const blockText = blockedAmount > 0 ? `，格挡 ${blockedAmount}` : '';
+                const shieldText = shieldResult.absorbed > 0 ? `，护盾吸收 ${shieldResult.absorbed}` : '';
+                addLog(`【${boss.name}】普通攻击命中 坦克 位置${tIdx + 1} ${target.char.name}，造成 ${shieldResult.finalDamage} 点物理伤害（护甲减伤${drPct}%${blockText}${shieldText}）`);
+            }
+        }
+    }
+
 
 // ==================== 火焰之王拉格纳罗斯（团队首领）技能处理 ====================
     // 机制：
@@ -23034,6 +23349,48 @@ function stepBossCombat(state) {
             continue;
         }
 
+        // 麦克斯纳：裹网不进行攻击行动
+        if (combat.bossId === 'maexxna' && m.isMaexxnaWebWrap) {
+            continue;
+        }
+
+        // 麦克斯纳：小蜘蛛每回合攻击坦克，并叠加减疗（持续时间刷新）
+        if (combat.bossId === 'maexxna' && m.isMaexxnaSpiderling) {
+            const tankIdx = pickAlivePlayerIndex();
+            if (tankIdx >= 0) {
+                const tank = combat.playerStates[tankIdx];
+                const mult = (typeof boss.spiderlingAttackMultiplier === 'number' && Number.isFinite(boss.spiderlingAttackMultiplier))
+                    ? boss.spiderlingAttackMultiplier
+                    : 1;
+                const raw = Math.max(1, Math.floor((boss.attack || 0) * mult));
+
+                const { damage, dr, blockedAmount } = calcMitigatedAndBlockedDamage(tank, raw, false);
+                const shieldResult = applyShieldAbsorb(tank, damage, logs, currentRound);
+                tank.currentHp -= shieldResult.finalDamage;
+
+                const drPct = Math.round(dr * 100);
+                const blockText = blockedAmount > 0 ? `，格挡 ${blockedAmount}` : '';
+                const shieldText = shieldResult.absorbed > 0 ? `，护盾吸收 ${shieldResult.absorbed}` : '';
+                addLog(`【${m.displayName || '小蜘蛛'}】撕咬坦克 位置${tankIdx + 1} ${tank.char.name}，造成 ${shieldResult.finalDamage} 点物理伤害（护甲减伤${drPct}%${blockText}${shieldText}）`);
+
+                // 叠加减疗（1%/次，可叠加，持续3回合；持续时间刷新到3回合）
+                if (tank.currentHp > 0) {
+                    const perHit = (typeof boss.spiderlingHealReductionPerHit === 'number' && Number.isFinite(boss.spiderlingHealReductionPerHit))
+                        ? boss.spiderlingHealReductionPerHit
+                        : 0.01;
+                    const dur = Math.max(1, Math.floor(Number(boss.spiderlingHealReductionDuration || 3)));
+
+                    tank.debuffs = tank.debuffs || {};
+                    const prev = Number(tank.debuffs.mortalStrike?.healingReduction) || 0;
+                    const next = prev + perHit;
+                    tank.debuffs.mortalStrike = { healingReduction: next, duration: dur, source: '小蜘蛛' };
+
+                    addLog(`   ↳ 坦克受到【蛛毒】影响：受到治疗降低 +${Math.round(perHit * 100)}%（当前${Math.round(next * 100)}%），持续${dur}回合（刷新）`, 'debuff');
+                }
+            }
+            continue;
+        }
+
         // 范克里夫的火炮手：对全队造成AOE伤害
         if (combat.bossId === 'vancleef' && m.isCannoneer) {
             const baseAoeDamage = Math.floor((boss.attack || 0) * (boss.minion.aoeDamageMultiplier || 0.5));
@@ -23504,6 +23861,44 @@ function stepBossCombat(state) {
             const blockText = blockedAmount > 0 ? `，格挡 ${blockedAmount}` : '';
             const shieldText = shieldResult.absorbed > 0 ? `，护盾吸收 ${shieldResult.absorbed}` : '';
             addLog(`【${boss.minion.name}${i + 1}】攻击 位置${tIdx + 1} ${target.char.name}，造成 ${shieldResult.finalDamage} 点伤害（护甲减伤${drPct}%${blockText}${shieldText}）`);
+        }
+    }
+
+    // ==================== 麦克斯纳：小蜘蛛持续时间 / 裹网清理（回合末） ====================
+    // 说明：
+    // - 小蜘蛛：持续3回合（在每回合“小弟行动”完成后扣减一次剩余回合数，归0则消散）
+    // - 裹网：若其绑定的目标已死亡，则裹网同步消失，避免被错误选为目标
+    if (combat.bossId === 'maexxna') {
+        let expiredSpiderlings = 0;
+
+        (combat.minions || []).forEach(m => {
+            if (!m || (m.hp ?? 0) <= 0) return;
+
+            // 小蜘蛛持续时间
+            if (m.isMaexxnaSpiderling) {
+                const left = Number(m.maexxnaTurnsLeft) || 0;
+                if (left > 0) {
+                    const next = left - 1;
+                    m.maexxnaTurnsLeft = next;
+                    if (next <= 0) {
+                        m.hp = 0;
+                        expiredSpiderlings += 1;
+                    }
+                }
+            }
+
+            // 裹网目标死亡清理
+            if (m.isMaexxnaWebWrap) {
+                const tIdx = Number(m.webWrapTargetIndex);
+                const target = combat.playerStates?.[tIdx];
+                if (!target || (target.currentHp ?? 0) <= 0) {
+                    m.hp = 0;
+                }
+            }
+        });
+
+        if (expiredSpiderlings > 0) {
+            addLog(`→ 有 ${expiredSpiderlings} 只【小蜘蛛】在持续时间结束后消散`, 'warning');
         }
     }
 
@@ -37374,6 +37769,12 @@ const BossPrepareModal = ({ state, dispatch }) => {
         lightning_chain: '闪电链',
         ball_lightning: '球状闪电',
 
+        // ✅ 麦克斯纳
+        web_wrap: '蛛网裹体',
+        venom_shock: '剧毒震击',
+        summon_spiderlings: '召唤小蜘蛛',
+        web_spray: '蛛网喷溅',
+
     };
 
     const formatBossCycle = (boss) =>
@@ -38818,6 +39219,90 @@ const BossPrepareModal = ({ state, dispatch }) => {
                                         <span style={{ color: '#a5d6a7' }}>自然法术伤害</span>（计算魔抗）
                                         <br />
                                         技能循环：<span style={{ color: '#ffd700' }}>极性转换 → 连锁闪电 → 闪电链 → 球状闪电</span>
+                                      </div>
+                                    </div>
+                                  </>
+                                )}
+
+                                {/* 麦克斯纳的技能 */}
+                                {bossId === 'maexxna' && (
+                                  <>
+                                    <div style={{
+                                      padding: 10,
+                                      background: 'rgba(63,81,181,0.10)',
+                                      borderRadius: 6,
+                                      borderLeft: '3px solid #3f51b5'
+                                    }}>
+                                      <div style={{ fontSize: 12, color: '#c5cae9', fontWeight: 600, marginBottom: 4 }}>
+                                        🕸️ 技能1：蛛网裹体
+                                      </div>
+                                      <div style={{ fontSize: 11, color: '#aaa', lineHeight: 1.5 }}>
+                                        对<span style={{ color: '#ff9800' }}>除坦克外</span>的随机目标释放裹网（裹网生命值
+                                        <span style={{ color: '#ffd700' }}> {Number(boss.webWrapHp || 4000000).toLocaleString()}</span>）
+                                        <br />
+                                        目标每回合行动时若裹网未被消灭：<span style={{ color: '#ffd700' }}>无法行动</span>，并受到
+                                        <span style={{ color: '#ffd700' }}> Boss攻击×{boss.webWrapDamageMultiplier ?? 2.5}</span> 的<span style={{ color: '#81c784' }}>自然伤害</span>（计算魔抗）
+                                      </div>
+                                    </div>
+
+                                    <div style={{
+                                      padding: 10,
+                                      background: 'rgba(244,67,54,0.10)',
+                                      borderRadius: 6,
+                                      borderLeft: '3px solid #f44336'
+                                    }}>
+                                      <div style={{ fontSize: 12, color: '#ff8a80', fontWeight: 600, marginBottom: 4 }}>
+                                        ☠️ 技能2：剧毒震击
+                                      </div>
+                                      <div style={{ fontSize: 11, color: '#aaa', lineHeight: 1.5 }}>
+                                        对<span style={{ color: '#ff9800' }}>当前坦克</span>造成
+                                        <span style={{ color: '#ffd700' }}> Boss攻击×{boss.venomShockPhysicalMultiplier ?? 12}</span> 的<span style={{ color: '#ffd700' }}>物理伤害</span>
+                                        <span style={{ color: '#888' }}>（护甲/格挡可减免）</span>
+                                        <br />
+                                        并对<span style={{ color: '#ff9800' }}>所有角色</span>造成一次等同于<span style={{ color: '#ffd700' }}>“坦克实际承伤”</span>的
+                                        <span style={{ color: '#81c784' }}>自然伤害</span>（各自计算魔抗）
+                                      </div>
+                                    </div>
+
+                                    <div style={{
+                                      padding: 10,
+                                      background: 'rgba(76,175,80,0.10)',
+                                      borderRadius: 6,
+                                      borderLeft: '3px solid #4caf50'
+                                    }}>
+                                      <div style={{ fontSize: 12, color: '#a5d6a7', fontWeight: 600, marginBottom: 4 }}>
+                                        🕷️ 技能3：召唤小蜘蛛
+                                      </div>
+                                      <div style={{ fontSize: 11, color: '#aaa', lineHeight: 1.5 }}>
+                                        召唤 <span style={{ color: '#ffd700' }}>{boss.spiderlingCount ?? 4}</span> 只小蜘蛛（每只生命值
+                                        <span style={{ color: '#ffd700' }}> {Number(boss.spiderlingHp || 2000000).toLocaleString()}</span>），持续
+                                        <span style={{ color: '#ffd700' }}> {boss.spiderlingDuration ?? 3}</span> 回合
+                                        <br />
+                                        小蜘蛛每回合对<span style={{ color: '#ff9800' }}>坦克</span>造成
+                                        <span style={{ color: '#ffd700' }}> Boss攻击×{boss.spiderlingAttackMultiplier ?? 1}</span> 的<span style={{ color: '#ffd700' }}>物理伤害</span>
+                                        <br />
+                                        并使坦克受到治疗降低
+                                        <span style={{ color: '#ffd700' }}> +{Math.round(((boss.spiderlingHealReductionPerHit ?? 0.01) * 100))}%</span>（可叠加，持续
+                                        <span style={{ color: '#ffd700' }}> {boss.spiderlingHealReductionDuration ?? 3}</span> 回合，持续时间刷新）
+                                      </div>
+                                    </div>
+
+                                    <div style={{
+                                      padding: 10,
+                                      background: 'rgba(33,150,243,0.10)',
+                                      borderRadius: 6,
+                                      borderLeft: '3px solid #2196F3'
+                                    }}>
+                                      <div style={{ fontSize: 12, color: '#90caf9', fontWeight: 600, marginBottom: 4 }}>
+                                        🌫️ 技能4：蛛网喷溅
+                                      </div>
+                                      <div style={{ fontSize: 11, color: '#aaa', lineHeight: 1.5 }}>
+                                        对<span style={{ color: '#ff9800' }}>所有角色</span>造成
+                                        <span style={{ color: '#ffd700' }}> Boss攻击×{boss.webSprayMultiplier ?? 2}</span> 的<span style={{ color: '#81c784' }}>自然伤害</span>（计算魔抗）
+                                        <br />
+                                        并使其<span style={{ color: '#ffd700' }}>昏迷 {boss.webSprayStunDuration ?? 1}</span> 回合，无法行动
+                                        <br />
+                                        技能循环：<span style={{ color: '#ffd700' }}>蛛网裹体 → 剧毒震击 → 召唤小蜘蛛 → 蛛网喷溅</span>
                                       </div>
                                     </div>
                                   </>

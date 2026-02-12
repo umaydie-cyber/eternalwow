@@ -11999,7 +11999,7 @@ const FIXED_EQUIPMENTS = {
     EQ_325: {
       id: 'EQ_325',
       name: '埃提耶什碎片',
-      icon: 'icons/wow/vanilla/weapons/INV_Staff_21.png',
+      icon: 'icons/wow/vanilla/weapons/aitiyeshisuipian.png',
       type: 'equipment',
       slot: 'mainHand',
       rarity: 'orange',

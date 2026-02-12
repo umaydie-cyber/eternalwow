@@ -97,6 +97,9 @@ const BOSS_BONUS_CONFIG = {
     // ✅ 新增：60级世界首领 - 帕奇维克
     patchwerk: { name: '帕奇维克', bonus: 0.30 },
 
+    // ✅ 新增：60级世界首领 - 洛欧塞布
+    loatheb: { name: '洛欧塞布', bonus: 0.30 },
+
     // ✅ 新增：团队首领 - 奥妮克希亚
     onyxia: { name: '奥妮克希亚', bonus: 0.30 },
 
@@ -14116,6 +14119,18 @@ const WORLD_BOSSES = {
         unlockLevel: 60
     },
 
+    // ✅ 新增：60级世界首领 - 洛欧塞布
+    loatheb: {
+        id: 'loatheb',
+        name: '洛欧塞布',
+        icon: 'icons/wow/vanilla/boss/loatheb.png', // 预留：自行补图标
+        hp: 70000000,
+        attack: 42000,
+        defense: 36000,
+        rewards: { gold: 5800000, exp: 3800000 },
+        unlockLevel: 60
+    },
+
 };
 
 // ==================== 团队首领（Raid Boss） ====================
@@ -15264,6 +15279,52 @@ const BOSS_DATA = {
                 { id: 'EQ_345', chance: 0.10 }, // 骨镰肩铠
                 { id: 'EQ_346', chance: 0.10 }, // 霜火肩垫
                 { id: 'EQ_347', chance: 0.10 }, // 信仰肩垫
+            ]
+        }
+    },
+
+    // ✅ 新增：60级世界首领 - 洛欧塞布
+    loatheb: {
+        id: 'loatheb',
+        name: '洛欧塞布',
+        maxHp: 70000000,
+        attack: 42000,
+        defense: 36000,
+
+        // 技能1（被动）：剧毒光环（每回合对全体造成 1×Boss攻击 的自然伤害，持续到战斗结束）
+        poisonAuraMultiplier: 1,
+
+        // 技能2：召唤孢子
+        // - 召唤 1 个孢子（基础 400万血量；每次召唤额外 +100万血量）
+        // - 若召唤前场上已有存活孢子：召唤时对全体造成（存活孢子数量 × 2×Boss攻击）的自然伤害
+        // - 孢子死亡：全体获得 暴击率+50% / 暴击伤害+80%，持续4回合
+        sporeBaseHp: 4000000,
+        sporeHpIncreasePerSummon: 1000000,
+        sporeSummonAoEMultiplierPerAliveSpore: 2,
+        sporeBuffCritRateBonus: 50,
+        sporeBuffCritDamageBonus: 0.8,
+        sporeBuffDuration: 4,
+
+        // 技能3：必然的厄运（暗影DOT：0.5×/回合，持续3回合；结束爆发3×；结束后本技能伤害+20%持续到战斗结束）
+        doomDotMultiplier: 0.5,
+        doomDuration: 3,
+        doomExpireMultiplier: 3,
+        doomIncreasePerExpire: 0.2,
+
+        // 技能4：死亡之花（自然DOT：0.5×/回合，持续3回合；结束爆发3×；结束后本技能伤害+20%持续到战斗结束）
+        deathFlowerDotMultiplier: 0.5,
+        deathFlowerDuration: 3,
+        deathFlowerExpireMultiplier: 3,
+        deathFlowerIncreasePerExpire: 0.2,
+
+        // 技能循环：必然的厄运 → 召唤孢子 → 死亡之花 → 召唤孢子
+        cycle: ['inevitable_doom', 'summon_spore', 'death_flower', 'summon_spore'],
+
+        rewards: {
+            gold: 5800000,
+            exp: 3800000,
+            items: [
+                // 预留：后续可补充洛欧塞布专属掉落
             ]
         }
     },
@@ -22606,6 +22667,270 @@ function stepBossCombat(state) {
 
 
 
+// ==================== 洛欧塞布（世界首领）技能处理 ====================
+    // 机制：
+    // - 被动【剧毒光环】：每回合对全体造成 1×BOSS攻击 的自然伤害（持续到战斗结束）
+    // - 【召唤孢子】：召唤 1 个孢子（基础 400万血量；每次召唤额外 +100万血量）；
+    //   若召唤前场上已有存活孢子：召唤时对全体造成（存活孢子数 × 2×BOSS攻击）的自然伤害
+    //   孢子死亡：全体获得 暴击率+50% / 暴击伤害+80%，持续4回合
+    // - 【必然的厄运】：全体暗影DOT：每回合 0.5×BOSS攻击，持续3回合；结束爆发 3×BOSS攻击；
+    //   DOT 结束后，本技能伤害提高 +20%（可叠加）持续到战斗结束
+    // - 【死亡之花】：全体自然DOT：每回合 0.5×BOSS攻击，持续3回合；结束爆发 3×BOSS攻击；
+    //   DOT 结束后，本技能伤害提高 +20%（可叠加）持续到战斗结束
+    // - 技能循环：必然的厄运 → 召唤孢子 → 死亡之花 → 召唤孢子
+    else if (combat.bossId === 'loatheb') {
+        combat.bossBuffs = combat.bossBuffs || {};
+        combat.minions = Array.isArray(combat.minions) ? combat.minions : [];
+
+        // 初始化战斗内计数器
+        if (!Number.isFinite(Number(combat.bossBuffs.loathebSporeSummons))) {
+            combat.bossBuffs.loathebSporeSummons = 0;
+        }
+        if (!Number.isFinite(Number(combat.bossBuffs.loathebDoomStacks))) {
+            combat.bossBuffs.loathebDoomStacks = 0;
+        }
+        if (!Number.isFinite(Number(combat.bossBuffs.loathebDeathFlowerStacks))) {
+            combat.bossBuffs.loathebDeathFlowerStacks = 0;
+        }
+
+        // ① 孢子死亡触发：全队暴击增益
+        const deadSpores = (combat.minions || []).filter(m => (m?.hp ?? 0) <= 0 && m.isLoathebSpore && !m.deathProcessed);
+        if (deadSpores.length > 0) {
+            deadSpores.forEach(m => { m.deathProcessed = true; });
+
+            const dur = Math.max(1, Math.floor(Number(boss.sporeBuffDuration || 4)));
+            const critRate = Number.isFinite(Number(boss.sporeBuffCritRateBonus)) ? Number(boss.sporeBuffCritRateBonus) : 50;
+            const critDmg = Number.isFinite(Number(boss.sporeBuffCritDamageBonus)) ? Number(boss.sporeBuffCritDamageBonus) : 0.8;
+
+            combat.playerStates.forEach((ps) => {
+                if (!ps || ps.currentHp <= 0) return;
+                ps.buffs = Array.isArray(ps.buffs) ? ps.buffs : [];
+
+                const type = 'loatheb_spore_buff';
+                const existing = ps.buffs.find(b => b?.type === type);
+                if (existing) {
+                    existing.duration = dur; // 刷新持续时间
+                    existing.critRateBonus = critRate;
+                    existing.critDamageBonus = critDmg;
+                    existing.name = existing.name || '孢子激励';
+                } else {
+                    ps.buffs.push({
+                        type,
+                        name: '孢子激励',
+                        duration: dur,
+                        critRateBonus: critRate,
+                        critDamageBonus: critDmg,
+                    });
+                }
+            });
+
+            addLog(`【孢子】死亡（${deadSpores.length}个）：全队获得【孢子激励】暴击率+${critRate}%、暴击伤害+${Math.round(critDmg * 100)}%，持续${dur}回合`, 'buff');
+        }
+
+        // ② 被动：剧毒光环（每回合）
+        const auraMult = (typeof boss.poisonAuraMultiplier === 'number' && Number.isFinite(boss.poisonAuraMultiplier))
+            ? boss.poisonAuraMultiplier
+            : 1;
+        const auraRaw = Math.max(1, Math.floor((boss.attack || 0) * auraMult));
+
+        addLog(`【${boss.name}】被动【剧毒光环】侵蚀全队！`);
+        combat.playerStates.forEach((ps, pIdx) => {
+            if (!ps || ps.currentHp <= 0) return;
+
+            const nature = calcMagicDamage(ps, auraRaw);
+            const shieldResult = applyShieldAbsorb(ps, nature.damage, logs, currentRound);
+            ps.currentHp -= shieldResult.finalDamage;
+
+            const resPct = Math.round(nature.resistReduction * 100);
+            const mrText = Number(nature.magicResist) < 0 ? `（魔抗 ${Math.floor(nature.magicResist)}）` : '';
+            const shieldText = shieldResult.absorbed > 0 ? `，护盾吸收 ${shieldResult.absorbed}` : '';
+            addLog(`→ 位置${pIdx + 1} ${ps.char.name} 受到 ${shieldResult.finalDamage} 点自然伤害（魔抗减伤${resPct}%${mrText}${shieldText}）`);
+        });
+
+        // 工具：随机目标
+        const pickRandomAlivePlayerIndex = () => {
+            const alive = (combat.playerStates || [])
+                .map((ps, idx) => ({ ps, idx }))
+                .filter(o => (o.ps?.currentHp ?? 0) > 0)
+                .map(o => o.idx);
+            if (alive.length <= 0) return -1;
+            return alive[Math.floor(Math.random() * alive.length)];
+        };
+
+        // ③ 技能循环处理
+        if (bossAction === 'summon_spore') {
+            const aliveSporeCount = (combat.minions || []).filter(m => (m?.hp ?? 0) > 0 && m.isLoathebSpore).length;
+            const per = (typeof boss.sporeSummonAoEMultiplierPerAliveSpore === 'number' && Number.isFinite(boss.sporeSummonAoEMultiplierPerAliveSpore))
+                ? boss.sporeSummonAoEMultiplierPerAliveSpore
+                : 2;
+
+            if (aliveSporeCount > 0) {
+                const aoeRaw = Math.max(1, Math.floor((boss.attack || 0) * per * aliveSporeCount));
+                addLog(`【${boss.name}】施放【召唤孢子】：场上存活孢子 ${aliveSporeCount} 个，孢子爆发造成全体自然伤害！`, 'warning');
+
+                combat.playerStates.forEach((ps, pIdx) => {
+                    if (!ps || ps.currentHp <= 0) return;
+
+                    const nature = calcMagicDamage(ps, aoeRaw);
+                    const shieldResult = applyShieldAbsorb(ps, nature.damage, logs, currentRound);
+                    ps.currentHp -= shieldResult.finalDamage;
+
+                    const resPct = Math.round(nature.resistReduction * 100);
+                    const mrText = Number(nature.magicResist) < 0 ? `（魔抗 ${Math.floor(nature.magicResist)}）` : '';
+                    const shieldText = shieldResult.absorbed > 0 ? `，护盾吸收 ${shieldResult.absorbed}` : '';
+                    addLog(`→ 位置${pIdx + 1} ${ps.char.name} 受到 ${shieldResult.finalDamage} 点自然伤害（魔抗减伤${resPct}%${mrText}${shieldText}）`);
+                });
+            } else {
+                addLog(`【${boss.name}】施放【召唤孢子】！`);
+            }
+
+            // 召唤新孢子
+            const baseHp = Math.max(1, Math.floor(Number(boss.sporeBaseHp || 4000000)));
+            const incHp = Math.max(0, Math.floor(Number(boss.sporeHpIncreasePerSummon || 1000000)));
+
+            combat.bossBuffs.loathebSporeSummons = Math.max(0, Math.floor(Number(combat.bossBuffs.loathebSporeSummons || 0))) + 1;
+            const serial = combat.bossBuffs.loathebSporeSummons;
+            const sporeHp = baseHp + (serial - 1) * incHp;
+
+            combat.minions.push({
+                hp: sporeHp,
+                maxHp: sporeHp,
+                attack: 0,
+                defense: 0,
+                dots: [],
+                isLoathebSpore: true,
+                displayName: `孢子${serial}`,
+            });
+
+            addLog(`→ 【${boss.name}】召唤了【孢子${serial}】（生命值 ${sporeHp.toLocaleString()}）`, 'warning');
+        }
+
+        // 技能3：必然的厄运（暗影DOT）
+        else if (bossAction === 'inevitable_doom') {
+            const stacks = Math.max(0, Math.floor(Number(combat.bossBuffs.loathebDoomStacks || 0)));
+            const per = (typeof boss.doomIncreasePerExpire === 'number' && Number.isFinite(boss.doomIncreasePerExpire))
+                ? boss.doomIncreasePerExpire
+                : 0.2;
+            const mult = 1 + stacks * per;
+
+            const dotMult = (typeof boss.doomDotMultiplier === 'number' && Number.isFinite(boss.doomDotMultiplier))
+                ? boss.doomDotMultiplier
+                : 0.5;
+            const expireMult = (typeof boss.doomExpireMultiplier === 'number' && Number.isFinite(boss.doomExpireMultiplier))
+                ? boss.doomExpireMultiplier
+                : 3;
+            const dur = Math.max(1, Math.floor(Number(boss.doomDuration || 3)));
+
+            const tickRaw = Math.max(1, Math.floor((boss.attack || 0) * dotMult * mult));
+            const expireRaw = Math.max(1, Math.floor((boss.attack || 0) * expireMult * mult));
+
+            const bonusText = stacks > 0 ? `（伤害加成+${Math.round(stacks * per * 100)}%）` : '';
+            addLog(`【${boss.name}】施放【必然的厄运】${bonusText}：全体获得暗影DOT（每回合0.5×攻击，持续${dur}回合；结束爆发3×攻击）`, 'warning');
+
+            combat.playerStates.forEach(ps => {
+                if (!ps || ps.currentHp <= 0) return;
+                ps.dots = Array.isArray(ps.dots) ? ps.dots : [];
+
+                const type = 'loatheb_inevitable_doom';
+                const existing = ps.dots.find(d => d?.type === type);
+                const dotObj = {
+                    name: '必然的厄运',
+                    type,
+                    school: 'shadow',
+                    duration: dur,
+                    damagePerTurn: tickRaw,
+                    // DOT结束爆发
+                    expireRawDamage: expireRaw,
+                    expireSchool: 'shadow',
+                    expireName: '必然的厄运',
+                    // DOT结束后：技能伤害+20%（仅增一次/回合，避免按人数重复叠）
+                    expireIncreaseKey: 'loathebDoomStacks',
+                    expireIncreasePer: per,
+                };
+
+                if (existing) {
+                    Object.assign(existing, dotObj);
+                } else {
+                    ps.dots.push(dotObj);
+                }
+            });
+        }
+
+        // 技能4：死亡之花（自然DOT）
+        else if (bossAction === 'death_flower') {
+            const stacks = Math.max(0, Math.floor(Number(combat.bossBuffs.loathebDeathFlowerStacks || 0)));
+            const per = (typeof boss.deathFlowerIncreasePerExpire === 'number' && Number.isFinite(boss.deathFlowerIncreasePerExpire))
+                ? boss.deathFlowerIncreasePerExpire
+                : 0.2;
+            const mult = 1 + stacks * per;
+
+            const dotMult = (typeof boss.deathFlowerDotMultiplier === 'number' && Number.isFinite(boss.deathFlowerDotMultiplier))
+                ? boss.deathFlowerDotMultiplier
+                : 0.5;
+            const expireMult = (typeof boss.deathFlowerExpireMultiplier === 'number' && Number.isFinite(boss.deathFlowerExpireMultiplier))
+                ? boss.deathFlowerExpireMultiplier
+                : 3;
+            const dur = Math.max(1, Math.floor(Number(boss.deathFlowerDuration || 3)));
+
+            const tickRaw = Math.max(1, Math.floor((boss.attack || 0) * dotMult * mult));
+            const expireRaw = Math.max(1, Math.floor((boss.attack || 0) * expireMult * mult));
+
+            const bonusText = stacks > 0 ? `（伤害加成+${Math.round(stacks * per * 100)}%）` : '';
+            addLog(`【${boss.name}】施放【死亡之花】${bonusText}：全体获得自然DOT（每回合0.5×攻击，持续${dur}回合；结束爆发3×攻击）`, 'warning');
+
+            combat.playerStates.forEach(ps => {
+                if (!ps || ps.currentHp <= 0) return;
+                ps.dots = Array.isArray(ps.dots) ? ps.dots : [];
+
+                const type = 'loatheb_death_flower';
+                const existing = ps.dots.find(d => d?.type === type);
+                const dotObj = {
+                    name: '死亡之花',
+                    type,
+                    school: 'nature',
+                    duration: dur,
+                    damagePerTurn: tickRaw,
+                    // DOT结束爆发
+                    expireRawDamage: expireRaw,
+                    expireSchool: 'nature',
+                    expireName: '死亡之花',
+                    // DOT结束后：技能伤害+20%（仅增一次/回合，避免按人数重复叠）
+                    expireIncreaseKey: 'loathebDeathFlowerStacks',
+                    expireIncreasePer: per,
+                };
+
+                if (existing) {
+                    Object.assign(existing, dotObj);
+                } else {
+                    ps.dots.push(dotObj);
+                }
+            });
+        }
+
+        // 兜底：普通物理攻击（锁定坦克）
+        else {
+            const tIdx = pickAlivePlayerIndex();
+            if (tIdx >= 0) {
+                const target = combat.playerStates[tIdx];
+                const raw = Math.floor(boss.attack || 0);
+                const { damage, dr, blockedAmount } = calcMitigatedAndBlockedDamage(target, raw, false);
+
+                const shieldResult = applyShieldAbsorb(target, damage, logs, currentRound);
+                target.currentHp -= shieldResult.finalDamage;
+
+                const drPct = Math.round(dr * 100);
+                const blockText = blockedAmount > 0 ? `，格挡 ${blockedAmount}` : '';
+                const shieldText = shieldResult.absorbed > 0 ? `，护盾吸收 ${shieldResult.absorbed}` : '';
+                addLog(`【${boss.name}】普通攻击命中 位置${tIdx + 1} ${target.char.name}，造成 ${shieldResult.finalDamage} 点物理伤害（护甲减伤${drPct}%${blockText}${shieldText}）`);
+            } else {
+                // 无存活目标
+                addLog(`【${boss.name}】尝试攻击，但没有存活目标`);
+            }
+        }
+    }
+
+
+
 // ==================== 火焰之王拉格纳罗斯（团队首领）技能处理 ====================
     // 机制：
     // - 火焰伤害：计算魔抗（calcMagicDamage）
@@ -24032,6 +24357,11 @@ function stepBossCombat(state) {
             continue;
         }
 
+        // 洛欧塞布：孢子无技能，不进行攻击行动
+        if (combat.bossId === 'loatheb' && m.isLoathebSpore) {
+            continue;
+        }
+
         // 麦克斯纳：小蜘蛛每回合攻击坦克，并叠加减疗（持续时间刷新）
         if (combat.bossId === 'maexxna' && m.isMaexxnaSpiderling) {
             const tankIdx = pickAlivePlayerIndex();
@@ -24740,11 +25070,62 @@ function stepBossCombat(state) {
                 `【${dot.name}】${stackText}对 位置${pIdx + 1} ${ps.char.name} 造成 ${shieldResult.finalDamage} 点${dot.school === 'physical' ? '流血' : ''}伤害${extraText}${shieldText}（剩余${dot.duration - 1}回合）`
             );
 
-// 永久DOT不减少持续时间
-            if (!dot.isPermanent) {
-                dot.duration -= 1;
-            }
-            return dot.duration > 0 || dot.isPermanent;
+	// 永久DOT不减少持续时间
+	            if (!dot.isPermanent) {
+	                dot.duration -= 1;
+	            }
+
+	            // ✅ 通用：DOT 结束时触发“终结爆发”等额外效果
+	            // 用法：在 DOT 上挂载以下字段（可选）
+	            // - expireRawDamage: 终结爆发的基础伤害（会走魔抗/承伤乘区/护盾）
+	            // - expireSchool: 'shadow' | 'nature' | 'fire' | ...（仅用于日志文案）
+	            // - expireName: 终结爆发显示名称
+	            // - expireIncreaseKey / expireIncreasePer: 终结后叠层增伤（默认每次 +20%），并用 round 防止按人数重复叠
+	            if (!dot.isPermanent && dot.duration <= 0 && Number.isFinite(Number(dot.expireRawDamage)) && Number(dot.expireRawDamage) > 0) {
+	                const rawExpire = Math.max(1, Math.floor(Number(dot.expireRawDamage)));
+	                const label = dot.expireName || dot.name || 'DOT终结';
+	                const school = dot.expireSchool || dot.school || 'magic';
+
+	                // 目标仍存活才打终结伤害；若DOT本跳已经致死，则终结爆发不再追加
+	                if (ps.currentHp > 0) {
+	                    const mg = calcMagicDamage(ps, rawExpire);
+	                    const shieldResult2 = applyShieldAbsorb(ps, mg.damage, logs, currentRound);
+	                    ps.currentHp -= shieldResult2.finalDamage;
+
+	                    const resPct2 = Math.round(mg.resistReduction * 100);
+	                    const mrText2 = Number(mg.magicResist) < 0 ? `（魔抗 ${Math.floor(mg.magicResist)}）` : '';
+	                    const shieldText2 = shieldResult2.absorbed > 0 ? `，护盾吸收 ${shieldResult2.absorbed}` : '';
+	                    const dmgLabel = school === 'shadow' ? '暗影' : (school === 'nature' ? '自然' : '法术');
+
+	                    addLog(
+	                        `↳ 【${label}】终结爆发命中 位置${pIdx + 1} ${ps.char.name}，造成 ${shieldResult2.finalDamage} 点${dmgLabel}伤害（魔抗减伤${resPct2}%${mrText2}${shieldText2}）`,
+	                        'debuff'
+	                    );
+	                }
+
+	                // ✅ 终结后叠层增伤（默认每次 +20%），并用 round 防止按人数重复叠
+	                if (dot.expireIncreaseKey) {
+	                    combat.bossBuffs = combat.bossBuffs || {};
+	                    const key = String(dot.expireIncreaseKey);
+	                    const lastKey = `${key}_lastIncreaseRound`;
+
+	                    if (combat.bossBuffs[lastKey] !== currentRound) {
+	                        combat.bossBuffs[lastKey] = currentRound;
+	                        combat.bossBuffs[key] = Math.max(0, Math.floor(Number(combat.bossBuffs[key] || 0))) + 1;
+
+	                        const stacks = Math.max(0, Math.floor(Number(combat.bossBuffs[key] || 0)));
+	                        const perInc = (typeof dot.expireIncreasePer === 'number' && Number.isFinite(dot.expireIncreasePer))
+	                            ? dot.expireIncreasePer
+	                            : 0.2;
+
+	                        addLog(
+	                            `【${boss.name}】的【${label}】变得更强：伤害提高 +${Math.round(perInc * 100)}%（当前${stacks}层，总提升${Math.round(stacks * perInc * 100)}%）`,
+	                            'warning'
+	                        );
+	                    }
+	                }
+	            }
+	            return dot.duration > 0 || dot.isPermanent;
         });
     });
 
@@ -38471,6 +38852,12 @@ const BossPrepareModal = ({ state, dispatch }) => {
         hateful_strike: '仇恨打击',
         slime_arrow: '软泥之箭',
         patchwerk_enrage: '激怒',
+
+        // ✅ 洛欧塞布
+        inevitable_doom: '必然的厄运',
+        summon_spore: '召唤孢子',
+        death_flower: '死亡之花',
+        poison_aura: '剧毒光环',
 
     };
 

@@ -11315,7 +11315,7 @@ const FIXED_EQUIPMENTS = {
       type: 'equipment',
       slot: 'neck',
       rarity: 'purple',
-      level: 1,
+      level: 0,
       maxLevel: 100,
       baseStats: {
         attack: 1100,
@@ -11343,7 +11343,7 @@ const FIXED_EQUIPMENTS = {
       type: 'equipment',
       slot: 'ring2',
       rarity: 'purple',
-      level: 1,
+      level: 0,
       maxLevel: 100,
       baseStats: {
         attack: 750,
@@ -11371,7 +11371,7 @@ const FIXED_EQUIPMENTS = {
       type: 'equipment',
       slot: 'neck',
       rarity: 'purple',
-      level: 1,
+      level: 0,
       maxLevel: 100,
       baseStats: {
         attack: 1100,
@@ -11401,7 +11401,7 @@ const FIXED_EQUIPMENTS = {
       type: 'equipment',
       slot: 'offHand',
       rarity: 'purple',
-      level: 1,
+      level: 0,
       maxLevel: 100,
       baseStats: {
         spellPower: 1050,
@@ -11429,7 +11429,7 @@ const FIXED_EQUIPMENTS = {
       type: 'equipment',
       slot: 'mainHand',
       rarity: 'purple',
-      level: 1,
+      level: 0,
       maxLevel: 100,
       baseStats: {
         attack: 3200,
@@ -11459,7 +11459,7 @@ const FIXED_EQUIPMENTS = {
       type: 'equipment',
       slot: 'mainHand',
       rarity: 'purple',
-      level: 1,
+      level: 0,
       maxLevel: 100,
       baseStats: {
         spellPower: 3200,
@@ -11487,7 +11487,7 @@ const FIXED_EQUIPMENTS = {
       type: 'equipment',
       slot: 'neck',
       rarity: 'purple',
-      level: 1,
+      level: 0,
       maxLevel: 100,
       baseStats: {
         spellPower: 1100,
@@ -11523,7 +11523,7 @@ const FIXED_EQUIPMENTS = {
       type: 'equipment',
       slot: 'mainHand',
       rarity: 'purple',
-      level: 1,
+      level: 0,
       maxLevel: 100,
       baseStats: {
         attack: 3900,
@@ -11561,7 +11561,7 @@ const FIXED_EQUIPMENTS = {
       type: 'equipment',
       slot: 'cloak',
       rarity: 'purple',
-      level: 1,
+      level: 0,
       maxLevel: 100,
       baseStats: {
         attack: 750,
@@ -11597,7 +11597,7 @@ const FIXED_EQUIPMENTS = {
       type: 'equipment',
       slot: 'belt',
       rarity: 'purple',
-      level: 1,
+      level: 0,
       maxLevel: 100,
       baseStats: {
         attack: 900,
@@ -11623,7 +11623,7 @@ const FIXED_EQUIPMENTS = {
       type: 'equipment',
       slot: 'cloak',
       rarity: 'purple',
-      level: 1,
+      level: 0,
       maxLevel: 100,
       baseStats: {
         hp: 11000,
@@ -11655,7 +11655,7 @@ const FIXED_EQUIPMENTS = {
       rarity: 'purple',
       setId: 'dreadnaught_set',
       setName: '无畏',
-      level: 1,
+      level: 0,
       maxLevel: 100,
       baseStats: {
         hp: 10000,
@@ -11685,7 +11685,7 @@ const FIXED_EQUIPMENTS = {
       rarity: 'purple',
       setId: 'dreadnaught_set',
       setName: '无畏',
-      level: 1,
+      level: 0,
       maxLevel: 100,
       baseStats: {
         hp: 8000,
@@ -11715,7 +11715,7 @@ const FIXED_EQUIPMENTS = {
       rarity: 'purple',
       setId: 'dreadnaught_set',
       setName: '无畏',
-      level: 1,
+      level: 0,
       maxLevel: 100,
       baseStats: {
         hp: 8500,
@@ -11748,7 +11748,7 @@ const FIXED_EQUIPMENTS = {
       rarity: 'purple',
       setId: 'bonescythe_set',
       setName: '骨镰',
-      level: 1,
+      level: 0,
       maxLevel: 100,
       baseStats: {
         attack: 900,
@@ -11778,7 +11778,7 @@ const FIXED_EQUIPMENTS = {
       rarity: 'purple',
       setId: 'bonescythe_set',
       setName: '骨镰',
-      level: 1,
+      level: 0,
       maxLevel: 100,
       baseStats: {
         attack: 850,
@@ -11806,7 +11806,7 @@ const FIXED_EQUIPMENTS = {
       rarity: 'purple',
       setId: 'bonescythe_set',
       setName: '骨镰',
-      level: 1,
+      level: 0,
       maxLevel: 100,
       baseStats: {
         attack: 900,
@@ -11836,7 +11836,7 @@ const FIXED_EQUIPMENTS = {
       rarity: 'purple',
       setId: 'frostfire_set',
       setName: '霜火',
-      level: 1,
+      level: 0,
       maxLevel: 100,
       baseStats: {
         spellPower: 950,
@@ -11864,7 +11864,7 @@ const FIXED_EQUIPMENTS = {
       rarity: 'purple',
       setId: 'frostfire_set',
       setName: '霜火',
-      level: 1,
+      level: 0,
       maxLevel: 100,
       baseStats: {
         spellPower: 900,
@@ -11892,7 +11892,7 @@ const FIXED_EQUIPMENTS = {
       rarity: 'purple',
       setId: 'frostfire_set',
       setName: '霜火',
-      level: 1,
+      level: 0,
       maxLevel: 100,
       baseStats: {
         spellPower: 900,
@@ -11922,7 +11922,7 @@ const FIXED_EQUIPMENTS = {
       rarity: 'purple',
       setId: 'faith_set',
       setName: '信仰',
-      level: 1,
+      level: 0,
       maxLevel: 100,
       baseStats: {
         spellPower: 850,
@@ -11951,7 +11951,7 @@ const FIXED_EQUIPMENTS = {
       rarity: 'purple',
       setId: 'faith_set',
       setName: '信仰',
-      level: 1,
+      level: 0,
       maxLevel: 100,
       baseStats: {
         spellPower: 820,
@@ -11977,7 +11977,7 @@ const FIXED_EQUIPMENTS = {
       rarity: 'purple',
       setId: 'faith_set',
       setName: '信仰',
-      level: 1,
+      level: 0,
       maxLevel: 100,
       baseStats: {
         spellPower: 850,
@@ -12007,6 +12007,216 @@ const FIXED_EQUIPMENTS = {
       maxLevel: 100,
       baseStats: {},
       growth: {},
+    },
+
+    // ==================== 纳克萨玛斯：塔迪乌斯掉落 ====================
+
+    // ✅ 衰落之眼（法强饰品1）
+    EQ_326: {
+      id: 'EQ_326',
+      name: '衰落之眼',
+      icon: 'icons/wow/vanilla/items/shuailuozhiyan.png',
+      type: 'equipment',
+      slot: 'trinket1',
+      rarity: 'purple',
+      level: 1,
+      maxLevel: 100,
+      baseStats: {
+        spellPower: 1200,
+        hp: 6000,
+        critRate: 25,
+        mastery: 30,
+        versatility: 10,
+      },
+      growth: {
+        spellPower: 2,
+        hp: 2,
+        critRate: 2,
+        mastery: 2,
+        versatility: 2,
+      }
+    },
+
+    // ✅ 谴责者（攻强副手）
+    EQ_327: {
+      id: 'EQ_327',
+      name: '谴责者',
+      icon: 'icons/wow/vanilla/weapons/qianzezhe.png',
+      type: 'equipment',
+      slot: 'offHand',
+      rarity: 'purple',
+      level: 1,
+      maxLevel: 100,
+      baseStats: {
+        attack: 1500,
+        hp: 6500,
+        critRate: 20,
+        critDamage: 0.35,
+        haste: 20,
+        mastery: 20,
+      },
+      growth: {
+        attack: 2,
+        hp: 2,
+        critRate: 2,
+        critDamage: 2,
+        haste: 2,
+        mastery: 2,
+      }
+    },
+
+    // ✅ 钉板憎恶胸骨（攻强 / 暴击 / 爆伤 胸甲）
+    EQ_328: {
+      id: 'EQ_328',
+      name: '钉板憎恶胸骨',
+      icon: 'icons/wow/vanilla/armor/INV_Chest_Chain_15.png',
+      type: 'equipment',
+      slot: 'chest',
+      rarity: 'purple',
+      level: 1,
+      maxLevel: 100,
+      baseStats: {
+        attack: 1150,
+        hp: 8000,
+        armor: 320,
+        magicResist: 100,
+        critRate: 20,
+        critDamage: 0.60,
+        mastery: 20,
+      },
+      growth: {
+        attack: 2,
+        hp: 2,
+        armor: 2,
+        magicResist: 2,
+        critRate: 2,
+        critDamage: 2,
+        mastery: 2,
+      }
+    },
+
+    // ===== T3：无畏（战士）- 头盔 =====
+    EQ_329: {
+      id: 'EQ_329',
+      name: '无畏头盔',
+      icon: 'icons/wow/vanilla/armor/INV_Helmet_58.png',
+      type: 'equipment',
+      slot: 'head',
+      rarity: 'purple',
+      setId: 'dreadnaught_set',
+      setName: '无畏',
+      level: 1,
+      maxLevel: 100,
+      baseStats: {
+        hp: 11000,
+        attack: 450,
+        armor: 330,
+        magicResist: 100,
+        versatility: 18,
+        blockRate: 6,
+        blockValue: 650,
+      },
+      growth: {
+        hp: 2,
+        attack: 2,
+        armor: 2,
+        magicResist: 2,
+        versatility: 2,
+        blockRate: 2,
+        blockValue: 2,
+      }
+    },
+
+    // ===== T3：骨镰（盗贼）- 头盔 =====
+    EQ_330: {
+      id: 'EQ_330',
+      name: '骨镰头盔',
+      icon: 'icons/wow/vanilla/armor/INV_Helmet_58.png',
+      type: 'equipment',
+      slot: 'head',
+      rarity: 'purple',
+      setId: 'bonescythe_set',
+      setName: '骨镰',
+      level: 1,
+      maxLevel: 100,
+      baseStats: {
+        attack: 1000,
+        hp: 6800,
+        armor: 240,
+        magicResist: 100,
+        critRate: 16,
+        critDamage: 0.35,
+        haste: 10,
+      },
+      growth: {
+        attack: 2,
+        hp: 2,
+        armor: 2,
+        magicResist: 2,
+        critRate: 2,
+        critDamage: 2,
+        haste: 2,
+      }
+    },
+
+    // ===== T3：霜火（法师）- 头饰 =====
+    EQ_331: {
+      id: 'EQ_331',
+      name: '霜火头饰',
+      icon: 'icons/wow/vanilla/armor/INV_Crown_01.png',
+      type: 'equipment',
+      slot: 'head',
+      rarity: 'purple',
+      setId: 'frostfire_set',
+      setName: '霜火',
+      level: 1,
+      maxLevel: 100,
+      baseStats: {
+        spellPower: 1050,
+        hp: 6800,
+        magicResist: 100,
+        critRate: 16,
+        critDamage: 0.35,
+        haste: 10,
+      },
+      growth: {
+        spellPower: 2,
+        hp: 2,
+        magicResist: 2,
+        critRate: 2,
+        critDamage: 2,
+        haste: 2,
+      }
+    },
+
+    // ===== T3：信仰（牧师）- 头环 =====
+    EQ_332: {
+      id: 'EQ_332',
+      name: '信仰头环',
+      icon: 'icons/wow/vanilla/armor/INV_Crown_01.png',
+      type: 'equipment',
+      slot: 'head',
+      rarity: 'purple',
+      setId: 'faith_set',
+      setName: '信仰',
+      level: 1,
+      maxLevel: 100,
+      baseStats: {
+        spellPower: 980,
+        hp: 8000,
+        armor: 240,
+        magicResist: 100,
+        mastery: 20,
+        versatility: 16,
+      },
+      growth: {
+        spellPower: 2,
+        hp: 2,
+        armor: 2,
+        magicResist: 2,
+        mastery: 2,
+        versatility: 2,
+      }
     },
 
 
@@ -14451,7 +14661,18 @@ const BOSS_DATA = {
         rewards: {
             gold: 4800000,
             exp: 3000000,
-            items: []
+            items: [
+                // ===== 塔迪乌斯专属掉落（纳克萨玛斯） =====
+                { id: 'EQ_326', chance: 0.10 }, // 衰落之眼（法强饰品1）
+                { id: 'EQ_327', chance: 0.10 }, // 谴责者（攻强副手）
+                { id: 'EQ_328', chance: 0.10 }, // 钉板憎恶胸骨（攻强/暴击/爆伤 胸甲）
+
+                // T3 头部
+                { id: 'EQ_329', chance: 0.10 }, // 无畏头盔
+                { id: 'EQ_330', chance: 0.10 }, // 骨镰头盔
+                { id: 'EQ_331', chance: 0.10 }, // 霜火头饰
+                { id: 'EQ_332', chance: 0.10 }, // 信仰头环
+            ]
         }
     },
 

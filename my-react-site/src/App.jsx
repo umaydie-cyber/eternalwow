@@ -12476,6 +12476,221 @@ const FIXED_EQUIPMENTS = {
       }
     },
 
+    // ==================== 纳克萨玛斯：帕奇维克掉落 ====================
+
+    // ✅ 断离（攻强主手）
+    EQ_341: {
+      id: 'EQ_341',
+      name: '断离',
+      icon: 'icons/wow/vanilla/weapons/duanli.png',
+      type: 'equipment',
+      slot: 'mainHand',
+      rarity: 'purple',
+      level: 1,
+      maxLevel: 100,
+      baseStats: {
+        attack: 4000,
+        hp: 7500,
+        critRate: 25,
+        critDamage: 0.75,
+        haste: 25,
+        mastery: 25,
+      },
+      growth: {
+        attack: 2,
+        hp: 2,
+        critRate: 2,
+        critDamage: 2,
+        haste: 2,
+        mastery: 2,
+      }
+    },
+
+    // ✅ 瘟疫携带者（魔抗坦克副手盾牌）
+    EQ_342: {
+      id: 'EQ_342',
+      name: '瘟疫携带者',
+      icon: 'icons/wow/vanilla/armor/wenyixiedaizhe.png',
+      type: 'equipment',
+      slot: 'offHand',
+      rarity: 'purple',
+      level: 1,
+      maxLevel: 100,
+      baseStats: {
+        hp: 12500,
+        armor: 450,
+        magicResist: 230,
+        mastery: 25,
+        versatility: 25,
+        blockRate: 7,
+        blockValue: 1000,
+      },
+      growth: {
+        hp: 2,
+        armor: 2,
+        magicResist: 2,
+        mastery: 2,
+        versatility: 2,
+        blockRate: 2,
+        blockValue: 2,
+      }
+    },
+
+    // ✅ 缝合披风（治疗法强披风）
+    EQ_343: {
+      id: 'EQ_343',
+      name: '缝合披风',
+      icon: 'icons/wow/vanilla/armor/dixueemo.png',
+      type: 'equipment',
+      slot: 'cloak',
+      rarity: 'purple',
+      level: 1,
+      maxLevel: 100,
+      baseStats: {
+        spellPower: 1100,
+        hp: 9500,
+        armor: 240,
+        magicResist: 180,
+        mastery: 24,
+        versatility: 24,
+        haste: 10,
+      },
+      growth: {
+        spellPower: 2,
+        hp: 2,
+        armor: 2,
+        magicResist: 2,
+        mastery: 2,
+        versatility: 2,
+        haste: 2,
+      }
+    },
+
+    // ===== T3：无畏（战士）- 肩部 =====
+    EQ_344: {
+      id: 'EQ_344',
+      name: '无畏肩铠',
+      icon: 'icons/wow/vanilla/armor/INV_Shoulder_30.png',
+      type: 'equipment',
+      slot: 'shoulder',
+      rarity: 'purple',
+      setId: 'dreadnaught_set',
+      setName: '无畏',
+      level: 1,
+      maxLevel: 100,
+      baseStats: {
+        hp: 10500,
+        attack: 420,
+        armor: 320,
+        magicResist: 110,
+        mastery: 16,
+        blockRate: 6,
+        blockValue: 800,
+      },
+      growth: {
+        hp: 2,
+        attack: 2,
+        armor: 2,
+        magicResist: 2,
+        mastery: 2,
+        blockRate: 2,
+        blockValue: 2,
+      }
+    },
+
+    // ===== T3：骨镰（盗贼）- 肩部 =====
+    EQ_345: {
+      id: 'EQ_345',
+      name: '骨镰肩铠',
+      icon: 'icons/wow/vanilla/armor/INV_Shoulder_30.png',
+      type: 'equipment',
+      slot: 'shoulder',
+      rarity: 'purple',
+      setId: 'bonescythe_set',
+      setName: '骨镰',
+      level: 1,
+      maxLevel: 100,
+      baseStats: {
+        attack: 980,
+        hp: 7000,
+        armor: 240,
+        magicResist: 110,
+        critRate: 16,
+        critDamage: 0.35,
+        haste: 10,
+      },
+      growth: {
+        attack: 2,
+        hp: 2,
+        armor: 2,
+        magicResist: 2,
+        critRate: 2,
+        critDamage: 2,
+        haste: 2,
+      }
+    },
+
+    // ===== T3：霜火（法师）- 肩部 =====
+    EQ_346: {
+      id: 'EQ_346',
+      name: '霜火肩垫',
+      icon: 'icons/wow/vanilla/armor/INV_Shoulder_25.png',
+      type: 'equipment',
+      slot: 'shoulder',
+      rarity: 'purple',
+      setId: 'frostfire_set',
+      setName: '霜火',
+      level: 1,
+      maxLevel: 100,
+      baseStats: {
+        spellPower: 980,
+        hp: 7200,
+        magicResist: 110,
+        critRate: 16,
+        critDamage: 0.35,
+        haste: 10,
+      },
+      growth: {
+        spellPower: 2,
+        hp: 2,
+        magicResist: 2,
+        critRate: 2,
+        critDamage: 2,
+        haste: 2,
+        mastery: 2,
+      }
+    },
+
+    // ===== T3：信仰（牧师）- 肩部 =====
+    EQ_347: {
+      id: 'EQ_347',
+      name: '信仰肩垫',
+      icon: 'icons/wow/vanilla/armor/INV_Shoulder_25.png',
+      type: 'equipment',
+      slot: 'shoulder',
+      rarity: 'purple',
+      setId: 'faith_set',
+      setName: '信仰',
+      level: 1,
+      maxLevel: 100,
+      baseStats: {
+        spellPower: 920,
+        hp: 8500,
+        armor: 240,
+        magicResist: 110,
+        versatility: 16,
+        haste: 16,
+      },
+      growth: {
+        spellPower: 2,
+        hp: 2,
+        armor: 2,
+        magicResist: 2,
+        versatility: 2,
+        haste: 2,
+      }
+    },
+
 };
 
 //赤脊山5件图鉴100级点亮效果
@@ -15038,7 +15253,18 @@ const BOSS_DATA = {
         rewards: {
             gold: 5400000,
             exp: 3500000,
-            items: []
+            items: [
+                // ===== 帕奇维克专属掉落（纳克萨玛斯）=====
+                { id: 'EQ_341', chance: 0.10 }, // 断离（攻强主手）
+                { id: 'EQ_342', chance: 0.10 }, // 瘟疫携带者（魔抗坦克副手盾牌）
+                { id: 'EQ_343', chance: 0.10 }, // 缝合披风（治疗法强披风）
+
+                // T3 肩部
+                { id: 'EQ_344', chance: 0.10 }, // 无畏肩铠
+                { id: 'EQ_345', chance: 0.10 }, // 骨镰肩铠
+                { id: 'EQ_346', chance: 0.10 }, // 霜火肩垫
+                { id: 'EQ_347', chance: 0.10 }, // 信仰肩垫
+            ]
         }
     },
 

@@ -11429,9 +11429,9 @@ const FIXED_EQUIPMENTS = {
       level: 1,
       maxLevel: 100,
       baseStats: {
-        attack: 3600,
-        hp: 10000,
-        magicResist: 200,
+        attack: 3200,
+        hp: 12000,
+        magicResist: 180,
         mastery: 25,
         versatility: 30,
         critRate: 15,
@@ -11459,12 +11459,11 @@ const FIXED_EQUIPMENTS = {
       level: 1,
       maxLevel: 100,
       baseStats: {
-        spellPower: 3400,
+        spellPower: 3200,
         hp: 10000,
         magicResist: 150,
         mastery: 28,
         versatility: 32,
-        critRate: 24,
         haste: 20,
       },
       growth: {
@@ -11473,7 +11472,6 @@ const FIXED_EQUIPMENTS = {
         magicResist: 2,
         mastery: 2,
         versatility: 2,
-        critRate: 2,
         haste: 2,
       }
     },
@@ -11509,7 +11507,7 @@ const FIXED_EQUIPMENTS = {
         name: '仇恨汲取',
         trigger: 'turn_start',
         chance: 0.25,
-        stats: { spellPower: 2500 },
+        stats: { spellPower: 2000 },
         scaleWithLevel: true
       }
     },
@@ -11526,12 +11524,10 @@ const FIXED_EQUIPMENTS = {
       maxLevel: 100,
       baseStats: {
         attack: 3900,
-        hp: 7500,
-        critRate: 22,
+        hp: 6900,
+        critRate: 35,
         critDamage: 0.85,
-        haste: 20,
-        mastery: 20,
-        versatility: 20,
+        mastery: 35,
       },
       growth: {
         attack: 2,
@@ -11540,7 +11536,6 @@ const FIXED_EQUIPMENTS = {
         critDamage: 2,
         haste: 2,
         mastery: 2,
-        versatility: 2,
       },
       specialEffect: {
         type: 'proc_damage',
@@ -11566,12 +11561,12 @@ const FIXED_EQUIPMENTS = {
       level: 1,
       maxLevel: 100,
       baseStats: {
-        attack: 550,
-        spellPower: 550,
+        attack: 750,
+        spellPower: 750,
         hp: 7800,
         magicResist: 150,
-        mastery: 24,
-        versatility: 24,
+        mastery: 25,
+        versatility: 25,
       },
       growth: {
         attack: 2,
@@ -11604,10 +11599,9 @@ const FIXED_EQUIPMENTS = {
       baseStats: {
         attack: 900,
         hp: 6500,
-        critRate: 20,
-        critDamage: 0.35,
-        mastery: 16,
-        haste: 16,
+        critRate: 30,
+        critDamage: 0.6,
+        mastery: 15,
       },
       growth: {
         attack: 2,
@@ -11615,7 +11609,6 @@ const FIXED_EQUIPMENTS = {
         critRate: 2,
         critDamage: 2,
         mastery: 2,
-        haste: 2,
       }
     },
 
@@ -11632,10 +11625,10 @@ const FIXED_EQUIPMENTS = {
       baseStats: {
         hp: 11000,
         armor: 360,
-        magicResist: 200,
+        magicResist: 160,
         mastery: 24,
         versatility: 24,
-        blockRate: 7,
+        blockRate: 5,
         blockValue: 900,
       },
       growth: {
@@ -11662,11 +11655,10 @@ const FIXED_EQUIPMENTS = {
       level: 1,
       maxLevel: 100,
       baseStats: {
-        hp: 9000,
+        hp: 10000,
         attack: 450,
-        armor: 320,
-        magicResist: 150,
-        mastery: 18,
+        armor: 300,
+        magicResist: 100,
         versatility: 16,
         blockRate: 6,
         blockValue: 750,
@@ -11676,7 +11668,6 @@ const FIXED_EQUIPMENTS = {
         attack: 2,
         armor: 2,
         magicResist: 2,
-        mastery: 2,
         versatility: 2,
         blockRate: 2,
         blockValue: 2,
@@ -11695,11 +11686,10 @@ const FIXED_EQUIPMENTS = {
       maxLevel: 100,
       baseStats: {
         hp: 8000,
-        attack: 400,
+        attack: 320,
         armor: 300,
-        magicResist: 140,
+        magicResist: 90,
         mastery: 16,
-        versatility: 14,
         blockRate: 5,
         blockValue: 650,
       },
@@ -11709,7 +11699,6 @@ const FIXED_EQUIPMENTS = {
         armor: 2,
         magicResist: 2,
         mastery: 2,
-        versatility: 2,
         blockRate: 2,
         blockValue: 2,
       }
@@ -11727,11 +11716,10 @@ const FIXED_EQUIPMENTS = {
       maxLevel: 100,
       baseStats: {
         hp: 8500,
-        attack: 420,
+        attack: 320,
         armor: 310,
-        magicResist: 145,
-        mastery: 17,
-        versatility: 15,
+        magicResist: 105,
+        mastery: 16,
         blockRate: 5,
         blockValue: 700,
       },
@@ -11760,15 +11748,13 @@ const FIXED_EQUIPMENTS = {
       level: 1,
       maxLevel: 100,
       baseStats: {
-        attack: 950,
-        hp: 6500,
+        attack: 900,
+        hp: 6000,
         armor: 220,
-        magicResist: 120,
-        critRate: 20,
+        magicResist: 90,
+        critRate: 16,
         critDamage: 0.35,
-        haste: 18,
-        mastery: 18,
-        versatility: 14,
+        versatility: 10,
       },
       growth: {
         attack: 2,
@@ -11777,8 +11763,6 @@ const FIXED_EQUIPMENTS = {
         magicResist: 2,
         critRate: 2,
         critDamage: 2,
-        haste: 2,
-        mastery: 2,
         versatility: 2,
       }
     },
@@ -11796,11 +11780,10 @@ const FIXED_EQUIPMENTS = {
       baseStats: {
         attack: 850,
         hp: 6000,
-        magicResist: 110,
-        critRate: 18,
+        magicResist: 80,
+        critRate: 16,
         critDamage: 0.30,
-        haste: 16,
-        mastery: 16,
+        haste: 10,
       },
       growth: {
         attack: 2,
@@ -11809,7 +11792,6 @@ const FIXED_EQUIPMENTS = {
         critRate: 2,
         critDamage: 2,
         haste: 2,
-        mastery: 2,
       }
     },
     EQ_318: {
@@ -11825,18 +11807,16 @@ const FIXED_EQUIPMENTS = {
       maxLevel: 100,
       baseStats: {
         attack: 900,
-        hp: 6200,
-        magicResist: 115,
-        critRate: 19,
-        critDamage: 0.32,
-        haste: 17,
-        mastery: 17,
+        hp: 6000,
+        magicResist: 80,
+        critDamage: 0.35,
+        haste: 16,
+        mastery: 10,
       },
       growth: {
         attack: 2,
         hp: 2,
         magicResist: 2,
-        critRate: 2,
         critDamage: 2,
         haste: 2,
         mastery: 2,
@@ -11858,11 +11838,10 @@ const FIXED_EQUIPMENTS = {
       baseStats: {
         spellPower: 950,
         hp: 6500,
-        magicResist: 120,
-        critRate: 20,
+        magicResist: 90,
+        critRate: 10,
         critDamage: 0.35,
-        haste: 18,
-        mastery: 18,
+        haste: 16,
       },
       growth: {
         spellPower: 2,
@@ -11871,7 +11850,6 @@ const FIXED_EQUIPMENTS = {
         critRate: 2,
         critDamage: 2,
         haste: 2,
-        mastery: 2,
       }
     },
     EQ_320: {
@@ -11886,13 +11864,12 @@ const FIXED_EQUIPMENTS = {
       level: 1,
       maxLevel: 100,
       baseStats: {
-        spellPower: 850,
+        spellPower: 900,
         hp: 6000,
-        magicResist: 110,
-        critRate: 18,
+        magicResist: 80,
+        critRate: 16,
         critDamage: 0.30,
-        haste: 16,
-        mastery: 16,
+        mastery: 10,
       },
       growth: {
         spellPower: 2,
@@ -11900,7 +11877,6 @@ const FIXED_EQUIPMENTS = {
         magicResist: 2,
         critRate: 2,
         critDamage: 2,
-        haste: 2,
         mastery: 2,
       }
     },
@@ -11917,12 +11893,11 @@ const FIXED_EQUIPMENTS = {
       maxLevel: 100,
       baseStats: {
         spellPower: 900,
-        hp: 6200,
-        magicResist: 115,
-        critRate: 19,
-        critDamage: 0.32,
-        haste: 17,
-        mastery: 17,
+        hp: 6000,
+        magicResist: 90,
+        critRate: 16,
+        critDamage: 0.35,
+        versatility: 10,
       },
       growth: {
         spellPower: 2,
@@ -11930,8 +11905,7 @@ const FIXED_EQUIPMENTS = {
         magicResist: 2,
         critRate: 2,
         critDamage: 2,
-        haste: 2,
-        mastery: 2,
+        versatility: 2,
       }
     },
 
@@ -11948,14 +11922,12 @@ const FIXED_EQUIPMENTS = {
       level: 1,
       maxLevel: 100,
       baseStats: {
-        spellPower: 900,
+        spellPower: 850,
         hp: 7800,
         armor: 220,
-        magicResist: 140,
-        mastery: 20,
-        versatility: 20,
-        haste: 18,
-        critRate: 14,
+        magicResist: 100,
+        versatility: 18,
+        critRate: 16,
       },
       growth: {
         spellPower: 2,
@@ -11964,7 +11936,6 @@ const FIXED_EQUIPMENTS = {
         magicResist: 2,
         mastery: 2,
         versatility: 2,
-        haste: 2,
         critRate: 2,
       }
     },
@@ -11982,20 +11953,16 @@ const FIXED_EQUIPMENTS = {
       baseStats: {
         spellPower: 820,
         hp: 7200,
-        magicResist: 130,
+        magicResist: 100,
         mastery: 18,
-        versatility: 18,
         haste: 16,
-        critRate: 12,
       },
       growth: {
         spellPower: 2,
         hp: 2,
         magicResist: 2,
         mastery: 2,
-        versatility: 2,
         haste: 2,
-        critRate: 2,
       }
     },
     EQ_324: {
@@ -12012,11 +11979,9 @@ const FIXED_EQUIPMENTS = {
       baseStats: {
         spellPower: 850,
         hp: 7500,
-        magicResist: 135,
-        mastery: 19,
-        versatility: 19,
-        haste: 17,
-        critRate: 13,
+        magicResist: 100,
+        mastery: 18,
+        versatility: 16,
       },
       growth: {
         spellPower: 2,
@@ -12024,8 +11989,6 @@ const FIXED_EQUIPMENTS = {
         magicResist: 2,
         mastery: 2,
         versatility: 2,
-        haste: 2,
-        critRate: 2,
       }
     },
 

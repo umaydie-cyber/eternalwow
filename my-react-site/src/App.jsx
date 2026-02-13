@@ -13768,6 +13768,63 @@ const FIXED_EQUIPMENTS = {
     },
 
 
+// ✅ 埃提耶什法杖杖身（合成材料：末端 + 顶端）
+EQ_382: {
+  id: 'EQ_382',
+  name: '埃提耶什法杖杖身',
+  icon: 'icons/wow/vanilla/weapons/INV_Staff_20.png',
+  type: 'equipment',
+  slot: 'mainHand',
+  rarity: 'orange',
+  level: 0,
+  maxLevel: 100,
+  baseStats: {},
+  growth: {},
+},
+
+// ✅ 埃提耶什，守护者的传说之杖（成品：杖身 + Lv100 碎片灌注）
+EQ_383: {
+  id: 'EQ_383',
+  name: '埃提耶什，守护者的传说之杖',
+  icon: 'icons/wow/vanilla/weapons/aitiyeshi.png',
+  type: 'equipment',
+  slot: 'mainHand',
+  rarity: 'orange',
+  level: 0,
+  maxLevel: 100,
+  baseStats: {
+    spellPower: 4200,
+    hp: 16000,
+    magicResist: 320,
+    mastery: 35,
+    haste: 30,
+    critRate: 25,
+    versatility: 25,
+  },
+  growth: {
+    spellPower: 2,
+    hp: 2,
+    magicResist: 2,
+    mastery: 2,
+    haste: 2,
+    critRate: 2,
+    versatility: 2,
+  },
+  specialEffect: {
+    type: 'proc_stat',
+    name: '守护者的回响',
+    trigger: 'turn_start',
+    chance: 0.25,
+    scaleWithLevel: true,
+    stats: {
+      spellPower: 700,
+      mastery: 25,
+      haste: 25,
+    },
+  },
+},
+
+
 
 
 };
@@ -17001,7 +17058,40 @@ function mergeEquipments(eqA, eqB) {
         return forged || null;
     }
 
-    if (eqA.id !== eqB.id) return null;
+
+
+// ==================== 特殊配方：埃提耶什（Atiesh）分步合成 ====================
+// 设计思路：
+// 1）先把「末端 + 顶端」拼成完整杖身（便于玩家理解：两段组件先组装）
+// 2）再用「埃提耶什碎片 Lv100」进行灌注/重铸，升格为传说法杖
+//
+// 规则：
+// - EQ_301（埃提耶什法杖末端） + EQ_381（埃提耶什法杖顶端） => EQ_382（埃提耶什法杖杖身）
+// - EQ_382（杖身） + EQ_325（埃提耶什碎片，需 Lv100） => EQ_383（埃提耶什，守护者的传说之杖）
+const isAtieshBodyRecipe = (a, b) => {
+    const ida = a?.id;
+    const idb = b?.id;
+    return (ida === 'EQ_301' && idb === 'EQ_381') || (ida === 'EQ_381' && idb === 'EQ_301');
+};
+const isAtieshForgeRecipe = (a, b) => {
+    const ida = a?.id;
+    const idb = b?.id;
+    return (ida === 'EQ_382' && idb === 'EQ_325') || (ida === 'EQ_325' && idb === 'EQ_382');
+};
+
+if (isAtieshBodyRecipe(eqA, eqB)) {
+    const staffBody = createEquipmentInstance('EQ_382');
+    return staffBody || null;
+}
+
+if (isAtieshForgeRecipe(eqA, eqB)) {
+    const shard = eqA?.id === 'EQ_325' ? eqA : eqB;
+    const shardLv = Number(shard?.currentLevel ?? shard?.level ?? 0) || 0;
+    if (shardLv < 100) return null; // 必须使用 Lv100 的碎片完成“灌注/重铸”
+    const atiesh = createEquipmentInstance('EQ_383');
+    return atiesh || null;
+}
+if (eqA.id !== eqB.id) return null;
 
     const getLevel = (eq) => (eq?.currentLevel ?? eq?.level ?? 0);
 
@@ -35604,7 +35694,16 @@ const InventoryPage = ({ state, dispatch }) => {
     const astralSlots = Math.min(autoMergeSlots, astralForgeCount);
 
     const isThunderfuryRecipe = (aId, bId) =>
-        (aId === 'EQ_176' && bId === 'EQ_181') || (aId === 'EQ_181' && bId === 'EQ_176');
+    (aId === 'EQ_176' && bId === 'EQ_181') || (aId === 'EQ_181' && bId === 'EQ_176');
+
+const isAtieshBodyRecipe = (aId, bId) =>
+    (aId === 'EQ_301' && bId === 'EQ_381') || (aId === 'EQ_381' && bId === 'EQ_301');
+
+const isAtieshForgeRecipe = (aId, bId) =>
+    (aId === 'EQ_382' && bId === 'EQ_325') || (aId === 'EQ_325' && bId === 'EQ_382');
+
+const isSpecialRecipePair = (aId, bId) =>
+    isThunderfuryRecipe(aId, bId) || isAtieshBodyRecipe(aId, bId) || isAtieshForgeRecipe(aId, bId);
 
     const clearDrag = () => {
         setDraggedItemId(null);
@@ -35689,17 +35788,28 @@ const InventoryPage = ({ state, dispatch }) => {
             return;
         }
 
-        if (fromItem.id === targetItem.id || isThunderfuryRecipe(fromItem.id, targetItem.id)) {
-            dispatch({
-                type: 'MERGE_EQUIPMENT',
-                payload: { instanceIdA: fromItem.instanceId, instanceIdB: targetItem.instanceId }
-            });
-        } else {
-            alert('这两件装备无法合成（需要相同装备，或雷霆之怒配方对：EQ_176 + EQ_181）。');
+            if (fromItem.id === targetItem.id || isSpecialRecipePair(fromItem.id, targetItem.id)) {
+        // ✅ 埃提耶什成品：需要消耗 Lv100 的「埃提耶什碎片」
+        if (isAtieshForgeRecipe(fromItem.id, targetItem.id)) {
+            const shard = fromItem.id === 'EQ_325' ? fromItem : targetItem;
+            const shardLv = Number(shard?.currentLevel ?? shard?.level ?? 0) || 0;
+            if (shardLv < 100) {
+                alert('合成失败：需要【埃提耶什碎片（EQ_325）】达到 Lv100 才能完成灌注。');
+                setMergeMode(null);
+                return;
+            }
         }
 
-        setMergeMode(null);
-    };
+        dispatch({
+            type: 'MERGE_EQUIPMENT',
+            payload: { instanceIdA: fromItem.instanceId, instanceIdB: targetItem.instanceId }
+        });
+    } else {
+        alert('这两件装备无法合成（需要相同装备，或特殊配方：雷霆之怒 EQ_176 + EQ_181；埃提耶什杖身 EQ_301 + EQ_381；埃提耶什成品 EQ_382 + EQ_325(碎片需Lv100)）。');
+    }
+
+    setMergeMode(null);
+};
 
     const sellOrDrop = (item) => {
         if (!item) return;
@@ -36035,12 +36145,23 @@ const InventoryPage = ({ state, dispatch }) => {
                                         return;
                                     }
 
-                                    if (fromItem && fromItem.type === 'equipment' && (fromItem.id === toItem.id || isThunderfuryRecipe(fromItem.id, toItem.id))) {
-                                        dispatch({
-                                            type: 'MERGE_EQUIPMENT',
-                                            payload: { instanceIdA: fromInstanceId, instanceIdB: toInstanceId }
-                                        });
-                                    } else if (draggedIndex !== null) {
+                                    if (fromItem && fromItem.type === 'equipment' && (fromItem.id === toItem.id || isSpecialRecipePair(fromItem.id, toItem.id))) {
+    // ✅ 埃提耶什成品：需要消耗 Lv100 的「埃提耶什碎片」
+    if (isAtieshForgeRecipe(fromItem.id, toItem.id)) {
+        const shard = fromItem.id === 'EQ_325' ? fromItem : toItem;
+        const shardLv = Number(shard?.currentLevel ?? shard?.level ?? 0) || 0;
+        if (shardLv < 100) {
+            alert('合成失败：需要【埃提耶什碎片（EQ_325）】达到 Lv100 才能完成灌注。');
+            clearDrag();
+            return;
+        }
+    }
+
+    dispatch({
+        type: 'MERGE_EQUIPMENT',
+        payload: { instanceIdA: fromInstanceId, instanceIdB: toInstanceId }
+    });
+} else if (draggedIndex !== null) {
                                         dispatch({
                                             type: 'MOVE_INVENTORY_ITEM',
                                             payload: { fromIndex: draggedIndex, toIndex: index }

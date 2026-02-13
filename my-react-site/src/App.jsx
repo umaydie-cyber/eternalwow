@@ -28613,6 +28613,8 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
 
     const getBuffBlockRate = () =>
         buffs.reduce((sum, b) => sum + (b.blockRate || 0), 0);
+    const getBuffArmorMult = () =>
+      buffs.reduce((mult, b) => mult * (b.armorMult || 1), 1);
 
     const tickBuffs = () => {
         buffs = buffs
@@ -30373,8 +30375,11 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
         }
 
         // ===== 敌人回合 =====
-        const dr = getArmorDamageReduction(character.stats.armor);
-        const rawEnemyDamage = applyPhysicalMitigation(combatState.enemy?.attack ?? 0, character.stats.armor);
+        const baseArmor = Number(character.stats.armor) || 0;
+        const effectiveArmor = Math.max(0, Math.floor(baseArmor * getBuffArmorMult()));
+
+        const dr = getArmorDamageReduction(effectiveArmor);
+        const rawEnemyDamage = applyPhysicalMitigation(combatState.enemy?.attack ?? 0, effectiveArmor);
 
         // ===== 招架（复仇DH示例：有 counterattack 技能时才会招架）=====
         let parried = false;

@@ -30352,6 +30352,53 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
         const dr = getArmorDamageReduction(character.stats.armor);
         const rawEnemyDamage = applyPhysicalMitigation(combatState.enemy?.attack ?? 0, character.stats.armor);
 
+        // ===== 招架（复仇DH示例：有 counterattack 技能时才会招架）=====
+        let parried = false;
+        if (
+          character?.classId === 'vengeance_demon_hunter' &&
+          Array.isArray(character?.skills) &&
+          character.skills.includes('counterattack')
+        ) {
+          const critRate = Math.max(0, Number(character?.stats?.critRate) || 0);
+          const parryRate = Math.max(0, Math.min(95, critRate / 10)); // 你源码里其它地方就是这么算的
+          const parryChance = parryRate / 100;
+
+          if (Math.random() < parryChance) {
+            parried = true;
+
+            logs.push({
+              round,
+              kind: 'proc',
+              actor: character.name,
+              proc: '招架',
+              text: `【招架】成功，抵消本次攻击`
+            });
+
+            // 可选：招架触发反击（示例）
+            let counterRaw = (Number(character?.stats?.attack) || 0) * 1.2;
+            let counterCrit = false;
+            if (Math.random() < (critRate / 100)) {
+              counterCrit = true;
+              counterRaw *= (Number(character?.stats?.critDamage) || 2);
+            }
+            const counterDmg = Math.max(1, Math.floor(counterRaw));
+            enemyHp = Math.max(0, enemyHp - counterDmg);
+
+            logs.push({
+              round,
+              actor: character.name,
+              action: `反击${counterCrit ? '(暴击)' : ''}`,
+              target: combatState.enemy?.name,
+              value: counterDmg,
+              type: 'damage'
+            });
+          }
+        }
+
+        let finalDamage = rawEnemyDamage;
+        let blockedAmount = 0;
+
+        if (!parried) {
         // ===== 50级天赋：格挡突破 - 超过95%的格挡率转化为格挡值加成 =====
         let baseBlockRate = (character.stats.blockRate || 0) + getBuffBlockRate();
         let blockBreakthroughBonusValue = 0;
@@ -30487,6 +30534,17 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
             value: Math.floor(finalDamage),
             type: 'damage'
         });
+        }else{
+            //招架成功：不扣血，也可以记一条敌人攻击被招架的日志（可选）
+            logs.push({
+                round,
+                actor: combatState.enemy?.name,
+                action: '普通攻击(被招架)',
+                target: character.name,
+                value: 0,
+                type: 'damage'
+            });
+        }
 
         // 回合结束，buff/debuff duration -1（保持原有）
         tickBuffs();

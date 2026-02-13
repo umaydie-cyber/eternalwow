@@ -29170,6 +29170,27 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
                 isCrit: result.isCrit
             });
 
+            // ===== 吸血/转化治疗：例如【邪能毁灭】造成伤害的30%回血 =====
+            if (result.lifeStealPct && Number(result.lifeStealPct) > 0 && charHp > 0) {
+              const pct = Number(result.lifeStealPct);
+              const healRaw = Math.max(0, Math.floor(actualDamage * pct));
+              if (healRaw > 0) {
+                const maxHp = Math.max(0, Math.floor(Number(character.stats.maxHp ?? character.stats.hp) || 0));
+
+                // （可选）治疗吸收：如果你有 healAbsorb 系统，建议先初始化 healAbsorb 并在这里扣减
+                const actualHeal = Math.min(healRaw, maxHp - charHp);
+                if (actualHeal > 0) {
+                  charHp += actualHeal;
+                  logs.push({
+                    round,
+                    kind: 'heal',
+                    actor: character.name,
+                    text: `【${skill.name}】回复 ${actualHeal} 点生命（${Math.floor(pct * 100)}%吸血）`
+                  });
+                }
+              }
+            }
+
             // 暴击时施加重伤DOT（与现有DOT结构兼容）
             if (result.isCrit && result.dotOnCrit) {
                 enemyDebuffs.push({

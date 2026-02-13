@@ -2297,7 +2297,7 @@ const SKILLS = {
         iconUrl: 'icons/wow/vanilla/abilities/xienenghuimie.png',
         type: 'aoe_damage',
         limit: 1,
-        description: '对所有敌人造成2.5倍攻击强度的混乱伤害（不计算防御），并回复造成总伤害20%的生命值。',
+        description: '对所有敌人造成2.5倍攻击强度的混乱伤害（不计算防御），并回复造成总伤害10%的生命值。',
         calculate: (char) => {
             let damage = (char.stats.attack || 0) * 2.5;
             const critRate = Number(char.stats.critRate) || 0;
@@ -2309,7 +2309,7 @@ const SKILLS = {
                 isCrit,
                 school: 'chaos',
                 ignoreDefense: true,
-                lifeStealPct: 0.20
+                lifeStealPct: 0.10
             };
         }
     },

@@ -28617,16 +28617,33 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
       buffs.reduce((mult, b) => mult * (b.armorMult || 1), 1);
 
     const tickBuffs = () => {
-        buffs = buffs
-            .map(b => ({ ...b, duration: (b.duration ?? 0) - 1 }))
-            .filter(b => {
-                // 护盾：持续时间到期或吸收量耗尽都移除
-                if (b.type && ['ice_barrier', 'holy_barrier', 'scarab_barrier'].includes(b.type)) {
-                    return (b.duration ?? 0) > 0 && (b.amount ?? 0) > 0;
-                }
-                // 其他buff只看持续时间
-                return (b.duration ?? 0) > 0;
-            });
+            // ✅ 先计算下一回合 duration，并在“到期”时做必要的回滚处理
+           buffs = buffs
+                .map(b => {
+                    const nextDuration = (b.duration ?? 0) - 1;
+                    // ===== PATCH: 恶魔变形到期回滚最大生命 =====
+                    // BOSS 战里有回滚逻辑；地图战这里补齐，让行为一致
+                    if (b.type === 'metamorphosis' && nextDuration <= 0) {
+                        const rollback = Math.max(0, Math.floor(Number(b.maxHpBonus) || 0));
+                        if (rollback > 0) {
+                           const curMax = Math.max(1, Math.floor(Number(character.stats.maxHp ?? character.stats.hp) || 1));
+                           const newMax = Math.max(1, curMax - rollback);
+                           character.stats.maxHp = newMax;
+                           // 当前血不超过上限
+                           charHp = Math.min(charHp, newMax);
+                        }
+                    }
+                    // ===== END PATCH =====
+                    return { ...b, duration: nextDuration };
+               })
+                .filter(b => {
+                    // 护盾：持续时间到期或吸收量耗尽都移除
+                    if (b.type && ['ice_barrier', 'holy_barrier', 'scarab_barrier'].includes(b.type)) {
+                       return (b.duration ?? 0) > 0 && (b.amount ?? 0) > 0;
+                    }
+                    // 其他buff只看持续时间
+                    return (b.duration ?? 0) > 0;
+                });
     };
     const tickEnemyDebuffs = () => {
         enemyDebuffs = enemyDebuffs
@@ -29729,7 +29746,37 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
             });
         }
         else if (result.buff) {
-            buffs.push({ ...result.buff });
+            //===== PATCH: 地图战补齐【恶魔变形】特殊逻辑（与BOSS战一致）=====
+            const buffToApply = { ...result.buff };
+            if (buffToApply.type === 'metamorphosis') {
+                const existingMeta = buffs.find(b => b.type === 'metamorphosis');
+                // 不允许重复叠加最大生命：已有则只刷新持续时间
+                if (existingMeta) {
+                    existingMeta.duration = Math.max(existingMeta.duration ?? 0, buffToApply.duration ?? 0);
+                } else {
+                    //1) 最大生命上限提高（保存flat bonus到buff，用于到期回滚）
+                    const pct = Math.max(0, Number(buffToApply.maxHpBonusPct) || 0);
+                    if (pct > 0) {
+                        const curMax = Math.max(1, Math.floor(Number(character.stats.maxHp ?? character.stats.hp) || 1));
+                        const bonus = Math.floor(curMax * pct);
+                        buffToApply.maxHpBonus = bonus;
+                        character.stats.maxHp = curMax + bonus;
+                        //当前血不超过新上限（一般不需要，但安全）
+                        charHp = Math.min(charHp, character.stats.maxHp);
+                    ｝
+                    //2) 立刻回复生命
+                    const healPct = Math.max(0, Number(buffToApply.instantHealPct) || 0);
+                    if (healPct > 0) {
+                        const maxHp = Math.max(1, Math.floor(Number(character.stats.maxHp ?? character.stats.hp) || 1));
+                        const healAmount = Math.floor(maxHp * healPct);
+                        charHp = Math.min(maxHp, charHp + healAmount);
+                    ｝
+                    buffs.push(buffToApply);
+                }
+            } else {
+                buffs.push(buffToApply);
+            ｝
+
             let buffText = '';
             if (result.buff.damageTakenMult) {
                 const damageReduction = Math.round((1 - result.buff.damageTakenMult) * 100);

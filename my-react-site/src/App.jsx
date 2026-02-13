@@ -2236,6 +2236,7 @@ const SKILLS = {
         id: 'counterattack',
         name: '还击',
         icon: '⚔️',
+        iconUrl: 'icons/wow/vanilla/abilities/huanji.png',
         type: 'passive',
         description: '被动：暴击同时提高（暴击/10）招架率。招架：完全免疫该次物理伤害，并对目标造成1.2倍攻击强度的物理伤害。'
     },

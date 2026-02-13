@@ -19681,7 +19681,7 @@ function stepBossCombat(state) {
                             && p.char?.classId === 'vengeance_demon_hunter'
                             && Array.isArray(p.char?.skills)
                             && p.char.skills.includes('shattered_soul')) {
-                            triggerShatteredSoulHeal(p, overflow, '破碎灵魂（溢出）');
+                            triggerShatteredSoul(p, overflow, '破碎灵魂（溢出）');
                         }
 
                         if (realGain > 0) {
@@ -21456,7 +21456,7 @@ function stepBossCombat(state) {
                     && p.char?.classId === 'vengeance_demon_hunter'
                     && Array.isArray(p.char.skills)
                     && p.char.skills.includes('shattered_soul')) {
-                    triggerShatteredSoulHeal(p, spent, `${p.char.name} 破碎灵魂`);
+                    triggerShatteredSoul(p, spent, `${p.char.name} 破碎灵魂`);
                 }
 
                 // 狂徒盗贼20级天赋：无情 - 每消耗1星，20%概率返还1星
@@ -21495,7 +21495,7 @@ function stepBossCombat(state) {
                     && p.char?.classId === 'vengeance_demon_hunter'
                     && Array.isArray(p.char.skills)
                     && p.char.skills.includes('shattered_soul')) {
-                    triggerShatteredSoulHeal(p, overflow, `${p.char.name} 破碎灵魂`);
+                    triggerShatteredSoul(p, overflow, `${p.char.name} 破碎灵魂`);
                 }
             }
         }
@@ -28801,7 +28801,7 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
 
                         // 复仇恶魔猎手：获得连击点溢出会触发【破碎灵魂】
                         if (overflow > 0 && hasShatteredSoul) {
-                            triggerShatteredSoulHeal(overflow);
+                            triggerShatteredSoul(overflow);
                         }
                     }
                 }

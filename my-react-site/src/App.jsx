@@ -303,6 +303,41 @@ const CLASSES = {
             { level: 50, skillId: 'between_the_eyes' },
             { level: 60, skillId: 'adrenaline_rush' },
         ]
+    },
+
+    // ==================== 新增职业：复仇恶魔猎手 ====================
+    vengeance_demon_hunter: {
+        id: 'vengeance_demon_hunter',
+        name: '复仇恶魔猎手',
+        // 说明：
+        // - 所有伤害技能都可暴击（技能侧实现）
+        // - DOT 受急速加成（Boss战 DOT 结算侧实现；地图战已自带急速DOT加成）
+        baseStats: {
+            hp: 140,
+            mp: 60,
+            attack: 17,
+            spellPower: 5,
+            armor: 22,
+            magicResist: 15,
+            blockValue: 0,
+        },
+        baseGatherStats: { proficiency: 5, precision: 3, perception: 2 },
+        skills: [
+            { level: 1, skillId: 'basic_attack' },
+            { level: 1, skillId: 'rest' },
+            { level: 1, skillId: 'mastery_fel_blood' },
+            { level: 1, skillId: 'counterattack' },
+            { level: 3, skillId: 'rupture' },
+            { level: 5, skillId: 'shattered_soul' },
+            { level: 10, skillId: 'demon_spikes' },
+            { level: 10, skillId: 'fel_devastation' },
+            { level: 20, skillId: 'fiery_brand' },
+            { level: 30, skillId: 'soul_cleave' },
+            { level: 40, skillId: 'metamorphosis' },
+            { level: 50, skillId: 'spirit_bomb' },
+            { level: 60, skillId: 'sigil_of_flame' },
+            { level: 70, skillId: 'immolation_aura' },
+        ]
     }
 
 };
@@ -2182,6 +2217,254 @@ const SKILLS = {
                     hasteBonus: 20,
                     comboPerTurn: 1,
                     duration
+                }
+            };
+        }
+    },
+
+    // ==================== 复仇恶魔猎手 ====================
+    mastery_fel_blood: {
+        id: 'mastery_fel_blood',
+        name: '精通：邪能之血',
+        icon: '🩸',
+        type: 'passive',
+        description: '被动：提高（10 + 精通/10）%攻击强度。恶魔猎手无法格挡：格挡率转化为（格挡率/2）暴击率，格挡值转化为（格挡值/50）%暴击伤害。'
+    },
+    counterattack: {
+        id: 'counterattack',
+        name: '还击',
+        icon: '⚔️',
+        type: 'passive',
+        description: '被动：暴击同时提高（暴击/10）招架率。招架：完全免疫该次物理伤害，并对目标造成1.2倍攻击强度的物理伤害。'
+    },
+    rupture: {
+        id: 'rupture',
+        name: '破裂',
+        icon: '🗡️',
+        type: 'damage',
+        limit: 3,
+        description: '迅速挥砍，对目标造成1.2倍攻击强度的物理伤害，并获得2颗星（最多5颗）。',
+        calculate: (char) => {
+            let damage = (char.stats.attack || 0) * 1.2;
+            const critRate = Number(char.stats.critRate) || 0;
+            const isCrit = Math.random() < critRate / 100;
+            if (isCrit) damage *= (Number(char.stats.critDamage) || 2.0);
+            damage *= (1 + (Number(char.stats.versatility) || 0) / 100);
+            return {
+                damage: Math.floor(damage),
+                isCrit,
+                generateComboPoints: 2
+            };
+        }
+    },
+    shattered_soul: {
+        id: 'shattered_soul',
+        name: '破碎灵魂',
+        icon: '💠',
+        type: 'passive',
+        description: '被动：超过5颗星后再获得的星会被吸收。每颗星恢复你在前4回合内受到的所有伤害的8%（不低于最大生命值的1%）。5星后获得星将直接消耗并触发破碎灵魂。'
+    },
+    demon_spikes: {
+        id: 'demon_spikes',
+        name: '恶魔尖刺',
+        icon: '🛡️',
+        type: 'buff',
+        limit: 2,
+        description: '护甲提高（10 + 精通/10）%，持续2回合。',
+        calculate: (char) => {
+            const mastery = Number(char.stats.mastery) || 0;
+            const pct = 10 + mastery / 10;
+            return {
+                buff: {
+                    type: 'demon_spikes',
+                    name: '恶魔尖刺',
+                    armorMult: 1 + pct / 100,
+                    duration: 2,
+                }
+            };
+        }
+    },
+    fel_devastation: {
+        id: 'fel_devastation',
+        name: '邪能毁灭',
+        icon: '💚',
+        type: 'aoe_damage',
+        limit: 1,
+        description: '对所有敌人造成2.5倍攻击强度的混乱伤害（不计算防御），并回复造成总伤害30%的生命值。',
+        calculate: (char) => {
+            let damage = (char.stats.attack || 0) * 2.5;
+            const critRate = Number(char.stats.critRate) || 0;
+            const isCrit = Math.random() < critRate / 100;
+            if (isCrit) damage *= (Number(char.stats.critDamage) || 2.0);
+            damage *= (1 + (Number(char.stats.versatility) || 0) / 100);
+            return {
+                aoeDamage: Math.floor(damage),
+                isCrit,
+                school: 'chaos',
+                ignoreDefense: true,
+                lifeStealPct: 0.30
+            };
+        }
+    },
+    fiery_brand: {
+        id: 'fiery_brand',
+        name: '烈火印记',
+        icon: '🔥',
+        type: 'dot',
+        limit: 1,
+        description: '对目标施加烈火印记：每回合造成1倍攻击强度的火焰伤害（DOT火焰伤害计算防御）。同时获得40%减伤，持续3回合。',
+        calculate: (char) => {
+            let dpt = (char.stats.attack || 0) * 1.0;
+            const critRate = Number(char.stats.critRate) || 0;
+            const isCrit = Math.random() < critRate / 100;
+            if (isCrit) dpt *= (Number(char.stats.critDamage) || 2.0);
+            dpt *= (1 + (Number(char.stats.versatility) || 0) / 100);
+
+            return {
+                isCrit,
+                dot: {
+                    name: '烈火印记',
+                    school: 'fire',
+                    damagePerTurn: dpt,
+                    duration: 3,
+                    // Boss战 DOT 结算：对复仇DH做急速加成
+                    scaleWithHaste: true,
+                    // 本技能要求 DOT 伤害计算防御
+                    applyTargetDefense: true,
+                },
+                buff: {
+                    type: 'fiery_brand',
+                    name: '烈火印记',
+                    damageTakenMult: 0.6,
+                    duration: 3,
+                }
+            };
+        }
+    },
+    soul_cleave: {
+        id: 'soul_cleave',
+        name: '灵魂裂劈',
+        icon: '🧿',
+        type: 'aoe_damage',
+        limit: 3,
+        description: '消耗至多2星（触发破碎灵魂）。对所有敌人造成1.8倍攻击强度的物理伤害。',
+        calculate: (char) => {
+            let damage = (char.stats.attack || 0) * 1.8;
+            const critRate = Number(char.stats.critRate) || 0;
+            const isCrit = Math.random() < critRate / 100;
+            if (isCrit) damage *= (Number(char.stats.critDamage) || 2.0);
+            damage *= (1 + (Number(char.stats.versatility) || 0) / 100);
+            return {
+                aoeDamage: Math.floor(damage),
+                isCrit,
+                consumeComboPoints: 2,
+                triggerShatteredSoul: true,
+                school: 'physical'
+            };
+        }
+    },
+    metamorphosis: {
+        id: 'metamorphosis',
+        name: '恶魔变形',
+        icon: '😈',
+        type: 'buff',
+        limit: 1,
+        description: '生命值上限提高40%，血量回复40%，魔法抗性提高500，每回合获得1星，持续3回合。',
+        calculate: () => {
+            return {
+                buff: {
+                    type: 'metamorphosis',
+                    name: '恶魔变形',
+                    duration: 3,
+                    maxHpBonusPct: 0.40,
+                    instantHealPct: 0.40,
+                    magicResistBonus: 500,
+                    comboPerTurn: 1,
+                }
+            };
+        }
+    },
+    spirit_bomb: {
+        id: 'spirit_bomb',
+        name: '幽魂炸弹',
+        icon: '💥',
+        type: 'aoe_damage',
+        limit: 1,
+        description: '消耗所有星（触发破碎灵魂）。对所有敌人造成（1 + 星*0.6）倍攻击强度的火焰伤害。',
+        calculate: (char, combatContext) => {
+            const maxCombo = getMaxComboPointsForChar(char);
+            const combo = Math.max(0, Math.min(maxCombo, Math.floor(Number(combatContext?.comboPoints) || 0)));
+            const mult = 1 + combo * 0.6;
+
+            let damage = (char.stats.attack || 0) * mult;
+            const critRate = Number(char.stats.critRate) || 0;
+            const isCrit = Math.random() < critRate / 100;
+            if (isCrit) damage *= (Number(char.stats.critDamage) || 2.0);
+            damage *= (1 + (Number(char.stats.versatility) || 0) / 100);
+
+            return {
+                aoeDamage: Math.floor(damage),
+                isCrit,
+                consumeComboPoints: 'all',
+                triggerShatteredSoul: true,
+                school: 'fire'
+            };
+        }
+    },
+    sigil_of_flame: {
+        id: 'sigil_of_flame',
+        name: '烈焰咒符',
+        icon: '🟥',
+        type: 'aoe_dot',
+        limit: 1,
+        description: '对所有敌人施加烈焰咒符（火焰DOT），每回合造成0.6倍攻击强度的火焰伤害，持续3回合。',
+        calculate: (char) => {
+            let dpt = (char.stats.attack || 0) * 0.6;
+            const critRate = Number(char.stats.critRate) || 0;
+            const isCrit = Math.random() < critRate / 100;
+            if (isCrit) dpt *= (Number(char.stats.critDamage) || 2.0);
+            dpt *= (1 + (Number(char.stats.versatility) || 0) / 100);
+
+            return {
+                isCrit,
+                aoeDot: {
+                    name: '烈焰咒符',
+                    school: 'fire',
+                    damagePerTurn: dpt,
+                    duration: 3,
+                    scaleWithHaste: true,
+                }
+            };
+        }
+    },
+    immolation_aura: {
+        id: 'immolation_aura',
+        name: '献祭光环',
+        icon: '🟠',
+        type: 'aoe_dot',
+        limit: 1,
+        description: '每回合对所有敌人造成0.4倍攻击强度的火焰伤害（视为DOT），护甲提升20%，持续3回合。',
+        calculate: (char) => {
+            let dpt = (char.stats.attack || 0) * 0.4;
+            const critRate = Number(char.stats.critRate) || 0;
+            const isCrit = Math.random() < critRate / 100;
+            if (isCrit) dpt *= (Number(char.stats.critDamage) || 2.0);
+            dpt *= (1 + (Number(char.stats.versatility) || 0) / 100);
+
+            return {
+                isCrit,
+                aoeDot: {
+                    name: '献祭光环',
+                    school: 'fire',
+                    damagePerTurn: dpt,
+                    duration: 3,
+                    scaleWithHaste: true,
+                },
+                buff: {
+                    type: 'immolation_aura_armor',
+                    name: '献祭光环',
+                    armorMult: 1.2,
+                    duration: 3,
                 }
             };
         }
@@ -17821,6 +18104,29 @@ function calculateTotalStats(character, partyAuras = { hpMul: 1, spellPowerMul: 
 
         totalStats.iceLanceBaseMultiplier = iceLanceBaseMultiplier;
     }
+
+    // ==================== 复仇恶魔猎手：精通/格挡转化（1级被动） ====================
+    if (character.classId === 'vengeance_demon_hunter') {
+        const mastery = Number(totalStats.mastery) || 0;
+
+        // 精通：邪能之血 - 攻击强度提高（10 + 精通/10）%
+        const atkBonusPct = 10 + mastery / 10;
+        totalStats.attack = (Number(totalStats.attack) || 0) * (1 + atkBonusPct / 100);
+
+        // 无法格挡：格挡率 -> 暴击率；格挡值 -> 暴击伤害
+        const blockRate = Number(totalStats.blockRate) || 0;
+        const blockValue = Number(totalStats.blockValue) || 0;
+
+        // 格挡率转化为（格挡率/2）暴击率
+        totalStats.critRate = (Number(totalStats.critRate) || 0) + blockRate / 2;
+
+        // 格挡值转化为（格挡值/50）% 暴击伤害（以倍率加成：+0.02 表示 +2% 爆伤）
+        totalStats.critDamage = (Number(totalStats.critDamage) || 2.0) + (blockValue / 50) / 100;
+
+        // 禁用格挡
+        totalStats.blockRate = 0;
+        totalStats.blockValue = 0;
+    }
     // ==================== 羁绊：武圣转世（全队攻击强度 +15%） ====================
     if (gameState?.rebirthBonds?.includes('wusheng')) {
         totalStats.attack = (Number(totalStats.attack) || 0) * 1.15;
@@ -18592,6 +18898,15 @@ function stepBossCombat(state) {
         logs.push({ round: currentRound, text, type });
     };
 
+    // ==================== 本回合承伤追踪（用于部分职业机制，如【破碎灵魂】） ====================
+    if (Array.isArray(combat.playerStates)) {
+        combat.playerStates.forEach(ps => {
+            if (!ps) return;
+            if (!Array.isArray(ps.damageTakenHistory)) ps.damageTakenHistory = [];
+            ps.damageTakenThisRound = 0;
+        });
+    }
+
     // ==================== 装备特效：守护者的回响（BOSS战团队光环，不叠加） ====================
     const { bonus: bossTeamAuraBonus, keys: bossTeamAuraKeys } = getBossTeamAuraBonus(combat.playerStates);
     if (bossTeamAuraKeys.length > 0 && !combat.bossBuffs?.bossTeamAuraLogged) {
@@ -18629,9 +18944,17 @@ function stepBossCombat(state) {
 
     // 通用：法术伤害（魔抗）结算（并套用：受伤减免/全能/挫志怒吼/救赎/法术易伤）
     const calcMagicDamage = (playerState, rawDamage, magicResistOverride = null) => {
-        const mr = (magicResistOverride !== null && magicResistOverride !== undefined)
+        // 基础魔抗（可被 override 覆盖）
+        let mr = (magicResistOverride !== null && magicResistOverride !== undefined)
             ? (Number(magicResistOverride) || 0)
             : (playerState?.char?.stats?.magicResist || 0);
+
+        // Buff：魔法抗性加成（例如：复仇恶魔猎手【恶魔变形】+500）
+        if (playerState?.buffs?.length) {
+            playerState.buffs.forEach(b => {
+                if (b?.magicResistBonus) mr += Number(b.magicResistBonus) || 0;
+            });
+        }
 
         const resistReduction = getMagicResistDamageReduction(mr);
         let damage = Math.floor((rawDamage || 0) * (1 - resistReduction));
@@ -18745,6 +19068,46 @@ function stepBossCombat(state) {
         return { actualHeal, absorbed, healingMult, remainingAbsorb, absorbedAll };
     };
 
+    // ==================== 复仇恶魔猎手：破碎灵魂（5级被动） ====================
+    const getShatteredSoulHealPerStar = (ps) => {
+        const maxHp = Math.max(0, Math.floor(Number(ps?.char?.stats?.maxHp) || 0));
+        const history = Array.isArray(ps?.damageTakenHistory) ? ps.damageTakenHistory : [];
+        const sumLast4 = history.slice(0, 4).reduce((sum, v) => sum + Math.max(0, Math.floor(Number(v) || 0)), 0);
+        const byDamage = Math.floor(sumLast4 * 0.08);
+        const minHeal = Math.floor(maxHp * 0.01);
+        return Math.max(byDamage, minHeal);
+    };
+
+    const triggerShatteredSoul = (ps, stars, reasonText = '破碎灵魂') => {
+        if (!ps || ps.currentHp <= 0) return { totalActualHeal: 0, totalAbsorbed: 0, healPerStar: 0 };
+        const count = Math.max(0, Math.floor(Number(stars) || 0));
+        if (count <= 0) return { totalActualHeal: 0, totalAbsorbed: 0, healPerStar: 0 };
+
+        const healPerStar = getShatteredSoulHealPerStar(ps);
+        if (healPerStar <= 0) return { totalActualHeal: 0, totalAbsorbed: 0, healPerStar: 0 };
+
+        let totalActualHeal = 0;
+        let totalAbsorbed = 0;
+        let lastHealingMult = 1;
+        for (let i = 0; i < count; i++) {
+            const { actualHeal, absorbed, healingMult } = applyHealingToPlayer(ps, healPerStar, reasonText);
+            totalActualHeal += actualHeal;
+            totalAbsorbed += absorbed;
+            lastHealingMult = healingMult;
+        }
+
+        let text = `【${reasonText}】${ps.char?.name || '恶魔猎手'} 吸收灵魂碎片（${count}星）恢复 ${totalActualHeal} 点生命`;
+        if (totalAbsorbed > 0) {
+            text += `（治疗吸收 吸收 ${totalAbsorbed}）`;
+        }
+        if (lastHealingMult < 1) {
+            text += `（受到致死打击减疗${Math.round((1 - lastHealingMult) * 100)}%）`;
+        }
+        addLog(text, 'heal');
+
+        return { totalActualHeal, totalAbsorbed, healPerStar };
+    };
+
 
     const triggerAtonementHeal = (source, damageDone) => {
         if (!source || damageDone <= 0) return;
@@ -18774,8 +19137,15 @@ function stepBossCombat(state) {
 
     // ===== 护盾吸收伤害辅助函数 =====
     const applyShieldAbsorb = (playerState, damage, logs, currentRound) => {
-        if (!playerState.buffs || damage <= 0) {
-            return { finalDamage: damage, absorbed: 0 };
+        const incoming = Math.max(0, Math.floor(Number(damage) || 0));
+        if (incoming <= 0) {
+            return { finalDamage: 0, absorbed: 0 };
+        }
+
+        // 如果没有护盾buff，也要记录本回合承伤（用于部分职业机制）
+        if (!playerState?.buffs) {
+            playerState.damageTakenThisRound = (playerState.damageTakenThisRound || 0) + incoming;
+            return { finalDamage: incoming, absorbed: 0 };
         }
 
         // 找到有效的护盾buff
@@ -18784,13 +19154,19 @@ function stepBossCombat(state) {
         );
 
         if (!shieldBuff) {
-            return { finalDamage: damage, absorbed: 0 };
+            playerState.damageTakenThisRound = (playerState.damageTakenThisRound || 0) + incoming;
+            return { finalDamage: incoming, absorbed: 0 };
         }
 
         // 计算吸收量
-        const absorbed = Math.min(shieldBuff.amount, damage);
+        const absorbed = Math.min(shieldBuff.amount, incoming);
         shieldBuff.amount -= absorbed;
-        const finalDamage = damage - absorbed;
+        const finalDamage = incoming - absorbed;
+
+        // 记录本回合承伤（护盾吸收部分不计入“受到的伤害”）
+        if (finalDamage > 0) {
+            playerState.damageTakenThisRound = (playerState.damageTakenThisRound || 0) + finalDamage;
+        }
 
         // 护盾受击触发效果（寒冰护体：25%概率获得寒冰指）
         if (shieldBuff.onHitEffect?.type === 'generate_finger') {
@@ -18974,6 +19350,28 @@ function stepBossCombat(state) {
                             return false;
                         }
                         return true;
+                    }
+
+                    // 复仇恶魔猎手：恶魔变形到期需要恢复最大生命值
+                    if (b.type === 'metamorphosis' && (b.duration ?? 999) <= 0) {
+                        const currentMaxHp = Math.max(0, Math.floor(Number(p?.char?.stats?.maxHp) || 0));
+                        let bonus = Math.max(0, Math.floor(Number(b.maxHpBonus) || 0));
+                        // 兼容旧数据：若未存 flat bonus，则尝试通过 pct 反推
+                        if (bonus <= 0) {
+                            const pct = Math.max(0, Number(b.maxHpBonusPct) || 0);
+                            if (pct > 0 && currentMaxHp > 0) {
+                                const base = currentMaxHp / (1 + pct);
+                                bonus = Math.max(0, Math.floor(currentMaxHp - base));
+                            }
+                        }
+                        if (bonus > 0 && currentMaxHp > 0) {
+                            p.char.stats.maxHp = Math.max(1, currentMaxHp - bonus);
+                            if (p.currentHp > p.char.stats.maxHp) {
+                                p.currentHp = p.char.stats.maxHp;
+                            }
+                        }
+                        addLog(`位置${i + 1} ${p.char.name} 的【${b.name || '恶魔变形'}】效果结束`);
+                        return false;
                     }
                     return (b.duration ?? 999) > 0;
                 });
@@ -19261,8 +19659,19 @@ function stepBossCombat(state) {
                     if (gain > 0) {
                         const maxCombo = getMaxComboPointsForChar(p.char);
                         const before = p.comboPoints;
-                        p.comboPoints = Math.min(maxCombo, p.comboPoints + gain);
+                        const wouldHave = before + gain;
+                        p.comboPoints = Math.min(maxCombo, wouldHave);
                         const realGain = p.comboPoints - before;
+
+                        // 复仇恶魔猎手：溢出星触发【破碎灵魂】
+                        const overflow = Math.max(0, wouldHave - maxCombo);
+                        if (overflow > 0
+                            && p.char?.classId === 'vengeance_demon_hunter'
+                            && Array.isArray(p.char?.skills)
+                            && p.char.skills.includes('shattered_soul')) {
+                            triggerShatteredSoulHeal(p, overflow, '破碎灵魂（溢出）');
+                        }
+
                         if (realGain > 0) {
                             addLog(`【${b.name || '增益'}】位置${i + 1} ${p.char.name} 获得 ${realGain} 星（当前${p.comboPoints}星）`);
                         }
@@ -19971,6 +20380,9 @@ function stepBossCombat(state) {
             }
             let damage = result.aoeDamage * buffDamageDealtMult;
 
+            // 用于吸血/转化治疗（例如：复仇恶魔猎手【邪能毁灭】）
+            let totalDamageInflictedForLifeSteal = 0;
+
             // 狂徒盗贼20级天赋：索命强能 - 消耗星的技能每消耗1星，最终伤害+5%
             if (p.char?.classId === 'outlaw_rogue' && p.char?.talents?.[20] === 'fatal_empowerment' && result.consumeComboPoints) {
                 const spent = (result.consumeComboPoints === 'all')
@@ -19991,6 +20403,7 @@ function stepBossCombat(state) {
                     addLog(`位置${i + 1} ${p.char.name} 的${skillName}被【${shieldInfo.shieldName}】免疫（目标：${boss.name}）`, 'warning');
                 } else {
                     const br = dealDamageToBoss(damage);
+                    totalDamageInflictedForLifeSteal += Math.max(0, Math.floor((br.hpDamage || 0) + (br.absorbed || 0)));
                     let msg = `位置${i + 1} ${p.char.name} 的${skillName}对 ${boss.name} 造成 ${Math.floor(br.hpDamage)} 伤害${result.isCrit ? '（暴击！）' : ''}`;
                     if (br.absorbed > 0) msg += `（厚皮护盾吸收 ${br.absorbed}）`;
                     addLog(msg);
@@ -20037,6 +20450,10 @@ function stepBossCombat(state) {
                     return;
                 }
 
+                // 统计本次对该目标造成的有效伤害（不超过当前血量）
+                const dealt = Math.max(0, Math.min(Math.floor(m.hp || 0), Math.floor(damage)));
+                totalDamageInflictedForLifeSteal += dealt;
+
                 m.hp -= damage;
                 const minionName = boss.minion?.name || boss.cannoneer?.name || '小弟';
                 addLog(`位置${i + 1} ${p.char.name} 的${skillName}对 ${minionName}${idx + 1} 造成 ${Math.floor(damage)} 伤害${result.isCrit ? '（暴击！）' : ''}`);
@@ -20057,6 +20474,21 @@ function stepBossCombat(state) {
                     addLog(`【冰川突进】触发：${p.char.name} 获得1层寒冰指，当前${p.fingersOfFrost}层`);
                 }
             });
+
+            // 吸血/转化治疗
+            if (result.lifeStealPct && Number(result.lifeStealPct) > 0) {
+                const pct = Number(result.lifeStealPct);
+                const healAmount = Math.max(0, Math.floor(totalDamageInflictedForLifeSteal * pct));
+                if (healAmount > 0 && p.currentHp > 0) {
+                    const hr = applyHealingToPlayer(p, healAmount, `${skillName}（吸血）`);
+                    if (hr.actualHeal > 0 || hr.absorbed > 0) {
+                        let msg = `【吸血】位置${i + 1} ${p.char.name} 通过【${skillName}】回复 ${hr.actualHeal} 生命`;
+                        if (hr.absorbed > 0) msg += `（治疗吸收 吸收 ${hr.absorbed}）`;
+                        if (hr.healingMult < 1) msg += `（受到致死打击减疗${Math.round((1 - hr.healingMult) * 100)}%）`;
+                        addLog(msg, 'heal');
+                    }
+                }
+            }
 
             // 山丘之王天赋处理
             if (p.char.talents?.[30] === 'mountain_king' && Math.random() < 0.5) {
@@ -20736,47 +21168,115 @@ function stepBossCombat(state) {
         // buff处理
         if (result.buff) {
             p.buffs = p.buffs || [];
-            p.buffs.push({ ...result.buff, justApplied: true });
+            let buffToApply = { ...result.buff, justApplied: true };
 
-            if (result.buff.damageTakenMult) {
-                const damageReduction = Math.round((1 - result.buff.damageTakenMult) * 100);
-                let buffText = `位置${i + 1} ${p.char.name} 开启盾墙，受到伤害降低${damageReduction}%（持续${result.buff.duration}回合）`;
-                if (result.buff.damageDealtMult && result.buff.damageDealtMult > 1) {
-                    const damageIncrease = Math.round((result.buff.damageDealtMult - 1) * 100);
+            // ==================== 特殊：恶魔变形（最大生命值/即时治疗） ====================
+            if (buffToApply.type === 'metamorphosis') {
+                const existingMeta = p.buffs.find(b => b.type === 'metamorphosis');
+                // 已有形态：不重复叠加最大生命值，只刷新持续时间（保留原先加成值）
+                if (existingMeta && Number.isFinite(Number(existingMeta.maxHpBonus)) && Number(existingMeta.maxHpBonus) > 0) {
+                    buffToApply.maxHpBonus = existingMeta.maxHpBonus;
+                }
+                if (!existingMeta) {
+                    const baseMaxHp = Math.max(1, Math.floor(Number(p.char.stats.maxHp) || 0));
+                    const pct = Math.max(0, Number(buffToApply.maxHpBonusPct) || 0);
+                    const bonus = Math.max(0, Math.floor(baseMaxHp * pct));
+                    if (bonus > 0) {
+                        p.char.stats.maxHp = baseMaxHp + bonus;
+                        buffToApply.maxHpBonus = bonus;
+                        // 若当前血量超过新上限，先修正
+                        if (p.currentHp > p.char.stats.maxHp) p.currentHp = p.char.stats.maxHp;
+                    }
+                }
+
+                // 即时回复：按【当前最大生命值】百分比
+                const instantHealPct = Math.max(0, Number(buffToApply.instantHealPct) || 0);
+                if (instantHealPct > 0 && p.currentHp > 0) {
+                    const healAmt = Math.floor(Math.max(0, Number(p.char.stats.maxHp) || 0) * instantHealPct);
+                    if (healAmt > 0) {
+                        const healRes = applyHealingToPlayer(p, healAmt, '恶魔变形');
+                        if (healRes.actualHeal > 0 || healRes.absorbed > 0) {
+                            let healText = `位置${i + 1} ${p.char.name} 施放【恶魔变形】，立即回复 ${healRes.actualHeal} 点生命`;
+                            if (healRes.absorbed > 0) healText += `（治疗吸收 吸收 ${healRes.absorbed}）`;
+                            if (healRes.healingMult < 1) healText += `（致死打击减疗${Math.round((1 - healRes.healingMult) * 100)}%）`;
+                            addLog(healText, 'heal');
+                        }
+                    }
+                }
+            }
+
+            // ==================== 不可叠加：同类型刷新持续时间（避免叠层） ====================
+            const noStackTypes = new Set(['demon_spikes', 'metamorphosis', 'fiery_brand', 'immolation_aura']);
+            const existingIdx = p.buffs.findIndex(b => b.type === buffToApply.type);
+            if (noStackTypes.has(buffToApply.type) && existingIdx !== -1) {
+                p.buffs[existingIdx] = { ...p.buffs[existingIdx], ...buffToApply, justApplied: true };
+            } else {
+                p.buffs.push(buffToApply);
+            }
+
+            // ==================== 日志输出 ====================
+            if (buffToApply.damageTakenMult) {
+                const damageReduction = Math.round((1 - buffToApply.damageTakenMult) * 100);
+                const duration = buffToApply.duration;
+                let buffText;
+                if (buffToApply.type === 'shield_wall') {
+                    buffText = `位置${i + 1} ${p.char.name} 开启盾墙，受到伤害降低${damageReduction}%（持续${duration}回合）`;
+                } else {
+                    const buffName = buffToApply.name || '减伤';
+                    buffText = `位置${i + 1} ${p.char.name} 获得【${buffName}】：受到伤害降低${damageReduction}%（持续${duration}回合）`;
+                }
+                if (buffToApply.damageDealtMult && buffToApply.damageDealtMult > 1) {
+                    const damageIncrease = Math.round((buffToApply.damageDealtMult - 1) * 100);
                     buffText += `，造成伤害提高${damageIncrease}%`;
                 }
 
                 // 60级天赋：泰坦壁垒 - 盾墙期间面板属性加成
-                if (Number.isFinite(Number(result.buff.masteryBonus)) && Number(result.buff.masteryBonus) !== 0) {
-                    buffText += `，精通+${result.buff.masteryBonus}`;
+                if (Number.isFinite(Number(buffToApply.masteryBonus)) && Number(buffToApply.masteryBonus) !== 0) {
+                    buffText += `，精通+${buffToApply.masteryBonus}`;
                 }
-                if (Number.isFinite(Number(result.buff.versatilityBonus)) && Number(result.buff.versatilityBonus) !== 0) {
-                    buffText += `，全能+${result.buff.versatilityBonus}`;
+                if (Number.isFinite(Number(buffToApply.versatilityBonus)) && Number(buffToApply.versatilityBonus) !== 0) {
+                    buffText += `，全能+${buffToApply.versatilityBonus}`;
                 }
 
                 addLog(buffText);
             }
 
-            if (result.buff.type === 'icy_veins') {
-                addLog(`位置${i + 1} ${p.char.name} 开启【冰冷血脉】：冰霜伤害+50%，急速+50%，持续${result.buff.duration}回合`);
+            // 冰霜法师
+            if (buffToApply.type === 'icy_veins') {
+                addLog(`位置${i + 1} ${p.char.name} 开启【冰冷血脉】：冰霜伤害+50%，急速+50%，持续${buffToApply.duration}回合`);
             }
 
-            // 狂徒盗贼buff
-            if (result.buff.type === 'blade_flurry') {
+            // 复仇恶魔猎手
+            if (buffToApply.type === 'demon_spikes') {
+                const armorPct = Math.round((Number(buffToApply.armorMult) - 1) * 100);
+                addLog(`位置${i + 1} ${p.char.name} 使用【恶魔尖刺】：护甲提高${armorPct}%（持续${buffToApply.duration}回合）`);
+            }
+            if (buffToApply.type === 'immolation_aura') {
+                const armorPct = Math.round((Number(buffToApply.armorMult) - 1) * 100);
+                addLog(`位置${i + 1} ${p.char.name} 开启【献祭光环】：护甲提高${armorPct}%（持续${buffToApply.duration}回合）`);
+            }
+            if (buffToApply.type === 'metamorphosis') {
+                const hpPct = Math.round((Number(buffToApply.maxHpBonusPct) || 0) * 100);
+                const healPct = Math.round((Number(buffToApply.instantHealPct) || 0) * 100);
+                addLog(`位置${i + 1} ${p.char.name} 进入【恶魔变形】：最大生命值+${hpPct}%（立即回复${healPct}%），魔法抗性+${buffToApply.magicResistBonus || 0}，每回合+${buffToApply.comboPerTurn || 0}星，持续${buffToApply.duration}回合`);
+            }
+
+            // 狂徒盗贼
+            if (buffToApply.type === 'blade_flurry') {
                 addLog(`位置${i + 1} ${p.char.name} 开启【剑刃乱舞】：后续普攻/刺骨/伏击/正中眉心将触发复制伤害（持续本场战斗）`);
             }
-            if (result.buff.type === 'slice_and_dice') {
-                const vBonus = result.buff.versatilityBonus || 0;
-                addLog(`位置${i + 1} ${p.char.name} 开启【切割】：急速+${result.buff.hasteBonus || 0}` + (vBonus ? `，全能+${vBonus}` : '') + `，持续${result.buff.duration}回合`);
+            if (buffToApply.type === 'slice_and_dice') {
+                const vBonus = buffToApply.versatilityBonus || 0;
+                addLog(`位置${i + 1} ${p.char.name} 开启【切割】：急速+${buffToApply.hasteBonus || 0}` + (vBonus ? `，全能+${vBonus}` : '') + `，持续${buffToApply.duration}回合`);
             }
-            if (result.buff.type === 'between_the_eyes') {
-                addLog(`位置${i + 1} ${p.char.name} 获得【正中眉心】：暴击率+${result.buff.critRateBonus || 0}%，持续${result.buff.duration}回合`);
+            if (buffToApply.type === 'between_the_eyes') {
+                addLog(`位置${i + 1} ${p.char.name} 获得【正中眉心】：暴击率+${buffToApply.critRateBonus || 0}%，持续${buffToApply.duration}回合`);
             }
-            if (result.buff.type === 'adrenaline_rush') {
-                addLog(`位置${i + 1} ${p.char.name} 开启【冲动】：急速+${result.buff.hasteBonus || 0}，每回合+${result.buff.comboPerTurn || 0}星，持续${result.buff.duration}回合`);
+            if (buffToApply.type === 'adrenaline_rush') {
+                addLog(`位置${i + 1} ${p.char.name} 开启【冲动】：急速+${buffToApply.hasteBonus || 0}，每回合+${buffToApply.comboPerTurn || 0}星，持续${buffToApply.duration}回合`);
             }
-            if (result.buff.type === 'crimson_vial') {
-                addLog(`位置${i + 1} ${p.char.name} 使用【猩红之瓶】：每回合回复${Math.round((result.buff.healPctPerTurn || 0) * 100)}%最大生命值，持续${result.buff.duration}回合`);
+            if (buffToApply.type === 'crimson_vial') {
+                addLog(`位置${i + 1} ${p.char.name} 使用【猩红之瓶】：每回合回复${Math.round((buffToApply.healPctPerTurn || 0) * 100)}%最大生命值，持续${buffToApply.duration}回合`);
             }
         }
 
@@ -20939,6 +21439,14 @@ function stepBossCombat(state) {
                 p.comboPoints = Math.max(0, p.comboPoints - spent);
                 addLog(`【连击点】${p.char.name} 消耗 ${spent} 星（当前${p.comboPoints}星）`);
 
+                // 复仇恶魔猎手：消耗星触发【破碎灵魂】
+                if (result.triggerShatteredSoul
+                    && p.char?.classId === 'vengeance_demon_hunter'
+                    && Array.isArray(p.char.skills)
+                    && p.char.skills.includes('shattered_soul')) {
+                    triggerShatteredSoulHeal(p, spent, `${p.char.name} 破碎灵魂`);
+                }
+
                 // 狂徒盗贼20级天赋：无情 - 每消耗1星，20%概率返还1星
                 if (p.char?.classId === 'outlaw_rogue' && p.char?.talents?.[20] === 'ruthless') {
                     let refunded = 0;
@@ -20962,10 +21470,20 @@ function stepBossCombat(state) {
             if (gain > 0) {
                 const maxCombo = getMaxComboPointsForChar(p.char);
                 const before = p.comboPoints;
-                p.comboPoints = Math.min(maxCombo, p.comboPoints + gain);
-                const realGain = p.comboPoints - before;
+                const after = Math.min(maxCombo, p.comboPoints + gain);
+                const overflow = Math.max(0, before + gain - maxCombo);
+                p.comboPoints = after;
+                const realGain = after - before;
                 if (realGain > 0) {
                     addLog(`【连击点】${p.char.name} 获得 ${realGain} 星（当前${p.comboPoints}星）`);
+                }
+
+                // 复仇恶魔猎手：溢出的星触发【破碎灵魂】
+                if (overflow > 0
+                    && p.char?.classId === 'vengeance_demon_hunter'
+                    && Array.isArray(p.char.skills)
+                    && p.char.skills.includes('shattered_soul')) {
+                    triggerShatteredSoulHeal(p, overflow, `${p.char.name} 破碎灵魂`);
                 }
             }
         }
@@ -21146,7 +21664,32 @@ function stepBossCombat(state) {
                 return dot.duration > 0;
             }
 
-            const dmg = Math.max(1, Math.floor(dot.damagePerTurn));
+            // DOT 伤害：支持急速加成/计算防御（用于部分职业技能）
+            let dotDamage = Number(dot.damagePerTurn) || 0;
+
+            // 急速加成（例如：复仇恶魔猎手）
+            if (dot.scaleWithHaste && dot.sourcePlayerId) {
+                const sourcePlayer = combat.playerStates.find(p => p.char.id === dot.sourcePlayerId);
+                if (sourcePlayer) {
+                    const hasteBonusFromBuffs = (sourcePlayer.buffs || []).reduce(
+                        (sum, b) => sum + (Number(b?.hasteBonus) || 0),
+                        0
+                    );
+                    const hasteTotal = (Number(sourcePlayer?.char?.stats?.haste) || 0) + hasteBonusFromBuffs;
+                    dotDamage *= (1 + hasteTotal * 0.02);
+                }
+            }
+
+            // 计算防御（例如：烈火印记 DOT）
+            if (dot.applyTargetDefense) {
+                const sourcePlayer = dot.sourcePlayerId
+                    ? combat.playerStates.find(p => p.char.id === dot.sourcePlayerId)
+                    : null;
+                const effectiveDefense = getEffectiveTargetDefense(sourcePlayer?.char, boss.defense || 0);
+                dotDamage = Math.max(1, Math.floor(dotDamage) - effectiveDefense);
+            }
+
+            const dmg = Math.max(1, Math.floor(dotDamage));
             const br = dealDamageToBoss(dmg);
 
             {
@@ -21207,7 +21750,32 @@ function stepBossCombat(state) {
                     return dot.duration > 0;
                 }
 
-                const dmg = Math.max(1, Math.floor(dot.damagePerTurn));
+                    // DOT 伤害：支持急速加成/计算防御（用于部分职业技能）
+                    let dotDamage = Number(dot.damagePerTurn) || 0;
+
+                    // 急速加成（例如：复仇恶魔猎手）
+                    if (dot.scaleWithHaste && dot.sourcePlayerId) {
+                        const sourcePlayer = combat.playerStates.find(p => p.char.id === dot.sourcePlayerId);
+                        if (sourcePlayer) {
+                            const hasteBonusFromBuffs = (sourcePlayer.buffs || []).reduce(
+                                (sum, b) => sum + (Number(b?.hasteBonus) || 0),
+                                0
+                            );
+                            const hasteTotal = (Number(sourcePlayer?.char?.stats?.haste) || 0) + hasteBonusFromBuffs;
+                            dotDamage *= (1 + hasteTotal * 0.02);
+                        }
+                    }
+
+                    // 计算防御（例如：烈火印记 DOT）
+                    if (dot.applyTargetDefense) {
+                        const sourcePlayer = dot.sourcePlayerId
+                            ? combat.playerStates.find(p => p.char.id === dot.sourcePlayerId)
+                            : null;
+                        const effectiveDefense = getEffectiveTargetDefense(sourcePlayer?.char, m.defense || 0);
+                        dotDamage = Math.max(1, Math.floor(dotDamage) - effectiveDefense);
+                    }
+
+                    const dmg = Math.max(1, Math.floor(dotDamage));
                 m.hp -= dmg;
 
                 addLog(`【${dotName}】对 ${targetLabel} 造成 ${dmg} DOT 伤害（剩余${dot.duration - 1}回合）`);
@@ -21259,11 +21827,90 @@ function stepBossCombat(state) {
         return buffs.reduce((sum, b) => sum + (b?.blockRate || 0), 0);
     };
 
-    const calcMitigatedAndBlockedDamage = (playerState, rawDamage, isHeavy = false) => {
+    const calcMitigatedAndBlockedDamage = (playerState, rawDamage, isHeavy = false, attackerInfo = null) => {
+        // ==================== 复仇恶魔猎手：招架（还击） ====================
+        // 招架判定：招架后免疫本次物理伤害，并对攻击者造成 1.2 倍攻击强度的物理伤害
+        if (playerState?.char?.classId === 'vengeance_demon_hunter') {
+            const hasCounter = Array.isArray(playerState?.char?.skills)
+                ? playerState.char.skills.includes('counterattack')
+                : false;
+            if (hasCounter && (playerState.currentHp ?? 0) > 0) {
+                const critRate = Math.max(0, Number(playerState?.char?.stats?.critRate) || 0);
+                const parryRate = Math.max(0, Math.min(95, critRate / 10));
+                const parryChance = parryRate / 100;
+
+                if (Math.random() < parryChance) {
+                    // 反击伤害
+                    let counterRaw = (Number(playerState?.char?.stats?.attack) || 0) * 1.2;
+                    let counterCrit = false;
+                    if (Math.random() < (critRate / 100)) {
+                        counterCrit = true;
+                        counterRaw *= (Number(playerState?.char?.stats?.critDamage) || 2);
+                    }
+                    const vers = Number(playerState?.char?.stats?.versatility) || 0;
+                    counterRaw *= (1 + vers / 100);
+                    const counterBase = Math.max(1, Math.floor(counterRaw));
+
+                    const pos = Math.max(0, combat.playerStates.findIndex(ps => ps === playerState));
+                    const attackerType = attackerInfo?.type || 'boss';
+                    let counterText = '';
+
+                    if (attackerType === 'minion') {
+                        const idx = attackerInfo?.index;
+                        const m = (combat.minions || [])[idx];
+                        const mName = m?.name || '小怪';
+
+                        if (!m || (m.hp ?? 0) <= 0) {
+                            counterText = `并反击 ${mName}，但目标已倒下`;
+                        } else {
+                            const shieldInfo = getExecutusShieldInfo('physical', 'minion');
+                            if (m.immune || shieldInfo.immune) {
+                                counterText = `并反击 ${mName}，但被【${shieldInfo.shieldName || '免疫'}】免疫`;
+                            } else {
+                                const def = Math.max(0, Math.floor(Number(m.defense) || 0));
+                                const effDef = getEffectiveTargetDefense(playerState.char, def);
+                                const dealt = Math.max(1, Math.floor(counterBase - effDef));
+                                m.hp -= dealt;
+                                counterText = `并反击 ${mName} 造成 ${dealt} 点物理伤害`;
+                                if (counterCrit) counterText += '（暴击）';
+                                if (m.hp <= 0) counterText += `，${mName} 被击败！`;
+                            }
+                        }
+                    } else {
+                        const isRagnarosSubmerged = (combat.bossId === 'ragnaros') && ((combat.bossBuffs?.submergeRemaining || 0) > 0);
+                        const shieldInfo = getExecutusShieldInfo('physical', 'boss');
+                        if (isRagnarosSubmerged || shieldInfo.immune) {
+                            counterText = `并反击 ${boss.name}，但被【${isRagnarosSubmerged ? '熔岩潜行' : shieldInfo.shieldName}】免疫`;
+                        } else {
+                            const effDef = getEffectiveTargetDefense(playerState.char, boss.defense || 0);
+                            const dealtPreShield = Math.max(1, Math.floor(counterBase - effDef));
+                            const br = dealDamageToBoss(dealtPreShield);
+                            counterText = `并反击 ${boss.name} 造成 ${br.hpDamage} 点物理伤害`;
+                            if (counterCrit) counterText += '（暴击）';
+                            if (br.absorbed > 0) counterText += `（厚皮护盾吸收 ${br.absorbed}）`;
+                        }
+                    }
+
+                    addLog(`【还击】位置${pos + 1} ${playerState.char.name} 招架了物理攻击，完全免疫本次伤害！${counterText}`, counterCrit ? 'crit' : 'normal');
+                    return { damage: 0, dr: 1, blockedAmount: 0, isHeavy, parried: true };
+                }
+            }
+        }
+
         const baseArmor = playerState?.char?.stats?.armor || 0;
 
-        // ✅ 护甲类减益：允许通过 debuffs.*.armorMult 影响有效护甲（例如：克洛玛古斯【腐蚀酸液】）
+        // ✅ 护甲类增益：允许通过 buffs.*.armorMult 影响有效护甲（例如：恶魔尖刺/献祭光环等）
         let armor = baseArmor;
+        if (Array.isArray(playerState?.buffs)) {
+            playerState.buffs.forEach(b => {
+                const m = Number(b?.armorMult);
+                if (Number.isFinite(m) && m > 0) {
+                    armor *= m;
+                }
+            });
+        }
+
+        // ✅ 护甲类减益：允许通过 debuffs.*.armorMult 影响有效护甲（例如：克洛玛古斯【腐蚀酸液】）
         if (playerState?.debuffs) {
             Object.keys(playerState.debuffs).forEach(k => {
                 const d = playerState.debuffs[k];
@@ -21279,9 +21926,11 @@ function stepBossCombat(state) {
         let dmg = applyPhysicalMitigation(rawDamage, armor);
 
         // ===== 50级天赋：格挡突破 =====
-        let baseBlockRate = playerState?.char?.stats?.blockRate || 0;
+        // 复仇恶魔猎手：无法格挡
+        const noBlock = playerState?.char?.classId === 'vengeance_demon_hunter';
+        let baseBlockRate = noBlock ? 0 : (playerState?.char?.stats?.blockRate || 0);
         const buffBlockRate = getBuffBlockRate(playerState);
-        let totalBlockRate = baseBlockRate + buffBlockRate;
+        let totalBlockRate = baseBlockRate + (noBlock ? 0 : buffBlockRate);
         let blockBreakthroughBonusValue = 0;
 
         if (playerState?.char?.talents?.[50] === 'block_breakthrough' && totalBlockRate > 95) {
@@ -21668,11 +22317,12 @@ function stepBossCombat(state) {
                 const raw = Math.floor((boss.attack || 0) * (boss.fangsMultiplier || 3));
                 const { damage, dr, blockedAmount } = calcMitigatedAndBlockedDamage(target, raw, true);
 
-                target.currentHp -= damage;
+                const shieldResult = applyShieldAbsorb(target, damage, logs, currentRound);
+                target.currentHp -= shieldResult.finalDamage;
 
                 const drPct = Math.round(dr * 100);
                 const blockText = blockedAmount > 0 ? `，格挡 ${blockedAmount}` : '';
-                addLog(`【${boss.name}】使用【尖牙与利爪】对 位置${tIdx + 1} 造成 ${damage} 点物理伤害（护甲减伤${drPct}%${blockText}）`);
+                addLog(`【${boss.name}】使用【尖牙与利爪】对 位置${tIdx + 1} 造成 ${shieldResult.finalDamage} 点物理伤害（护甲减伤${drPct}%${blockText}）`);
 
                 // 施加流血DOT
                 target.dots = target.dots || [];
@@ -21703,11 +22353,12 @@ function stepBossCombat(state) {
                 const raw = Math.floor(boss.attack || 0);
                 const { damage, dr, blockedAmount } = calcMitigatedAndBlockedDamage(target, raw, false);
 
-                target.currentHp -= damage;
+                const shieldResult = applyShieldAbsorb(target, damage, logs, currentRound);
+                target.currentHp -= shieldResult.finalDamage;
 
                 const drPct = Math.round(dr * 100);
                 const blockText = blockedAmount > 0 ? `，格挡 ${blockedAmount}` : '';
-                addLog(`【${boss.name}】普通攻击 位置${tIdx + 1} 造成 ${damage} 点伤害（护甲减伤${drPct}%${blockText}）`);
+                addLog(`【${boss.name}】普通攻击 位置${tIdx + 1} 造成 ${shieldResult.finalDamage} 点伤害（护甲减伤${drPct}%${blockText}）`);
             }
         }
     }
@@ -21740,11 +22391,12 @@ function stepBossCombat(state) {
                 const raw = Math.floor((boss.attack || 0) * (boss.heavyMultiplier || 1));
                 const { damage, dr, blockedAmount } = calcMitigatedAndBlockedDamage(target, raw, true);
 
-                target.currentHp -= damage;
+                const shieldResult = applyShieldAbsorb(target, damage, logs, currentRound);
+                target.currentHp -= shieldResult.finalDamage;
 
                 const drPct = Math.round(dr * 100);
                 const blockText = blockedAmount > 0 ? `，格挡 ${blockedAmount}` : '';
-                addLog(`【${boss.name}】使用【重击】对 位置${tIdx + 1} 造成 ${damage} 伤害（护甲减伤${drPct}%${blockText}）`);
+                addLog(`【${boss.name}】使用【重击】对 位置${tIdx + 1} 造成 ${shieldResult.finalDamage} 伤害（护甲减伤${drPct}%${blockText}）`);
             }
         }
     }// ==================== 裂魂者萨尔诺斯技能处理 ====================
@@ -26892,12 +27544,14 @@ function stepBossCombat(state) {
             const raw = Math.floor(m.attack || 0);
             const { damage, dr, blockedAmount } = calcMitigatedAndBlockedDamage(target, raw, false);
 
-            target.currentHp -= damage;
+            const shieldResult = applyShieldAbsorb(target, damage, logs, currentRound);
+            target.currentHp -= shieldResult.finalDamage;
 
             const drPct = Math.round(dr * 100);
             const blockText = blockedAmount > 0 ? `，格挡 ${blockedAmount}` : '';
+            const shieldText = shieldResult.absorbed > 0 ? `，护盾吸收 ${shieldResult.absorbed}` : '';
             const minionName = boss.minion?.name || '小弟';
-            addLog(`【${minionName}】攻击 位置${tIdx + 1} 造成 ${damage} 伤害（护甲减伤${drPct}%${blockText}）`);
+            addLog(`【${minionName}】攻击 位置${tIdx + 1} 造成 ${shieldResult.finalDamage} 伤害（护甲减伤${drPct}%${blockText}${shieldText}）`);
         }
         // 萨尔诺斯的十字军：对坦克（1号位）造成普通攻击
         if (combat.bossId === 'thalnos' && m.isCrusader) {
@@ -27518,6 +28172,16 @@ function stepBossCombat(state) {
     }
 
     // 继续战斗
+    // 将本回合承伤写入历史（最多保留最近4回合），用于诸如【破碎灵魂】等机制
+    if (Array.isArray(combat.playerStates)) {
+        combat.playerStates.forEach(ps => {
+            if (!ps) return;
+            const taken = Math.max(0, Math.floor(Number(ps.damageTakenThisRound) || 0));
+            ps.damageTakenHistory = [taken, ...(Array.isArray(ps.damageTakenHistory) ? ps.damageTakenHistory : [])].slice(0, 4);
+            ps.damageTakenThisRound = 0;
+        });
+    }
+
     combat.logs = logs.slice(-50);
 
     const syncedCharacters = (state.characters || []).map(c => {
@@ -27895,6 +28559,11 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
     // enemy debuffs
     let enemyDebuffs = Array.isArray(combatState.enemyDebuffs) ? [...combatState.enemyDebuffs] : [];
 
+    // ✅ 最近4回合承伤记录（用于部分职业机制，如复仇恶魔猎手【破碎灵魂】）
+    let damageTakenHistory = Array.isArray(combatState.damageTakenHistory)
+        ? [...combatState.damageTakenHistory]
+        : [];
+
     // 天赋叠层（仅本场战斗有效）
     let talentBuffs = combatState.talentBuffs
         ? { ...combatState.talentBuffs }
@@ -27999,6 +28668,58 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
         });
     };
 
+    // ==================== 复仇恶魔猎手：破碎灵魂（5级被动） ====================
+    const hasShatteredSoul = character?.classId === 'vengeance_demon_hunter'
+        && Array.isArray(character?.skills)
+        && character.skills.includes('shattered_soul');
+
+    const getShatteredSoulHealPerStar = () => {
+        const maxHp = Math.max(0, Math.floor(Number(character.stats.maxHp ?? character.stats.hp) || 0));
+        const sumLast4 = (Array.isArray(damageTakenHistory) ? damageTakenHistory : [])
+            .slice(0, 4)
+            .reduce((s, v) => s + Math.max(0, Math.floor(Number(v) || 0)), 0);
+        const byDamage = Math.floor(sumLast4 * 0.08);
+        const minHeal = Math.floor(maxHp * 0.01);
+        return Math.max(byDamage, minHeal);
+    };
+
+    const triggerShatteredSoul = (stars, reasonText = '破碎灵魂') => {
+        const count = Math.max(0, Math.floor(Number(stars) || 0));
+        if (!hasShatteredSoul || count <= 0) return;
+        if (charHp <= 0) return;
+
+        const per = getShatteredSoulHealPerStar();
+        if (per <= 0) return;
+
+        let totalHeal = 0;
+        let totalAbsorbed = 0;
+        const maxHp = Math.max(0, Math.floor(Number(character.stats.maxHp ?? character.stats.hp) || 0));
+
+        for (let k = 0; k < count; k++) {
+            let healAmount = per;
+
+            // 治疗吸收
+            if (healAbsorb > 0) {
+                const absorbed = Math.min(healAbsorb, healAmount);
+                healAbsorb -= absorbed;
+                healAmount -= absorbed;
+                totalAbsorbed += absorbed;
+            }
+
+            if (healAmount > 0) {
+                const actual = Math.min(healAmount, maxHp - charHp);
+                charHp += actual;
+                totalHeal += actual;
+            }
+        }
+
+        if (totalHeal > 0 || totalAbsorbed > 0) {
+            let text = `【破碎灵魂】${character.name} 吸收灵魂碎片，恢复 ${totalHeal} 点生命（${count}星）`;
+            if (totalAbsorbed > 0) text += `（治疗吸收 吸收 ${totalAbsorbed}）`;
+            logs.push({ round, kind: 'heal', actor: character.name, text });
+        }
+    };
+
     const maxRounds = 200;
 
     for (let i = 0; i < roundsPerTick; i++) {
@@ -28052,8 +28773,10 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
                     if (gain > 0) {
                         const maxCombo = getMaxComboPointsForChar(character);
                         const before = comboPoints;
-                        comboPoints = Math.min(maxCombo, comboPoints + gain);
-                        const realGain = comboPoints - before;
+                        const after = Math.min(maxCombo, before + gain);
+                        const overflow = Math.max(0, (before + gain) - maxCombo);
+                        comboPoints = after;
+                        const realGain = after - before;
                         if (realGain > 0) {
                             logs.push({
                                 round,
@@ -28062,6 +28785,11 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
                                 proc: b.name || '增益',
                                 text: `【${b.name || '增益'}】获得 ${realGain} 星（当前${comboPoints}星）`
                             });
+                        }
+
+                        // 复仇恶魔猎手：获得连击点溢出会触发【破碎灵魂】
+                        if (overflow > 0 && hasShatteredSoul) {
+                            triggerShatteredSoulHeal(overflow);
                         }
                     }
                 }

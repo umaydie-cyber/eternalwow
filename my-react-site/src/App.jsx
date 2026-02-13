@@ -13369,6 +13369,405 @@ const FIXED_EQUIPMENTS = {
         haste: 2,
       }
     },
+    // ==================== 纳克萨玛斯：克尔苏加德掉落 ====================
+
+    // ===== T3：无畏（战士）- 之戒 =====
+    EQ_369: {
+      id: 'EQ_369',
+      name: '无畏之戒',
+      icon: 'icons/wow/vanilla/armor/zst3jie.png',
+      type: 'equipment',
+      slot: 'ring1',
+      rarity: 'purple',
+      setId: 'dreadnaught_set',
+      setName: '无畏',
+      level: 1,
+      maxLevel: 100,
+      baseStats: {
+        attack: 650,
+        hp: 11000,
+        armor: 360,
+        magicResist: 200,
+        mastery: 24,
+        versatility: 24,
+        blockRate: 6,
+        blockValue: 900,
+      },
+      growth: {
+        attack: 2,
+        hp: 2,
+        armor: 2,
+        magicResist: 2,
+        mastery: 2,
+        versatility: 2,
+        blockRate: 2,
+        blockValue: 2,
+      }
+    },
+
+    // ===== T3：骨镰（盗贼）- 之戒 =====
+    EQ_370: {
+      id: 'EQ_370',
+      name: '骨镰之戒',
+      icon: 'icons/wow/vanilla/armor/zst3jie.png',
+      type: 'equipment',
+      slot: 'ring1',
+      rarity: 'purple',
+      setId: 'bonescythe_set',
+      setName: '骨镰',
+      level: 1,
+      maxLevel: 100,
+      baseStats: {
+        attack: 1100,
+        hp: 7500,
+        critRate: 22,
+        critDamage: 0.50,
+        haste: 20,
+        mastery: 20,
+        versatility: 18,
+      },
+      growth: {
+        attack: 2,
+        hp: 2,
+        critRate: 2,
+        critDamage: 2,
+        haste: 2,
+        mastery: 2,
+        versatility: 2,
+      }
+    },
+
+    // ===== T3：霜火（法师）- 之戒 =====
+    EQ_371: {
+      id: 'EQ_371',
+      name: '霜火之戒',
+      icon: 'icons/wow/vanilla/armor/zst3jie.png',
+      type: 'equipment',
+      slot: 'ring1',
+      rarity: 'purple',
+      setId: 'frostfire_set',
+      setName: '霜火',
+      level: 1,
+      maxLevel: 100,
+      baseStats: {
+        spellPower: 1100,
+        hp: 7500,
+        critRate: 22,
+        critDamage: 0.50,
+        haste: 22,
+        mastery: 20,
+        versatility: 18,
+      },
+      growth: {
+        spellPower: 2,
+        hp: 2,
+        critRate: 2,
+        critDamage: 2,
+        haste: 2,
+        mastery: 2,
+        versatility: 2,
+      }
+    },
+
+    // ===== T3：信仰（牧师）- 之戒 =====
+    EQ_372: {
+      id: 'EQ_372',
+      name: '信仰之戒',
+      icon: 'icons/wow/vanilla/armor/zst3jie.png',
+      type: 'equipment',
+      slot: 'ring1',
+      rarity: 'purple',
+      setId: 'faith_set',
+      setName: '信仰',
+      level: 1,
+      maxLevel: 100,
+      baseStats: {
+        spellPower: 1050,
+        hp: 10000,
+        armor: 280,
+        magicResist: 160,
+        mastery: 28,
+        versatility: 28,
+        haste: 16,
+      },
+      growth: {
+        spellPower: 2,
+        hp: 2,
+        armor: 2,
+        magicResist: 2,
+        mastery: 2,
+        versatility: 2,
+        haste: 2,
+      }
+    },
+
+    // ✅ 米奈希尔之力（攻强主手）
+    EQ_373: {
+      id: 'EQ_373',
+      name: '米奈希尔之力',
+      icon: 'icons/wow/vanilla/weapons/minaixierzhili.png',
+      type: 'equipment',
+      slot: 'mainHand',
+      rarity: 'purple',
+      level: 1,
+      maxLevel: 100,
+      baseStats: {
+        attack: 4800,
+        hp: 9000,
+        critRate: 35,
+        critDamage: 0.95,
+        haste: 25,
+        mastery: 30,
+        versatility: 20,
+      },
+      growth: {
+        attack: 2,
+        hp: 2,
+        critRate: 2,
+        critDamage: 2,
+        haste: 2,
+        mastery: 2,
+        versatility: 2,
+      }
+    },
+
+    // ✅ 帝殒（攻强副手）
+    EQ_374: {
+      id: 'EQ_374',
+      name: '帝殒',
+      icon: 'icons/wow/vanilla/weapons/diyun.png',
+      type: 'equipment',
+      slot: 'offHand',
+      rarity: 'purple',
+      level: 1,
+      maxLevel: 100,
+      baseStats: {
+        attack: 2000,
+        hp: 8000,
+        critRate: 25,
+        critDamage: 0.45,
+        haste: 25,
+        mastery: 25,
+        versatility: 15,
+      },
+      growth: {
+        attack: 2,
+        hp: 2,
+        critRate: 2,
+        critDamage: 2,
+        haste: 2,
+        mastery: 2,
+        versatility: 2,
+      }
+    },
+
+    // ✅ 谴责之盾（治疗副手）
+    EQ_375: {
+      id: 'EQ_375',
+      name: '谴责之盾',
+      icon: 'icons/wow/vanilla/armor/qianzezhidun.png',
+      type: 'equipment',
+      slot: 'offHand',
+      rarity: 'purple',
+      level: 1,
+      maxLevel: 100,
+      baseStats: {
+        spellPower: 1700,
+        hp: 12000,
+        armor: 420,
+        magicResist: 220,
+        mastery: 30,
+        versatility: 30,
+        haste: 18,
+        critRate: 12,
+        blockRate: 4,
+        blockValue: 900,
+      },
+      growth: {
+        spellPower: 2,
+        hp: 2,
+        armor: 2,
+        magicResist: 2,
+        mastery: 2,
+        versatility: 2,
+        haste: 2,
+        critRate: 2,
+        blockRate: 2,
+        blockValue: 2,
+      }
+    },
+
+    // ✅ 厄运之指（法强戒指 RING2）
+    EQ_376: {
+      id: 'EQ_376',
+      name: '厄运之指',
+      icon: 'icons/wow/vanilla/armor/eyunzhizhi.png',
+      type: 'equipment',
+      slot: 'ring2',
+      rarity: 'purple',
+      level: 1,
+      maxLevel: 100,
+      baseStats: {
+        spellPower: 1350,
+        hp: 8500,
+        magicResist: 120,
+        critRate: 20,
+        haste: 22,
+        mastery: 22,
+        versatility: 18,
+      },
+      growth: {
+        spellPower: 2,
+        hp: 2,
+        magicResist: 2,
+        critRate: 2,
+        haste: 2,
+        mastery: 2,
+        versatility: 2,
+      }
+    },
+
+    // ✅ 怒风的沸腾符咒（攻强项链）
+    EQ_377: {
+      id: 'EQ_377',
+      name: '怒风的沸腾符咒',
+      icon: 'icons/wow/vanilla/armor/nufengdefeitengfuzhou.png',
+      type: 'equipment',
+      slot: 'neck',
+      rarity: 'purple',
+      level: 1,
+      maxLevel: 100,
+      baseStats: {
+        attack: 1500,
+        hp: 9000,
+        magicResist: 150,
+        critRate: 22,
+        critDamage: 0.55,
+        haste: 22,
+        mastery: 22,
+        versatility: 18,
+      },
+      growth: {
+        attack: 2,
+        hp: 2,
+        magicResist: 2,
+        critRate: 2,
+        critDamage: 2,
+        haste: 2,
+        mastery: 2,
+        versatility: 2,
+      }
+    },
+
+    // ✅ 无辜囚徒宝石（法强项链）
+    EQ_378: {
+      id: 'EQ_378',
+      name: '无辜囚徒宝石',
+      icon: 'icons/wow/vanilla/armor/wuguqiutubaoshi.png',
+      type: 'equipment',
+      slot: 'neck',
+      rarity: 'purple',
+      level: 1,
+      maxLevel: 100,
+      baseStats: {
+        spellPower: 1500,
+        hp: 9000,
+        magicResist: 150,
+        critRate: 22,
+        haste: 24,
+        mastery: 24,
+        versatility: 16,
+      },
+      growth: {
+        spellPower: 2,
+        hp: 2,
+        magicResist: 2,
+        critRate: 2,
+        haste: 2,
+        mastery: 2,
+        versatility: 2,
+      }
+    },
+
+    // ✅ 扭曲虚空之锤（治疗法强主手）
+    EQ_379: {
+      id: 'EQ_379',
+      name: '扭曲虚空之锤',
+      icon: 'icons/wow/vanilla/weapons/niuquxukongzhichui.png',
+      type: 'equipment',
+      slot: 'mainHand',
+      rarity: 'purple',
+      level: 1,
+      maxLevel: 100,
+      baseStats: {
+        spellPower: 4200,
+        hp: 11000,
+        magicResist: 200,
+        mastery: 30,
+        versatility: 30,
+        haste: 24,
+        critRate: 18,
+      },
+      growth: {
+        spellPower: 2,
+        hp: 2,
+        magicResist: 2,
+        mastery: 2,
+        versatility: 2,
+        haste: 2,
+        critRate: 2,
+      }
+    },
+
+    // ✅ 饥饿之寒（坦克暴击/爆伤主手）
+    EQ_380: {
+      id: 'EQ_380',
+      name: '饥饿之寒',
+      icon: 'icons/wow/vanilla/weapons/jiezhihan.png',
+      type: 'equipment',
+      slot: 'mainHand',
+      rarity: 'purple',
+      level: 1,
+      maxLevel: 100,
+      baseStats: {
+        attack: 3600,
+        hp: 15000,
+        armor: 320,
+        magicResist: 260,
+        mastery: 30,
+        versatility: 25,
+        critRate: 18,
+        critDamage: 0.55,
+        blockValue: 1000,
+      },
+      growth: {
+        attack: 2,
+        hp: 2,
+        armor: 2,
+        magicResist: 2,
+        mastery: 2,
+        versatility: 2,
+        critRate: 2,
+        critDamage: 2,
+        blockValue: 2,
+      }
+    },
+
+    // ✅ 埃提耶什法杖顶端（主手无属性）
+    EQ_381: {
+      id: 'EQ_381',
+      name: '埃提耶什法杖顶端',
+      icon: 'icons/wow/vanilla/weapons/INV_Staff_20.png',
+      type: 'equipment',
+      slot: 'mainHand',
+      rarity: 'orange',
+      level: 0,
+      maxLevel: 100,
+      baseStats: {},
+      growth: {},
+    },
+
+
 
 
 };
@@ -16187,7 +16586,30 @@ const BOSS_DATA = {
         rewards: {
             gold: 8000000,
             exp: 5200000,
-            items: []
+            items: [
+                // ===== 克尔苏加德专属掉落（纳克萨玛斯） =====
+
+                // T3 戒指（RING1）
+                { id: 'EQ_369', chance: 0.10 }, // 无畏之戒
+                { id: 'EQ_370', chance: 0.10 }, // 骨镰之戒
+                { id: 'EQ_371', chance: 0.10 }, // 霜火之戒
+                { id: 'EQ_372', chance: 0.10 }, // 信仰之戒
+
+                // 武器 / 副手
+                { id: 'EQ_373', chance: 0.10 }, // 米奈希尔之力（攻强主手）
+                { id: 'EQ_374', chance: 0.10 }, // 帝殒（攻强副手）
+                { id: 'EQ_375', chance: 0.10 }, // 谴责之盾（治疗副手）
+                { id: 'EQ_379', chance: 0.10 }, // 扭曲虚空之锤（治疗法强主手）
+                { id: 'EQ_380', chance: 0.10 }, // 饥饿之寒（坦克暴击爆伤主手）
+
+                // 首饰
+                { id: 'EQ_376', chance: 0.10 }, // 厄运之指（法强戒指 RING2）
+                { id: 'EQ_377', chance: 0.10 }, // 怒风的沸腾符咒（攻强项链）
+                { id: 'EQ_378', chance: 0.10 }, // 无辜囚徒宝石（法强项链）
+
+                // 特殊掉落（主手无属性，可用于后续合成/剧情扩展）
+                { id: 'EQ_381', chance: 0.02 }, // 埃提耶什法杖顶端
+            ]
         }
     },
 

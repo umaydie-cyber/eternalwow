@@ -13811,15 +13811,17 @@ EQ_383: {
     versatility: 2,
   },
   specialEffect: {
-    type: 'proc_stat',
+    type: 'boss_team_aura',
     name: '守护者的回响',
-    trigger: 'turn_start',
-    chance: 0.25,
-    scaleWithLevel: true,
+    // 仅BOSS战生效：使队伍中所有成员 急速/全能/精通/暴击 各 +10（不叠加）
+    scope: 'boss',
+    uniqueKey: 'guardian_echo',
+    nonStacking: true,
     stats: {
-      spellPower: 700,
-      mastery: 25,
-      haste: 25,
+      haste: 10,
+      versatility: 10,
+      mastery: 10,
+      critRate: 10,
     },
   },
 },
@@ -18374,6 +18376,56 @@ function rollProcStatEffects(character, trigger) {
 }
 
 
+// ==================== 装备特效：BOSS战团队光环（不叠加） ====================
+// specialEffect: {
+//   type: 'boss_team_aura',
+//   name: '守护者的回响',
+//   scope: 'boss',
+//   uniqueKey: 'guardian_echo',
+//   nonStacking: true,
+//   stats: { haste: 10, versatility: 10, mastery: 10, critRate: 10 }
+// }
+// 说明：
+// - 仅在 BOSS 战斗中生效
+// - 相同 uniqueKey 的光环效果不叠加（团队内只生效一次）
+// - 不同 uniqueKey 的光环可叠加（预留扩展）
+function getBossTeamAuraBonus(playerStates = []) {
+    const totalBonus = {};
+    const appliedKeys = new Set();
+
+    (Array.isArray(playerStates) ? playerStates : []).forEach(ps => {
+        const ch = ps?.char;
+        if (!ch) return;
+        const eqList = Object.values(ch.equipment || {}).filter(Boolean);
+
+        eqList.forEach(eq => {
+            const effects = getEquipmentSpecialEffectList(eq);
+            effects.forEach(se => {
+                if (!se || se.type !== 'boss_team_aura') return;
+                // 默认使用 uniqueKey；缺省时退化到 name/type
+                const key = String(se.uniqueKey || se.key || se.id || se.name || 'boss_team_aura');
+
+                // 相同 key 不叠加：团队内只应用一次
+                if (appliedKeys.has(key)) return;
+                appliedKeys.add(key);
+
+                const stats = (se.stats && typeof se.stats === 'object') ? se.stats : {};
+                Object.entries(stats).forEach(([stat, valRaw]) => {
+                    const add = Number(valRaw) || 0;
+                    if (!Number.isFinite(add) || add === 0) return;
+                    totalBonus[stat] = (totalBonus[stat] || 0) + add;
+                });
+            });
+        });
+    });
+
+    // 统一向下取整，避免小数污染
+    Object.keys(totalBonus).forEach(k => {
+        totalBonus[k] = Math.floor(Number(totalBonus[k]) || 0);
+    });
+
+    return { bonus: totalBonus, keys: Array.from(appliedKeys) };
+}
 
 // ==================== 装备特效：无视防御（穿甲） ====================
 // specialEffect: { type: 'ignore_defense', pct: 0.5 }
@@ -18538,6 +18590,14 @@ function stepBossCombat(state) {
     const addLog = (text, type = 'normal') => {
         logs.push({ round: currentRound, text, type });
     };
+
+    // ==================== 装备特效：守护者的回响（BOSS战团队光环，不叠加） ====================
+    const { bonus: bossTeamAuraBonus, keys: bossTeamAuraKeys } = getBossTeamAuraBonus(combat.playerStates);
+    if (bossTeamAuraKeys.length > 0 && !combat.bossBuffs?.bossTeamAuraLogged) {
+        const t = formatProcStatBonusText(bossTeamAuraBonus);
+        addLog(`【团队光环】${t || '获得增益'}（来自：${bossTeamAuraKeys.join('、')}，不叠加）`, 'buff');
+        combat.bossBuffs = { ...(combat.bossBuffs || {}), bossTeamAuraLogged: true };
+    }
 
     // 以战斗内状态为准，计算本回合有效Boss数据（避免直接修改 BOSS_DATA 全局对象）
     let boss = { ...bossBase };
@@ -19553,6 +19613,11 @@ function stepBossCombat(state) {
 
         // 种族：技能格属性加成（加法叠加）
         Object.entries(racialSlotBonus || {}).forEach(([stat, add]) => {
+            calcStats[stat] = (calcStats[stat] || 0) + (Number(add) || 0);
+        });
+
+        // 装备特效：BOSS战团队光环（不叠加）
+        Object.entries(bossTeamAuraBonus || {}).forEach(([stat, add]) => {
             calcStats[stat] = (calcStats[stat] || 0) + (Number(add) || 0);
         });
 
@@ -34122,6 +34187,34 @@ const ItemDetailsModal = ({ item, onClose, onEquip, characters, state , dispatch
                               </div>
                             )}
 
+                            {/* boss_team_aura */}
+                            {type === 'boss_team_aura' && (
+                              <div style={{ fontSize: 12, color: '#ffb74d', lineHeight: 1.6 }}>
+                                <div style={{ marginBottom: 8, color: '#fff' }}>
+                                  👥 仅BOSS战生效：为队伍中所有成员提供以下属性加成（不叠加）：
+                                </div>
+
+                                {Object.entries((se.stats && typeof se.stats === 'object') ? se.stats : {}).map(([stat, value]) => (
+                                  <div key={stat} style={{ marginTop: 8, color: '#fff' }}>
+                                    • {statNames[stat] || stat}{' '}
+                                    <span style={{ color: '#4CAF50', fontWeight: 600 }}>+{formatItemStatValue(stat, value)}</span>
+                                  </div>
+                                ))}
+
+                                <div style={{
+                                  marginTop: 12,
+                                  padding: '8px 12px',
+                                  background: 'rgba(255,215,0,0.1)',
+                                  borderRadius: 6,
+                                  border: '1px dashed rgba(255,215,0,0.3)',
+                                  fontSize: 11,
+                                  color: '#c9a227'
+                                }}>
+                                  💡 提示：同名团队光环不会叠加（团队内只生效一次）
+                                </div>
+                              </div>
+                            )}
+
                             {/* proc_damage */}
                             {type === 'proc_damage' && (
                               <div style={{ fontSize: 12, color: '#ffb74d', lineHeight: 1.6 }}>
@@ -34179,7 +34272,7 @@ const ItemDetailsModal = ({ item, onClose, onEquip, characters, state , dispatch
                             )}
 
                             {/* fallback */}
-                            {![ 'skill_slot_buff','skill_slot_shield','heal_cast_shield','basic_attack_repeat','proc_stat','proc_damage','ignore_defense','thunderfury','map_slayer' ].includes(type) && (
+                            {![ 'skill_slot_buff','skill_slot_shield','heal_cast_shield','basic_attack_repeat','proc_stat','boss_team_aura','proc_damage','ignore_defense','thunderfury','map_slayer' ].includes(type) && (
                               <div style={{ fontSize: 12, color: '#aaa' }}>
                                 ⚡ 特效：{String(type || 'unknown')}
                               </div>
@@ -37525,6 +37618,11 @@ function describeEquipmentSpecialEffect(eq) {
             const bonusText = formatProcStatBonusText(se.stats || {});
             return `🎲 每回合 ${chance}%：${bonusText || '触发增益'}`;
         }
+
+if (se.type === 'boss_team_aura') {
+    const bonusText = formatProcStatBonusText(se.stats || {});
+    return `👥 BOSS战：全队 ${bonusText || '获得增益'}（不叠加）`;
+}
 
         if (se.type === 'map_slayer') {
             return `🗺️ 地图伤害 +${((Number(se.bonusDamageVsMap || 0)) * 100).toFixed(0)}%`;

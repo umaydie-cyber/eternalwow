@@ -29746,36 +29746,31 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
             });
         }
         else if (result.buff) {
-            //===== PATCH: 地图战补齐【恶魔变形】特殊逻辑（与BOSS战一致）=====
             const buffToApply = { ...result.buff };
             if (buffToApply.type === 'metamorphosis') {
                 const existingMeta = buffs.find(b => b.type === 'metamorphosis');
-                // 不允许重复叠加最大生命：已有则只刷新持续时间
                 if (existingMeta) {
                     existingMeta.duration = Math.max(existingMeta.duration ?? 0, buffToApply.duration ?? 0);
                 } else {
-                    //1) 最大生命上限提高（保存flat bonus到buff，用于到期回滚）
                     const pct = Math.max(0, Number(buffToApply.maxHpBonusPct) || 0);
                     if (pct > 0) {
                         const curMax = Math.max(1, Math.floor(Number(character.stats.maxHp ?? character.stats.hp) || 1));
                         const bonus = Math.floor(curMax * pct);
                         buffToApply.maxHpBonus = bonus;
                         character.stats.maxHp = curMax + bonus;
-                        //当前血不超过新上限（一般不需要，但安全）
                         charHp = Math.min(charHp, character.stats.maxHp);
-                    ｝
-                    //2) 立刻回复生命
+                    }
                     const healPct = Math.max(0, Number(buffToApply.instantHealPct) || 0);
                     if (healPct > 0) {
                         const maxHp = Math.max(1, Math.floor(Number(character.stats.maxHp ?? character.stats.hp) || 1));
                         const healAmount = Math.floor(maxHp * healPct);
                         charHp = Math.min(maxHp, charHp + healAmount);
-                    ｝
+                    }
                     buffs.push(buffToApply);
                 }
             } else {
                 buffs.push(buffToApply);
-            ｝
+            }
 
             let buffText = '';
             if (result.buff.damageTakenMult) {

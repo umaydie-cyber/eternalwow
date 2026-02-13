@@ -16980,9 +16980,7 @@ function formatItemStatValue(stat, valueRaw) {
     }
 
     if (stat === 'critDamage') {
-        return v <= 1
-            ? `${Math.floor(v * 100)}%`
-            : `${Math.floor(v)}`;
+        return `${Math.floor(v * 100)}%`;
     }
 
     return `${Math.floor(v)}`;
@@ -18220,7 +18218,7 @@ function formatProcStatBonusText(bonus = {}) {
             return `${name} +${v.toFixed(1)}%`;
         }
         if (stat === 'critDamage') {
-            return v <= 1 ? `${name} +${Math.floor(v * 100)}%` : `${name} +${Math.floor(v)}`;
+            return `${name} +${Math.floor(v * 100)}%` ;
         }
         return `${name} +${Math.floor(v)}`;
     }).join('，');
@@ -43078,6 +43076,122 @@ const BossPrepareModal = ({ state, dispatch }) => {
 
                                       <div style={{ fontSize: 11, color: '#aaa', marginTop: 2 }}>
                                         伤害结算：冰霜/暗影法术伤害计算<span style={{ color: '#ffd700' }}>魔抗</span>；物理伤害计算<span style={{ color: '#ffd700' }}>护甲 / 格挡</span>等属性。
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
+
+
+
+                                {/* 克尔苏加德的技能（准备界面说明） */}
+                                {bossId === 'kelthuzad' && (
+                                  <div style={{
+                                    marginTop: 12,
+                                    padding: 12,
+                                    background: 'rgba(103,58,183,0.10)',
+                                    borderRadius: 8,
+                                    border: '1px solid rgba(179,136,255,0.25)'
+                                  }}>
+                                    <div style={{ fontSize: 12, color: '#d1c4e9', fontWeight: 700, marginBottom: 8 }}>
+                                      ☠️❄️ 团队首领：克尔苏加德
+                                    </div>
+
+                                    <div style={{ display: 'grid', gap: 10, fontSize: 11, color: '#ddd', lineHeight: 1.6 }}>
+                                      <div style={{
+                                          padding: 10,
+                                          background: 'rgba(33,150,243,0.10)',
+                                          borderRadius: 6,
+                                          borderLeft: '3px solid #2196f3'
+                                        }}>
+                                        <div style={{ fontSize: 12, color: '#90caf9', fontWeight: 600, marginBottom: 4  }}>技能1：寒冰箭</div>
+                                        <div>
+                                          对<span style={{ color: '#ff6b6b', fontWeight: 700 }}>坦克（1号位）</span>造成 <b>Boss攻击力×{boss.frostBoltMultiplier ?? 6}</b> 的<span style={{ color: '#90caf9' }}>冰霜法术伤害</span>（计算魔抗）。
+                                        </div>
+                                      </div>
+
+                                      <div style={{
+                                          padding: 10,
+                                          background: 'rgba(3,169,244,0.10)',
+                                          borderRadius: 6,
+                                          borderLeft: '3px solid #03a9f4'
+                                        }}>
+                                        <div style={{ fontSize: 12, color: '#81d4fa', fontWeight: 600, marginBottom: 4  }}>技能2：寒冰箭雨</div>
+                                        <div>
+                                          对<span style={{ color: '#ff6b6b', fontWeight: 700 }}>所有角色</span>造成 <b>Boss攻击力×{boss.frostBoltRainMultiplier ?? 3}</b> 的<span style={{ color: '#90caf9' }}>冰霜法术伤害</span>（计算魔抗）。
+                                        </div>
+                                      </div>
+
+                                      <div style={{
+                                          padding: 10,
+                                          background: 'rgba(156,39,176,0.10)',
+                                          borderRadius: 6,
+                                          borderLeft: '3px solid #9c27b0'
+                                        }}>
+                                        <div style={{ fontSize: 12, color: '#ce93d8', fontWeight: 600, marginBottom: 4  }}>技能3：法力爆裂</div>
+                                        <div>
+                                          对随机目标施加DOT：每回合造成 <b>Boss攻击力×{boss.manaBurstDotMultiplier ?? 1}</b> 的<span style={{ color: '#ce93d8' }}>奥术伤害</span>，持续 <b>{boss.manaBurstDuration ?? 4}</b> 回合。<br/>
+                                          结束时爆炸：对其造成 <b>Boss攻击力×{boss.manaBurstExpireMultiplier ?? 3}</b> 的<span style={{ color: '#ce93d8' }}>奥术伤害</span>。<br/>
+                                          <span style={{ color: '#64b5f6' }}>集中站位：</span>爆炸伤害对<span style={{ color: '#ff6b6b', fontWeight: 700 }}>所有角色</span>生效。
+                                        </div>
+                                      </div>
+
+                                      <div style={{
+                                          padding: 10,
+                                          background: 'rgba(33,150,243,0.10)',
+                                          borderRadius: 6,
+                                          borderLeft: '3px solid #2196f3'
+                                        }}>
+                                        <div style={{ fontSize: 12, color: '#90caf9', fontWeight: 600, marginBottom: 4  }}>技能4：寒冰之墓</div>
+                                        <div>
+                                          对随机目标施加<span style={{ color: '#90caf9', fontWeight: 700 }}>【寒冰之墓】</span>：每回合造成其
+                                          <span style={{ color: '#ffd700', fontWeight: 700 }}>最大生命值 {Math.round((boss.frostTombHpPctPerTurn ?? 0.30) * 100)}%</span> 的冰霜伤害，持续 <b>{boss.frostTombDuration ?? 4}</b> 回合。<br/>
+                                          并使其<span style={{ color: '#ffd54f', fontWeight: 700 }}>无法行动</span>（持续期间）。
+                                        </div>
+                                      </div>
+
+                                      <div style={{
+                                          padding: 10,
+                                          background: 'rgba(0,0,0,0.22)',
+                                          borderRadius: 6,
+                                          borderLeft: '3px solid #673ab7'
+                                        }}>
+                                        <div style={{ fontSize: 12, color: '#b388ff', fontWeight: 600, marginBottom: 4  }}>技能5：暗影裂缝</div>
+                                        <div>
+                                          使随机 <b>{boss.shadowRiftTargets ?? 2}</b> 名目标获得<span style={{ color: '#ffd54f', fontWeight: 700 }}>【跑位】</span>，
+                                          持续 <b>{boss.shadowRiftRunningDuration ?? 2}</b> 回合，无法行动。
+                                        </div>
+                                      </div>
+
+                                      <div style={{
+                                          padding: 10,
+                                          background: 'rgba(0,0,0,0.22)',
+                                          borderRadius: 6,
+                                          borderLeft: '3px solid #673ab7'
+                                        }}>
+                                        <div style={{ fontSize: 12, color: '#b388ff', fontWeight: 600, marginBottom: 4  }}>技能6：克尔苏加德之链</div>
+                                        <div>
+                                          对随机 <b>{boss.kelthuzadChainTargets ?? 3}</b> 名目标施加DOT：每回合造成 <b>Boss攻击力×{boss.kelthuzadChainDotMultiplier ?? 1.5}</b> 的<span style={{ color: '#b388ff' }}>暗影伤害</span>，持续 <b>{boss.kelthuzadChainDuration ?? 4}</b> 回合。<br/>
+                                          <span style={{ color: '#ff9800' }}>分散站位：</span>额外立即造成 <b>Boss攻击力×{boss.kelthuzadChainDispersedImmediateMultiplier ?? 3}</b> 的暗影伤害，
+                                          并获得<span style={{ color: '#ffd54f', fontWeight: 700 }}>【跑位】</span> <b>{boss.kelthuzadChainDispersedRunningDuration ?? 1}</b> 回合，无法行动。
+                                        </div>
+                                      </div>
+
+                                      <div style={{
+                                          padding: 10,
+                                          background: 'rgba(96,125,139,0.10)',
+                                          borderRadius: 6,
+                                          borderLeft: '3px solid #607d8b'
+                                        }}>
+                                        <div style={{ fontSize: 12, color: '#b0bec5', fontWeight: 600, marginBottom: 4  }}>技能7：冰霜皇冠卫士</div>
+                                        <div>
+                                          召唤 <b>{boss.frostCrownGuardCount ?? 2}</b> 个【冰霜皇冠卫士】加入战斗（每个生命值 <b>{Number(boss.frostCrownGuardHp || boss.minion?.maxHp || 10000000).toLocaleString()}</b>）。<br/>
+                                          卫士每回合对<span style={{ color: '#ff6b6b', fontWeight: 700 }}>坦克（1号位）</span>释放<b>重击</b>：造成 <b>Boss攻击力×{boss.frostCrownGuardHeavyStrikeMultiplier ?? 5}</b> 的物理伤害（护甲/格挡）。<br/>
+                                          并在其存活期间，每回合叠加：重击伤害提高 <b>{Math.round((boss.frostCrownGuardHeavyStrikeIncreasePerTurn ?? 0.15) * 100)}%</b>（可叠加）。
+                                        </div>
+                                      </div>
+
+                                      <div style={{ fontSize: 11, color: '#aaa', marginTop: 2 }}>
+                                        伤害结算：冰霜/奥术/暗影法术伤害计算<span style={{ color: '#ffd700' }}>魔抗</span>；物理伤害计算<span style={{ color: '#ffd700' }}>护甲 / 格挡</span>等属性。
                                       </div>
                                     </div>
                                   </div>

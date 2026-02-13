@@ -39252,7 +39252,10 @@ const CodexPage = ({ state, dispatch }) => {
                                         setHoveredEquip({ tpl, unlocked, lv100, dropEnabled });
                                         handleEquipMouseMove(e);
                                     }}
-                                    onMouseMove={handleEquipMouseMove}
+                                    onMouseMove={(e) => {
+                                        setHoveredEquip(prev => (prev?.tpl?.id === tpl.id ? prev : { tpl, unlocked, lv100, dropEnabled }));
+                                        handleEquipMouseMove(e);
+                                    }}
                                     onMouseLeave={() => setHoveredEquip(null)}
                                     style={{
                                         background: unlocked ? 'rgba(0,0,0,0.35)' : 'rgba(0,0,0,0.18)',

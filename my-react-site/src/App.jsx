@@ -12971,6 +12971,403 @@ const FIXED_EQUIPMENTS = {
       }
     },
 
+    // ==================== 纳克萨玛斯：萨菲隆掉落 ====================
+
+    // ✅ 死亡的面孔（坦克盾牌 / 副手）
+    EQ_357: {
+      id: 'EQ_357',
+      name: '死亡的面孔',
+      icon: 'icons/wow/vanilla/armor/siwangdemiankong.png',
+      type: 'equipment',
+      slot: 'offHand',
+      rarity: 'purple',
+      level: 1,
+      maxLevel: 100,
+      baseStats: {
+        hp: 14000,
+        armor: 520,
+        magicResist: 260,
+        mastery: 28,
+        versatility: 28,
+        blockRate: 8,
+        blockValue: 1200,
+      },
+      growth: {
+        hp: 2,
+        armor: 2,
+        magicResist: 2,
+        mastery: 2,
+        versatility: 2,
+        blockRate: 2,
+        blockValue: 2,
+      }
+    },
+
+    // ✅ 屠龙者的纹章（攻强爆发 饰品2）
+    // 设计：常驻提供攻击/暴击；在 1/2/3 格技能释放时获得额外攻强加成（爆发输出）
+    EQ_358: {
+      id: 'EQ_358',
+      name: '屠龙者的纹章',
+      icon: 'icons/wow/vanilla/armor/tulongzhedewenzhang.png',
+      type: 'equipment',
+      slot: 'trinket2',
+      rarity: 'purple',
+      level: 1,
+      maxLevel: 100,
+      baseStats: {
+        attack: 1200,
+        hp: 6000,
+        critRate: 18,
+        haste: 18,
+        mastery: 18,
+      },
+      growth: {
+        attack: 2,
+        hp: 2,
+        critRate: 2,
+        haste: 2,
+        mastery: 2,
+      },
+      specialEffect: {
+        name: '屠龙者怒火',
+        type: 'skill_slot_buff',
+        slots: [0, 1, 2],
+        attackBonus: 3200,
+        scaleWithLevel: true
+      }
+    },
+
+    // ✅ 萨菲隆的精华（法强爆发 饰品2）
+    // 设计：常驻提供法强/急速；在 1/2/3 格技能释放时获得额外法强加成（爆发输出/治疗）
+    EQ_359: {
+      id: 'EQ_359',
+      name: '萨菲隆的精华',
+      icon: 'icons/wow/vanilla/armor/safeilongdejinghua.png',
+      type: 'equipment',
+      slot: 'trinket2',
+      rarity: 'purple',
+      level: 1,
+      maxLevel: 100,
+      baseStats: {
+        spellPower: 1200,
+        hp: 6000,
+        haste: 20,
+        mastery: 18,
+        critRate: 12,
+      },
+      growth: {
+        spellPower: 2,
+        hp: 2,
+        haste: 2,
+        mastery: 2,
+        critRate: 2,
+      },
+      specialEffect: {
+        name: '冰霜精华',
+        type: 'skill_slot_buff',
+        slots: [0, 1, 2],
+        spellPowerBonus: 3200,
+        scaleWithLevel: true
+      }
+    },
+
+    // ✅ 偏斜雕文（坦克爆发 饰品2）
+    // 设计：常驻提供血量/护甲/格挡；回合开始概率触发偏斜，短暂大幅提升护甲与格挡能力
+    EQ_360: {
+      id: 'EQ_360',
+      name: '偏斜雕文',
+      icon: 'icons/wow/vanilla/armor/luoousaibuzhiying.png',
+      type: 'equipment',
+      slot: 'trinket2',
+      rarity: 'purple',
+      level: 1,
+      maxLevel: 100,
+      baseStats: {
+        hp: 10000,
+        armor: 320,
+        magicResist: 220,
+        mastery: 20,
+        versatility: 20,
+        blockRate: 6,
+        blockValue: 900,
+      },
+      growth: {
+        hp: 2,
+        armor: 2,
+        magicResist: 2,
+        mastery: 2,
+        versatility: 2,
+        blockRate: 2,
+        blockValue: 2,
+      },
+      specialEffect: {
+        name: '偏斜',
+        type: 'proc_stat',
+        trigger: 'turn_start',
+        chance: 0.25,
+        stats: { armor: 2200, blockRate: 10, blockValue: 1500 },
+        scaleWithLevel: true
+      }
+    },
+
+    // ✅ 亡者之眼（治疗爆发 饰品2）
+    // 设计：常驻提供法强/精通；回合开始概率触发「亡者洞察」临时提升法术强度
+    EQ_361: {
+      id: 'EQ_361',
+      name: '亡者之眼',
+      icon: 'icons/wow/vanilla/armor/wangzhezhiyan.png',
+      type: 'equipment',
+      slot: 'trinket2',
+      rarity: 'purple',
+      level: 1,
+      maxLevel: 100,
+      baseStats: {
+        spellPower: 1150,
+        hp: 6500,
+        mastery: 24,
+        versatility: 24,
+        critRate: 12,
+      },
+      growth: {
+        spellPower: 2,
+        hp: 2,
+        mastery: 2,
+        versatility: 2,
+        critRate: 2,
+      },
+      specialEffect: {
+        name: '亡者洞察',
+        type: 'proc_stat',
+        trigger: 'turn_start',
+        chance: 0.25,
+        stats: { spellPower: 2800 },
+        scaleWithLevel: true
+      }
+    },
+
+    // ✅ 萨菲隆的右眼（法强副手）
+    EQ_362: {
+      id: 'EQ_362',
+      name: '萨菲隆的右眼',
+      icon: 'icons/wow/vanilla/armor/safeilongdeyouyan.png',
+      type: 'equipment',
+      slot: 'offHand',
+      rarity: 'purple',
+      level: 1,
+      maxLevel: 100,
+      baseStats: {
+        spellPower: 1500,
+        hp: 7500,
+        magicResist: 180,
+        critRate: 18,
+        haste: 18,
+        mastery: 24,
+        versatility: 18,
+      },
+      growth: {
+        spellPower: 2,
+        hp: 2,
+        magicResist: 2,
+        critRate: 2,
+        haste: 2,
+        mastery: 2,
+        versatility: 2,
+      }
+    },
+
+    // ✅ 大墓地披风（法强披风）
+    EQ_363: {
+      id: 'EQ_363',
+      name: '大墓地披风',
+      icon: 'icons/wow/vanilla/armor/damudipifeng.png',
+      type: 'equipment',
+      slot: 'cloak',
+      rarity: 'purple',
+      level: 1,
+      maxLevel: 100,
+      baseStats: {
+        spellPower: 1300,
+        hp: 10000,
+        armor: 220,
+        magicResist: 220,
+        mastery: 22,
+        versatility: 22,
+        haste: 16,
+      },
+      growth: {
+        spellPower: 2,
+        hp: 2,
+        armor: 2,
+        magicResist: 2,
+        mastery: 2,
+        versatility: 2,
+        haste: 2,
+      }
+    },
+
+    // ✅ 支配披风（攻强披风）
+    EQ_364: {
+      id: 'EQ_364',
+      name: '支配披风',
+      icon: 'icons/wow/vanilla/armor/damudipifeng.png',
+      type: 'equipment',
+      slot: 'cloak',
+      rarity: 'purple',
+      level: 1,
+      maxLevel: 100,
+      baseStats: {
+        attack: 1300,
+        hp: 9500,
+        magicResist: 180,
+        critRate: 20,
+        critDamage: 0.35,
+        haste: 20,
+        mastery: 20,
+      },
+      growth: {
+        attack: 2,
+        hp: 2,
+        magicResist: 2,
+        critRate: 2,
+        critDamage: 2,
+        haste: 2,
+        mastery: 2,
+      }
+    },
+
+    // ===== T3：无畏（战士）- 胸甲 =====
+    EQ_365: {
+      id: 'EQ_365',
+      name: '无畏胸甲',
+      icon: 'icons/wow/vanilla/armor/INV_Chest_Plate02.png',
+      type: 'equipment',
+      slot: 'chest',
+      rarity: 'purple',
+      setId: 'dreadnaught_set',
+      setName: '无畏',
+      level: 1,
+      maxLevel: 100,
+      baseStats: {
+        hp: 14500,
+        attack: 520,
+        armor: 420,
+        magicResist: 120,
+        mastery: 18,
+        versatility: 18,
+        blockRate: 7,
+        blockValue: 1100,
+      },
+      growth: {
+        hp: 2,
+        attack: 2,
+        armor: 2,
+        magicResist: 2,
+        mastery: 2,
+        versatility: 2,
+        blockRate: 2,
+        blockValue: 2,
+      }
+    },
+
+    // ===== T3：骨镰（盗贼）- 胸甲 =====
+    EQ_366: {
+      id: 'EQ_366',
+      name: '骨镰胸甲',
+      icon: 'icons/wow/vanilla/armor/INV_Chest_Plate02.png',
+      type: 'equipment',
+      slot: 'chest',
+      rarity: 'purple',
+      setId: 'bonescythe_set',
+      setName: '骨镰',
+      level: 1,
+      maxLevel: 100,
+      baseStats: {
+        attack: 1350,
+        hp: 8800,
+        armor: 320,
+        magicResist: 120,
+        critRate: 18,
+        critDamage: 0.45,
+        haste: 16,
+        mastery: 12,
+      },
+      growth: {
+        attack: 2,
+        hp: 2,
+        armor: 2,
+        magicResist: 2,
+        critRate: 2,
+        critDamage: 2,
+        haste: 2,
+        mastery: 2,
+      }
+    },
+
+    // ===== T3：霜火（法师）- 长袍 =====
+    EQ_367: {
+      id: 'EQ_367',
+      name: '霜火长袍',
+      icon: 'icons/wow/vanilla/armor/INV_Chest_Cloth_43.png',
+      type: 'equipment',
+      slot: 'chest',
+      rarity: 'purple',
+      setId: 'frostfire_set',
+      setName: '霜火',
+      level: 1,
+      maxLevel: 100,
+      baseStats: {
+        spellPower: 1350,
+        hp: 8800,
+        magicResist: 120,
+        critRate: 18,
+        critDamage: 0.45,
+        haste: 16,
+        mastery: 12,
+      },
+      growth: {
+        spellPower: 2,
+        hp: 2,
+        magicResist: 2,
+        critRate: 2,
+        critDamage: 2,
+        haste: 2,
+        mastery: 2,
+      }
+    },
+
+    // ===== T3：信仰（牧师）- 长袍 =====
+    EQ_368: {
+      id: 'EQ_368',
+      name: '信仰长袍',
+      icon: 'icons/wow/vanilla/armor/INV_Chest_Cloth_43.png',
+      type: 'equipment',
+      slot: 'chest',
+      rarity: 'purple',
+      setId: 'faith_set',
+      setName: '信仰',
+      level: 1,
+      maxLevel: 100,
+      baseStats: {
+        spellPower: 1250,
+        hp: 11000,
+        armor: 340,
+        magicResist: 120,
+        mastery: 20,
+        versatility: 20,
+        haste: 14,
+      },
+      growth: {
+        spellPower: 2,
+        hp: 2,
+        armor: 2,
+        magicResist: 2,
+        mastery: 2,
+        versatility: 2,
+        haste: 2,
+      }
+    },
+
+
 };
 
 //赤脊山5件图鉴100级点亮效果
@@ -15683,7 +16080,23 @@ const BOSS_DATA = {
         rewards: {
             gold: 7000000,
             exp: 4500000,
-            items: []
+            items: [
+                // ===== 萨菲隆专属掉落（纳克萨玛斯）=====
+                { id: 'EQ_357', chance: 0.10 }, // 死亡的面孔（坦克盾牌 / 副手）
+                { id: 'EQ_358', chance: 0.10 }, // 屠龙者的纹章（攻强爆发 饰品2）
+                { id: 'EQ_359', chance: 0.10 }, // 萨菲隆的精华（法强爆发 饰品2）
+                { id: 'EQ_360', chance: 0.10 }, // 偏斜雕文（坦克爆发 饰品2）
+                { id: 'EQ_361', chance: 0.10 }, // 亡者之眼（治疗爆发 饰品2）
+                { id: 'EQ_362', chance: 0.10 }, // 萨菲隆的右眼（法强副手）
+                { id: 'EQ_363', chance: 0.10 }, // 大墓地披风（法强披风）
+                { id: 'EQ_364', chance: 0.10 }, // 支配披风（攻强披风）
+
+                // T3 胸甲
+                { id: 'EQ_365', chance: 0.10 }, // 无畏胸甲
+                { id: 'EQ_366', chance: 0.10 }, // 骨镰胸甲
+                { id: 'EQ_367', chance: 0.10 }, // 霜火长袍
+                { id: 'EQ_368', chance: 0.10 }, // 信仰长袍
+            ]
         }
     },
 

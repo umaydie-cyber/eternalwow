@@ -119,6 +119,9 @@ const BOSS_BONUS_CONFIG = {
 
     // ✅ 新增：团队首领 - 萨菲隆（60级解锁）
     sapphiron: { name: '萨菲隆', bonus: 0.30 },
+
+    // ✅ 新增：团队首领 - 克尔苏加德（60级解锁）
+    kelthuzad: { name: '克尔苏加德', bonus: 0.30 },
 };
 
 // 兼容旧代码：派生出 names / bossBonus 两个对象（不再手写维护）
@@ -14885,6 +14888,20 @@ const TEAM_BOSSES = {
         unlockLevel: 60,
         partySize: 5, // ✅ 团队首领：5人
     },
+
+
+    // ✅ 新增：团队首领 - 克尔苏加德（60级解锁）
+    kelthuzad: {
+        id: 'kelthuzad',
+        name: '克尔苏加德',
+        icon: 'icons/wow/vanilla/boss/kelthuzad.png', // 预留：自行补图标
+        hp: 100000000,
+        attack: 50000,
+        defense: 40000,
+        rewards: { gold: 8000000, exp: 5200000 },
+        unlockLevel: 60,
+        partySize: 5, // ✅ 团队首领：5人
+    },
 };
 
 // UI/逻辑层通用：获取 Boss 元信息
@@ -16101,6 +16118,78 @@ const BOSS_DATA = {
     },
 
 
+
+
+
+    // ✅ 新增：团队首领 - 克尔苏加德（60级解锁 · 5人）
+    kelthuzad: {
+        id: 'kelthuzad',
+        name: '克尔苏加德',
+        maxHp: 100000000,
+        attack: 50000,
+        defense: 40000,
+
+        // 技能1：寒冰箭（对坦克造成 6× 攻击的冰霜伤害）
+        frostBoltMultiplier: 6,
+
+        // 技能2：寒冰箭雨（对所有角色造成 3× 攻击的冰霜伤害）
+        frostBoltRainMultiplier: 3,
+
+        // 技能3：法力爆裂（随机目标 DOT：每回合 1× 奥术伤害，持续 4 回合；结束时爆炸 3× 奥术伤害）
+        // 机制：集中站位时，爆炸伤害对所有角色生效
+        manaBurstDotMultiplier: 1,
+        manaBurstDuration: 4,
+        manaBurstExpireMultiplier: 3,
+
+        // 技能4：寒冰之墓（随机目标：每回合造成其最大生命值 30% 的冰霜伤害，持续 4 回合；无法行动）
+        frostTombHpPctPerTurn: 0.30,
+        frostTombDuration: 4,
+
+        // 技能5：暗影裂缝（随机 2 目标获得【跑位】，2 回合无法行动）
+        shadowRiftTargets: 2,
+        shadowRiftRunningDuration: 2,
+
+        // 技能6：克尔苏加德之链（随机 3 目标 DOT：每回合 1.5× 暗影伤害）
+        // 机制：分散站位时，额外立即造成 3× 暗影伤害，并获得【跑位】1回合
+        kelthuzadChainTargets: 3,
+        kelthuzadChainDotMultiplier: 1.5,
+        kelthuzadChainDuration: 4,
+        kelthuzadChainDispersedImmediateMultiplier: 3,
+        kelthuzadChainDispersedRunningDuration: 1,
+
+        // 技能7：冰霜皇冠卫士（2个，1000万血量）
+        frostCrownGuardCount: 2,
+        frostCrownGuardHp: 10000000,
+        frostCrownGuardHeavyStrikeMultiplier: 5,
+        frostCrownGuardHeavyStrikeIncreasePerTurn: 0.15,
+
+        // UI通用：小弟配置（战斗中以 displayName 为准）
+        minion: {
+            name: '冰霜皇冠卫士',
+            maxHp: 10000000,
+            attack: 50000,
+            defense: 40000
+        },
+
+        // 技能循环：
+        // 寒冰箭 → 寒冰箭雨 → 法力爆裂 → 寒冰箭 → 冰霜冲击(寒冰之墓) → 暗影裂缝 → 冰霜皇冠卫士 → 克尔苏加德之链
+        cycle: [
+            'frost_bolt',
+            'frost_bolt_rain',
+            'mana_burst',
+            'frost_bolt',
+            'frost_tomb',
+            'shadow_rift',
+            'summon_frost_crown_guards',
+            'kelthuzad_chain'
+        ],
+
+        rewards: {
+            gold: 8000000,
+            exp: 5200000,
+            items: []
+        }
+    },
 
 // ✅ 新增：团队首领 - 奥妮克希亚（5人）
     onyxia: {
@@ -24224,6 +24313,303 @@ function stepBossCombat(state) {
     }
 
 
+
+
+// ==================== 克尔苏加德（团队首领）技能处理 ====================
+    else if (combat.bossId === 'kelthuzad') {
+        const stance = combat.strategy?.stance || 'dispersed';
+
+        // 取 n 个随机存活玩家（不重复）
+        const pickNRandomAlivePlayers = (n) => {
+            const aliveIdxs = [];
+            for (let i = 0; i < combat.playerStates.length; i++) {
+                if (combat.playerStates[i].currentHp > 0) aliveIdxs.push(i);
+            }
+            if (aliveIdxs.length <= 0) return [];
+            const cnt = Math.max(1, Math.min(aliveIdxs.length, Math.floor(n || 1)));
+            for (let i = aliveIdxs.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [aliveIdxs[i], aliveIdxs[j]] = [aliveIdxs[j], aliveIdxs[i]];
+            }
+            return aliveIdxs.slice(0, cnt);
+        };
+
+        const applyStun = (ps, dur, sourceName) => {
+            if (!ps || ps.currentHp <= 0) return;
+            const d = Math.max(1, Math.floor(Number(dur || 1)));
+            ps.debuffs = ps.debuffs || {};
+            if (ps.debuffs.stun && ps.debuffs.stun.duration > 0) {
+                ps.debuffs.stun.duration = Math.max(ps.debuffs.stun.duration, d);
+                if (sourceName) ps.debuffs.stun.source = sourceName;
+            } else {
+                ps.debuffs.stun = { duration: d, source: sourceName || '昏迷' };
+            }
+        };
+
+        const applyRunning = (ps, dur) => {
+            if (!ps || ps.currentHp <= 0) return;
+            const d = Math.max(1, Math.floor(Number(dur || 1)));
+            ps.debuffs = ps.debuffs || {};
+            const prev = ps.debuffs.running?.duration || 0;
+            ps.debuffs.running = { duration: Math.max(prev, d) };
+        };
+
+        const dealMagicDamageToPlayer = (tIdx, rawDamage, schoolLabel = '法术', prefix = '→ ') => {
+            const ps = combat.playerStates[tIdx];
+            if (!ps || ps.currentHp <= 0) return 0;
+
+            const beforeHp = ps.currentHp;
+
+            const mg = calcMagicDamage(ps, rawDamage);
+            const shieldResult = applyShieldAbsorb(ps, mg.damage, logs, currentRound);
+            ps.currentHp -= shieldResult.finalDamage;
+
+            const actualLoss = Math.min(beforeHp, shieldResult.finalDamage);
+
+            const resPct = Math.round(mg.resistReduction * 100);
+            const mrText = Number(mg.magicResist) < 0 ? `（魔抗 ${Math.floor(mg.magicResist)}）` : '';
+            const shieldText = shieldResult.absorbed > 0 ? `，护盾吸收 ${shieldResult.absorbed}` : '';
+            addLog(`${prefix}位置${tIdx + 1} ${ps.char.name} 受到 ${shieldResult.finalDamage} 点${schoolLabel}伤害（魔抗减伤${resPct}%${mrText}${shieldText}）`);
+            return actualLoss;
+        };
+
+        // ==================== 技能1：寒冰箭（坦克 6×冰霜） ====================
+        if (bossAction === 'frost_bolt') {
+            const mult = Number.isFinite(Number(boss.frostBoltMultiplier)) ? Number(boss.frostBoltMultiplier) : 6;
+            const raw = Math.max(1, Math.floor((boss.attack || 0) * mult));
+
+            const tIdx = pickAlivePlayerIndex();
+            if (tIdx < 0) {
+                addLog(`【${boss.name}】施放【寒冰箭】，但没有存活目标`, 'warning');
+            } else {
+                addLog(`【${boss.name}】施放【寒冰箭】命中坦克（位置${tIdx + 1}）！`, 'warning');
+                dealMagicDamageToPlayer(tIdx, raw, '冰霜', '→ ');
+            }
+        }
+
+        // ==================== 技能2：寒冰箭雨（全体 3×冰霜） ====================
+        else if (bossAction === 'frost_bolt_rain') {
+            const mult = Number.isFinite(Number(boss.frostBoltRainMultiplier)) ? Number(boss.frostBoltRainMultiplier) : 3;
+            const raw = Math.max(1, Math.floor((boss.attack || 0) * mult));
+
+            addLog(`【${boss.name}】施放【寒冰箭雨】（全体受击）！`, 'warning');
+            (combat.playerStates || []).forEach((ps, pIdx) => {
+                if (!ps || ps.currentHp <= 0) return;
+                dealMagicDamageToPlayer(pIdx, raw, '冰霜', '→ ');
+            });
+        }
+
+        // ==================== 技能3：法力爆裂（随机DOT：1×奥术/回合×4；结束爆炸3×；集中站位爆炸波及全体） ====================
+        else if (bossAction === 'mana_burst') {
+            const targets = pickNRandomAlivePlayers(1);
+            if (targets.length <= 0) {
+                addLog(`【${boss.name}】施放【法力爆裂】，但没有存活目标`, 'warning');
+            } else {
+                const tIdx = targets[0];
+                const target = combat.playerStates[tIdx];
+
+                const dur = Math.max(1, Math.floor(Number(boss.manaBurstDuration || 4)));
+                const tickMult = Number.isFinite(Number(boss.manaBurstDotMultiplier)) ? Number(boss.manaBurstDotMultiplier) : 1;
+                const expireMult = Number.isFinite(Number(boss.manaBurstExpireMultiplier)) ? Number(boss.manaBurstExpireMultiplier) : 3;
+
+                target.dots = target.dots || [];
+                const existing = target.dots.find(d => d && d.type === 'kelthuzad_mana_burst');
+                const perTurnRaw = Math.max(1, Math.floor((boss.attack || 0) * tickMult));
+
+                if (existing) {
+                    existing.duration = dur;
+                    existing.tickMultiplier = tickMult;
+                    existing.expireMultiplier = expireMult;
+                    existing.school = 'arcane';
+                    existing.name = '法力爆裂';
+                    existing.damagePerTurn = perTurnRaw;
+                } else {
+                    target.dots.push({
+                        type: 'kelthuzad_mana_burst',
+                        name: '法力爆裂',
+                        duration: dur,
+                        tickMultiplier: tickMult,
+                        expireMultiplier: expireMult,
+                        school: 'arcane',
+                        damagePerTurn: perTurnRaw,
+                    });
+                }
+
+                const aoeNote = stance === 'concentrated' ? '（集中站位：爆炸波及全体）' : '';
+                addLog(`【${boss.name}】施放【法力爆裂】命中 位置${tIdx + 1} ${target.char.name}：每回合${tickMult}×攻击奥术伤害，持续${dur}回合；结束爆炸${expireMult}×攻击${aoeNote}`, 'debuff');
+            }
+        }
+
+        // ==================== 技能4：寒冰之墓（随机目标：每回合30%最大生命值冰霜伤害×4；无法行动） ====================
+        else if (bossAction === 'frost_tomb') {
+            const targets = pickNRandomAlivePlayers(1);
+            if (targets.length <= 0) {
+                addLog(`【${boss.name}】施放【寒冰之墓】，但没有存活目标`, 'warning');
+            } else {
+                const tIdx = targets[0];
+                const target = combat.playerStates[tIdx];
+
+                const dur = Math.max(1, Math.floor(Number(boss.frostTombDuration || 4)));
+                const pct = Number.isFinite(Number(boss.frostTombHpPctPerTurn)) ? Number(boss.frostTombHpPctPerTurn) : 0.30;
+
+                // 施加无法行动（昏迷）
+                applyStun(target, dur, '寒冰之墓');
+
+                // 施加百分比DOT（在DOT结算处特殊处理）
+                target.dots = target.dots || [];
+                const existing = target.dots.find(d => d && d.type === 'kelthuzad_frost_tomb');
+                if (existing) {
+                    existing.duration = dur;
+                    existing.hpPctPerTurn = pct;
+                    existing.school = 'frost';
+                    existing.name = '寒冰之墓';
+                } else {
+                    target.dots.push({
+                        type: 'kelthuzad_frost_tomb',
+                        name: '寒冰之墓',
+                        duration: dur,
+                        hpPctPerTurn: pct,
+                        school: 'frost',
+                    });
+                }
+
+                addLog(`【${boss.name}】施放【寒冰之墓】束缚 位置${tIdx + 1} ${target.char.name}：每回合造成其最大生命值${Math.round(pct * 100)}%的冰霜伤害，持续${dur}回合，无法行动`, 'debuff');
+            }
+        }
+
+        // ==================== 技能5：暗影裂缝（随机2目标：跑位2回合无法行动） ====================
+        else if (bossAction === 'shadow_rift') {
+            const cnt = Math.max(1, Math.floor(Number(boss.shadowRiftTargets || 2)));
+            const dur = Math.max(1, Math.floor(Number(boss.shadowRiftRunningDuration || 2)));
+            const targets = pickNRandomAlivePlayers(cnt);
+
+            if (targets.length <= 0) {
+                addLog(`【${boss.name}】施放【暗影裂缝】，但没有存活目标`, 'warning');
+            } else {
+                addLog(`【${boss.name}】施放【暗影裂缝】（命中 ${targets.length} 名目标）！`, 'warning');
+                targets.forEach(tIdx => {
+                    const ps = combat.playerStates[tIdx];
+                    if (!ps || ps.currentHp <= 0) return;
+                    applyRunning(ps, dur);
+                    addLog(`→ 位置${tIdx + 1} ${ps.char.name} 获得【跑位】${dur}回合，无法行动`, 'debuff');
+                });
+            }
+        }
+
+        // ==================== 技能7：冰霜皇冠卫士（2个1000万血加入；每回合小弟阶段重击坦克并叠加伤害） ====================
+        else if (bossAction === 'summon_frost_crown_guards') {
+            combat.minions = combat.minions || [];
+            combat.bossBuffs = combat.bossBuffs || {};
+
+            const want = Math.max(1, Math.floor(Number(boss.frostCrownGuardCount || 2)));
+            const hp = Math.max(1, Math.floor(Number(boss.frostCrownGuardHp || 10000000)));
+            const def = Math.max(0, Math.floor(Number(boss.minion?.defense ?? boss.defense ?? 0)));
+            const atk = Math.max(0, Math.floor(Number(boss.minion?.attack ?? boss.attack ?? 0)));
+            const baseName = boss.minion?.name || '冰霜皇冠卫士';
+
+            const alive = (combat.minions || []).filter(mm => (mm?.hp ?? 0) > 0 && mm.isKelthuzadFrostCrownGuard).length;
+            const canAdd = Math.max(0, want - alive);
+            if (canAdd <= 0) {
+                addLog(`【${boss.name}】尝试召唤【冰霜皇冠卫士】，但卫士已全部在场（${alive}/${want}）`, 'warning');
+            } else {
+                if (!Number.isFinite(Number(combat.bossBuffs.kelthuzadGuardSerial))) {
+                    combat.bossBuffs.kelthuzadGuardSerial = 0;
+                }
+
+                addLog(`【${boss.name}】施放【冰霜皇冠卫士】！`, 'warning');
+                for (let k = 0; k < canAdd; k++) {
+                    const serial = ++combat.bossBuffs.kelthuzadGuardSerial;
+                    combat.minions.push({
+                        hp,
+                        maxHp: hp,
+                        attack: atk,
+                        defense: def,
+                        immune: false,
+                        dots: [],
+                        isKelthuzadFrostCrownGuard: true,
+                        displayName: `${baseName}${serial}`,
+                        kelthuzadGuardStacks: 0, // 重击叠层（每回合+1，伤害+15%）
+                    });
+                }
+                addLog(`→ 召唤 ${canAdd} 个【冰霜皇冠卫士】（当前存活：${alive + canAdd}/${want}）`, 'warning');
+            }
+        }
+
+        // ==================== 技能6：克尔苏加德之链（随机3目标DOT：1.5×暗影/回合；分散站位：额外3×暗影+跑位1回合） ====================
+        else if (bossAction === 'kelthuzad_chain') {
+            const cnt = Math.max(1, Math.floor(Number(boss.kelthuzadChainTargets || 3)));
+            const dur = Math.max(1, Math.floor(Number(boss.kelthuzadChainDuration || 4)));
+            const dotMult = Number.isFinite(Number(boss.kelthuzadChainDotMultiplier)) ? Number(boss.kelthuzadChainDotMultiplier) : 1.5;
+
+            const targets = pickNRandomAlivePlayers(cnt);
+            if (targets.length <= 0) {
+                addLog(`【${boss.name}】施放【克尔苏加德之链】，但没有存活目标`, 'warning');
+            } else {
+                const dispersed = stance === 'dispersed';
+                addLog(`【${boss.name}】施放【克尔苏加德之链】（命中 ${targets.length} 名目标${dispersed ? '；分散站位触发爆发' : ''}）！`, 'warning');
+
+                const perTurnRaw = Math.max(1, Math.floor((boss.attack || 0) * dotMult));
+                const burstMult = Number.isFinite(Number(boss.kelthuzadChainDispersedImmediateMultiplier))
+                    ? Number(boss.kelthuzadChainDispersedImmediateMultiplier)
+                    : 3;
+                const burstRaw = Math.max(1, Math.floor((boss.attack || 0) * burstMult));
+                const runDur = Math.max(1, Math.floor(Number(boss.kelthuzadChainDispersedRunningDuration || 1)));
+
+                targets.forEach(tIdx => {
+                    const ps = combat.playerStates[tIdx];
+                    if (!ps || ps.currentHp <= 0) return;
+
+                    // 分散站位：立即爆发 + 跑位
+                    if (dispersed) {
+                        dealMagicDamageToPlayer(tIdx, burstRaw, '暗影', '→ ');
+                        applyRunning(ps, runDur);
+                        addLog(`   ↳ 位置${tIdx + 1} ${ps.char.name} 因【克尔苏加德之链】需要跑位：无法行动${runDur}回合`, 'debuff');
+                    }
+
+                    // DOT（在DOT结算处特殊处理，用于显示“暗影/倍率”文案）
+                    ps.dots = ps.dots || [];
+                    const existing = ps.dots.find(d => d && d.type === 'kelthuzad_chain_dot');
+                    if (existing) {
+                        existing.duration = dur;
+                        existing.damageMultiplier = dotMult;
+                        existing.school = 'shadow';
+                        existing.name = '克尔苏加德之链';
+                        existing.damagePerTurn = perTurnRaw;
+                    } else {
+                        ps.dots.push({
+                            type: 'kelthuzad_chain_dot',
+                            name: '克尔苏加德之链',
+                            duration: dur,
+                            damageMultiplier: dotMult,
+                            school: 'shadow',
+                            damagePerTurn: perTurnRaw,
+                        });
+                    }
+                });
+            }
+        }
+
+        // 兜底：普通物理攻击（锁定坦克）
+        else {
+            const tIdx = pickAlivePlayerIndex();
+            if (tIdx >= 0) {
+                const target = combat.playerStates[tIdx];
+                const raw = Math.floor(boss.attack || 0);
+                const { damage, dr, blockedAmount } = calcMitigatedAndBlockedDamage(target, raw, false);
+
+                const shieldResult = applyShieldAbsorb(target, damage, logs, currentRound);
+                target.currentHp -= shieldResult.finalDamage;
+
+                const drPct = Math.round(dr * 100);
+                const blockText = blockedAmount > 0 ? `，格挡 ${blockedAmount}` : '';
+                const shieldText = shieldResult.absorbed > 0 ? `，护盾吸收 ${shieldResult.absorbed}` : '';
+                addLog(`【${boss.name}】普通攻击命中 位置${tIdx + 1} ${target.char.name}，造成 ${shieldResult.finalDamage} 点物理伤害（护甲减伤${drPct}%${blockText}${shieldText}）`);
+            } else {
+                addLog(`【${boss.name}】尝试攻击，但没有存活目标`, 'warning');
+            }
+        }
+    }
+
 // ==================== 奥妮克希亚技能处理 ====================
     else if (combat.bossId === 'onyxia') {
         const stance = combat.strategy?.stance || 'dispersed';
@@ -25885,6 +26271,42 @@ function stepBossCombat(state) {
             addLog(`【${minionName}${i + 1}】喷吐【酸液】命中 位置${tIdx + 1} ${target.char.name}，造成 ${shieldResult.finalDamage} 点自然伤害（魔抗减伤${resPct}%${mrText}${shieldText}）`);
         }
 
+
+        // 克尔苏加德：冰霜皇冠卫士 - 重击坦克（5×BOSS攻击物理伤害，且每回合伤害+15%叠加）
+        else if (combat.bossId === 'kelthuzad' && m.isKelthuzadFrostCrownGuard) {
+            const tIdx = pickAlivePlayerIndex();
+            if (tIdx < 0) break;
+
+            const target = combat.playerStates[tIdx];
+
+            const baseMult = Number.isFinite(Number(boss.frostCrownGuardHeavyStrikeMultiplier))
+                ? Number(boss.frostCrownGuardHeavyStrikeMultiplier)
+                : 5;
+            const inc = Number.isFinite(Number(boss.frostCrownGuardHeavyStrikeIncreasePerTurn))
+                ? Number(boss.frostCrownGuardHeavyStrikeIncreasePerTurn)
+                : 0.15;
+
+            const stacks = Math.max(0, Math.floor(Number(m.kelthuzadGuardStacks || 0)));
+            const mult = baseMult * (1 + inc * stacks);
+            const raw = Math.max(1, Math.floor((boss.attack || 0) * mult));
+
+            const { damage, dr, blockedAmount } = calcMitigatedAndBlockedDamage(target, raw, true);
+
+            const shieldResult = applyShieldAbsorb(target, damage, logs, currentRound);
+            target.currentHp -= shieldResult.finalDamage;
+
+            const drPct = Math.round(dr * 100);
+            const blockText = blockedAmount > 0 ? `，格挡 ${blockedAmount}` : '';
+            const shieldText = shieldResult.absorbed > 0 ? `，护盾吸收 ${shieldResult.absorbed}` : '';
+            const name = m.displayName || boss.minion?.name || '冰霜皇冠卫士';
+            const bonusPct = Math.round(stacks * inc * 100);
+
+            addLog(`【${name}】重击 位置${tIdx + 1} ${target.char.name}，造成 ${shieldResult.finalDamage} 点物理伤害（伤害加成+${bonusPct}%；护甲减伤${drPct}%${blockText}${shieldText}）`, 'warning');
+
+            // 每回合叠加 1 层
+            m.kelthuzadGuardStacks = stacks + 1;
+        }
+
 // 霍格的小弟：普通攻击
         else {
             const tIdx = pickAlivePlayerIndex();
@@ -26062,6 +26484,121 @@ function stepBossCombat(state) {
 
                 addLog(
                     `【${dot.name || '吞噬'}】对 位置${pIdx + 1} ${ps.char.name} 造成 ${shieldResult.finalDamage} 点自然伤害（×${mult.toFixed(1)}；魔抗减伤${resPct}%${mrText}${shieldText}）（剩余${dot.duration - 1}回合）`,
+                    'debuff'
+                );
+
+                dot.duration -= 1;
+                return dot.duration > 0;
+            }
+
+
+            // ✅ 特殊DOT：克尔苏加德【法力爆裂】（奥术DOT，持续4回合；结束爆炸3×；集中站位爆炸波及全体）
+            if (dot?.type === 'kelthuzad_mana_burst') {
+                const tickMult = Number.isFinite(Number(dot.tickMultiplier))
+                    ? Number(dot.tickMultiplier)
+                    : (Number.isFinite(Number(boss.manaBurstDotMultiplier)) ? Number(boss.manaBurstDotMultiplier) : 1);
+
+                const raw = Math.max(1, Math.floor((boss.attack || 0) * tickMult));
+
+                const mg = calcMagicDamage(ps, raw);
+                const shieldResult = applyShieldAbsorb(ps, mg.damage, logs, currentRound);
+                ps.currentHp -= shieldResult.finalDamage;
+
+                const resPct = Math.round(mg.resistReduction * 100);
+                const mrText = Number(mg.magicResist) < 0 ? `（魔抗 ${Math.floor(mg.magicResist)}）` : '';
+                const shieldText = shieldResult.absorbed > 0 ? `，护盾吸收 ${shieldResult.absorbed}` : '';
+
+                addLog(
+                    `【${dot.name || '法力爆裂'}】对 位置${pIdx + 1} ${ps.char.name} 造成 ${shieldResult.finalDamage} 点奥术伤害（魔抗减伤${resPct}%${mrText}${shieldText}）（剩余${dot.duration - 1}回合）`,
+                    'debuff'
+                );
+
+                dot.duration -= 1;
+
+                // 结束爆炸：仅当本跳未致死时触发（与通用爆炸DOT逻辑一致）
+                if (dot.duration <= 0 && ps.currentHp > 0) {
+                    const expireMult = Number.isFinite(Number(dot.expireMultiplier))
+                        ? Number(dot.expireMultiplier)
+                        : (Number.isFinite(Number(boss.manaBurstExpireMultiplier)) ? Number(boss.manaBurstExpireMultiplier) : 3);
+
+                    const rawExp = Math.max(1, Math.floor((boss.attack || 0) * expireMult));
+                    const stance = combat.strategy?.stance || 'dispersed';
+
+                    if (stance === 'concentrated') {
+                        addLog(`↳ 【${dot.name || '法力爆裂'}】结束爆炸（集中站位：全体受击）！`, 'warning');
+                        (combat.playerStates || []).forEach((ps2, idx2) => {
+                            if (!ps2 || ps2.currentHp <= 0) return;
+
+                            const mg2 = calcMagicDamage(ps2, rawExp);
+                            const shieldResult2 = applyShieldAbsorb(ps2, mg2.damage, logs, currentRound);
+                            ps2.currentHp -= shieldResult2.finalDamage;
+
+                            const resPct2 = Math.round(mg2.resistReduction * 100);
+                            const mrText2 = Number(mg2.magicResist) < 0 ? `（魔抗 ${Math.floor(mg2.magicResist)}）` : '';
+                            const shieldText2 = shieldResult2.absorbed > 0 ? `，护盾吸收 ${shieldResult2.absorbed}` : '';
+
+                            addLog(`→ 位置${idx2 + 1} ${ps2.char.name} 受到 ${shieldResult2.finalDamage} 点奥术爆炸伤害（魔抗减伤${resPct2}%${mrText2}${shieldText2}）`, 'debuff');
+                        });
+                    } else {
+                        const mg2 = calcMagicDamage(ps, rawExp);
+                        const shieldResult2 = applyShieldAbsorb(ps, mg2.damage, logs, currentRound);
+                        ps.currentHp -= shieldResult2.finalDamage;
+
+                        const resPct2 = Math.round(mg2.resistReduction * 100);
+                        const mrText2 = Number(mg2.magicResist) < 0 ? `（魔抗 ${Math.floor(mg2.magicResist)}）` : '';
+                        const shieldText2 = shieldResult2.absorbed > 0 ? `，护盾吸收 ${shieldResult2.absorbed}` : '';
+
+                        addLog(`↳ 【${dot.name || '法力爆裂'}】结束爆炸：位置${pIdx + 1} ${ps.char.name} 受到 ${shieldResult2.finalDamage} 点奥术爆炸伤害（魔抗减伤${resPct2}%${mrText2}${shieldText2}）`, 'debuff');
+                    }
+                }
+
+                return dot.duration > 0;
+            }
+
+            // ✅ 特殊DOT：克尔苏加德【寒冰之墓】（每回合造成目标最大生命值30%的冰霜伤害，持续4回合）
+            if (dot?.type === 'kelthuzad_frost_tomb') {
+                const pct = Number.isFinite(Number(dot.hpPctPerTurn))
+                    ? Number(dot.hpPctPerTurn)
+                    : (Number.isFinite(Number(boss.frostTombHpPctPerTurn)) ? Number(boss.frostTombHpPctPerTurn) : 0.30);
+
+                const maxHp = Math.max(1, Math.floor(Number(ps.char?.stats?.maxHp) || 0));
+                const raw = Math.max(1, Math.floor(maxHp * pct));
+
+                const mg = calcMagicDamage(ps, raw);
+                const shieldResult = applyShieldAbsorb(ps, mg.damage, logs, currentRound);
+                ps.currentHp -= shieldResult.finalDamage;
+
+                const resPct = Math.round(mg.resistReduction * 100);
+                const mrText = Number(mg.magicResist) < 0 ? `（魔抗 ${Math.floor(mg.magicResist)}）` : '';
+                const shieldText = shieldResult.absorbed > 0 ? `，护盾吸收 ${shieldResult.absorbed}` : '';
+
+                addLog(
+                    `【${dot.name || '寒冰之墓'}】对 位置${pIdx + 1} ${ps.char.name} 造成 ${shieldResult.finalDamage} 点冰霜伤害（最大生命值${Math.round(pct * 100)}%；魔抗减伤${resPct}%${mrText}${shieldText}）（剩余${dot.duration - 1}回合）`,
+                    'debuff'
+                );
+
+                dot.duration -= 1;
+                return dot.duration > 0;
+            }
+
+            // ✅ 特殊DOT：克尔苏加德【克尔苏加德之链】（每回合 1.5× 暗影伤害，持续若干回合）
+            if (dot?.type === 'kelthuzad_chain_dot') {
+                const mult = Number.isFinite(Number(dot.damageMultiplier))
+                    ? Number(dot.damageMultiplier)
+                    : (Number.isFinite(Number(boss.kelthuzadChainDotMultiplier)) ? Number(boss.kelthuzadChainDotMultiplier) : 1.5);
+
+                const raw = Math.max(1, Math.floor((boss.attack || 0) * mult));
+
+                const mg = calcMagicDamage(ps, raw);
+                const shieldResult = applyShieldAbsorb(ps, mg.damage, logs, currentRound);
+                ps.currentHp -= shieldResult.finalDamage;
+
+                const resPct = Math.round(mg.resistReduction * 100);
+                const mrText = Number(mg.magicResist) < 0 ? `（魔抗 ${Math.floor(mg.magicResist)}）` : '';
+                const shieldText = shieldResult.absorbed > 0 ? `，护盾吸收 ${shieldResult.absorbed}` : '';
+
+                addLog(
+                    `【${dot.name || '克尔苏加德之链'}】对 位置${pIdx + 1} ${ps.char.name} 造成 ${shieldResult.finalDamage} 点暗影伤害（×${mult.toFixed(1)}；魔抗减伤${resPct}%${mrText}${shieldText}）（剩余${dot.duration - 1}回合）`,
                     'debuff'
                 );
 
@@ -39816,6 +40353,15 @@ const BossPrepareModal = ({ state, dispatch }) => {
         frost_arrow_rain: '寒冰箭雨',
         frost_breath: '冰霜吐息',
         frost_aura: '冰霜光环',
+
+        // 克尔苏加德
+        frost_bolt: '寒冰箭',
+        frost_bolt_rain: '寒冰箭雨',
+        mana_burst: '法力爆裂',
+        frost_tomb: '寒冰之墓',
+        shadow_rift: '暗影裂缝',
+        summon_frost_crown_guards: '冰霜皇冠卫士',
+        kelthuzad_chain: '克尔苏加德之链',
 
         // 其他boss也可以逐步补齐
         mortal_strike: '致死打击',

@@ -28703,6 +28703,11 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
         const per = getShatteredSoulHealPerStar();
         if (per <= 0) return;
 
+        // 治疗吸收：从角色debuff读取剩余值
+        let healAbsorb = Math.max(
+          0,
+          Math.floor(Number(character?.debuffs?.healAbsorb?.remaining) || 0)
+        );
         let totalHeal = 0;
         let totalAbsorbed = 0;
         const maxHp = Math.max(0, Math.floor(Number(character.stats.maxHp ?? character.stats.hp) || 0));
@@ -28723,6 +28728,19 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
                 charHp += actual;
                 totalHeal += actual;
             }
+        }
+
+        // 写回治疗吸收剩余值
+        if (character) {
+          character.debuffs = character.debuffs || {};
+          if (healAbsorb > 0) {
+            character.debuffs.healAbsorb = {
+              ...(character.debuffs.healAbsorb || {}),
+              remaining: healAbsorb,
+            };
+          } else if (character.debuffs.healAbsorb) {
+            delete character.debuffs.healAbsorb;
+          }
         }
 
         if (totalHeal > 0 || totalAbsorbed > 0) {

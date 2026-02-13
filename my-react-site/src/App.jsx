@@ -38823,6 +38823,42 @@ const CodexPage = ({ state, dispatch }) => {
         setTooltipPos({ x, y });
     };
 
+    React.useEffect(() => {
+      // 只兜底“装备页”的 tooltip，避免影响别的 tab
+      const onMove = (e) => {
+        // 没开 tooltip 就不用检查（省性能）
+        if (!hoveredEquip?.tpl) return;
+        // 不在装备 tab，也关掉（避免切 tab 后残留）
+        if (tab !== 'equipment') {
+          setHoveredEquip(null);
+          return;
+        }
+
+        const x = e.clientX ?? 0;
+        const y = e.clientY ?? 0;
+
+        const el = document.elementFromPoint(x, y);
+        const card = el?.closest?.('[data-codex-equip="1"]');
+
+        // 如果鼠标当前位置不在任何装备卡片上：强制关闭
+        if (!card) setHoveredEquip(null);
+      };
+
+      const hide = () => setHoveredEquip(null);
+
+      // 用捕获阶段更稳（事件丢失概率更低）
+      window.addEventListener('mousemove', onMove, true);
+      // 鼠标冲出页面/窗口失焦时也要关（否则会残留）
+      document.addEventListener('mouseleave', hide);
+      window.addEventListener('blur', hide);
+
+      return () => {
+        window.removeEventListener('mousemove', onMove, true);
+        document.removeEventListener('mouseleave', hide);
+        window.removeEventListener('blur', hide);
+      };
+    }, [hoveredEquip?.tpl, tab]);
+
     const renderEquipTooltip = () => {
         if (!hoveredEquip?.tpl) return null;
         const { tpl, unlocked, lv100, dropEnabled } = hoveredEquip;
@@ -39248,6 +39284,8 @@ const CodexPage = ({ state, dispatch }) => {
                             return (
                                 <div
                                     key={tpl.id}
+                                    data-codex-equip="1"
+                                    data-equip-id={tpl.id}
                                     onMouseEnter={(e) => {
                                         setHoveredEquip({ tpl, unlocked, lv100, dropEnabled });
                                         handleEquipMouseMove(e);

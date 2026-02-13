@@ -15520,6 +15520,8 @@ const SET_BONUSES = {
         tiers: [
             { count: 3, bonus: { hp: 2000, armor: 250, mastery: 15, blockRate: 5, blockValue: 500 } },
             { count: 5, bonus: { hp: 6000, attack: 1500 } },
+            { count: 8, bonus: {}, procEffects: [{ type: 'proc_stat', trigger: 'turn_start', chance: 0.25, stats: { attack: 4800, critRate: 40 }, name: '无畏·8件套' }] },
+
         ]
     },
     bonescythe_set: {
@@ -15527,6 +15529,8 @@ const SET_BONUSES = {
         tiers: [
             { count: 3, bonus: { attack: 420, haste: 15, critRate: 15, critDamage: 0.30 } },
             { count: 5, bonus: { hp: 3600, versatility: 32 } },
+            { count: 8, bonus: {}, procEffects: [{ type: 'proc_stat', trigger: 'turn_start', chance: 0.25, stats: { attack: 4800, critRate: 40 }, name: '骨镰·8件套' }] },
+
         ]
     },
     frostfire_set: {
@@ -15534,6 +15538,8 @@ const SET_BONUSES = {
         tiers: [
             { count: 3, bonus: { spellPower: 420, haste: 15, critRate: 15, critDamage: 0.30 } },
             { count: 5, bonus: { hp: 3600, versatility: 32 } },
+            { count: 8, bonus: {}, procEffects: [{ type: 'proc_stat', trigger: 'turn_start', chance: 0.25, stats: { spellPower: 4800, versatility: 40 }, name: '霜火·8件套' }] },
+
         ]
     },
     faith_set: {
@@ -15541,6 +15547,8 @@ const SET_BONUSES = {
         tiers: [
             { count: 3, bonus: { spellPower: 380, mastery: 15, versatility: 15, hp: 1200 } },
             { count: 5, bonus: { hp: 4500, spellPower:1500 } },
+            { count: 8, bonus: {}, procEffects: [{ type: 'proc_stat', trigger: 'turn_start', chance: 0.25, stats: { spellPower: 4800, versatility: 40 }, name: '信仰·8件套' }] },
+
         ]
     },
 
@@ -18319,7 +18327,43 @@ function rollProcStatEffects(character, trigger) {
         }
     }
 
-    // 统一向下取整，避免小数污染
+        // ==================== 套装特效：proc_stat（例如 8 件套每回合触发增益） ====================
+    // tier.procEffects: [{ type:'proc_stat', trigger:'turn_start', chance:0.25, stats:{...}, name:'xxx' }]
+    const setBonuses = getSetBonusesForCharacter(character);
+    for (const set of setBonuses) {
+        for (const tier of (set.activated || [])) {
+            const effects = Array.isArray(tier?.procEffects) ? tier.procEffects : [];
+            if (effects.length === 0) continue;
+
+            for (const se of effects) {
+                if (!se || se.type !== 'proc_stat') continue;
+                if (se.trigger !== trigger) continue;
+
+                const chance = Math.max(0, Math.min(1, Number(se.chance) || 0));
+                if (chance <= 0) continue;
+
+                if (Math.random() >= chance) continue;
+
+                const stats = se.stats && typeof se.stats === 'object' ? se.stats : {};
+
+                const applied = {};
+                for (const [stat, valRaw] of Object.entries(stats)) {
+                    const baseVal = Number(valRaw) || 0;
+                    if (!Number.isFinite(baseVal) || baseVal === 0) continue;
+
+                    const add = baseVal; // 套装触发增益不随装备等级缩放
+                    applied[stat] = (applied[stat] || 0) + add;
+                    totalBonus[stat] = (totalBonus[stat] || 0) + add;
+                }
+
+                // 输出给日志用：优先用特效自定义名，其次套装名
+                const label = se.name || `${set.name || set.setId || '套装'}·${tier.count}件套`;
+                triggered.push({ label, bonus: applied, chance });
+            }
+        }
+    }
+
+// 统一向下取整，避免小数污染
     for (const k of Object.keys(totalBonus)) {
         totalBonus[k] = Math.floor(Number(totalBonus[k]) || 0);
     }
@@ -33847,7 +33891,24 @@ const CharacterDetailsModal = ({ characterId, state, onClose, onUnequip, onEditS
                                             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                                                 {set.activated.map((t, idx) => (
                                                     <div key={idx} style={{ fontSize: 12, color: '#ddd' }}>
-                                                        ✅ {t.count} 件：{formatBonusText(t.bonus)}
+                                                        ✅ {t.count} 件：{(() => {
+                                                        const parts = [];
+                                                        const bt = formatBonusText(t.bonus);
+                                                        if (bt) parts.push(bt);
+
+                                                        const effects = Array.isArray(t?.procEffects) ? t.procEffects : [];
+                                                        effects.forEach(se => {
+                                                            if (!se || se.type !== 'proc_stat') return;
+                                                            if (se.trigger !== 'turn_start') return;
+
+                                                            const chance = Math.max(0, Math.min(1, Number(se.chance) || 0));
+                                                            const pct = Math.round(chance * 100);
+                                                            const bonusText = formatProcStatBonusText(se.stats || {});
+                                                            parts.push(`🎲 每回合${pct}%：${bonusText || '触发增益'}`);
+                                                        });
+
+                                                        return parts.join('；');
+                                                    })()}
                                                     </div>
                                                 ))}
                                             </div>

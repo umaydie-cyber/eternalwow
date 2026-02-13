@@ -29183,7 +29183,8 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
                   charHp += actualHeal;
                   logs.push({
                     round,
-                    kind: 'heal',
+                    type: 'heal',
+                    action: skill.name,
                     actor: character.name,
                     text: `【${skill.name}】回复 ${actualHeal} 点生命（${Math.floor(pct * 100)}%吸血）`
                   });

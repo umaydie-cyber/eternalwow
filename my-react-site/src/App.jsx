@@ -115,6 +115,10 @@ const BOSS_BONUS_CONFIG = {
 
     // ✅ 新增：团队首领 - 克苏恩（60级解锁）
     cthun: { name: '克苏恩', bonus: 0.30 },
+
+
+    // ✅ 新增：团队首领 - 萨菲隆（60级解锁）
+    sapphiron: { name: '萨菲隆', bonus: 0.30 },
 };
 
 // 兼容旧代码：派生出 names / bossBonus 两个对象（不再手写维护）
@@ -14470,6 +14474,20 @@ const TEAM_BOSSES = {
         unlockLevel: 60,
         partySize: 5, // ✅ 团队首领：5人
     },
+
+
+    // ✅ 新增：团队首领 - 萨菲隆（60级解锁）
+    sapphiron: {
+        id: 'sapphiron',
+        name: '萨菲隆',
+        icon: 'icons/wow/vanilla/boss/sapphiron.png', // 预留：自行补图标
+        hp: 90000000,
+        attack: 50000,
+        defense: 40000,
+        rewards: { gold: 7000000, exp: 4500000 },
+        unlockLevel: 60,
+        partySize: 5, // ✅ 团队首领：5人
+    },
 };
 
 // UI/逻辑层通用：获取 Boss 元信息
@@ -15612,6 +15630,64 @@ const BOSS_DATA = {
             ]
         }
     },
+
+    // ✅ 新增：团队首领 - 萨菲隆（60级解锁 · 5人）
+    sapphiron: {
+        id: 'sapphiron',
+        name: '萨菲隆',
+        maxHp: 90000000,
+        attack: 50000,
+        defense: 40000,
+
+        // 技能1（被动）：冰霜光环（每回合对全体造成 1×Boss攻击 的冰霜伤害）
+        frostAuraMultiplier: 1,
+
+        // 技能2：生命吸取（随机3目标：3×Boss攻击 的暗影伤害，并回复等同造成伤害的生命值）
+        lifeDrainTargets: 3,
+        lifeDrainMultiplier: 3,
+
+        // 技能3：寒冷
+        // - 分散站位：随机2目标造成 2×Boss攻击 的冰霜伤害
+        // - 集中站位：对所有角色造成 4×Boss攻击 的冰霜伤害
+        chillTargets: 2,
+        chillMultiplier: 2,
+        chillConcentratedMultiplier: 4,
+
+        // 技能4：顺劈斩
+        // - 分散站位：对坦克造成 5×Boss攻击 的物理伤害
+        // - 集中站位：对所有角色造成 5×Boss攻击 的物理伤害
+        cleaveMultiplier: 5,
+
+        // 技能5：扫尾
+        // - 集中站位：无事发生
+        // - 分散站位：随机2目标造成 3×Boss攻击 的物理伤害，并使其1回合无法行动
+        tailSweepTargets: 2,
+        tailSweepMultiplier: 3,
+        tailSweepStunDuration: 1,
+
+        // 技能6：寒冰箭雨（随机2目标：3×Boss攻击 的冰霜伤害，并冻结1回合）
+        frostArrowRainTargets: 2,
+        frostArrowRainMultiplier: 3,
+        frostArrowRainFreezeDuration: 1,
+
+        // 技能7：冰霜吐息
+        // - 集中站位：对所有角色造成 1×Boss攻击 的冰霜伤害
+        // - 分散站位：全体获得【跑位】2回合，无法行动
+        frostBreathMultiplier: 1,
+        frostBreathRunningDuration: 2,
+
+        // 技能循环：
+        // 顺劈斩 → 寒冷 → 扫尾 → 生命吸取 → 顺劈斩 → 扫尾 → 寒冰箭雨 → 冰霜吐息 → 循环
+        cycle: ['cleave', 'chill', 'tail_sweep', 'life_drain', 'cleave', 'tail_sweep', 'frost_arrow_rain', 'frost_breath'],
+
+        rewards: {
+            gold: 7000000,
+            exp: 4500000,
+            items: []
+        }
+    },
+
+
 
 // ✅ 新增：团队首领 - 奥妮克希亚（5人）
     onyxia: {
@@ -18198,7 +18274,8 @@ function stepBossCombat(state) {
                 p.skillIndex = (p.skillIndex || 0) + 1;
             }
 
-            addLog(`位置${i + 1} ${p.char.name} 因【昏迷】无法行动（剩余${p.debuffs.stun.duration}回合）`, 'debuff');
+            const stunName = p.debuffs.stun?.source || '昏迷';
+            addLog(`位置${i + 1} ${p.char.name} 因【${stunName}】无法行动（剩余${p.debuffs.stun.duration}回合）`, 'debuff');
             tickPlayerDurations(p, i);
             continue;
         }
@@ -23455,6 +23532,281 @@ function stepBossCombat(state) {
 
             // 推进循环（下潜本身算一次动作）
             combat.bossBuffs.ragnarosCycleIndex = (cycleIndex + 1) % cycle.length;
+        }
+    }
+
+
+
+// ==================== 萨菲隆（团队首领）技能处理 ====================
+    // 机制：
+    // - 被动【冰霜光环】：每回合对所有角色造成 1×Boss攻击 的冰霜伤害（计算魔抗）
+    // - 冰霜/暗影伤害：计算魔抗（calcMagicDamage）
+    // - 物理伤害：护甲/格挡/护盾（calcMitigatedAndBlockedDamage + applyShieldAbsorb）
+    // - 技能循环：顺劈斩 → 寒冷 → 扫尾 → 生命吸取 → 顺劈斩 → 扫尾 → 寒冰箭雨 → 冰霜吐息 → 循环
+    else if (combat.bossId === 'sapphiron') {
+        const stance = combat.strategy?.stance || 'dispersed';
+
+        const pickNRandomAlivePlayers = (n) => {
+            const aliveIdx = (combat.playerStates || [])
+                .map((ps, idx) => ({ idx, hp: ps?.currentHp ?? 0 }))
+                .filter(x => x.hp > 0)
+                .map(x => x.idx);
+
+            const pool = aliveIdx.slice();
+            const picked = [];
+
+            const need = Math.min(Math.max(0, Math.floor(Number(n || 0))), pool.length);
+            for (let k = 0; k < need; k++) {
+                const r = Math.floor(Math.random() * pool.length);
+                picked.push(pool[r]);
+                pool.splice(r, 1);
+            }
+            return picked;
+        };
+
+        const applyStun = (ps, dur, sourceName) => {
+            if (!ps || ps.currentHp <= 0) return;
+            const d = Math.max(1, Math.floor(Number(dur || 1)));
+            ps.debuffs = ps.debuffs || {};
+            if (ps.debuffs.stun && ps.debuffs.stun.duration > 0) {
+                ps.debuffs.stun.duration = Math.max(ps.debuffs.stun.duration, d);
+                if (sourceName) ps.debuffs.stun.source = sourceName;
+            } else {
+                ps.debuffs.stun = { duration: d, source: sourceName || '昏迷' };
+            }
+        };
+
+        const applyRunning = (ps, dur) => {
+            if (!ps || ps.currentHp <= 0) return;
+            const d = Math.max(1, Math.floor(Number(dur || 1)));
+            ps.debuffs = ps.debuffs || {};
+            const prev = ps.debuffs.running?.duration || 0;
+            ps.debuffs.running = { duration: Math.max(prev, d) };
+        };
+
+        const dealMagicDamageToPlayer = (tIdx, rawDamage, schoolLabel = '法术', prefix = '→ ') => {
+            const ps = combat.playerStates[tIdx];
+            if (!ps || ps.currentHp <= 0) return 0;
+
+            const beforeHp = ps.currentHp;
+
+            const mg = calcMagicDamage(ps, rawDamage);
+            const shieldResult = applyShieldAbsorb(ps, mg.damage, logs, currentRound);
+            ps.currentHp -= shieldResult.finalDamage;
+
+            const actualLoss = Math.min(beforeHp, shieldResult.finalDamage);
+
+            const resPct = Math.round(mg.resistReduction * 100);
+            const mrText = mg.magicResist ? `，魔抗 ${mg.magicResist}` : '';
+            const shieldText = shieldResult.absorbed > 0 ? `，护盾吸收 ${shieldResult.absorbed}` : '';
+            addLog(`${prefix}位置${tIdx + 1} ${ps.char.name} 受到 ${shieldResult.finalDamage} 点${schoolLabel}伤害（魔抗减伤${resPct}%${mrText}${shieldText}）`);
+            return actualLoss;
+        };
+
+        // ==================== 技能1：被动 - 冰霜光环（每回合全体 1×冰霜） ====================
+        {
+            const mult = Number.isFinite(Number(boss.frostAuraMultiplier)) ? Number(boss.frostAuraMultiplier) : 1;
+            const raw = Math.max(1, Math.floor((boss.attack || 0) * mult));
+
+            addLog(`【${boss.name}】被动【冰霜光环】触发！`, 'debuff');
+            (combat.playerStates || []).forEach((ps, pIdx) => {
+                if (!ps || ps.currentHp <= 0) return;
+                dealMagicDamageToPlayer(pIdx, raw, '冰霜', '→ ');
+            });
+        }
+
+        // ==================== 技能4：顺劈斩（分散：坦克 5×物理；集中：全体 5×物理） ====================
+        if (bossAction === 'cleave') {
+            const raw = Math.floor((boss.attack || 0) * (boss.cleaveMultiplier || 5));
+
+            if (stance === 'dispersed') {
+                const tIdx = pickAlivePlayerIndex();
+                if (tIdx >= 0) {
+                    const target = combat.playerStates[tIdx];
+                    const { damage, dr, blockedAmount } = calcMitigatedAndBlockedDamage(target, raw, true);
+
+                    const shieldResult = applyShieldAbsorb(target, damage, logs, currentRound);
+                    target.currentHp -= shieldResult.finalDamage;
+
+                    const drPct = Math.round(dr * 100);
+                    const blockText = blockedAmount > 0 ? `，格挡 ${blockedAmount}` : '';
+                    const shieldText = shieldResult.absorbed > 0 ? `，护盾吸收 ${shieldResult.absorbed}` : '';
+                    addLog(`【${boss.name}】施放【顺劈斩】（分散站位）命中 位置${tIdx + 1} ${target.char.name}，造成 ${shieldResult.finalDamage} 点物理伤害（护甲减伤${drPct}%${blockText}${shieldText}）`, 'warning');
+                } else {
+                    addLog(`【${boss.name}】施放【顺劈斩】，但没有存活目标`, 'warning');
+                }
+            } else {
+                addLog(`【${boss.name}】施放【顺劈斩】（集中站位：全体受击）！`, 'warning');
+                (combat.playerStates || []).forEach((ps, pIdx) => {
+                    if (!ps || ps.currentHp <= 0) return;
+                    const { damage, dr, blockedAmount } = calcMitigatedAndBlockedDamage(ps, raw, true);
+
+                    const shieldResult = applyShieldAbsorb(ps, damage, logs, currentRound);
+                    ps.currentHp -= shieldResult.finalDamage;
+
+                    const drPct = Math.round(dr * 100);
+                    const blockText = blockedAmount > 0 ? `，格挡 ${blockedAmount}` : '';
+                    const shieldText = shieldResult.absorbed > 0 ? `，护盾吸收 ${shieldResult.absorbed}` : '';
+                    addLog(`→ 位置${pIdx + 1} ${ps.char.name} 受到 ${shieldResult.finalDamage} 点物理伤害（护甲减伤${drPct}%${blockText}${shieldText}）`);
+                });
+            }
+        }
+
+        // ==================== 技能3：寒冷（分散：随机2 2×冰霜；集中：全体 4×冰霜） ====================
+        else if (bossAction === 'chill') {
+            if (stance === 'concentrated') {
+                const raw = Math.max(1, Math.floor((boss.attack || 0) * (boss.chillConcentratedMultiplier || 4)));
+                addLog(`【${boss.name}】施放【寒冷】（集中站位：全体受击）！`, 'warning');
+
+                (combat.playerStates || []).forEach((ps, pIdx) => {
+                    if (!ps || ps.currentHp <= 0) return;
+                    dealMagicDamageToPlayer(pIdx, raw, '冰霜', '→ ');
+                });
+            } else {
+                const cnt = Math.max(1, Math.floor(Number(boss.chillTargets || 2)));
+                const targets = pickNRandomAlivePlayers(cnt);
+                const raw = Math.max(1, Math.floor((boss.attack || 0) * (boss.chillMultiplier || 2)));
+
+                if (targets.length <= 0) {
+                    addLog(`【${boss.name}】施放【寒冷】，但没有存活目标`, 'warning');
+                } else {
+                    addLog(`【${boss.name}】施放【寒冷】（分散站位：命中 ${targets.length} 名目标）！`, 'warning');
+                    targets.forEach(tIdx => {
+                        dealMagicDamageToPlayer(tIdx, raw, '冰霜', '→ ');
+                    });
+                }
+            }
+        }
+
+        // ==================== 技能5：扫尾（集中：无事发生；分散：随机2 3×物理 + 无法行动1回合） ====================
+        else if (bossAction === 'tail_sweep') {
+            if (stance === 'concentrated') {
+                addLog(`【${boss.name}】施放【扫尾】（集中站位：无事发生）`, 'proc');
+            } else {
+                const cnt = Math.max(1, Math.floor(Number(boss.tailSweepTargets || 2)));
+                const targets = pickNRandomAlivePlayers(cnt);
+                const raw = Math.max(1, Math.floor((boss.attack || 0) * (boss.tailSweepMultiplier || 3)));
+                const stunDur = Math.max(1, Math.floor(Number(boss.tailSweepStunDuration || 1)));
+
+                if (targets.length <= 0) {
+                    addLog(`【${boss.name}】施放【扫尾】，但没有存活目标`, 'warning');
+                } else {
+                    addLog(`【${boss.name}】施放【扫尾】（分散站位：命中 ${targets.length} 名目标）！`, 'warning');
+                    targets.forEach(tIdx => {
+                        const target = combat.playerStates[tIdx];
+                        if (!target || target.currentHp <= 0) return;
+
+                        const { damage, dr, blockedAmount } = calcMitigatedAndBlockedDamage(target, raw, false);
+                        const shieldResult = applyShieldAbsorb(target, damage, logs, currentRound);
+                        target.currentHp -= shieldResult.finalDamage;
+
+                        const drPct = Math.round(dr * 100);
+                        const blockText = blockedAmount > 0 ? `，格挡 ${blockedAmount}` : '';
+                        const shieldText = shieldResult.absorbed > 0 ? `，护盾吸收 ${shieldResult.absorbed}` : '';
+                        addLog(`→ 位置${tIdx + 1} ${target.char.name} 受到 ${shieldResult.finalDamage} 点物理伤害（护甲减伤${drPct}%${blockText}${shieldText}）`);
+
+                        if (target.currentHp > 0) {
+                            applyStun(target, stunDur, '扫尾');
+                            addLog(`   ↳ 位置${tIdx + 1} ${target.char.name} 被【扫尾】击倒，无法行动${stunDur}回合`, 'debuff');
+                        }
+                    });
+                }
+            }
+        }
+
+        // ==================== 技能2：生命吸取（随机3 3×暗影；Boss回复等同伤害） ====================
+        else if (bossAction === 'life_drain') {
+            const cnt = Math.max(1, Math.floor(Number(boss.lifeDrainTargets || 3)));
+            const targets = pickNRandomAlivePlayers(cnt);
+            const raw = Math.max(1, Math.floor((boss.attack || 0) * (boss.lifeDrainMultiplier || 3)));
+
+            if (targets.length <= 0) {
+                addLog(`【${boss.name}】施放【生命吸取】，但没有存活目标`, 'warning');
+            } else {
+                addLog(`【${boss.name}】施放【生命吸取】（命中 ${targets.length} 名目标）！`, 'warning');
+
+                let totalLeech = 0;
+                targets.forEach(tIdx => {
+                    totalLeech += dealMagicDamageToPlayer(tIdx, raw, '暗影', '→ ');
+                });
+
+                if (totalLeech > 0) {
+                    const before = combat.bossHp;
+                    combat.bossHp = Math.min(boss.maxHp, Math.floor(combat.bossHp + totalLeech));
+                    const healed = combat.bossHp - before;
+                    if (healed > 0) {
+                        addLog(`→ 【${boss.name}】吸取生命恢复 ${healed} 点生命`, 'heal');
+                    }
+                }
+            }
+        }
+
+        // ==================== 技能6：寒冰箭雨（随机2 3×冰霜 + 冻结1回合） ====================
+        else if (bossAction === 'frost_arrow_rain') {
+            const cnt = Math.max(1, Math.floor(Number(boss.frostArrowRainTargets || 2)));
+            const targets = pickNRandomAlivePlayers(cnt);
+            const raw = Math.max(1, Math.floor((boss.attack || 0) * (boss.frostArrowRainMultiplier || 3)));
+            const freezeDur = Math.max(1, Math.floor(Number(boss.frostArrowRainFreezeDuration || 1)));
+
+            if (targets.length <= 0) {
+                addLog(`【${boss.name}】施放【寒冰箭雨】，但没有存活目标`, 'warning');
+            } else {
+                addLog(`【${boss.name}】施放【寒冰箭雨】（命中 ${targets.length} 名目标）！`, 'warning');
+                targets.forEach(tIdx => {
+                    const target = combat.playerStates[tIdx];
+                    if (!target || target.currentHp <= 0) return;
+
+                    dealMagicDamageToPlayer(tIdx, raw, '冰霜', '→ ');
+
+                    if (target.currentHp > 0) {
+                        applyStun(target, freezeDur, '冻结');
+                        addLog(`   ↳ 位置${tIdx + 1} ${target.char.name} 被【冻结】${freezeDur}回合，无法行动`, 'debuff');
+                    }
+                });
+            }
+        }
+
+        // ==================== 技能7：冰霜吐息（集中：全体 1×冰霜；分散：全体跑位2回合） ====================
+        else if (bossAction === 'frost_breath') {
+            if (stance === 'concentrated') {
+                const raw = Math.max(1, Math.floor((boss.attack || 0) * (boss.frostBreathMultiplier || 1)));
+                addLog(`【${boss.name}】施放【冰霜吐息】（集中站位：全体受击）！`, 'warning');
+
+                (combat.playerStates || []).forEach((ps, pIdx) => {
+                    if (!ps || ps.currentHp <= 0) return;
+                    dealMagicDamageToPlayer(pIdx, raw, '冰霜', '→ ');
+                });
+            } else {
+                const dur = Math.max(1, Math.floor(Number(boss.frostBreathRunningDuration || 2)));
+                addLog(`【${boss.name}】施放【冰霜吐息】（分散站位：全体跑位）！`, 'debuff');
+
+                (combat.playerStates || []).forEach((ps, pIdx) => {
+                    if (!ps || ps.currentHp <= 0) return;
+                    applyRunning(ps, dur);
+                });
+
+                addLog(`→ 全体获得【跑位】${dur}回合，无法行动`, 'debuff');
+            }
+        }
+
+        // 兜底：普通物理攻击（打坦克）
+        else {
+            const tIdx = pickAlivePlayerIndex();
+            if (tIdx >= 0) {
+                const target = combat.playerStates[tIdx];
+                const raw = Math.floor(boss.attack || 0);
+                const { damage, dr, blockedAmount } = calcMitigatedAndBlockedDamage(target, raw, false);
+
+                const shieldResult = applyShieldAbsorb(target, damage, logs, currentRound);
+                target.currentHp -= shieldResult.finalDamage;
+
+                const drPct = Math.round(dr * 100);
+                const blockText = blockedAmount > 0 ? `，格挡 ${blockedAmount}` : '';
+                const shieldText = shieldResult.absorbed > 0 ? `，护盾吸收 ${shieldResult.absorbed}` : '';
+                addLog(`【${boss.name}】普通攻击命中 位置${tIdx + 1} ${target.char.name}，造成 ${shieldResult.finalDamage} 点物理伤害（护甲减伤${drPct}%${blockText}${shieldText}）`);
+            } else {
+                addLog(`【${boss.name}】尝试攻击，但没有存活目标`, 'warning');
+            }
         }
     }
 
@@ -39044,6 +39396,14 @@ const BossPrepareModal = ({ state, dispatch }) => {
         summon_giant_eye_stalk: '召唤巨型眼柄',
         devour: '吞噬',
 
+
+        // 萨菲隆
+        chill: '寒冷',
+        life_drain: '生命吸取',
+        frost_arrow_rain: '寒冰箭雨',
+        frost_breath: '冰霜吐息',
+        frost_aura: '冰霜光环',
+
         // 其他boss也可以逐步补齐
         mortal_strike: '致死打击',
         summon_cannoneers: '火炮手准备',
@@ -41227,6 +41587,122 @@ const BossPrepareModal = ({ state, dispatch }) => {
                                     </div>
                                   </div>
                                 )}
+
+                                {/* 萨菲隆的技能（准备界面说明） */}
+                                {bossId === 'sapphiron' && (
+                                  <div style={{
+                                    marginTop: 12,
+                                    padding: 12,
+                                    background: 'rgba(33,150,243,0.10)',
+                                    borderRadius: 8,
+                                    border: '1px solid rgba(144,202,249,0.25)'
+                                  }}>
+                                    <div style={{ fontSize: 12, color: '#bbdefb', fontWeight: 700, marginBottom: 8 }}>
+                                      ❄️ 团队首领：萨菲隆
+                                    </div>
+
+                                    <div style={{ display: 'grid', gap: 10, fontSize: 11, color: '#ddd', lineHeight: 1.6 }}>
+                                      <div style={{
+                                          padding: 10,
+                                          background: 'rgba(33,150,243,0.10)',
+                                          borderRadius: 6,
+                                          borderLeft: '3px solid #2196f3'
+                                        }}>
+                                        <div style={{ fontSize: 12, color: '#90caf9', fontWeight: 600, marginBottom: 4  }}>技能1：冰霜光环（被动）</div>
+                                        <div>
+                                          每回合对<span style={{ color: '#ff6b6b', fontWeight: 700 }}>所有角色</span>造成
+                                          <b> Boss攻击力×{boss.frostAuraMultiplier ?? 1}</b> 的<span style={{ color: '#90caf9' }}>冰霜法术伤害</span>（计算魔抗）。
+                                        </div>
+                                      </div>
+
+                                      <div style={{
+                                          padding: 10,
+                                          background: 'rgba(156,39,176,0.10)',
+                                          borderRadius: 6,
+                                          borderLeft: '3px solid #9c27b0'
+                                        }}>
+                                        <div style={{ fontSize: 12, color: '#ce93d8', fontWeight: 600, marginBottom: 4  }}>技能2：生命吸取</div>
+                                        <div>
+                                          随机 <b>{boss.lifeDrainTargets ?? 3}</b> 名目标造成 <b>Boss攻击力×{boss.lifeDrainMultiplier ?? 3}</b> 的暗影伤害（计算魔抗）。<br/>
+                                          并为Boss回复<span style={{ color: '#81c784', fontWeight: 700 }}>等同于造成伤害</span>的生命值。
+                                        </div>
+                                      </div>
+
+                                      <div style={{
+                                          padding: 10,
+                                          background: 'rgba(3,169,244,0.10)',
+                                          borderRadius: 6,
+                                          borderLeft: '3px solid #03a9f4'
+                                        }}>
+                                        <div style={{ fontSize: 12, color: '#81d4fa', fontWeight: 600, marginBottom: 4  }}>技能3：寒冷</div>
+                                        <div>
+                                          <span style={{ color: '#ff9800' }}>分散站位：</span>随机 <b>{boss.chillTargets ?? 2}</b> 名目标，造成 <b>Boss攻击力×{boss.chillMultiplier ?? 2}</b> 的冰霜伤害。<br/>
+                                          <span style={{ color: '#64b5f6' }}>集中站位：</span>对<span style={{ color: '#ff6b6b', fontWeight: 700 }}>所有角色</span>造成 <b>Boss攻击力×{boss.chillConcentratedMultiplier ?? 4}</b> 的冰霜伤害。
+                                        </div>
+                                      </div>
+
+                                      <div style={{
+                                          padding: 10,
+                                          background: 'rgba(158,158,158,0.10)',
+                                          borderRadius: 6,
+                                          borderLeft: '3px solid #9e9e9e'
+                                        }}>
+                                        <div style={{ fontSize: 12, color: '#e0e0e0', fontWeight: 600, marginBottom: 4  }}>技能4：顺劈斩</div>
+                                        <div>
+                                          <span style={{ color: '#ff9800' }}>分散站位：</span>对<span style={{ color: '#ff6b6b', fontWeight: 700 }}>坦克（1号位）</span>造成 <b>Boss攻击力×{boss.cleaveMultiplier ?? 5}</b> 的物理伤害。<br/>
+                                          <span style={{ color: '#64b5f6' }}>集中站位：</span>改为对<span style={{ color: '#ff6b6b', fontWeight: 700 }}>所有角色</span>造成 <b>Boss攻击力×{boss.cleaveMultiplier ?? 5}</b> 的物理伤害。
+                                        </div>
+                                      </div>
+
+                                      <div style={{
+                                          padding: 10,
+                                          background: 'rgba(255,152,0,0.10)',
+                                          borderRadius: 6,
+                                          borderLeft: '3px solid #ff9800'
+                                        }}>
+                                        <div style={{ fontSize: 12, color: '#ffcc80', fontWeight: 600, marginBottom: 4  }}>技能5：扫尾</div>
+                                        <div>
+                                          <span style={{ color: '#64b5f6' }}>集中站位：</span>无事发生。<br/>
+                                          <span style={{ color: '#ff9800' }}>分散站位：</span>随机 <b>{boss.tailSweepTargets ?? 2}</b> 名目标，造成 <b>Boss攻击力×{boss.tailSweepMultiplier ?? 3}</b> 的物理伤害，<br/>
+                                          并使其<span style={{ color: '#ffd54f', fontWeight: 700 }}>无法行动</span> <b>{boss.tailSweepStunDuration ?? 1}</b> 回合。
+                                        </div>
+                                      </div>
+
+                                      <div style={{
+                                          padding: 10,
+                                          background: 'rgba(3,169,244,0.10)',
+                                          borderRadius: 6,
+                                          borderLeft: '3px solid #03a9f4'
+                                        }}>
+                                        <div style={{ fontSize: 12, color: '#81d4fa', fontWeight: 600, marginBottom: 4  }}>技能6：寒冰箭雨</div>
+                                        <div>
+                                          随机 <b>{boss.frostArrowRainTargets ?? 2}</b> 名目标造成 <b>Boss攻击力×{boss.frostArrowRainMultiplier ?? 3}</b> 的冰霜伤害，<br/>
+                                          并使其<span style={{ color: '#90caf9', fontWeight: 700 }}>冻结</span> <b>{boss.frostArrowRainFreezeDuration ?? 1}</b> 回合无法行动。
+                                        </div>
+                                      </div>
+
+                                      <div style={{
+                                          padding: 10,
+                                          background: 'rgba(33,150,243,0.10)',
+                                          borderRadius: 6,
+                                          borderLeft: '3px solid #2196f3'
+                                        }}>
+                                        <div style={{ fontSize: 12, color: '#90caf9', fontWeight: 600, marginBottom: 4  }}>技能7：冰霜吐息</div>
+                                        <div>
+                                          <span style={{ color: '#64b5f6' }}>集中站位：</span>对<span style={{ color: '#ff6b6b', fontWeight: 700 }}>所有角色</span>造成 <b>Boss攻击力×{boss.frostBreathMultiplier ?? 1}</b> 的冰霜伤害。<br/>
+                                          <span style={{ color: '#ff9800' }}>分散站位：</span>全体获得<span style={{ color: '#ffd54f', fontWeight: 700 }}>【跑位】</span>
+                                          <b> {boss.frostBreathRunningDuration ?? 2}</b> 回合，无法行动。
+                                        </div>
+                                      </div>
+
+                                      <div style={{ fontSize: 11, color: '#aaa', marginTop: 2 }}>
+                                        伤害结算：冰霜/暗影法术伤害计算<span style={{ color: '#ffd700' }}>魔抗</span>；物理伤害计算<span style={{ color: '#ffd700' }}>护甲 / 格挡</span>等属性。
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
+
+
 
                                 {/* 克苏恩的技能（准备界面说明） */}
                                 {bossId === 'cthun' && (

@@ -15488,25 +15488,29 @@ const SET_BONUSES = {
     conqueror_set: {
         name: '征服者',
         tiers: [
-            { count: 2, bonus: { hp: 600, armor: 100, mastery: 8 } },
+            { count: 3, bonus: { hp: 1200, armor: 150, mastery: 15 } },
+            { count: 5, bonus: { hp: 5400, attack: 1200 } },
         ]
     },
     deathdealer_set: {
         name: '死亡执行者',
         tiers: [
-            { count: 2, bonus: { attack: 150, critRate: 6, haste: 8 } },
+            { count: 3, bonus: { attack: 400, critRate: 10, haste: 5 } },
+            { count: 5, bonus: { hp: 3000, versatility: 30 } },
         ]
     },
     enigma_set: {
         name: '神秘',
         tiers: [
-            { count: 2, bonus: { spellPower: 180, critRate: 6, haste: 8 } },
+            { count: 3, bonus: { spellPower: 400, critRate: 10, mastery: 5 } },
+            { count: 5, bonus: { hp: 3000, versatility: 30 } },
         ]
     },
     oracle_set: {
         name: '神谕者',
         tiers: [
-            { count: 2, bonus: { spellPower: 160, mastery: 8, versatility: 8 } },
+            { count: 3, bonus: { spellPower: 300, mastery: 10, versatility: 5 } },
+            { count: 5, bonus: { hp: 3600, spellPower:1200 } },
         ]
     },
 
@@ -15515,24 +15519,28 @@ const SET_BONUSES = {
         name: '无畏',
         tiers: [
             { count: 3, bonus: { hp: 2000, armor: 250, mastery: 15, blockRate: 5, blockValue: 500 } },
+            { count: 5, bonus: { hp: 6000, attack: 1500 } },
         ]
     },
     bonescythe_set: {
         name: '骨镰',
         tiers: [
             { count: 3, bonus: { attack: 420, haste: 15, critRate: 15, critDamage: 0.30 } },
+            { count: 5, bonus: { hp: 3600, versatility: 32 } },
         ]
     },
     frostfire_set: {
         name: '霜火',
         tiers: [
             { count: 3, bonus: { spellPower: 420, haste: 15, critRate: 15, critDamage: 0.30 } },
+            { count: 5, bonus: { hp: 3600, versatility: 32 } },
         ]
     },
     faith_set: {
         name: '信仰',
         tiers: [
             { count: 3, bonus: { spellPower: 380, mastery: 15, versatility: 15, hp: 1200 } },
+            { count: 5, bonus: { hp: 4500, spellPower:1500 } },
         ]
     },
 

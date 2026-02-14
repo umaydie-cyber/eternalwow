@@ -32065,6 +32065,44 @@ function gameReducer(state, action) {
 
                         const finalLogs = step.combatState.logs || [];
 
+                        // ===== PATCH: 地图战结束时，若仍在恶魔变形中，回滚最大生命 =====
+                        const meta = (step.combatState?.buffs || []).find(b => b.type === 'metamorphosis');
+                        if (meta) {
+                          const base = Math.max(0, Math.floor(Number(meta.baseMaxHp) || 0));
+                          if (base > 0) {
+                            const newMax = Math.max(1, base);
+                            char.stats = { ...char.stats, maxHp: newMax };
+                            const curHp = Number(char.stats?.currentHp ?? newMax) || 0;
+                            const nextHp = Math.min(Math.max(0, curHp), newMax);
+                            if (nextHp !== curHp) char.stats = { ...char.stats, currentHp: nextHp };
+                            // 可选：写日志提示（橙色被动）
+                            finalLogs.push({
+                              kind: 'proc',
+                              proc: '恶魔变形结束',
+                              text: `【恶魔变形】战斗结束回滚：最大生命恢复为 ${newMax}`
+                            });
+                          } else {
+                            const rollback = Math.max(0, Math.floor(Number(meta.maxHpBonus) || 0));
+                            if (rollback > 0) {
+                              const curMax = Math.max(1, Math.floor(Number(char.stats?.maxHp ?? char.stats?.hp) || 1));
+                              const newMax = Math.max(1, curMax - rollback);
+
+                              char.stats = { ...char.stats, maxHp: newMax };
+
+                              const curHp = Number(char.stats?.currentHp ?? newMax) || 0;
+                              const nextHp = Math.min(Math.max(0, curHp), newMax);
+                              if (nextHp !== curHp) char.stats = { ...char.stats, currentHp: nextHp };
+
+                              finalLogs.push({
+                                kind: 'proc',
+                                proc: '恶魔变形结束',
+                                text: `【恶魔变形】战斗结束回滚：最大生命恢复为 ${newMax}`
+                              });
+                            }
+                          }
+                        }
+                        // ===== END PATCH =====
+
                         // ✅ 种族：宾至如归（人类）- 地图战斗结束后回复最大生命值的 10%
                         const raceTrait = RACE_TRAITS?.[char.race];
                         const hospitalityPct = Number(raceTrait?.mapCombatEndHealPct) || 0;

@@ -1983,7 +1983,7 @@ const SKILLS = {
             );
 
             const isCrit = Math.random() < critRate / 100;
-            if (isCrit) damagePerTurn *= critDamage;
+            if (isCrit) damage *= critDamage;
 
             return {
                 aoeDamage: Math.floor(damage),

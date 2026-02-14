@@ -1134,7 +1134,7 @@ function applyFrostCritBreakthrough({ critRate, critDamage, blizzardActive, hasT
   if (blizzardActive) {
     // ✅ 冰风暴期间：保持暴击（由技能自身/规则决定是否必爆），并把“全部暴击率”转成暴伤
     // 例：critRate=60 => 暴伤倍率 +0.60
-    if(critRate > 100){finalCritDamage += (critRate-100) / 100;}
+    if(critRate > 100){finalCritDamage += critRate / 100;}
     // 这里不要把 finalCritRate 置 0
   } else {
     // ✅ 非冰风暴期间：只把“超过100%的溢出暴击率”转成暴伤

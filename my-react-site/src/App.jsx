@@ -2014,6 +2014,8 @@ const SKILLS = {
                 shieldAmount *= 1.1;
             }
 
+            shieldAmount *= (1 + (Number(char.stats.versatility) || 0) / 100);
+
             return {
                 shield: {
                     type: 'ice_barrier',

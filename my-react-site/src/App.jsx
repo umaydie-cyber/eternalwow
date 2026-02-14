@@ -1971,28 +1971,19 @@ const SKILLS = {
                 critRate += 10;
             }
 
-            // ===== 50级天赋：寒冰突破 =====
-            let critBreakthroughBonus = 1;
-            let forcedCritConversion = false;
+            let critDamage = char.stats.critDamage;
 
-            if (char.talents?.[50] === 'frost_crit_breakthrough') {
-                if (combatContext?.blizzardActive) {
-                    critBreakthroughBonus = 1 + (critRate / 100);
-                    forcedCritConversion = true;
-                    critRate = 0;
-                } else if (critRate > 100) {
-                    const excessCrit = critRate - 100;
-                    critBreakthroughBonus = 1 + (excessCrit / 100);
-                    critRate = 100;
-                }
-            }
+            ({ finalCritRate: critRate, finalCritDamage: critDamage } =
+                applyFrostCritBreakthrough({
+                     critRate,
+                     critDamage,
+                     blizzardActive: !!combatContext?.blizzardActive,
+                     hasTalent: char.talents?.[50] === 'frost_crit_breakthrough'
+                })
+            );
 
-            damage *= critBreakthroughBonus;
-
-            const isCrit = !forcedCritConversion && Math.random() < critRate / 100;
-            if (isCrit) {
-                damage *= char.stats.critDamage;
-            }
+            const isCrit = Math.random() < critRate / 100;
+            if (isCrit) damagePerTurn *= critDamage;
 
             return {
                 aoeDamage: Math.floor(damage),

@@ -634,6 +634,66 @@ const TALENTS = {
             ]
         }))
     ],
+
+    // ==================== 复仇恶魔猎手 ====================
+    vengeance_demon_hunter: [
+        {
+            tier: 10,
+            options: [
+                { id: 'illidari_will', type: TALENT_TYPES.AURA, name: '伊利达雷的意志', description: '增加25%血量。' },
+                { id: 'soul_fragment_recovery', type: TALENT_TYPES.AURA, name: '碎魂恢复', description: '破碎灵魂回复的血量增加50%。' },
+                { id: 'tooth_for_tooth', type: TALENT_TYPES.AURA, name: '以牙还牙', description: '恶魔尖刺持续期间，受到任何伤害都会对攻击者造成0.5倍攻击强度的真实伤害，并为你回复等量生命。' },
+            ]
+        },
+        {
+            tier: 20,
+            options: [
+                { id: 'blazing_ruin', type: TALENT_TYPES.AURA, name: '炽烈灭亡', description: '烈火烙印BUFF持续期间，使你的所有伤害提高30%。' },
+                { id: 'searing_blood', type: TALENT_TYPES.AURA, name: '炽燃之血', description: '你的所有伤害提高20%。' },
+                { id: 'fiery_execution', type: TALENT_TYPES.AURA, name: '火刑', description: '烈火烙印对所有敌人释放。' },
+            ]
+        },
+        {
+            tier: 30,
+            options: [
+                { id: 'empowered_spikes', type: TALENT_TYPES.AURA, name: '强化尖刺', description: '恶魔尖刺持续期间你的招架率增加20。' },
+                { id: 'calcified_spikes', type: TALENT_TYPES.AURA, name: '钙化尖刺', description: '恶魔尖刺持续期间你受到的伤害降低20%。' },
+                { id: 'pain_aura', type: TALENT_TYPES.AURA, name: '痛苦光环', description: '你的暴击率提高15。' },
+            ]
+        },
+        {
+            tier: 40,
+            options: [
+                { id: 'demonic_barrier', type: TALENT_TYPES.AURA, name: '毁灭壁垒', description: '邪能毁灭提供的治疗量（过量也计算）的120%会转化为护盾。' },
+                { id: 'sea_of_fire', type: TALENT_TYPES.AURA, name: '葬身火海', description: '烈火烙印可配置两次，造成的伤害提高为4倍攻击强度。' },
+                { id: 'delayed_spikes', type: TALENT_TYPES.AURA, name: '延时尖刺', description: '恶魔尖刺持续时间增加1回合。' },
+            ]
+        },
+        {
+            tier: 50,
+            options: [
+                { id: 'frailty', type: TALENT_TYPES.AURA, name: '脆弱', description: '灵魂裂劈、幽魂炸弹对目标施加DEBUFF，使其造成的伤害降低20%。' },
+                { id: 'crit_breakthrough', type: TALENT_TYPES.AURA, name: '爆发突破', description: '同战士【爆发突破】：超过100%的暴击率会直接转化为对总伤害的加成。' },
+                { id: 'ignite', type: TALENT_TYPES.AURA, name: '引火', description: '邪能毁灭造成的伤害提高100%。' },
+            ]
+        },
+        {
+            tier: 60,
+            options: [
+                { id: 'painful_revelry', type: TALENT_TYPES.AURA, name: '痛苦狂欢', description: '你的烈火烙印造成伤害时为你施加造成伤害50%的护盾。' },
+                { id: 'aldrachi_design', type: TALENT_TYPES.AURA, name: '奥达奇的设计', description: '招架提高（急速/20）%。' },
+                { id: 'illidari_knowledge', type: TALENT_TYPES.AURA, name: '伊利达雷的知识', description: '受到的魔法伤害降低15%。' },
+            ]
+        },
+        {
+            tier: 70,
+            options: [
+                { id: 'detonation', type: TALENT_TYPES.AURA, name: '爆燃', description: '献祭释放回合，每有一个敌人，获得1颗星。' },
+                { id: 'infernal_armor', type: TALENT_TYPES.AURA, name: '地狱火护甲', description: '献祭改为提升50%护甲。' },
+                { id: 'pain_aura_immolation', type: TALENT_TYPES.AURA, name: '痛苦光环', description: '献祭光环期间，暴击提高30。' },
+            ]
+        },
+    ],
     discipline_priest: [
         {
             tier: 10,
@@ -2288,14 +2348,25 @@ const SKILLS = {
         calculate: (char) => {
             const mastery = Number(char.stats.mastery) || 0;
             const pct = 10 + mastery / 10;
-            return {
-                buff: {
-                    type: 'demon_spikes',
-                    name: '恶魔尖刺',
-                    armorMult: 1 + pct / 100,
-                    duration: 2,
-                }
+
+            // 40级：延时尖刺 - 恶魔尖刺持续时间 +1 回合（2→3）
+            const duration = (char?.classId === 'vengeance_demon_hunter' && char?.talents?.[40] === 'delayed_spikes')
+                ? 3
+                : 2;
+
+            const buff = {
+                type: 'demon_spikes',
+                name: '恶魔尖刺',
+                armorMult: 1 + pct / 100,
+                duration,
             };
+
+            // 30级：钙化尖刺 - 恶魔尖刺期间受到伤害 -20%
+            if (char?.classId === 'vengeance_demon_hunter' && char?.talents?.[30] === 'calcified_spikes') {
+                buff.damageTakenMult = 0.8;
+            }
+
+            return { buff };
         }
     },
     fel_devastation: {
@@ -2308,10 +2379,25 @@ const SKILLS = {
         description: '对所有敌人造成2.5倍攻击强度的混乱伤害（不计算防御），并回复造成总伤害10%的生命值。',
         calculate: (char) => {
             let damage = (char.stats.attack || 0) * 2.5;
-            const critRate = Number(char.stats.critRate) || 0;
+
+            // 50级：引火 - 邪能毁灭伤害 +100%
+            if (char?.classId === 'vengeance_demon_hunter' && char?.talents?.[50] === 'ignite') {
+                damage *= 2;
+            }
+
+            let critRate = Number(char.stats.critRate) || 0;
+            let critBreakthroughBonus = 1;
+            if (char?.talents?.[50] === 'crit_breakthrough' && critRate > 100) {
+                const excess = critRate - 100;
+                critRate = 100;
+                critBreakthroughBonus = 1 + excess / 100;
+            }
+            damage *= critBreakthroughBonus;
+
             const isCrit = Math.random() < critRate / 100;
             if (isCrit) damage *= (Number(char.stats.critDamage) || 2.0);
             damage *= (1 + (Number(char.stats.versatility) || 0) / 100);
+
             return {
                 aoeDamage: Math.floor(damage),
                 isCrit,
@@ -2330,16 +2416,42 @@ const SKILLS = {
         limit: 1,
         description: '对目标施加烈火印记：每回合造成1倍攻击强度的火焰伤害（DOT火焰伤害计算防御）。同时获得40%减伤，持续3回合。',
         calculate: (char) => {
-            let dpt = (char.stats.attack || 0) * 1.0;
-            const critRate = Number(char.stats.critRate) || 0;
+            // 40级：葬身火海 - DOT 伤害提高为 4 倍攻击强度
+            const dotMult = (char?.classId === 'vengeance_demon_hunter' && char?.talents?.[40] === 'sea_of_fire') ? 4.0 : 1.0;
+            let dpt = (char.stats.attack || 0) * dotMult;
+
+            let critRate = Number(char.stats.critRate) || 0;
+            let critBreakthroughBonus = 1;
+            if (char?.talents?.[50] === 'crit_breakthrough' && critRate > 100) {
+                const excess = critRate - 100;
+                critRate = 100;
+                critBreakthroughBonus = 1 + excess / 100;
+            }
+            dpt *= critBreakthroughBonus;
+
             const isCrit = Math.random() < critRate / 100;
             if (isCrit) dpt *= (Number(char.stats.critDamage) || 2.0);
             dpt *= (1 + (Number(char.stats.versatility) || 0) / 100);
 
+            const buff = {
+                type: 'fiery_brand',
+                name: '烈火烙印',
+                damageTakenMult: 0.6,
+                duration: 3,
+            };
+
+            // 20级：炽烈灭亡 - 烈火烙印持续期间所有伤害 +30%
+            if (char?.classId === 'vengeance_demon_hunter' && char?.talents?.[20] === 'blazing_ruin') {
+                buff.damageDealtMult = 1.3;
+            }
+
             return {
                 isCrit,
+                // 20级：火刑 - DOT 对所有敌人释放
+                dotAllEnemies: (char?.classId === 'vengeance_demon_hunter' && char?.talents?.[20] === 'fiery_execution'),
                 dot: {
-                    name: '烈火印记',
+                    sourceSkillId: 'fiery_brand',
+                    name: '烈火烙印',
                     school: 'fire',
                     damagePerTurn: dpt,
                     duration: 3,
@@ -2348,12 +2460,7 @@ const SKILLS = {
                     // 本技能要求 DOT 伤害计算防御
                     applyTargetDefense: true,
                 },
-                buff: {
-                    type: 'fiery_brand',
-                    name: '烈火印记',
-                    damageTakenMult: 0.6,
-                    duration: 3,
-                }
+                buff
             };
         }
     },
@@ -2367,7 +2474,16 @@ const SKILLS = {
         description: '消耗至多2星（触发破碎灵魂）。对所有敌人造成1.8倍攻击强度的物理伤害。',
         calculate: (char) => {
             let damage = (char.stats.attack || 0) * 1.8;
-            const critRate = Number(char.stats.critRate) || 0;
+
+            let critRate = Number(char.stats.critRate) || 0;
+            let critBreakthroughBonus = 1;
+            if (char?.talents?.[50] === 'crit_breakthrough' && critRate > 100) {
+                const excess = critRate - 100;
+                critRate = 100;
+                critBreakthroughBonus = 1 + excess / 100;
+            }
+            damage *= critBreakthroughBonus;
+
             const isCrit = Math.random() < critRate / 100;
             if (isCrit) damage *= (Number(char.stats.critDamage) || 2.0);
             damage *= (1 + (Number(char.stats.versatility) || 0) / 100);
@@ -2416,7 +2532,15 @@ const SKILLS = {
             const mult = 1 + combo * 0.6;
 
             let damage = (char.stats.attack || 0) * mult;
-            const critRate = Number(char.stats.critRate) || 0;
+            let critRate = Number(char.stats.critRate) || 0;
+            let critBreakthroughBonus = 1;
+            if (char?.talents?.[50] === 'crit_breakthrough' && critRate > 100) {
+                const excess = critRate - 100;
+                critRate = 100;
+                critBreakthroughBonus = 1 + excess / 100;
+            }
+            damage *= critBreakthroughBonus;
+
             const isCrit = Math.random() < critRate / 100;
             if (isCrit) damage *= (Number(char.stats.critDamage) || 2.0);
             damage *= (1 + (Number(char.stats.versatility) || 0) / 100);
@@ -2440,7 +2564,16 @@ const SKILLS = {
         description: '对所有敌人施加烈焰咒符（火焰DOT），每回合造成0.6倍攻击强度的火焰伤害，持续3回合。',
         calculate: (char) => {
             let dpt = (char.stats.attack || 0) * 0.6;
-            const critRate = Number(char.stats.critRate) || 0;
+
+            let critRate = Number(char.stats.critRate) || 0;
+            let critBreakthroughBonus = 1;
+            if (char?.talents?.[50] === 'crit_breakthrough' && critRate > 100) {
+                const excess = critRate - 100;
+                critRate = 100;
+                critBreakthroughBonus = 1 + excess / 100;
+            }
+            dpt *= critBreakthroughBonus;
+
             const isCrit = Math.random() < critRate / 100;
             if (isCrit) dpt *= (Number(char.stats.critDamage) || 2.0);
             dpt *= (1 + (Number(char.stats.versatility) || 0) / 100);
@@ -2465,14 +2598,40 @@ const SKILLS = {
         type: 'aoe_dot',
         limit: 1,
         description: '每回合对所有敌人造成0.4倍攻击强度的火焰伤害（视为DOT），护甲提升20%，持续3回合。',
-        calculate: (char) => {
+        calculate: (char, combatContext) => {
             let dpt = (char.stats.attack || 0) * 0.4;
-            const critRate = Number(char.stats.critRate) || 0;
+
+            let critRate = Number(char.stats.critRate) || 0;
+            let critBreakthroughBonus = 1;
+            if (char?.talents?.[50] === 'crit_breakthrough' && critRate > 100) {
+                const excess = critRate - 100;
+                critRate = 100;
+                critBreakthroughBonus = 1 + excess / 100;
+            }
+            dpt *= critBreakthroughBonus;
+
             const isCrit = Math.random() < critRate / 100;
             if (isCrit) dpt *= (Number(char.stats.critDamage) || 2.0);
             dpt *= (1 + (Number(char.stats.versatility) || 0) / 100);
 
-            return {
+            // 70级：地狱火护甲 - 护甲提升 50%（覆盖基础 20%）
+            const armorMult = (char?.classId === 'vengeance_demon_hunter' && char?.talents?.[70] === 'infernal_armor')
+                ? 1.5
+                : 1.2;
+
+            const buff = {
+                type: 'immolation_aura_armor',
+                name: '献祭光环',
+                armorMult,
+                duration: 3,
+            };
+
+            // 70级：痛苦光环 - 献祭光环期间暴击 +30
+            if (char?.classId === 'vengeance_demon_hunter' && char?.talents?.[70] === 'pain_aura_immolation') {
+                buff.critRateBonus = 30;
+            }
+
+            const res = {
                 isCrit,
                 aoeDot: {
                     name: '献祭光环',
@@ -2481,13 +2640,16 @@ const SKILLS = {
                     duration: 3,
                     scaleWithHaste: true,
                 },
-                buff: {
-                    type: 'immolation_aura_armor',
-                    name: '献祭光环',
-                    armorMult: 1.2,
-                    duration: 3,
-                }
+                buff,
             };
+
+            // 70级：爆燃 - 献祭释放回合，每有一个敌人获得 1 颗星
+            if (char?.classId === 'vengeance_demon_hunter' && char?.talents?.[70] === 'detonation') {
+                const enemyCount = Math.max(0, Math.floor(Number(combatContext?.enemyCount) || 0));
+                res.generateComboPoints = enemyCount;
+            }
+
+            return res;
         }
     },
 
@@ -18087,6 +18249,19 @@ function calculateTotalStats(character, partyAuras = { hpMul: 1, spellPowerMul: 
         }
     }
 
+    // ==================== 复仇恶魔猎手：常驻被动天赋 ====================
+    if (character.classId === 'vengeance_demon_hunter') {
+        // 10级：伊利达雷的意志 - 最大生命值 +25%
+        if (t[10] === 'illidari_will') {
+            totalStats.hp = (Number(totalStats.hp) || 0) * 1.25;
+        }
+
+        // 30级：痛苦光环 - 暴击率 +15
+        if (t[30] === 'pain_aura') {
+            totalStats.critRate = (Number(totalStats.critRate) || 0) + 15;
+        }
+    }
+
     // ==================== 精通：精确格挡 ====================
     if (character.classId === 'protection_warrior') {
         const mastery = totalStats.mastery || 0;
@@ -18964,7 +19139,7 @@ function stepBossCombat(state) {
     };
 
     // 通用：法术伤害（魔抗）结算（并套用：受伤减免/全能/挫志怒吼/救赎/法术易伤）
-    const calcMagicDamage = (playerState, rawDamage, magicResistOverride = null) => {
+    const calcMagicDamage = (playerState, rawDamage, magicResistOverride = null, attackerInfo = null) => {
         // 基础魔抗（可被 override 覆盖）
         let mr = (magicResistOverride !== null && magicResistOverride !== undefined)
             ? (Number(magicResistOverride) || 0)
@@ -18990,11 +19165,29 @@ function stepBossCombat(state) {
         }
 
         const demoralizingShoutMult = combat.bossDebuffs?.demoralizingShout?.damageMult ?? 1;
+        // 复仇DH50级天赋：脆弱 - 目标对恶魔猎手造成的伤害降低20%
+        let vdhFragilityMult = 1;
+        if (playerState?.char?.classId === 'vengeance_demon_hunter' && playerState?.char?.talents?.[50] === 'frailty') {
+            if (attackerInfo?.type === 'minion' && Number.isInteger(attackerInfo.index)) {
+                const m = (combat.minions || [])[attackerInfo.index];
+                const frag = m?.debuffs?.vdhFragility;
+                if (frag?.damageMult) vdhFragilityMult *= frag.damageMult;
+            } else {
+                const frag = combat.bossDebuffs?.vdhFragility;
+                if (frag?.damageMult) vdhFragilityMult *= frag.damageMult;
+            }
+        }
+
+        // 复仇DH60级天赋：伊利达雷的知识 - 受到的魔法伤害降低15%
+        const illidariKnowledgeMult = (
+            playerState?.char?.classId === 'vengeance_demon_hunter' &&
+            playerState?.char?.talents?.[60] === 'illidari_knowledge'
+        ) ? 0.85 : 1;
         const versTakenMult = getVersatilityDamageTakenMult(playerState?.char?.stats?.versatility);
         const atonementTakenMult = getAtonementDamageTakenMult(playerState);
         const spellVulnMult = getSpellVulnerabilityMult(playerState);
 
-        damage = Math.max(1, Math.floor(damage * takenMult * buffTakenMult * atonementTakenMult * demoralizingShoutMult * versTakenMult * spellVulnMult));
+        damage = Math.max(1, Math.floor(damage * takenMult * buffTakenMult * atonementTakenMult * demoralizingShoutMult * vdhFragilityMult * illidariKnowledgeMult * versTakenMult * spellVulnMult));
 
         return { damage, resistReduction, magicResist: mr, spellVulnMult };
     };
@@ -19102,7 +19295,14 @@ function stepBossCombat(state) {
 
         const byDamage = Math.floor(sumRecent * healPct);
         const minHeal = Math.floor(maxHp * minPct);
-        return Math.max(byDamage, minHeal);
+        let heal = Math.max(byDamage, minHeal);
+
+        // 10级天赋：碎魂恢复 - 破碎灵魂回复量 +50%
+        if (ps?.char?.classId === 'vengeance_demon_hunter' && ps?.char?.talents?.[10] === 'soul_fragment_recovery') {
+            heal = Math.floor(heal * 1.5);
+        }
+
+        return heal;
     };
 
     const triggerShatteredSoul = (ps, stars, reasonText = '破碎灵魂') => {
@@ -19163,25 +19363,71 @@ function stepBossCombat(state) {
 
 
     // ===== 护盾吸收伤害辅助函数 =====
-    const applyShieldAbsorb = (playerState, damage, logs, currentRound) => {
+    const applyShieldAbsorb = (playerState, damage, logs, currentRound, attackerInfo = null) => {
         const incoming = Math.max(0, Math.floor(Number(damage) || 0));
         if (incoming <= 0) {
             return { finalDamage: 0, absorbed: 0 };
         }
 
+        // 复仇DH10级天赋：以牙还牙（恶魔尖刺期间，受击反击并治疗）
+        const tryToothForTooth = (eventDamage) => {
+            if (eventDamage <= 0) return;
+            if (playerState?.currentHp <= 0) return;
+            if (playerState?.char?.classId !== 'vengeance_demon_hunter') return;
+            if (playerState?.char?.talents?.[10] !== 'tooth_for_tooth') return;
+            const hasDemonSpikes = (playerState?.buffs || []).some(b => b?.type === 'demon_spikes' && (b.duration ?? 0) > 0);
+            if (!hasDemonSpikes) return;
+
+            const baseAtk = Number(playerState?.char?.stats?.attack) || 0;
+            const talentFlatAtk = Number(playerState?.talentBuffs?.attackFlat) || 0;
+            const buffAtk = (playerState?.buffs || []).reduce((s, b) => s + (Number(b?.attackBonus) || 0), 0);
+            const currentAtk = baseAtk + talentFlatAtk + buffAtk;
+            const retaliate = Math.max(1, Math.floor(currentAtk * 0.5));
+
+            let targetName = boss?.name || 'Boss';
+            let dmgDone = retaliate;
+
+            if (attackerInfo?.type === 'minion' && Number.isInteger(attackerInfo.index)) {
+                const m = (combat.minions || [])[attackerInfo.index];
+                if (m && (m.hp ?? 0) > 0 && !m.immune) {
+                    targetName = m.displayName || m.name || `小弟${attackerInfo.index + 1}`;
+                    const before = m.hp;
+                    m.hp = Math.max(0, m.hp - retaliate);
+                    dmgDone = Math.min(retaliate, before);
+                } else {
+                    // 小弟无效则打boss
+                    dealDamageToBoss(retaliate);
+                }
+            } else {
+                dealDamageToBoss(retaliate);
+            }
+
+            const hr = applyHealingToPlayer(playerState, dmgDone, '以牙还牙');
+            let msg = `【以牙还牙】${playerState.char.name} 反击 ${targetName} 造成 ${dmgDone} 真实伤害，并回复 ${hr.actualHeal} 生命`;
+            if (hr.absorbedByHealAbsorb > 0) msg += `（治疗吸收 ${hr.absorbedByHealAbsorb}）`;
+            if (hr.healingMult < 1) msg += `（致死打击减疗${Math.round((1 - hr.healingMult) * 100)}%）`;
+            addLog(msg, 'proc');
+        };
+
         // 如果没有护盾buff，也要记录本回合承伤（用于部分职业机制）
         if (!playerState?.buffs) {
             playerState.damageTakenThisRound = (playerState.damageTakenThisRound || 0) + incoming;
+            tryToothForTooth(incoming);
             return { finalDamage: incoming, absorbed: 0 };
         }
 
-        // 找到有效的护盾buff
-        const shieldBuff = playerState.buffs.find(b =>
-            b.type && b.amount > 0 && ['ice_barrier', 'holy_barrier', 'scarab_barrier'].includes(b.type)
-        );
+        // 找到有效的护盾buff（取护盾量最大的那个）
+        const shieldTypes = ['ice_barrier', 'holy_barrier', 'scarab_barrier', 'demonic_barrier', 'painful_revelry_shield'];
+        const shieldBuff = (playerState.buffs || [])
+            .filter(b => b?.type && (Number(b?.amount) || 0) > 0 && shieldTypes.includes(b.type))
+            .reduce((best, b) => {
+                if (!best) return b;
+                return (Number(b.amount) || 0) > (Number(best.amount) || 0) ? b : best;
+            }, null);
 
         if (!shieldBuff) {
             playerState.damageTakenThisRound = (playerState.damageTakenThisRound || 0) + incoming;
+            tryToothForTooth(incoming);
             return { finalDamage: incoming, absorbed: 0 };
         }
 
@@ -19194,6 +19440,9 @@ function stepBossCombat(state) {
         if (finalDamage > 0) {
             playerState.damageTakenThisRound = (playerState.damageTakenThisRound || 0) + finalDamage;
         }
+
+        // 受击后触发以牙还牙（即使被护盾吸收也会触发，因此传入incoming）
+        tryToothForTooth(incoming);
 
         // 护盾受击触发效果（寒冰护体：25%概率获得寒冰指）
         if (shieldBuff.onHitEffect?.type === 'generate_finger') {
@@ -19371,7 +19620,7 @@ function stepBossCombat(state) {
                 })
                 .filter(b => {
                     // 护盾：持续时间到期或吸收量耗尽都移除
-                    if (b.type && ['ice_barrier', 'holy_barrier', 'scarab_barrier'].includes(b.type)) {
+                    if (b.type && ['ice_barrier', 'holy_barrier', 'scarab_barrier', 'demonic_barrier', 'painful_revelry_shield'].includes(b.type)) {
                         if ((b.duration ?? 999) <= 0 || (b.amount ?? 0) <= 0) {
                             addLog(`位置${i + 1} ${p.char.name} 的【${b.name}】护盾消失`);
                             return false;
@@ -20467,6 +20716,19 @@ function stepBossCombat(state) {
                             addLog(`【挫志怒吼】触发：所有敌人造成的伤害降低20%`);
                         }
                     }
+
+                    // 复仇DH50级天赋：脆弱 - 灵魂裂劈/幽魂炸弹使目标输出降低20%（对恶魔猎手生效）
+                    if (
+                        p.char?.classId === 'vengeance_demon_hunter' &&
+                        p.char?.talents?.[50] === 'frailty' &&
+                        (skillId === 'soul_cleave' || skillId === 'spirit_bomb')
+                    ) {
+                        combat.bossDebuffs = combat.bossDebuffs || {};
+                        if (!combat.bossDebuffs.vdhFragility) {
+                            combat.bossDebuffs.vdhFragility = { damageMult: 0.8 };
+                            addLog(`【脆弱】触发：${boss.name} 对恶魔猎手造成的伤害降低20%`);
+                        }
+                    }
                 }
             }
 
@@ -20494,6 +20756,19 @@ function stepBossCombat(state) {
                 const minionName = boss.minion?.name || boss.cannoneer?.name || '小弟';
                 addLog(`位置${i + 1} ${p.char.name} 的${skillName}对 ${minionName}${idx + 1} 造成 ${Math.floor(damage)} 伤害${result.isCrit ? '（暴击！）' : ''}`);
 
+                // 复仇DH50级天赋：脆弱 - 对小弟也施加（对恶魔猎手生效）
+                if (
+                    p.char?.classId === 'vengeance_demon_hunter' &&
+                    p.char?.talents?.[50] === 'frailty' &&
+                    (skillId === 'soul_cleave' || skillId === 'spirit_bomb')
+                ) {
+                    m.debuffs = m.debuffs || {};
+                    if (!m.debuffs.vdhFragility) {
+                        m.debuffs.vdhFragility = { damageMult: 0.8 };
+                        addLog(`【脆弱】触发：${minionName}${idx + 1} 对恶魔猎手造成的伤害降低20%`);
+                    }
+                }
+
                 // 救赎机制
                 if (p.char.stats.atonement) {
                     triggerAtonementHeal(p, damage);
@@ -20516,6 +20791,30 @@ function stepBossCombat(state) {
                 const pct = Number(result.lifeStealPct);
                 const healAmount = Math.max(0, Math.floor(totalDamageInflictedForLifeSteal * pct));
                 if (healAmount > 0 && p.currentHp > 0) {
+                    // 40级天赋：毁灭壁垒 - 邪能毁灭提供的治疗量（含溢出）的120%转化为护盾
+                    if (
+                        p.char?.classId === 'vengeance_demon_hunter' &&
+                        p.char?.talents?.[40] === 'demonic_barrier' &&
+                        skillId === 'fel_devastation'
+                    ) {
+                        const shieldGain = Math.floor(healAmount * 1.2);
+                        if (shieldGain > 0) {
+                            const shieldType = 'demonic_barrier';
+                            const idx = (p.buffs || []).findIndex(b => b.type === shieldType);
+                            if (idx >= 0) {
+                                p.buffs[idx] = {
+                                    ...p.buffs[idx],
+                                    amount: (p.buffs[idx].amount || 0) + shieldGain,
+                                    duration: Math.max(p.buffs[idx].duration || 0, 4),
+                                };
+                            } else {
+                                p.buffs = p.buffs || [];
+                                p.buffs.push({ type: shieldType, name: '毁灭壁垒', amount: shieldGain, duration: 4 });
+                            }
+                            addLog(`【毁灭壁垒】触发：${p.char.name} 获得护盾 ${shieldGain}`,'proc');
+                        }
+                    }
+
                     const hr = applyHealingToPlayer(p, healAmount, `${skillName}（吸血）`);
                     if (hr.actualHeal > 0 || hr.absorbed > 0) {
                         let msg = `【吸血】位置${i + 1} ${p.char.name} 通过【${skillName}】回复 ${hr.actualHeal} 生命`;
@@ -21167,16 +21466,43 @@ function stepBossCombat(state) {
                 }
             }else{
                 const dotObj = { ...result.dot, name: result.dot.name || skill.name, sourcePlayerId: p.char.id };
-                if (targetType === 'boss') {
-                    if (isRagnarosSubmergedThisRound) {
-                        addLog(`→ ${boss.name}处于【下潜】状态，未能施加【${dotObj.name}】`, 'warning');
-                    } else {
-                        combat.bossDots = combat.bossDots || [];
-                        combat.bossDots.push(dotObj);
+
+                // 复仇DH20级天赋：火刑 - DOT 对所有敌人释放
+                if (result.dotAllEnemies) {
+                    // Boss
+                    if (combat.bossHp > 0) {
+                        if (isRagnarosSubmergedThisRound) {
+                            addLog(`→ ${boss.name}处于【下潜】状态，未能施加【${dotObj.name}】`, 'warning');
+                        } else {
+                            combat.bossDots = combat.bossDots || [];
+                            combat.bossDots.push(dotObj);
+                        }
                     }
-                } else if (targetType === 'minion' && !combat.minions[targetIndex]?.immune) {
-                    combat.minions[targetIndex].dots = combat.minions[targetIndex].dots || [];
-                    combat.minions[targetIndex].dots.push(dotObj);
+
+                    // Minions
+                    (combat.minions || []).forEach((m, idx) => {
+                        if (m.hp <= 0) return;
+                        if (m.immune) {
+                            addLog(`【${dotObj.name}】被 火炮手${idx + 1}【登上甲板】免疫！`);
+                            return;
+                        }
+                        m.dots = m.dots || [];
+                        m.dots.push(dotObj);
+                    });
+
+                    addLog(`位置${i + 1} ${p.char.name} 的【火刑】使【${dotObj.name}】作用于所有敌人！`);
+                } else {
+                    if (targetType === 'boss') {
+                        if (isRagnarosSubmergedThisRound) {
+                            addLog(`→ ${boss.name}处于【下潜】状态，未能施加【${dotObj.name}】`, 'warning');
+                        } else {
+                            combat.bossDots = combat.bossDots || [];
+                            combat.bossDots.push(dotObj);
+                        }
+                    } else if (targetType === 'minion' && !combat.minions[targetIndex]?.immune) {
+                        combat.minions[targetIndex].dots = combat.minions[targetIndex].dots || [];
+                        combat.minions[targetIndex].dots.push(dotObj);
+                    }
                 }
             }
 
@@ -21217,7 +21543,6 @@ function stepBossCombat(state) {
                     const baseMaxHp = Math.max(1, Math.floor(Number(p.char.stats.maxHp) || 0));
                     const pct = Math.max(0, Number(buffToApply.maxHpBonusPct) || 0);
                     const bonus = Math.max(0, Math.floor(baseMaxHp * pct));
-                    buffToApply.baseMaxHp = baseMaxHp;
                     if (bonus > 0) {
                         p.char.stats.maxHp = baseMaxHp + bonus;
                         buffToApply.maxHpBonus = bonus;
@@ -21704,17 +22029,26 @@ function stepBossCombat(state) {
             // DOT 伤害：支持急速加成/计算防御（用于部分职业技能）
             let dotDamage = Number(dot.damagePerTurn) || 0;
 
+            // 施法者的伤害增益（例如：炽燃之血、烈火烙印期间增伤等）
+            const sourcePlayer = dot.sourcePlayerId
+                ? combat.playerStates.find(p => p.char.id === dot.sourcePlayerId)
+                : null;
+            if (sourcePlayer) {
+                const dealtMult = (sourcePlayer.buffs || []).reduce((m, b) => {
+                    if (b?.damageDealtMult) return m * b.damageDealtMult;
+                    return m;
+                }, 1);
+                dotDamage *= dealtMult;
+            }
+
             // 急速加成（例如：复仇恶魔猎手）
-            if (dot.scaleWithHaste && dot.sourcePlayerId) {
-                const sourcePlayer = combat.playerStates.find(p => p.char.id === dot.sourcePlayerId);
-                if (sourcePlayer) {
+            if (dot.scaleWithHaste && dot.sourcePlayerId && sourcePlayer) {
                     const hasteBonusFromBuffs = (sourcePlayer.buffs || []).reduce(
                         (sum, b) => sum + (Number(b?.hasteBonus) || 0),
                         0
                     );
                     const hasteTotal = (Number(sourcePlayer?.char?.stats?.haste) || 0) + hasteBonusFromBuffs;
                     dotDamage *= (1 + hasteTotal * 0.02);
-                }
             }
 
             // 计算防御（例如：烈火印记 DOT）
@@ -21736,7 +22070,6 @@ function stepBossCombat(state) {
             }
 
             if (dot.sourcePlayerId) {
-                const sourcePlayer = combat.playerStates.find(p => p.char.id === dot.sourcePlayerId);
                 if (sourcePlayer && sourcePlayer.char.talents?.[30] === 'brutal_momentum' && sourcePlayer.currentHp > 0) {
                     const healAmount = Math.floor(dmg * 1.5);
                     const hr = applyHealingToPlayer(sourcePlayer, healAmount, '残暴动力');
@@ -21744,6 +22077,31 @@ function stepBossCombat(state) {
                         let msg = `【残暴动力】触发：${sourcePlayer.char.name} 治疗 ${hr.actualHeal} 点生命`;
                         if (hr.absorbedByHealAbsorb > 0) msg += `（治疗吸收 ${hr.absorbedByHealAbsorb}）`;
                         addLog(msg);
+                    }
+                }
+
+                // 复仇DH60级天赋：痛苦狂欢 - 烈火烙印造成伤害时获得等于伤害50%的护盾
+                if (
+                    sourcePlayer &&
+                    sourcePlayer.char?.classId === 'vengeance_demon_hunter' &&
+                    sourcePlayer.char?.talents?.[60] === 'painful_revelry' &&
+                    (dot.sourceSkillId === 'fiery_brand' || dotName === '烈火烙印')
+                ) {
+                    const shieldGain = Math.floor(dmg * 0.5);
+                    if (shieldGain > 0) {
+                        const shieldType = 'painful_revelry_shield';
+                        const idx = (sourcePlayer.buffs || []).findIndex(b => b.type === shieldType);
+                        if (idx >= 0) {
+                            sourcePlayer.buffs[idx] = {
+                                ...sourcePlayer.buffs[idx],
+                                amount: (sourcePlayer.buffs[idx].amount || 0) + shieldGain,
+                                duration: Math.max(sourcePlayer.buffs[idx].duration || 0, 3),
+                            };
+                        } else {
+                            sourcePlayer.buffs = sourcePlayer.buffs || [];
+                            sourcePlayer.buffs.push({ type: shieldType, name: '痛苦狂欢', amount: shieldGain, duration: 3 });
+                        }
+                        addLog(`【痛苦狂欢】触发：${sourcePlayer.char.name} 获得护盾 ${shieldGain}`,'proc');
                     }
                 }
 
@@ -21790,17 +22148,26 @@ function stepBossCombat(state) {
                     // DOT 伤害：支持急速加成/计算防御（用于部分职业技能）
                     let dotDamage = Number(dot.damagePerTurn) || 0;
 
+                    // 施法者的伤害增益（例如：炽燃之血、烈火烙印期间增伤等）
+                    const sourcePlayer = dot.sourcePlayerId
+                        ? combat.playerStates.find(p => p.char.id === dot.sourcePlayerId)
+                        : null;
+                    if (sourcePlayer) {
+                        const dealtMult = (sourcePlayer.buffs || []).reduce((m, b) => {
+                            if (b?.damageDealtMult) return m * b.damageDealtMult;
+                            return m;
+                        }, 1);
+                        dotDamage *= dealtMult;
+                    }
+
                     // 急速加成（例如：复仇恶魔猎手）
-                    if (dot.scaleWithHaste && dot.sourcePlayerId) {
-                        const sourcePlayer = combat.playerStates.find(p => p.char.id === dot.sourcePlayerId);
-                        if (sourcePlayer) {
-                            const hasteBonusFromBuffs = (sourcePlayer.buffs || []).reduce(
-                                (sum, b) => sum + (Number(b?.hasteBonus) || 0),
-                                0
-                            );
-                            const hasteTotal = (Number(sourcePlayer?.char?.stats?.haste) || 0) + hasteBonusFromBuffs;
-                            dotDamage *= (1 + hasteTotal * 0.02);
-                        }
+                    if (dot.scaleWithHaste && dot.sourcePlayerId && sourcePlayer) {
+                        const hasteBonusFromBuffs = (sourcePlayer.buffs || []).reduce(
+                            (sum, b) => sum + (Number(b?.hasteBonus) || 0),
+                            0
+                        );
+                        const hasteTotal = (Number(sourcePlayer?.char?.stats?.haste) || 0) + hasteBonusFromBuffs;
+                        dotDamage *= (1 + hasteTotal * 0.02);
                     }
 
                     // 计算防御（例如：烈火印记 DOT）
@@ -21817,9 +22184,8 @@ function stepBossCombat(state) {
 
                 addLog(`【${dotName}】对 ${targetLabel} 造成 ${dmg} DOT 伤害（剩余${dot.duration - 1}回合）`);
 
-                if (dot.sourcePlayerId) {
-                    const sourcePlayer = combat.playerStates.find(p => p.char.id === dot.sourcePlayerId);
-                    if (sourcePlayer && sourcePlayer.char.talents?.[30] === 'brutal_momentum' && sourcePlayer.currentHp > 0) {
+                if (dot.sourcePlayerId && sourcePlayer) {
+                    if (sourcePlayer.char.talents?.[30] === 'brutal_momentum' && sourcePlayer.currentHp > 0) {
                         const healAmount = Math.floor(dmg * 1.5);
                         const healRes = applyHealingToPlayer(sourcePlayer, healAmount, '残暴动力');
                         if (healRes.actualHeal > 0 || healRes.absorbed > 0) {
@@ -21835,7 +22201,31 @@ function stepBossCombat(state) {
                         }
                     }
 
-                    if (dot.canGenerateFinger && sourcePlayer && sourcePlayer.char.talents?.[30] === 'orb_mastery') {
+                    // 复仇DH60级天赋：痛苦狂欢 - 烈火烙印造成伤害时获得等于伤害50%的护盾
+                    if (
+                        sourcePlayer.char?.classId === 'vengeance_demon_hunter' &&
+                        sourcePlayer.char?.talents?.[60] === 'painful_revelry' &&
+                        (dot.sourceSkillId === 'fiery_brand' || dotName === '烈火烙印')
+                    ) {
+                        const shieldGain = Math.floor(dmg * 0.5);
+                        if (shieldGain > 0) {
+                            const shieldType = 'painful_revelry_shield';
+                            const idx = (sourcePlayer.buffs || []).findIndex(b => b.type === shieldType);
+                            if (idx >= 0) {
+                                sourcePlayer.buffs[idx] = {
+                                    ...sourcePlayer.buffs[idx],
+                                    amount: (sourcePlayer.buffs[idx].amount || 0) + shieldGain,
+                                    duration: Math.max(sourcePlayer.buffs[idx].duration || 0, 3),
+                                };
+                            } else {
+                                sourcePlayer.buffs = sourcePlayer.buffs || [];
+                                sourcePlayer.buffs.push({ type: shieldType, name: '痛苦狂欢', amount: shieldGain, duration: 3 });
+                            }
+                            addLog(`【痛苦狂欢】触发：${sourcePlayer.char.name} 获得护盾 ${shieldGain}`,'proc');
+                        }
+                    }
+
+                    if (dot.canGenerateFinger && sourcePlayer.char.talents?.[30] === 'orb_mastery') {
                         if (Math.random() < 0.25) {
                             sourcePlayer.fingersOfFrost = (sourcePlayer.fingersOfFrost || 0) + 1;
                             addLog(`【宝珠精通】触发：${sourcePlayer.char.name} 获得1层寒冰指，当前${sourcePlayer.fingersOfFrost}层`);
@@ -21872,13 +22262,45 @@ function stepBossCombat(state) {
                 ? playerState.char.skills.includes('counterattack')
                 : false;
             if (hasCounter && (playerState.currentHp ?? 0) > 0) {
-                const critRate = Math.max(0, Number(playerState?.char?.stats?.critRate) || 0);
-                const parryRate = Math.max(0, Math.min(95, critRate / 10));
+                const baseCritRate = Number(playerState?.char?.stats?.critRate) || 0;
+	                const buffCritRate = (Array.isArray(playerState?.buffs) ? playerState.buffs : []).reduce(
+	                    (sum, b) => sum + (Number(b?.critRateBonus) || 0),
+	                    0
+	                );
+                const critRate = Math.max(0, baseCritRate + buffCritRate);
+
+                const baseHaste = Number(playerState?.char?.stats?.haste) || 0;
+	                const buffHaste = (Array.isArray(playerState?.buffs) ? playerState.buffs : []).reduce(
+	                    (sum, b) => sum + (Number(b?.hasteBonus) || 0),
+	                    0
+	                );
+                const hasteTotal = Math.max(0, baseHaste + buffHaste);
+
+                let parryRate = Math.max(0, Math.min(95, critRate / 10));
+
+                const hasDemonSpikes = (playerState?.buffs || []).some(b => b?.type === 'demon_spikes');
+                // 30级天赋：强化尖刺 - 恶魔尖刺期间招架 +20
+                if (playerState?.char?.talents?.[30] === 'empowered_spikes' && hasDemonSpikes) {
+                    parryRate += 20;
+                }
+                // 60级天赋：奥达奇的设计 - 招架提高（急速/20）%
+                if (playerState?.char?.talents?.[60] === 'aldrachi_design') {
+                    parryRate += hasteTotal / 20;
+                }
+                parryRate = Math.max(0, Math.min(95, parryRate));
+
                 const parryChance = parryRate / 100;
 
                 if (Math.random() < parryChance) {
                     // 反击伤害
-                    let counterRaw = (Number(playerState?.char?.stats?.attack) || 0) * 1.2;
+                    let counterRaw = (
+                        (Number(playerState?.char?.stats?.attack) || 0)
+                        + (Number(playerState?.talentBuffs?.attackFlat) || 0)
+	                        + (Array.isArray(playerState?.buffs) ? playerState.buffs : []).reduce(
+	                            (sum, b) => sum + (Number(b?.attackBonus) || 0),
+	                            0
+	                        )
+                    ) * 1.2;
                     let counterCrit = false;
                     if (Math.random() < (critRate / 100)) {
                         counterCrit = true;
@@ -22030,8 +22452,21 @@ function stepBossCombat(state) {
 
         const finalTakenMult = takenMult * buffTakenMult * getAtonementDamageTakenMult(playerState);
         const demoralizingShoutMult = combat.bossDebuffs?.demoralizingShout?.damageMult ?? 1;
+
+        // 复仇DH50级天赋：脆弱 - 目标对恶魔猎手造成的伤害降低20%
+        let vdhFragilityMult = 1;
+        if (playerState?.char?.classId === 'vengeance_demon_hunter' && playerState?.char?.talents?.[50] === 'frailty') {
+            if (attackerInfo?.type === 'minion') {
+                const m = (combat.minions || [])[attackerInfo.index];
+                const frag = m?.debuffs?.vdhFragility;
+                if (frag?.damageMult) vdhFragilityMult *= frag.damageMult;
+            } else {
+                const frag = combat.bossDebuffs?.vdhFragility;
+                if (frag?.damageMult) vdhFragilityMult *= frag.damageMult;
+            }
+        }
         const versTakenMult = getVersatilityDamageTakenMult(playerState?.char?.stats?.versatility);
-        dmg = Math.max(1, Math.floor(dmg * finalTakenMult * demoralizingShoutMult * versTakenMult));
+        dmg = Math.max(1, Math.floor(dmg * finalTakenMult * demoralizingShoutMult * vdhFragilityMult * versTakenMult));
 
         return { damage: dmg, dr, blockedAmount, isHeavy };
     };
@@ -23530,8 +23965,8 @@ function stepBossCombat(state) {
                 const target = combat.playerStates[tIdx];
                 const raw = Math.floor((boss.attack || 0) * (boss.soulBurnMultiplier || 8));
 
-                const fire = calcMagicDamage(target, raw);
-                const shieldResult = applyShieldAbsorb(target, fire.damage, logs, currentRound);
+                const fire = calcMagicDamage(target, raw, null, { type: 'minion', index: i });
+                const shieldResult = applyShieldAbsorb(target, fire.damage, logs, currentRound, { type: 'minion', index: i });
                 target.currentHp -= shieldResult.finalDamage;
 
                 const resPct = Math.round(fire.resistReduction * 100);
@@ -27072,8 +27507,8 @@ function stepBossCombat(state) {
                     : 1;
                 const raw = Math.max(1, Math.floor((boss.attack || 0) * mult));
 
-                const { damage, dr, blockedAmount } = calcMitigatedAndBlockedDamage(tank, raw, false);
-                const shieldResult = applyShieldAbsorb(tank, damage, logs, currentRound);
+                const { damage, dr, blockedAmount } = calcMitigatedAndBlockedDamage(tank, raw, false, { type: 'minion', index: i });
+                const shieldResult = applyShieldAbsorb(tank, damage, logs, currentRound, { type: 'minion', index: i });
                 tank.currentHp -= shieldResult.finalDamage;
 
                 const drPct = Math.round(dr * 100);
@@ -27121,11 +27556,17 @@ function stepBossCombat(state) {
                     });
                 }
                 const demoralizingShoutMult = combat.bossDebuffs?.demoralizingShout?.damageMult ?? 1;
+                // 复仇DH50级天赋：脆弱 - 小弟对恶魔猎手造成的伤害降低20%
+                const vdhFragilityMult = (
+                    ps.char?.classId === 'vengeance_demon_hunter' &&
+                    ps.char?.talents?.[50] === 'frailty' &&
+                    m?.debuffs?.vdhFragility?.damageMult
+                ) ? (m.debuffs.vdhFragility.damageMult || 0.8) : 1;
                 const versTakenMult = getVersatilityDamageTakenMult(ps.char?.stats?.versatility);
-                dmg = Math.max(1, Math.floor(dmg * takenMult * buffTakenMult * getAtonementDamageTakenMult(ps) * demoralizingShoutMult * versTakenMult));
+                dmg = Math.max(1, Math.floor(dmg * takenMult * buffTakenMult * getAtonementDamageTakenMult(ps) * demoralizingShoutMult * vdhFragilityMult * versTakenMult));
 
                 // 护盾吸收
-                const shieldResult = applyShieldAbsorb(ps, dmg, logs, currentRound);
+                const shieldResult = applyShieldAbsorb(ps, dmg, logs, currentRound, { type: 'minion', index: i });
                 ps.currentHp -= shieldResult.finalDamage;
 
                 // ✅ 修复：计算 drPct
@@ -27218,8 +27659,8 @@ function stepBossCombat(state) {
                     : 1.5;
                 const raw = Math.floor((boss.attack || 0) * mult);
 
-                const mg = calcMagicDamage(target, raw);
-                const shieldResult = applyShieldAbsorb(target, mg.damage, logs, currentRound);
+                const mg = calcMagicDamage(target, raw, null, { type: 'minion', index: i });
+                const shieldResult = applyShieldAbsorb(target, mg.damage, logs, currentRound, { type: 'minion', index: i });
                 target.currentHp -= shieldResult.finalDamage;
 
                 const resPct = Math.round(mg.resistReduction * 100);
@@ -27910,8 +28351,22 @@ function stepBossCombat(state) {
             // 挫志怒吼（bossDebuffs.demoralizingShout）已有在别处用，这里也补上
             const demoralizingShoutMult = combat.bossDebuffs?.demoralizingShout?.damageMult ?? 1;
 
+	            // 复仇DH50级天赋：脆弱 - 目标对恶魔猎手造成的伤害降低20%
+	            const vdhFragilityMult = (
+	                ps.char?.classId === 'vengeance_demon_hunter' &&
+	                ps.char?.talents?.[50] === 'frailty' &&
+	                combat.bossDebuffs?.vdhFragility?.damageMult
+	            ) ? (combat.bossDebuffs.vdhFragility.damageMult || 0.8) : 1;
+
+	            // 复仇DH60级天赋：伊利达雷的知识 - 受到的魔法伤害降低15%
+	            const illidariKnowledgeMult = (
+	                ps.char?.classId === 'vengeance_demon_hunter' &&
+	                ps.char?.talents?.[60] === 'illidari_knowledge' &&
+	                (!dot.school || dot.school !== 'physical')
+	            ) ? 0.85 : 1;
+
             // 最终 DOT 伤害
-            let dmg = Math.max(1, Math.floor(base * takenMult * buffTakenMult * getAtonementDamageTakenMult(ps) * demoralizingShoutMult * versTakenMult * spellVulnMult));
+	            let dmg = Math.max(1, Math.floor(base * takenMult * buffTakenMult * getAtonementDamageTakenMult(ps) * demoralizingShoutMult * vdhFragilityMult * illidariKnowledgeMult * versTakenMult * spellVulnMult));
 
             // （可选但推荐）DOT 也经过护盾吸收，和其它伤害统一
             const shieldResult = applyShieldAbsorb(ps, dmg, logs, currentRound);
@@ -28542,6 +28997,17 @@ function createCombatState(character, enemy, skillSlots) {
     // 战斗内 buffs（不改角色本体）
     let buffs = []; // { blockRate, duration }
 
+    // ==================== 复仇DH：战斗开场天赋光环 ====================
+    // 20级：炽燃之血 - 全伤害 +20%（用永久BUFF实现）
+    if (character?.classId === 'vengeance_demon_hunter' && character?.talents?.[20] === 'searing_blood') {
+        buffs.push({
+            type: 'searing_blood',
+            name: '炽燃之血',
+            damageDealtMult: 1.2,
+            duration: 999,
+        });
+    }
+
     // 保留 8 个槽位顺序：空/无效 => rest
     const slots8 = Array.from({ length: 8 }, (_, i) => (skillSlots?.[i] ?? ''));
 
@@ -28669,7 +29135,7 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
                })
                 .filter(b => {
                     // 护盾：持续时间到期或吸收量耗尽都移除
-                    if (b.type && ['ice_barrier', 'holy_barrier', 'scarab_barrier'].includes(b.type)) {
+                    if (b.type && ['ice_barrier', 'holy_barrier', 'scarab_barrier', 'demonic_barrier', 'painful_revelry_shield'].includes(b.type)) {
                        return (b.duration ?? 0) > 0 && (b.amount ?? 0) > 0;
                     }
                     // 其他buff只看持续时间
@@ -29233,6 +29699,41 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
               if (healRaw > 0) {
                 const maxHp = Math.max(0, Math.floor(Number(character.stats.maxHp ?? character.stats.hp) || 0));
 
+                // 40级天赋：毁灭壁垒 - 邪能毁灭提供的治疗量(含溢出)的120%转化为护盾
+                if (
+                    character?.classId === 'vengeance_demon_hunter' &&
+                    character?.talents?.[40] === 'demonic_barrier' &&
+                    currentSkillId === 'fel_devastation'
+                ) {
+                    const shieldGain = Math.floor(healRaw * 1.2);
+                    if (shieldGain > 0) {
+                        const idx = buffs.findIndex(b => b.type === 'demonic_barrier');
+                        if (idx >= 0) {
+                            buffs[idx] = {
+                                ...buffs[idx],
+                                amount: (buffs[idx].amount || 0) + shieldGain,
+                                duration: Math.max(buffs[idx].duration || 0, 4),
+                            };
+                        } else {
+                            buffs.push({
+                                type: 'demonic_barrier',
+                                name: '毁灭壁垒',
+                                amount: shieldGain,
+                                duration: 4,
+                            });
+                        }
+                        logs.push({
+                            round,
+                            kind: 'proc',
+                            actor: character.name,
+                            proc: '毁灭壁垒',
+                            value: shieldGain,
+                            type: 'shield',
+                            text: `【毁灭壁垒】获得护盾 ${shieldGain}`
+                        });
+                    }
+                }
+
                 // （可选）治疗吸收：如果你有 healAbsorb 系统，建议先初始化 healAbsorb 并在这里扣减
                 const actualHeal = Math.min(healRaw, maxHp - charHp);
                 if (actualHeal > 0) {
@@ -29285,6 +29786,29 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
                         actor: character.name,
                         proc: '挫志怒吼',
                         text: '【挫志怒吼】触发：敌人造成的伤害降低20%'
+                    });
+                }
+            }
+
+            // 复仇DH50级天赋：脆弱 - 灵魂裂劈/幽魂炸弹施加DEBUFF，使目标造成的伤害降低20%
+            if (
+                character?.classId === 'vengeance_demon_hunter' &&
+                character?.talents?.[50] === 'frailty' &&
+                (currentSkillId === 'soul_cleave' || currentSkillId === 'spirit_bomb')
+            ) {
+                const existingFrailty = enemyDebuffs.find(d => d.type === 'vdh_fragility');
+                if (!existingFrailty) {
+                    enemyDebuffs.push({
+                        type: 'vdh_fragility',
+                        damageMult: 0.8,
+                        duration: 999,
+                    });
+                    logs.push({
+                        round,
+                        kind: 'proc',
+                        actor: character.name,
+                        proc: '脆弱',
+                        text: '【脆弱】触发：目标造成的伤害降低20%'
                     });
                 }
             }
@@ -30371,6 +30895,13 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
             for (const d of dots) {
                 let dotDamage = d.damagePerTurn ?? 0;
 
+                // 玩家自身的伤害加成（如：炽燃之血、烈火烙印期间增伤等）
+                let dotDamageDealtMult = 1;
+                buffs.forEach(b => {
+                    if (b?.damageDealtMult) dotDamageDealtMult *= b.damageDealtMult;
+                });
+                dotDamage *= dotDamageDealtMult;
+
                 if (character.talents?.[10] === 'shadow_amp' && d.school === 'shadow') {
                     dotDamage *= 1.2;
                 }
@@ -30414,6 +30945,42 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
                     value: actualDot,
                     type: 'damage'
                 });
+
+                // 60级天赋：痛苦狂欢 - 烈火烙印造成伤害时，获得等于伤害50%的护盾
+                if (
+                    character?.classId === 'vengeance_demon_hunter' &&
+                    character?.talents?.[60] === 'painful_revelry' &&
+                    d.sourceSkillId === 'fiery_brand'
+                ) {
+                    const shieldGain = Math.floor(actualDot * 0.5);
+                    if (shieldGain > 0) {
+                        const shieldType = 'painful_revelry_shield';
+                        const idx = buffs.findIndex(b => b.type === shieldType);
+                        if (idx >= 0) {
+                            buffs[idx] = {
+                                ...buffs[idx],
+                                amount: (buffs[idx].amount || 0) + shieldGain,
+                                duration: Math.max(buffs[idx].duration || 0, 3),
+                            };
+                        } else {
+                            buffs.push({
+                                type: shieldType,
+                                name: '痛苦狂欢',
+                                amount: shieldGain,
+                                duration: 3,
+                            });
+                        }
+                        logs.push({
+                            round,
+                            kind: 'proc',
+                            actor: character.name,
+                            proc: '痛苦狂欢',
+                            value: shieldGain,
+                            type: 'shield',
+                            text: `【痛苦狂欢】获得护盾 ${shieldGain}`
+                        });
+                    }
+                }
 
                 // 30级天赋：残暴动力 - 重伤伤害的150%治疗自己
                 if (character.talents?.[30] === 'brutal_momentum' && d.sourceSkillName === '雷霆一击') {
@@ -30484,8 +31051,29 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
           Array.isArray(character?.skills) &&
           character.skills.includes('counterattack')
         ) {
-          const critRate = Math.max(0, Number(character?.stats?.critRate) || 0);
-          const parryRate = Math.max(0, Math.min(95, critRate / 10)); // 你源码里其它地方就是这么算的
+          const baseCritRate = Number(character?.stats?.critRate) || 0;
+          const buffCritRate = buffs.reduce((sum, b) => sum + (Number(b?.critRateBonus) || 0), 0);
+          const critRate = Math.max(0, baseCritRate + buffCritRate);
+
+          const baseHaste = Number(character?.stats?.haste) || 0;
+          const buffHaste = buffs.reduce((sum, b) => sum + (Number(b?.hasteBonus) || 0), 0);
+          const hasteTotal = Math.max(0, baseHaste + buffHaste);
+
+          let parryRate = Math.max(0, Math.min(95, critRate / 10)); // 现有口径：招架≈暴击/10
+
+          const hasDemonSpikes = buffs.some(b => b?.type === 'demon_spikes');
+
+          // 30级天赋：强化尖刺 - 恶魔尖刺期间招架 +20
+          if (character?.talents?.[30] === 'empowered_spikes' && hasDemonSpikes) {
+            parryRate += 20;
+          }
+
+          // 60级天赋：奥达奇的设计 - 招架提高（急速/20）%
+          if (character?.talents?.[60] === 'aldrachi_design') {
+            parryRate += hasteTotal / 20;
+          }
+
+          parryRate = Math.max(0, Math.min(95, parryRate));
           const parryChance = parryRate / 100;
 
           if (Math.random() < parryChance) {
@@ -30500,7 +31088,10 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
             });
 
             // 可选：招架触发反击（示例）
-            let counterRaw = (Number(character?.stats?.attack) || 0) * 1.2;
+            const currentAttack = (Number(character?.stats?.attack) || 0)
+              + (Number(talentBuffs?.attackFlat) || 0)
+              + buffs.reduce((sum, b) => sum + (Number(b?.attackBonus) || 0), 0);
+            let counterRaw = currentAttack * 1.2;
             let counterCrit = false;
             if (Math.random() < (critRate / 100)) {
               counterCrit = true;
@@ -30600,7 +31191,13 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
 
         // 30级天赋：挫志怒吼 - 敌人造成的伤害降低20%
         const demoralizingShout = enemyDebuffs.find(d => d.type === 'demoralizing_shout');
-        const enemyDamageMult = demoralizingShout ? demoralizingShout.damageMult : 1;
+        let enemyDamageMult = demoralizingShout ? demoralizingShout.damageMult : 1;
+
+        // 复仇DH50级天赋：脆弱 - 目标造成的伤害降低20%
+        const vdhFragility = enemyDebuffs.find(d => d.type === 'vdh_fragility');
+        if (vdhFragility?.damageMult) {
+            enemyDamageMult *= vdhFragility.damageMult;
+        }
 
         const atonementTakenMult = character.stats.atonement?.damageTakenMult ?? 1;
 
@@ -30608,7 +31205,13 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
 
         // ===== 新增：护盾吸收伤害 =====
         let shieldAbsorbed = 0;
-        const shieldBuff = buffs.find(b => b.type && b.amount > 0 && ['ice_barrier', 'holy_barrier', 'scarab_barrier'].includes(b.type));
+        const shieldTypes = ['ice_barrier', 'holy_barrier', 'scarab_barrier', 'demonic_barrier', 'painful_revelry_shield'];
+        const shieldBuff = buffs
+            .filter(b => b?.type && (b.amount || 0) > 0 && shieldTypes.includes(b.type))
+            .reduce((best, b) => {
+                if (!best) return b;
+                return (b.amount || 0) > (best.amount || 0) ? b : best;
+            }, null);
 
         if (shieldBuff && finalDamage > 0) {
             // 计算护盾吸收量
@@ -30659,6 +31262,66 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
             value: Math.floor(finalDamage),
             type: 'damage'
         });
+
+        // 10级天赋：以牙还牙 - 恶魔尖刺期间受伤会反击造成真实伤害并等量治疗
+        if (
+            finalDamage > 0 &&
+            character?.classId === 'vengeance_demon_hunter' &&
+            character?.talents?.[10] === 'tooth_for_tooth' &&
+            buffs.some(b => b?.type === 'demon_spikes')
+        ) {
+            const currentAttack = (Number(character?.stats?.attack) || 0)
+                + (Number(talentBuffs?.attackFlat) || 0)
+                + buffs.reduce((sum, b) => sum + (Number(b?.attackBonus) || 0), 0);
+            const retaliate = Math.floor(currentAttack * 0.5);
+
+            if (retaliate > 0) {
+                enemyHp -= retaliate;
+                logs.push({
+                    round,
+                    kind: 'proc',
+                    actor: character.name,
+                    proc: '以牙还牙',
+                    target: combatState.enemy?.name,
+                    value: retaliate,
+                    type: 'damage',
+                    text: `【以牙还牙】对 ${combatState.enemy?.name} 造成真实伤害 ${retaliate}，并治疗等量生命。`
+                });
+
+                // 等量治疗（考虑治疗吸收）
+                let healAmount = retaliate;
+                let healAbsorb = character.debuffs?.healAbsorb || 0;
+                if (healAbsorb > 0) {
+                    const absorbed = Math.min(healAbsorb, healAmount);
+                    healAbsorb -= absorbed;
+                    healAmount -= absorbed;
+                    character.debuffs.healAbsorb = healAbsorb;
+                    logs.push({
+                        round,
+                        kind: 'debuff',
+                        actor: character.name,
+                        proc: '治疗吸收',
+                        value: absorbed,
+                        type: 'heal_absorb',
+                        text: `【治疗吸收】抵消 ${absorbed} 治疗（剩余吸收 ${healAbsorb}）`
+                    });
+                }
+
+                const maxHp = Number(character?.stats?.maxHp) || 0;
+                const actualHeal = Math.max(0, Math.min(healAmount, maxHp - charHp));
+                if (actualHeal > 0) {
+                    charHp += actualHeal;
+                    logs.push({
+                        round,
+                        actor: character.name,
+                        action: '以牙还牙(治疗)',
+                        target: character.name,
+                        value: actualHeal,
+                        type: 'heal'
+                    });
+                }
+            }
+        }
         }else{
             //招架成功：不扣血，也可以记一条敌人攻击被招架的日志（可选）
             logs.push({
@@ -32883,7 +33546,10 @@ function gameReducer(state, action) {
                 currentMp: char.stats.maxMp,
                 skillIndex: 0,
                 comboPoints: 0, // 盗贼“星”(连击点)
-                buffs: [],
+                // 复仇DH20级天赋：炽燃之血 - 全伤害 +20%（用战斗内永久BUFF实现）
+                buffs: (char?.classId === 'vengeance_demon_hunter' && char?.talents?.[20] === 'searing_blood')
+                    ? [{ type: 'searing_blood', name: '炽燃之血', damageDealtMult: 1.2, duration: 999 }]
+                    : [],
                 talentBuffs: { attackFlat: 0, blockValueFlat: 0, spellPowerFlat: 0 },
                 fortuneMisfortuneStacks: 0, // 祸福相依层数
                 fantasiaStacks: 0,          // 幻想曲层数（戒律牧师50级天赋，仅本场战斗）
@@ -33927,6 +34593,11 @@ const SkillEditorModal = ({ character, onClose, onSave, state }) => {
             limit = 2;
         }
 
+        // 复仇DH40级天赋：葬身火海 - 烈火烙印可配置2次
+        if (skillId === 'fiery_brand' && character.talents?.[40] === 'sea_of_fire') {
+            limit = 2;
+        }
+
         // 戒律牧师20级天赋：圣光的许诺 - 真言术：耀可多配置1次
         if (skillId === 'power_word_radiance' && character.talents?.[20] === 'radiance_plus') {
             limit = (skill?.limit || 2) + 1;
@@ -34198,6 +34869,10 @@ const SkillViewerModal = ({ character, onClose }) => {
                             }
                             // 冰霜法师40级天赋：双彗星
                             if (sid === 'comet_storm' && character.talents?.[40] === 'double_comet') {
+                                limit = 2;
+                            }
+                            // 复仇DH40级天赋：葬身火海
+                            if (sid === 'fiery_brand' && character.talents?.[40] === 'sea_of_fire') {
                                 limit = 2;
                             }
                             // 戒律牧师20级天赋：圣光的许诺

@@ -1817,9 +1817,9 @@ const SKILLS = {
         iconUrl: 'icons/wow/vanilla/spells/bingfengbao.png',
         type: 'dot',
         limit: 2,
-        description: 'DOT持续3回合，每回合造成1倍法术强度的冰霜伤害，持续期间冰枪术必定爆击',
+        description: 'DOT持续3回合，每回合造成0.4倍法术强度的冰霜伤害，持续期间冰枪术必定爆击',
         calculate: (char, combatContext) => {
-            let damagePerTurn = char.stats.spellPower * 1;
+            let damagePerTurn = char.stats.spellPower * 0.4;
             let duration = 3;
 
             // 50级天赋：绝对零度 - 持续时间+2，伤害+50%

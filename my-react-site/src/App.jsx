@@ -30897,7 +30897,7 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
                 target: combatState.enemy?.name,
                 value: actualSf,
                 type: 'damage',
-                text: `【暗影魔】造成 ${actualSf} 暗影伤害`+isCrit?`【爆击】`:``,
+                text: `【暗影魔】造成 ${actualSf} 暗影伤害` + (isCrit ? `【爆击】` : ``),
             });
         }
 
@@ -30928,6 +30928,21 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
 
                 // ✅ 装备特效：地图屠戮（地图战斗伤害加成）
                 dotDamage *= mapDamageDealtMult;
+                // ===== DOT 暴击判定（地图战对齐BOSS战）=====
+                // 默认：DOT 可暴击，使用角色暴击率/暴击伤害；可由 DOT 对象覆写：
+                // - forceCrit: 强制暴击
+                // - noCrit: 禁止暴击
+                // - canCrit === false: 禁止暴击（兼容字段）
+                const dotCanCrit = !(d?.noCrit === true) && !(d?.canCrit === false);
+                let dotIsCrit = false;
+                if (dotCanCrit) {
+                    const critRate = (character?.stats?.critRate || 0) / 100;
+                    dotIsCrit = (d?.forceCrit === true) ? true : (Math.random() < critRate);
+                    if (dotIsCrit) {
+                        dotDamage *= (character?.stats?.critDamage || 2);
+                    }
+                }
+
                 dotDamage = Math.floor(dotDamage);
                 const actualDot = Math.max(1, dotDamage - enemyDefense);
                 if (character.stats.atonement) {
@@ -30954,7 +30969,8 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
                     action: `${d.sourceSkillName || '持续伤害'}(持续)`,
                     target: combatState.enemy?.name,
                     value: actualDot,
-                    type: 'damage'
+                    type: 'damage',
+                    text: `【${d.sourceSkillName || '持续伤害'}】造成 ${actualDot} 持续伤害` + (dotIsCrit ? `【爆击】` : ``),
                 });
 
                 // 60级天赋：痛苦狂欢 - 烈火烙印造成伤害时，获得等于伤害50%的护盾

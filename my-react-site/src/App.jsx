@@ -666,7 +666,7 @@ const TALENTS = {
             options: [
                 { id: 'demonic_barrier', type: TALENT_TYPES.AURA, name: '毁灭壁垒', description: '邪能毁灭提供的治疗量（过量也计算）的120%会转化为护盾。' },
                 { id: 'sea_of_fire', type: TALENT_TYPES.AURA, name: '葬身火海', description: '烈火烙印可配置两次，造成的伤害提高为4倍攻击强度。' },
-                { id: 'delayed_spikes', type: TALENT_TYPES.AURA, name: '延时尖刺', description: '恶魔尖刺持续时间增加1回合。' },
+                { id: 'delayed_spikes', type: TALENT_TYPES.AURA, name: '延时尖刺', description: '恶魔尖刺持续时间增加2回合。' },
             ]
         },
         {
@@ -2349,9 +2349,9 @@ const SKILLS = {
             const mastery = Number(char.stats.mastery) || 0;
             const pct = 10 + mastery / 10;
 
-            // 40级：延时尖刺 - 恶魔尖刺持续时间 +1 回合（2→3）
+            // 40级：延时尖刺 - 恶魔尖刺持续时间 +2 回合（2→4）
             const duration = (char?.classId === 'vengeance_demon_hunter' && char?.talents?.[40] === 'delayed_spikes')
-                ? 3
+                ? 4
                 : 2;
 
             const buff = {

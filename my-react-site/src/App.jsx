@@ -1689,9 +1689,9 @@ const SKILLS = {
             if (char.talents?.[50] === 'frost_crit_breakthrough') {
                 if (combatContext?.blizzardActive) {
                     // 冰风暴期间：所有暴击率转化为伤害加成
-                    critBreakthroughBonus = 1 + (critRate / 100);
+                    critBreakthroughBonus = 1 + ((critRate-100) / 100);
                     forcedCritConversion = true;
-                    critRate = 0;
+                    critRate = 100;
                 } else if (critRate > 100) {
                     // 非冰风暴期间：超过100%的暴击转化为伤害
                     const excessCrit = critRate - 100;

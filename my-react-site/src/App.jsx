@@ -38113,7 +38113,9 @@ const isSpecialRecipePair = (aId, bId) =>
                                                                     ? `无视防御${((Number(se.pct ?? se.ignorePct ?? se.value) || 0) * 100).toFixed(0)}%`
                                                                     : se.type === 'thunderfury'
                                                                         ? `闪电链${(se.chance * 100).toFixed(0)}%`
-                                                                        : se.type
+                                                                        : se.type === 'boss_team_aura'
+                                                                           ? `团队光环`
+                                                                           : se.type
                                             }{more > 0 ? ` +${more}` : ''}
                                         </div>
                                     );

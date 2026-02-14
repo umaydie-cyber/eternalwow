@@ -30197,6 +30197,13 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
                     text: `【连击点】消耗 ${spent} 星（当前${comboPoints}星）`
                 });
 
+                if (result.triggerShatteredSoul
+                            && character?.classId === 'vengeance_demon_hunter'
+                            && Array.isArray(character?.skills)
+                            && character.skills.includes('shattered_soul')) {
+                            triggerShatteredSoul(spent, `${character.name} 破碎灵魂（消耗星）`);
+                        }
+
                 // 狂徒盗贼20级天赋：无情 - 每消耗1星，20%概率返还1星
                 if (character?.classId === 'outlaw_rogue' && character?.talents?.[20] === 'ruthless') {
                     let refunded = 0;
@@ -30226,7 +30233,10 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
             if (gain > 0) {
                 const maxCombo = getMaxComboPointsForChar(character);
                 const before = comboPoints;
-                comboPoints = Math.min(maxCombo, comboPoints + gain);
+                const afterRaw = before + gain;
+                const after = Math.min(maxCombo, afterRaw);
+                const overflow = Math.max(0, afterRaw - maxCombo);
+                comboPoints = after;
                 const realGain = comboPoints - before;
                 if (realGain > 0) {
                     logs.push({
@@ -30236,6 +30246,12 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
                         proc: '连击点',
                         text: `【连击点】获得 ${realGain} 星（当前${comboPoints}星）`
                     });
+                }
+                if (overflow > 0
+                            && character?.classId === 'vengeance_demon_hunter'
+                            && Array.isArray(character?.skills)
+                            && character.skills.includes('shattered_soul')) {
+                            triggerShatteredSoul(overflow, `${character.name} 破碎灵魂（溢出星）`);
                 }
             }
         }

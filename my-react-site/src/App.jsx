@@ -21453,19 +21453,27 @@ function stepBossCombat(state) {
             if (result.dot.name === '冰风暴') {
                 if (targetType === 'boss' && !isRagnarosSubmergedThisRound) {
                     combat.bossDots = combat.bossDots || [];
-                    combat.bossDots.push({ ...result.dot, sourcePlayerId: p.char.id });
+                    // ✅ DOT 现在允许暴击：把暴击标记写入 dot 对象，供回合结算日志显示
+                    combat.bossDots.push({ ...result.dot, sourcePlayerId: p.char.id, isCrit: (result.dot?.isCrit ?? !!result.isCrit) });
                     addLog(`位置${i + 1} ${p.char.name} 对 ${boss.name} 施放【冰风暴】，持续${result.dot.duration}回合`);
                 } else if (targetType === 'boss' && isRagnarosSubmergedThisRound) {
                     addLog(`冰风暴被【下潜】免疫（目标：${boss.name}）`, 'warning');
                 } else if (targetIndex >= 0 && !combat.minions[targetIndex]?.immune) {
                     combat.minions[targetIndex].dots = combat.minions[targetIndex].dots || [];
-                    combat.minions[targetIndex].dots.push({ ...result.dot, sourcePlayerId: p.char.id });
+                    // ✅ DOT 现在允许暴击：把暴击标记写入 dot 对象，供回合结算日志显示
+                    combat.minions[targetIndex].dots.push({ ...result.dot, sourcePlayerId: p.char.id, isCrit: (result.dot?.isCrit ?? !!result.isCrit) });
                     addLog(`位置${i + 1} ${p.char.name} 对 火炮手${targetIndex + 1} 施放冰风暴！`);
                 } else if (targetIndex >= 0 && combat.minions[targetIndex]?.immune) {
                     addLog(`冰风暴被 火炮手${targetIndex + 1}【登上甲板】免疫！`);
                 }
             }else{
-                const dotObj = { ...result.dot, name: result.dot.name || skill.name, sourcePlayerId: p.char.id };
+                // ✅ DOT 现在允许暴击：把暴击标记写入 dot 对象，供回合结算日志显示
+                const dotObj = {
+                    ...result.dot,
+                    name: result.dot.name || skill.name,
+                    sourcePlayerId: p.char.id,
+                    isCrit: (result.dot?.isCrit ?? !!result.isCrit)
+                };
 
                 // 复仇DH20级天赋：火刑 - DOT 对所有敌人释放
                 if (result.dotAllEnemies) {
@@ -21475,7 +21483,7 @@ function stepBossCombat(state) {
                             addLog(`→ ${boss.name}处于【下潜】状态，未能施加【${dotObj.name}】`, 'warning');
                         } else {
                             combat.bossDots = combat.bossDots || [];
-                            combat.bossDots.push(dotObj);
+                            combat.bossDots.push({ ...dotObj });
                         }
                     }
 
@@ -21487,7 +21495,7 @@ function stepBossCombat(state) {
                             return;
                         }
                         m.dots = m.dots || [];
-                        m.dots.push(dotObj);
+                        m.dots.push({ ...dotObj });
                     });
 
                     addLog(`位置${i + 1} ${p.char.name} 的【火刑】使【${dotObj.name}】作用于所有敌人！`);
@@ -21497,11 +21505,11 @@ function stepBossCombat(state) {
                             addLog(`→ ${boss.name}处于【下潜】状态，未能施加【${dotObj.name}】`, 'warning');
                         } else {
                             combat.bossDots = combat.bossDots || [];
-                            combat.bossDots.push(dotObj);
+                            combat.bossDots.push({ ...dotObj });
                         }
                     } else if (targetType === 'minion' && !combat.minions[targetIndex]?.immune) {
                         combat.minions[targetIndex].dots = combat.minions[targetIndex].dots || [];
-                        combat.minions[targetIndex].dots.push(dotObj);
+                        combat.minions[targetIndex].dots.push({ ...dotObj });
                     }
                 }
             }
@@ -21512,7 +21520,8 @@ function stepBossCombat(state) {
         if (result.aoeDot) {
             if (combat.bossHp > 0 && !isRagnarosSubmergedThisRound) {
                 combat.bossDots = combat.bossDots || [];
-                combat.bossDots.push({ ...result.aoeDot, sourcePlayerId: p.char.id });
+                // ✅ DOT 现在允许暴击：把暴击标记写入 dot 对象，供回合结算日志显示
+                combat.bossDots.push({ ...result.aoeDot, sourcePlayerId: p.char.id, isCrit: (result.aoeDot?.isCrit ?? !!result.isCrit) });
                 addLog(`位置${i + 1} ${p.char.name} 对 ${boss.name} 施放【${result.aoeDot.name}】，持续${result.aoeDot.duration}回合`);
             }
             combat.minions.forEach((m, idx) => {
@@ -21522,7 +21531,8 @@ function stepBossCombat(state) {
                     return;
                 }
                 m.dots = m.dots || [];
-                m.dots.push({ ...result.aoeDot, sourcePlayerId: p.char.id });
+                // ✅ DOT 现在允许暴击：把暴击标记写入 dot 对象，供回合结算日志显示
+                m.dots.push({ ...result.aoeDot, sourcePlayerId: p.char.id, isCrit: (result.aoeDot?.isCrit ?? !!result.isCrit) });
                 addLog(`位置${i + 1} ${p.char.name} 对 火炮手${idx + 1} 施放【${result.aoeDot.name}】，持续${result.aoeDot.duration}回合`);
             });
         }
@@ -22064,7 +22074,8 @@ function stepBossCombat(state) {
             const br = dealDamageToBoss(dmg);
 
             {
-                let msg = `【${dotName}】对 ${boss.name} 造成 ${br.hpDamage} DOT 伤害（剩余${dot.duration - 1}回合）`;
+                const critText = dot?.isCrit ? '（暴击）' : '';
+                let msg = `【${dotName}】对 ${boss.name} 造成 ${br.hpDamage} DOT 伤害${critText}（剩余${dot.duration - 1}回合）`;
                 if (br.absorbed > 0) msg += `（厚皮护盾吸收 ${br.absorbed}）`;
                 addLog(msg);
             }
@@ -22182,7 +22193,7 @@ function stepBossCombat(state) {
                     const dmg = Math.max(1, Math.floor(dotDamage));
                 m.hp -= dmg;
 
-                addLog(`【${dotName}】对 ${targetLabel} 造成 ${dmg} DOT 伤害（剩余${dot.duration - 1}回合）`);
+                addLog(`【${dotName}】对 ${targetLabel} 造成 ${dmg} DOT 伤害${dot?.isCrit ? '（暴击）' : ''}（剩余${dot.duration - 1}回合）`);
 
                 if (dot.sourcePlayerId && sourcePlayer) {
                     if (sourcePlayer.char.talents?.[30] === 'brutal_momentum' && sourcePlayer.currentHp > 0) {

@@ -864,7 +864,7 @@ const TALENTS = {
                 {
                     id: 'fingers_of_frost',
                     name: '寒冰指',
-                    description: '寒冰箭有50%概率使你获得1层寒冰指效果，寒冰指使下一个冰枪术的伤害提高100%',
+                    description: '寒冰箭有80%概率使你获得1层寒冰指效果，寒冰指使下一个冰枪术的伤害提高100%',
                     type: 'on_cast'
                 },
                 {
@@ -21715,7 +21715,7 @@ function stepBossCombat(state) {
                 addLog(`【延绵寒冷】触发：${p.char.name} 法术强度+5`);
             }
 
-            if (p.char.talents?.[20] === 'fingers_of_frost' && Math.random() < 0.5) {
+            if (p.char.talents?.[20] === 'fingers_of_frost' && Math.random() < 0.8) {
                 p.fingersOfFrost = (p.fingersOfFrost || 0) + 1;
                 addLog(`【寒冰指】触发：${p.char.name} 获得1层寒冰指，当前${p.fingersOfFrost}层`);
             }
@@ -29692,6 +29692,19 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
                 type: 'damage',
                 isCrit: result.isCrit
             });
+
+            // ✅ 40级天赋：冰川突进 - 彗星风暴命中生成寒冰指（地图战斗）
+            if (result.generateFingerOnHit && character.classId === 'frost_mage') {
+              fingersOfFrost = (fingersOfFrost || 0) + 1;
+              logs.push({
+                round,
+                kind: 'proc',
+                actor: character.name,
+                proc: '冰川突进',
+                value: fingersOfFrost,
+                text: `【冰川突进】触发：获得1层寒冰指（当前${fingersOfFrost}层）`
+              });
+            }
 
             // ===== 吸血/转化治疗：例如【邪能毁灭】造成伤害的30%回血 =====
             if (result.lifeStealPct && Number(result.lifeStealPct) > 0 && charHp > 0) {

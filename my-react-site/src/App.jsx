@@ -2267,7 +2267,15 @@ const SKILLS = {
         icon: '💠',
         iconUrl: 'icons/wow/vanilla/abilities/posuilinghun.png',
         type: 'passive',
-        description: '被动：超过5颗星后再获得的星会被吸收。每颗星恢复你在前4回合内受到的所有伤害的8%（不低于最大生命值的1%）。5星后获得星将直接消耗并触发破碎灵魂。'
+        description: '被动：超过5颗星后再获得的星会被吸收。每颗星恢复你在前4回合内受到的所有伤害的8%（不低于最大生命值的1%）。5星后获得星将直接消耗并触发破碎灵魂。',
+        params: {
+            // 最小治疗：最大生命值 * minHealPctOfMaxHp
+            minHealPctOfMaxHp: 0.01,
+            // 按近期承伤比例治疗：sum(last recentDamageRounds) * recentDamageHealPct
+            recentDamageHealPct: 0.08,
+            // 统计前 N 回合承伤
+            recentDamageRounds: 4
+        }
     },
     demon_spikes: {
         id: 'demon_spikes',
@@ -19084,10 +19092,16 @@ function stepBossCombat(state) {
     // ==================== 复仇恶魔猎手：破碎灵魂（5级被动） ====================
     const getShatteredSoulHealPerStar = (ps) => {
         const maxHp = Math.max(0, Math.floor(Number(ps?.char?.stats?.maxHp) || 0));
+        const skillParams = (SKILLS?.shattered_soul?.params) || {};
+        const recentRounds = Math.max(0, Math.floor(Number(skillParams.recentDamageRounds) || 4));
+        const healPct = Math.max(0, Number(skillParams.recentDamageHealPct) || 0.08);
+        const minPct = Math.max(0, Number(skillParams.minHealPctOfMaxHp) || 0.01);
+
         const history = Array.isArray(ps?.damageTakenHistory) ? ps.damageTakenHistory : [];
-        const sumLast4 = history.slice(0, 4).reduce((sum, v) => sum + Math.max(0, Math.floor(Number(v) || 0)), 0);
-        const byDamage = Math.floor(sumLast4 * 0.08);
-        const minHeal = Math.floor(maxHp * 0.01);
+        const sumRecent = history.slice(0, recentRounds).reduce((sum, v) => sum + Math.max(0, Math.floor(Number(v) || 0)), 0);
+
+        const byDamage = Math.floor(sumRecent * healPct);
+        const minHeal = Math.floor(maxHp * minPct);
         return Math.max(byDamage, minHeal);
     };
 
@@ -28707,11 +28721,17 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
 
     const getShatteredSoulHealPerStar = () => {
         const maxHp = Math.max(0, Math.floor(Number(character.stats.maxHp ?? character.stats.hp) || 0));
-        const sumLast4 = (Array.isArray(damageTakenHistory) ? damageTakenHistory : [])
-            .slice(0, 4)
+        const skillParams = (SKILLS?.shattered_soul?.params) || {};
+        const recentRounds = Math.max(0, Math.floor(Number(skillParams.recentDamageRounds) || 4));
+        const healPct = Math.max(0, Number(skillParams.recentDamageHealPct) || 0.08);
+        const minPct = Math.max(0, Number(skillParams.minHealPctOfMaxHp) || 0.01);
+
+        const sumRecent = (Array.isArray(damageTakenHistory) ? damageTakenHistory : [])
+            .slice(0, recentRounds)
             .reduce((s, v) => s + Math.max(0, Math.floor(Number(v) || 0)), 0);
-        const byDamage = Math.floor(sumLast4 * 0.08);
-        const minHeal = Math.floor(maxHp * 0.01);
+
+        const byDamage = Math.floor(sumRecent * healPct);
+        const minHeal = Math.floor(maxHp * minPct);
         return Math.max(byDamage, minHeal);
     };
 

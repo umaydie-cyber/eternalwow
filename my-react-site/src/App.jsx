@@ -2601,9 +2601,9 @@ const SKILLS = {
         iconUrl: 'icons/wow/vanilla/abilities/xianjiguanghuan.png',
         type: 'aoe_dot',
         limit: 1,
-        description: '每回合对所有敌人造成0.1倍攻击强度的火焰伤害（视为DOT），护甲提升20%，持续4回合。',
+        description: '每回合对所有敌人造成0.15倍攻击强度的火焰伤害（视为DOT），护甲提升20%，持续4回合。',
         calculate: (char, combatContext) => {
-            let dpt = (char.stats.attack || 0) * 0.1;
+            let dpt = (char.stats.attack || 0) * 0.15;
 
             let critRate = Number(char.stats.critRate) || 0;
             let critBreakthroughBonus = 1;

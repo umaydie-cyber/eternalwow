@@ -2454,6 +2454,8 @@ const SKILLS = {
                     name: '烈火烙印',
                     school: 'fire',
                     damagePerTurn: dpt,
+                    isCrit,
+                    critBaked: true,
                     duration: 3,
                     // Boss战 DOT 结算：对复仇DH做急速加成
                     scaleWithHaste: true,
@@ -2584,6 +2586,8 @@ const SKILLS = {
                     name: '烈焰咒符',
                     school: 'fire',
                     damagePerTurn: dpt,
+                    isCrit,
+                    critBaked: true,
                     duration: 3,
                     scaleWithHaste: true,
                 }
@@ -2639,6 +2643,8 @@ const SKILLS = {
                     damagePerTurn: dpt,
                     duration: 4,
                     scaleWithHaste: true,
+                    isCrit,
+                    critBaked: true,
                 },
                 buff,
             };
@@ -30928,18 +30934,23 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
 
                 // ✅ 装备特效：地图屠戮（地图战斗伤害加成）
                 dotDamage *= mapDamageDealtMult;
-                // ===== DOT 暴击判定（地图战对齐BOSS战）=====
-                // 默认：DOT 可暴击，使用角色暴击率/暴击伤害；可由 DOT 对象覆写：
+                // ===== DOT 暴击判定（施加时快照，tick不重复计算）=====
+                // - 如果 DOT 对象带 critBaked=true，则表示 damagePerTurn 已经包含暴击倍率（快照），这里仅用于日志显示
+                // - 否则（未快照的 DOT），仍可在 tick 时按角色暴击率判定一次
+                // 额外字段：
                 // - forceCrit: 强制暴击
-                // - noCrit: 禁止暴击
-                // - canCrit === false: 禁止暴击（兼容字段）
+                // - noCrit / canCrit===false: 禁止暴击
                 const dotCanCrit = !(d?.noCrit === true) && !(d?.canCrit === false);
                 let dotIsCrit = false;
                 if (dotCanCrit) {
-                    const critRate = (character?.stats?.critRate || 0) / 100;
-                    dotIsCrit = (d?.forceCrit === true) ? true : (Math.random() < critRate);
-                    if (dotIsCrit) {
-                        dotDamage *= (character?.stats?.critDamage || 2);
+                    if (d?.critBaked === true) {
+                        dotIsCrit = (d?.forceCrit === true) || (d?.isCrit === true);
+                    } else {
+                        const critRate = (character?.stats?.critRate || 0) / 100;
+                        dotIsCrit = (d?.forceCrit === true) ? true : (Math.random() < critRate);
+                        if (dotIsCrit) {
+                            dotDamage *= (character?.stats?.critDamage || 2);
+                        }
                     }
                 }
 

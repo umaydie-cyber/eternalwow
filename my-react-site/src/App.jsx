@@ -19381,24 +19381,34 @@ function stepBossCombat(state) {
 
                     // 复仇恶魔猎手：恶魔变形到期需要恢复最大生命值
                     if (b.type === 'metamorphosis' && (b.duration ?? 999) <= 0) {
-                        const currentMaxHp = Math.max(0, Math.floor(Number(p?.char?.stats?.maxHp) || 0));
-                        let bonus = Math.max(0, Math.floor(Number(b.maxHpBonus) || 0));
-                        // 兼容旧数据：若未存 flat bonus，则尝试通过 pct 反推
-                        if (bonus <= 0) {
-                            const pct = Math.max(0, Number(b.maxHpBonusPct) || 0);
-                            if (pct > 0 && currentMaxHp > 0) {
-                                const base = currentMaxHp / (1 + pct);
-                                bonus = Math.max(0, Math.floor(currentMaxHp - base));
-                            }
-                        }
-                        if (bonus > 0 && currentMaxHp > 0) {
-                            p.char.stats.maxHp = Math.max(1, currentMaxHp - bonus);
+                        // ✅ 优先用施放时记录的 baseMaxHp 还原（避免 buff 持续期内面板被重算导致回滚基准错位）
+                        const base = Math.max(0, Math.floor(Number(b.baseMaxHp) || 0));
+                        if (base > 0) {
+                            p.char.stats.maxHp = Math.max(1, base);
                             if (p.currentHp > p.char.stats.maxHp) {
                                 p.currentHp = p.char.stats.maxHp;
+                            }
+                        } else {
+                            // 兼容旧数据：按 flat bonus / pct 回滚
+                            const currentMaxHp = Math.max(0, Math.floor(Number(p?.char?.stats?.maxHp) || 0));
+                            let bonus = Math.max(0, Math.floor(Number(b.maxHpBonus) || 0));
+                            if (bonus <= 0) {
+                                const pct = Math.max(0, Number(b.maxHpBonusPct) || 0);
+                                if (pct > 0 && currentMaxHp > 0) {
+                                    const base2 = currentMaxHp / (1 + pct);
+                                    bonus = Math.max(0, Math.floor(currentMaxHp - base2));
+                                }
+                            }
+                            if (bonus > 0 && currentMaxHp > 0) {
+                                p.char.stats.maxHp = Math.max(1, currentMaxHp - bonus);
+                                if (p.currentHp > p.char.stats.maxHp) {
+                                    p.currentHp = p.char.stats.maxHp;
+                                }
                             }
                         }
                         addLog(`位置${i + 1} ${p.char.name} 的【${b.name || '恶魔变形'}】效果结束`);
                         return false;
+                    }
                     }
                     return (b.duration ?? 999) > 0;
                 });
@@ -21208,6 +21218,7 @@ function stepBossCombat(state) {
                     const baseMaxHp = Math.max(1, Math.floor(Number(p.char.stats.maxHp) || 0));
                     const pct = Math.max(0, Number(buffToApply.maxHpBonusPct) || 0);
                     const bonus = Math.max(0, Math.floor(baseMaxHp * pct));
+                    buffToApply.baseMaxHp = baseMaxHp;
                     if (bonus > 0) {
                         p.char.stats.maxHp = baseMaxHp + bonus;
                         buffToApply.maxHpBonus = bonus;
@@ -28638,13 +28649,20 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
                     // ===== PATCH: 恶魔变形到期回滚最大生命 =====
                     // BOSS 战里有回滚逻辑；地图战这里补齐，让行为一致
                     if (b.type === 'metamorphosis' && nextDuration <= 0) {
-                        const rollback = Math.max(0, Math.floor(Number(b.maxHpBonus) || 0));
-                        if (rollback > 0) {
-                           const curMax = Math.max(1, Math.floor(Number(character.stats.maxHp ?? character.stats.hp) || 1));
-                           const newMax = Math.max(1, curMax - rollback);
-                           character.stats.maxHp = newMax;
-                           // 当前血不超过上限
-                           charHp = Math.min(charHp, newMax);
+                        // ✅ 优先用施放时记录的 baseMaxHp 还原（避免 buff 持续期内面板被重算导致回滚基准错位）
+                        const base = Math.max(0, Math.floor(Number(b.baseMaxHp) || 0));
+                        if (base > 0) {
+                            character.stats.maxHp = Math.max(1, base);
+                            charHp = Math.min(charHp, character.stats.maxHp);
+                        } else {
+                            // 兼容旧数据：仍按 flat bonus 回滚
+                            const rollback = Math.max(0, Math.floor(Number(b.maxHpBonus) || 0));
+                            if (rollback > 0) {
+                                const curMax = Math.max(1, Math.floor(Number(character.stats.maxHp ?? character.stats.hp) || 1));
+                                const newMax = Math.max(1, curMax - rollback);
+                                character.stats.maxHp = newMax;
+                                charHp = Math.min(charHp, newMax);
+                            }
                         }
                     }
                     // ===== END PATCH =====
@@ -29777,6 +29795,7 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
                         const curMax = Math.max(1, Math.floor(Number(character.stats.maxHp ?? character.stats.hp) || 1));
                         const bonus = Math.floor(curMax * pct);
                         buffToApply.maxHpBonus = bonus;
+                        buffToApply.baseMaxHp = curMax;
                         character.stats.maxHp = curMax + bonus;
                         charHp = Math.min(charHp, character.stats.maxHp);
                     }

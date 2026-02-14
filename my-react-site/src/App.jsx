@@ -648,7 +648,7 @@ const TALENTS = {
         {
             tier: 20,
             options: [
-                { id: 'blazing_ruin', type: TALENT_TYPES.AURA, name: '炽烈灭亡', description: '烈火烙印BUFF持续期间，使你的所有伤害提高30%。' },
+                { id: 'blazing_ruin', type: TALENT_TYPES.AURA, name: '炽烈灭亡', description: '烈火烙印BUFF持续期间，使你的所有伤害提高40%。' },
                 { id: 'searing_blood', type: TALENT_TYPES.AURA, name: '炽燃之血', description: '你的所有伤害提高20%。' },
                 { id: 'fiery_execution', type: TALENT_TYPES.AURA, name: '火刑', description: '烈火烙印对所有敌人释放。' },
             ]
@@ -2440,9 +2440,9 @@ const SKILLS = {
                 duration: 3,
             };
 
-            // 20级：炽烈灭亡 - 烈火烙印持续期间所有伤害 +30%
+            // 20级：炽烈灭亡 - 烈火烙印持续期间所有伤害 +40%
             if (char?.classId === 'vengeance_demon_hunter' && char?.talents?.[20] === 'blazing_ruin') {
-                buff.damageDealtMult = 1.3;
+                buff.damageDealtMult = 1.4;
             }
 
             return {

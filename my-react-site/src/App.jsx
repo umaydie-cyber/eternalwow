@@ -1664,7 +1664,7 @@ const SKILLS = {
         icon: '❄️',
         iconUrl : 'icons/wow/vanilla/spells/Spell_Frost_FrostWard.png',
         type: 'passive',
-        description: '被动：冰枪术的基础技能倍率提升(精通/2)%。该数值直接加在基础120%上。'
+        description: '被动：冰枪术的基础技能倍率提升(精通/1.2)%。该数值直接加在基础120%上。'
     },
     ice_spike: {
         id: 'ice_spike',
@@ -1741,7 +1741,7 @@ const SKILLS = {
         description: '造成1.2倍法术强度的冰霜伤害，爆击伤害额外增加200%',
         calculate: (char, combatContext) => {
             const mastery = Number(char.stats.mastery) || 0;
-            const baseMult = 1.2 + (mastery / 2) / 100;
+            const baseMult = 1.2 + (mastery / 1.2) / 100;
             let damage = char.stats.spellPower * baseMult;
 
             // 冰冷血脉buff：冰霜伤害提高50%

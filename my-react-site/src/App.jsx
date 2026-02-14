@@ -2267,12 +2267,12 @@ const SKILLS = {
         icon: '💠',
         iconUrl: 'icons/wow/vanilla/abilities/posuilinghun.png',
         type: 'passive',
-        description: '被动：超过5颗星后再获得的星会被吸收。每颗星恢复你在前4回合内受到的所有伤害的8%（不低于最大生命值的1%）。5星后获得星将直接消耗并触发破碎灵魂。',
+        description: '被动：超过5颗星后再获得的星会被吸收。每颗星恢复你在前4回合内受到的所有伤害的20%（不低于最大生命值的3%）。5星后获得星将直接消耗并触发破碎灵魂。',
         params: {
             // 最小治疗：最大生命值 * minHealPctOfMaxHp
-            minHealPctOfMaxHp: 0.01,
+            minHealPctOfMaxHp: 0.03,
             // 按近期承伤比例治疗：sum(last recentDamageRounds) * recentDamageHealPct
-            recentDamageHealPct: 0.08,
+            recentDamageHealPct: 0.2,
             // 统计前 N 回合承伤
             recentDamageRounds: 4
         }

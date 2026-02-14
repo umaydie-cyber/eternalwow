@@ -22066,7 +22066,7 @@ function stepBossCombat(state) {
                         0
                     );
                     const hasteTotal = (Number(sourcePlayer?.char?.stats?.haste) || 0) + hasteBonusFromBuffs;
-                    dotDamage *= (1 + hasteTotal * 0.02);
+                    dotDamage *= (1 + hasteTotal * 0.015);
             }
 
             // 计算防御（例如：烈火印记 DOT）
@@ -22186,7 +22186,7 @@ function stepBossCombat(state) {
                             0
                         );
                         const hasteTotal = (Number(sourcePlayer?.char?.stats?.haste) || 0) + hasteBonusFromBuffs;
-                        dotDamage *= (1 + hasteTotal * 0.02);
+                        dotDamage *= (1 + hasteTotal * 0.015);
                     }
 
                     // 计算防御（例如：烈火印记 DOT）
@@ -30867,7 +30867,7 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
             }
 
             // 急速：作为 DOT 类回合伤害，同样享受“急速*2%”的伤害加成
-            sfDamage *= (1 + ((((character?.stats?.haste) || 0) + hasteFromBuffsForDot) * 0.02));
+            sfDamage *= (1 + ((((character?.stats?.haste) || 0) + hasteFromBuffsForDot) * 0.015));
 
             // ✅ 装备特效：地图屠戮（地图战斗伤害加成）
             sfDamage *= mapDamageDealtMult;
@@ -30932,7 +30932,7 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
                 }
 
                 // 急速：DOT 伤害提高（急速 * 2%）
-                dotDamage *= (1 + ((((character?.stats?.haste) || 0) + hasteFromBuffsForDot) * 0.02));
+                dotDamage *= (1 + ((((character?.stats?.haste) || 0) + hasteFromBuffsForDot) * 0.015));
 
                 // ✅ 装备特效：地图屠戮（地图战斗伤害加成）
                 dotDamage *= mapDamageDealtMult;

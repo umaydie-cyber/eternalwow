@@ -19409,7 +19409,6 @@ function stepBossCombat(state) {
                         addLog(`位置${i + 1} ${p.char.name} 的【${b.name || '恶魔变形'}】效果结束`);
                         return false;
                     }
-                    }
                     return (b.duration ?? 999) > 0;
                 });
         }

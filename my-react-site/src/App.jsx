@@ -759,7 +759,7 @@ const TALENTS = {
                 {
                     id: 'shadowfiend',
                     name: '暗影魔',
-                    description: '每回合造成0.6倍法术强度的暗影伤害',
+                    description: '每回合造成0.4倍法术强度的暗影伤害',
                     type: 'dot'
                 }
             ]
@@ -828,7 +828,7 @@ const TALENTS = {
                 {
                     id: 'mindbender',
                     name: '催心魔',
-                    description: '若已点30级【暗影魔】，则暗影魔造成的伤害系数提升至1.2倍法术强度',
+                    description: '若已点30级【暗影魔】，则暗影魔造成的伤害系数提升至0.8倍法术强度',
                     type: 'aura'
                 }
             ]
@@ -2414,10 +2414,10 @@ const SKILLS = {
         iconUrl: 'icons/wow/vanilla/abilities/liehuolaoyin.png',
         type: 'dot',
         limit: 1,
-        description: '对目标施加烈火印记：每回合造成1倍攻击强度的火焰伤害（DOT火焰伤害计算防御）。同时获得40%减伤，持续3回合。',
+        description: '对目标施加烈火印记：每回合造成0.25倍攻击强度的火焰伤害（DOT火焰伤害计算防御）。同时获得40%减伤，持续3回合。',
         calculate: (char) => {
-            // 40级：葬身火海 - DOT 伤害提高为 4 倍攻击强度
-            const dotMult = (char?.classId === 'vengeance_demon_hunter' && char?.talents?.[40] === 'sea_of_fire') ? 4.0 : 1.0;
+            // 40级：葬身火海 - DOT 伤害提高为 0.3 倍攻击强度
+            const dotMult = (char?.classId === 'vengeance_demon_hunter' && char?.talents?.[40] === 'sea_of_fire') ? 0.3 : 0.25;
             let dpt = (char.stats.attack || 0) * dotMult;
 
             let critRate = Number(char.stats.critRate) || 0;
@@ -2563,9 +2563,9 @@ const SKILLS = {
         iconUrl: 'icons/wow/vanilla/abilities/lieyanzhoufu.png',
         type: 'aoe_dot',
         limit: 1,
-        description: '对所有敌人施加烈焰咒符（火焰DOT），每回合造成0.6倍攻击强度的火焰伤害，持续3回合。',
+        description: '对所有敌人施加烈焰咒符（火焰DOT），每回合造成0.15倍攻击强度的火焰伤害，持续3回合。',
         calculate: (char) => {
-            let dpt = (char.stats.attack || 0) * 0.6;
+            let dpt = (char.stats.attack || 0) * 0.15;
 
             let critRate = Number(char.stats.critRate) || 0;
             let critBreakthroughBonus = 1;
@@ -2601,9 +2601,9 @@ const SKILLS = {
         iconUrl: 'icons/wow/vanilla/abilities/xianjiguanghuan.png',
         type: 'aoe_dot',
         limit: 1,
-        description: '每回合对所有敌人造成0.4倍攻击强度的火焰伤害（视为DOT），护甲提升20%，持续4回合。',
+        description: '每回合对所有敌人造成0.1倍攻击强度的火焰伤害（视为DOT），护甲提升20%，持续4回合。',
         calculate: (char, combatContext) => {
-            let dpt = (char.stats.attack || 0) * 0.4;
+            let dpt = (char.stats.attack || 0) * 0.1;
 
             let critRate = Number(char.stats.critRate) || 0;
             let critBreakthroughBonus = 1;
@@ -30848,9 +30848,9 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
         // 效果：每回合造成 0.3 倍法术强度的暗影伤害
         // 说明：作为被动“DOT类回合伤害”，在 DOT 结算阶段触发一次。
         if (character?.classId === 'discipline_priest' && character?.talents?.[30] === 'shadowfiend') {
-            // 基础：0.3 *（当前面板法强 + 本场战斗叠加法强）
-            // 默认 0.6 * 法强；60级天赋【催心魔】= 1.2 * 法强（需要已点30级暗影魔才会进入本段）
-            const sfCoeff = (character?.talents?.[60] === 'mindbender') ? 1.2 : 0.6;
+            // 基础：0.4 *（当前面板法强 + 本场战斗叠加法强）
+            // 默认 0.4 * 法强；60级天赋【催心魔】= 0.8 * 法强（需要已点30级暗影魔才会进入本段）
+            const sfCoeff = (character?.talents?.[60] === 'mindbender') ? 0.8 : 0.4;
             let sfDamage = ((character?.stats?.spellPower || 0) + (talentBuffs?.spellPowerFlat || 0)) * sfCoeff;
 
             // 10级天赋：暗影增幅（暗影伤害 +20%）

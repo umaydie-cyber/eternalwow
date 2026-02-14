@@ -28786,7 +28786,7 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
         if (totalHeal > 0 || totalAbsorbed > 0) {
             let text = `【破碎灵魂】${character.name} 吸收灵魂碎片，恢复 ${totalHeal} 点生命（${count}星）`;
             if (totalAbsorbed > 0) text += `（治疗吸收 吸收 ${totalAbsorbed}）`;
-            logs.push({ round, kind: 'heal', actor: character.name, text });
+            logs.push({ round, type: 'heal', actor: character.name,value: totalHeal,skillName:`破碎灵魂`, text });
         }
     };
 

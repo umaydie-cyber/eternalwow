@@ -1124,6 +1124,31 @@ const TALENTS = {
 
 };
 
+function applyFrostCritBreakthrough({ critRate, critDamage, blizzardActive, hasTalent }) {
+  // 返回：修正后的暴击率、暴击伤害倍率
+  let finalCritRate = critRate;
+  let finalCritDamage = critDamage;
+
+  if (!hasTalent) return { finalCritRate, finalCritDamage };
+
+  if (blizzardActive) {
+    // ✅ 冰风暴期间：保持暴击（由技能自身/规则决定是否必爆），并把“全部暴击率”转成暴伤
+    // 例：critRate=60 => 暴伤倍率 +0.60
+    if(critRate > 100){finalCritDamage += (critRate-100) / 100;}
+    // 这里不要把 finalCritRate 置 0
+  } else {
+    // ✅ 非冰风暴期间：只把“超过100%的溢出暴击率”转成暴伤
+    if (critRate > 100) {
+      const excess = critRate - 100;
+      finalCritDamage += excess / 100;
+      finalCritRate = 100;
+    }
+  }
+
+  return { finalCritRate, finalCritDamage };
+}
+
+
 // ==================== 盗贼：连击点（星）上限 ====================
 // 默认上限为 5；狂徒盗贼 10级天赋【狡诈计谋】可提升至 7；40级天赋【深邃诡计】额外 +1。
 const BASE_MAX_COMBO_POINTS = 5;
@@ -1682,30 +1707,20 @@ const SKILLS = {
                 critRate += 10;
             }
 
-            // ===== 50级天赋：寒冰突破 =====
-            let critBreakthroughBonus = 1;
-            let forcedCritConversion = false;
+            let critDamage = char.stats.critDamage;
 
-            if (char.talents?.[50] === 'frost_crit_breakthrough') {
-                if (combatContext?.blizzardActive) {
-                    // 冰风暴期间：所有暴击率转化为伤害加成
-                    critBreakthroughBonus = 1 + ((critRate-100) / 100);
-                    forcedCritConversion = true;
-                    critRate = 100;
-                } else if (critRate > 100) {
-                    // 非冰风暴期间：超过100%的暴击转化为伤害
-                    const excessCrit = critRate - 100;
-                    critBreakthroughBonus = 1 + (excessCrit / 100);
-                    critRate = 100;
-                }
-            }
+            // ✅ 寒冰突破：转成暴击伤害（不再禁用暴击）
+            ({ finalCritRate: critRate, finalCritDamage: critDamage } =
+              applyFrostCritBreakthrough({
+                critRate,
+                critDamage,
+                blizzardActive: !!combatContext?.blizzardActive,
+                hasTalent: char.talents?.[50] === 'frost_crit_breakthrough'
+              })
+            );
 
-            damage *= critBreakthroughBonus;
-
-            const isCrit = !forcedCritConversion && Math.random() < critRate / 100;
-            if (isCrit) {
-                damage *= char.stats.critDamage;
-            }
+            const isCrit = Math.random() < critRate / 100;
+            if (isCrit) damage *= critDamage;
 
             return {
                 damage: Math.floor(damage),
@@ -1766,39 +1781,26 @@ const SKILLS = {
                 critRate += 10;
             }
 
-            // ===== 50级天赋：寒冰突破 =====
-            let critBreakthroughBonus = 1;
-            let forcedCritConversion = false; // 冰风暴期间强制转换所有暴击
+            let critDamage = char.stats.critDamage;
 
-            if (char.talents?.[50] === 'frost_crit_breakthrough') {
-                // 冰风暴期间：所有暴击率转化为伤害加成，不再暴击
-                if (combatContext?.blizzardActive) {
-                    critBreakthroughBonus = 1 + (critRate / 100);
-                    forcedCritConversion = true;
-                    critRate = 0; // 不再进行暴击判定
-                } else {
-                    // 非冰风暴期间：超过100%的暴击转化为伤害
-                    if (critRate > 100) {
-                        const excessCrit = critRate - 100;
-                        critBreakthroughBonus = 1 + (excessCrit / 100);
-                        critRate = 100;
-                    }
-                }
-            }
+            // ✅ 寒冰突破：转成暴伤，不禁用暴击
+            ({ finalCritRate: critRate, finalCritDamage: critDamage } =
+              applyFrostCritBreakthrough({
+                critRate,
+                critDamage,
+                blizzardActive: !!combatContext?.blizzardActive,
+                hasTalent: char.talents?.[50] === 'frost_crit_breakthrough'
+              })
+            );
 
-            damage *= critBreakthroughBonus;
+            // 冰风暴DOT期间必定爆击（✅不再被寒冰突破取消）
+            const forceCrit = !!combatContext?.blizzardActive;
 
-            // 冰风暴DOT期间必定爆击（除非被寒冰突破转换）
-            let forceCrit = false;
-            if (combatContext?.blizzardActive && !forcedCritConversion) {
-                forceCrit = true;
-            }
-
-            const isCrit = !forcedCritConversion && (forceCrit || Math.random() < critRate / 100);
+            const isCrit = forceCrit || Math.random() < critRate / 100;
             if (isCrit) {
-                // 基础暴击伤害 + 额外200%（或300%如果有极寒精通）
-                const extraCritDamage = char.talents?.[50] === 'glacial_mastery' ? 3 : 2;
-                damage *= (char.stats.critDamage + extraCritDamage);
+              // 你原本的冰枪术额外暴伤逻辑保留
+              const extraCritDamage = char.talents?.[50] === 'glacial_mastery' ? 3 : 2;
+              damage *= (critDamage + extraCritDamage);
             }
 
             return {
@@ -1845,30 +1847,19 @@ const SKILLS = {
                 critRate += 10;
             }
 
-            // ===== 50级天赋：寒冰突破 =====
-            let critBreakthroughBonus = 1;
-            let forcedCritConversion = false;
+            let critDamage = char.stats.critDamage;
 
-            if (char.talents?.[50] === 'frost_crit_breakthrough') {
-                if (combatContext?.blizzardActive) {
-                    // 冰风暴期间：所有暴击率转化为伤害加成
-                    critBreakthroughBonus = 1 + (critRate / 100);
-                    forcedCritConversion = true;
-                    critRate = 0;
-                } else if (critRate > 100) {
-                    // 非冰风暴期间：超过100%的暴击转化为伤害
-                    const excessCrit = critRate - 100;
-                    critBreakthroughBonus = 1 + (excessCrit / 100);
-                    critRate = 100;
-                }
-            }
+            ({ finalCritRate: critRate, finalCritDamage: critDamage } =
+              applyFrostCritBreakthrough({
+                critRate,
+                critDamage,
+                blizzardActive: !!combatContext?.blizzardActive,
+                hasTalent: char.talents?.[50] === 'frost_crit_breakthrough'
+              })
+            );
 
-            damagePerTurn *= critBreakthroughBonus;
-
-            const isCrit = !forcedCritConversion && Math.random() < critRate / 100;
-            if (isCrit) {
-                damagePerTurn *= char.stats.critDamage;
-            }
+            const isCrit = Math.random() < critRate / 100;
+            if (isCrit) damagePerTurn *= critDamage;
 
             return {
                 dot: {

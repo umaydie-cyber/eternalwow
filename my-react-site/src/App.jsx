@@ -2641,10 +2641,10 @@ const SKILLS = {
                     name: '献祭光环',
                     school: 'fire',
                     damagePerTurn: dpt,
-                    duration: 4,
-                    scaleWithHaste: true,
                     isCrit,
                     critBaked: true,
+                    duration: 4,
+                    scaleWithHaste: true,
                 },
                 buff,
             };

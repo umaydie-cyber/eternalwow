@@ -1876,6 +1876,8 @@ const SKILLS = {
                     name: '冰风暴',
                     damagePerTurn: Math.floor(damagePerTurn),
                     duration: duration,
+                    isCrit,
+                    critBaked: true,
                     enableIceLanceCrit: true // 标记冰枪术必定爆击
                 },
                 isCrit,

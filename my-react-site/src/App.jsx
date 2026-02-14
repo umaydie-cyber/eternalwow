@@ -2000,9 +2000,9 @@ const SKILLS = {
         iconUrl: 'icons/wow/vanilla/spells/Spell_Ice_Lament.png',
         type: 'shield',
         limit: 1,
-        description: '为自己施加一个护盾，吸收2.5倍法术强度的伤害，持续4回合。护盾存在时受击有25%概率获得1层寒冰指。',
+        description: '为自己施加一个护盾，吸收3倍法术强度的伤害，持续4回合。护盾存在时受击有40%概率获得1层寒冰指。',
         calculate: (char, combatContext) => {
-            let shieldAmount = char.stats.spellPower * 2.5;
+            let shieldAmount = char.stats.spellPower * 3;
 
             // 冰冷血脉增强护盾
             if (combatContext?.icyVeinsBuff) {
@@ -2024,7 +2024,7 @@ const SKILLS = {
                     // 受击时触发效果
                     onHitEffect: {
                         type: 'generate_finger',
-                        chance: 0.25
+                        chance: 0.4
                     }
                 }
             };

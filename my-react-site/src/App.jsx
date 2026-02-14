@@ -23982,8 +23982,8 @@ function stepBossCombat(state) {
                 const target = combat.playerStates[tIdx];
                 const raw = Math.floor((boss.attack || 0) * (boss.soulBurnMultiplier || 8));
 
-                const fire = calcMagicDamage(target, raw, null, { type: 'minion', index: i });
-                const shieldResult = applyShieldAbsorb(target, fire.damage, logs, currentRound, { type: 'minion', index: i });
+                const fire = calcMagicDamage(target, raw);
+                const shieldResult = applyShieldAbsorb(target, fire.damage, logs, currentRound);
                 target.currentHp -= shieldResult.finalDamage;
 
                 const resPct = Math.round(fire.resistReduction * 100);

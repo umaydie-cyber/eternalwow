@@ -1727,7 +1727,7 @@ const SKILLS = {
                 isCrit,
                 school: 'frost',
                 triggerFrostboltTalents: true,
-                critConverted: forcedCritConversion
+                critConverted: false
             };
         }
     },
@@ -1808,7 +1808,7 @@ const SKILLS = {
                 isCrit,
                 school: 'frost',
                 consumeFingersOfFrost: consumeFinger,
-                critConverted: forcedCritConversion // 标记暴击被转换
+                critConverted: false // 标记暴击被转换
             };
         }
     },
@@ -1872,7 +1872,7 @@ const SKILLS = {
                     enableIceLanceCrit: true // 标记冰枪术必定爆击
                 },
                 isCrit,
-                critConverted: forcedCritConversion
+                critConverted: false,
             };
         }
     },
@@ -1999,7 +1999,7 @@ const SKILLS = {
                 isCrit,
                 school: 'frost',
                 generateFingerOnHit: char.talents?.[40] === 'glacial_spike',
-                critConverted: forcedCritConversion
+                critConverted: false
             };
         }
     },ice_barrier: {

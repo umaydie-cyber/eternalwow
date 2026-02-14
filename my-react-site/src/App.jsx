@@ -642,7 +642,7 @@ const TALENTS = {
             options: [
                 { id: 'illidari_will', type: TALENT_TYPES.AURA, name: '伊利达雷的意志', description: '增加25%血量。' },
                 { id: 'soul_fragment_recovery', type: TALENT_TYPES.AURA, name: '碎魂恢复', description: '破碎灵魂回复的血量增加50%。' },
-                { id: 'tooth_for_tooth', type: TALENT_TYPES.AURA, name: '以牙还牙', description: '恶魔尖刺持续期间，受到任何伤害都会对攻击者造成0.5倍攻击强度的真实伤害，并为你回复等量生命。' },
+                { id: 'tooth_for_tooth', type: TALENT_TYPES.AURA, name: '以牙还牙', description: '恶魔尖刺持续期间，受到任何伤害都会对攻击者造成0.3倍攻击强度的真实伤害，并为你回复等量生命。' },
             ]
         },
         {
@@ -19382,7 +19382,7 @@ function stepBossCombat(state) {
             const talentFlatAtk = Number(playerState?.talentBuffs?.attackFlat) || 0;
             const buffAtk = (playerState?.buffs || []).reduce((s, b) => s + (Number(b?.attackBonus) || 0), 0);
             const currentAtk = baseAtk + talentFlatAtk + buffAtk;
-            const retaliate = Math.max(1, Math.floor(currentAtk * 0.5));
+            const retaliate = Math.max(1, Math.floor(currentAtk * 0.3));
 
             let targetName = boss?.name || 'Boss';
             let dmgDone = retaliate;
@@ -31273,7 +31273,7 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
             const currentAttack = (Number(character?.stats?.attack) || 0)
                 + (Number(talentBuffs?.attackFlat) || 0)
                 + buffs.reduce((sum, b) => sum + (Number(b?.attackBonus) || 0), 0);
-            const retaliate = Math.floor(currentAttack * 0.5);
+            const retaliate = Math.floor(currentAttack * 0.3);
 
             if (retaliate > 0) {
                 enemyHp -= retaliate;

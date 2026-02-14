@@ -2597,7 +2597,7 @@ const SKILLS = {
         iconUrl: 'icons/wow/vanilla/abilities/xianjiguanghuan.png',
         type: 'aoe_dot',
         limit: 1,
-        description: '每回合对所有敌人造成0.4倍攻击强度的火焰伤害（视为DOT），护甲提升20%，持续3回合。',
+        description: '每回合对所有敌人造成0.4倍攻击强度的火焰伤害（视为DOT），护甲提升20%，持续4回合。',
         calculate: (char, combatContext) => {
             let dpt = (char.stats.attack || 0) * 0.4;
 
@@ -2623,7 +2623,7 @@ const SKILLS = {
                 type: 'immolation_aura_armor',
                 name: '献祭光环',
                 armorMult,
-                duration: 3,
+                duration: 4,
             };
 
             // 70级：痛苦光环 - 献祭光环期间暴击 +30
@@ -2637,7 +2637,7 @@ const SKILLS = {
                     name: '献祭光环',
                     school: 'fire',
                     damagePerTurn: dpt,
-                    duration: 3,
+                    duration: 4,
                     scaleWithHaste: true,
                 },
                 buff,

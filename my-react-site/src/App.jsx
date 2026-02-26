@@ -28698,7 +28698,7 @@ function stepBossCombat(state) {
 
 // ==================== INITIAL STATE ====================
 const initialState = {
-    currentMenu: 'map',
+    currentMenu: 'character',
     frame: 0,      // 总帧
     lifeFrame: 0,  // 本世帧
     // 当前时间段（用于暗夜精灵【精灵精魄】等时间段被动；6:00-18:00=day）
@@ -36857,6 +36857,17 @@ const MapPage = ({ state, dispatch }) => {
     useEffect(() => {
         if (!isMobile) setSelectedCharId(null);
     }, [isMobile]);
+
+
+// ==================== TAB 解锁（必须先创建角色） ====================
+const hasCharacter = (state.characters || []).length > 0;
+
+// 未创建角色时，强制停留在【角色】页（防止导入/异常状态跳到其他页）
+useEffect(() => {
+    if (!hasCharacter && state.currentMenu !== 'character') {
+        dispatch({ type: 'SET_MENU', payload: 'character' });
+    }
+}, [hasCharacter, state.currentMenu]);
 
     const selectedChar = selectedCharId
         ? state.characters.find(c => c.id === selectedCharId)
@@ -48469,6 +48480,7 @@ useEffect(() => {
     ];
 
     const renderPage = () => {
+        if (!hasCharacter) return <CharacterPage state={state} dispatch={dispatch} />;
         switch (state.currentMenu) {
             case 'map': return <MapPage state={state} dispatch={dispatch} />;
             case 'character': return <CharacterPage state={state} dispatch={dispatch} />;
@@ -48767,31 +48779,41 @@ useEffect(() => {
                     border: '1px solid #3a3a3a',
                     flexWrap: 'wrap',
                 }}>
-                    {menus.map(menu => (
-                        <button
-                            key={menu.id}
-                            onClick={() => dispatch({ type: 'SET_MENU', payload: menu.id })}
-                            style={{
-                                flex: '1 0 90px',
-                                padding: '12px 16px',
-                                background: state.currentMenu === menu.id
-                                    ? 'linear-gradient(180deg, rgba(201,162,39,0.3), rgba(139,115,25,0.2))'
-                                    : 'transparent',
-                                border: state.currentMenu === menu.id
-                                    ? '1px solid #c9a227'
-                                    : '1px solid transparent',
-                                borderRadius: 6,
-                                color: state.currentMenu === menu.id ? '#ffd700' : '#888',
-                                cursor: 'pointer',
-                                fontFamily: 'inherit',
-                                fontSize: 13,
-                                transition: 'all 0.2s',
-                                textShadow: state.currentMenu === menu.id ? '0 0 10px rgba(255,215,0,0.5)' : 'none',
-                            }}
-                        >
-                            {menu.icon} {menu.name}
-                        </button>
-                    ))}
+                    {menus.map(menu => {
+                        const locked = !hasCharacter && menu.id !== 'character';
+                        const active = state.currentMenu === menu.id;
+                        return (
+                            <button
+                                key={menu.id}
+                                onClick={() => {
+                                    if (locked) return;
+                                    dispatch({ type: 'SET_MENU', payload: menu.id });
+                                }}
+                                title={locked ? '请先在【角色】页创建角色' : undefined}
+                                aria-disabled={locked}
+                                style={{
+                                    flex: '1 0 90px',
+                                    padding: '12px 16px',
+                                    background: active
+                                        ? 'linear-gradient(180deg, rgba(201,162,39,0.3), rgba(139,115,25,0.2))'
+                                        : 'transparent',
+                                    border: active
+                                        ? '1px solid #c9a227'
+                                        : '1px solid transparent',
+                                    borderRadius: 6,
+                                    color: active ? '#ffd700' : (locked ? '#555' : '#888'),
+                                    cursor: locked ? 'not-allowed' : 'pointer',
+                                    fontFamily: 'inherit',
+                                    fontSize: 13,
+                                    transition: 'all 0.2s',
+                                    textShadow: active ? '0 0 10px rgba(255,215,0,0.5)' : 'none',
+                                    opacity: locked ? 0.55 : 1,
+                                }}
+                            >
+                                {menu.icon} {menu.name}
+                            </button>
+                        );
+                    })}
                 </div>
             )}
 
@@ -48819,11 +48841,17 @@ useEffect(() => {
                         }}
                     >
                         {menus.map(menu => {
+                            const locked = !hasCharacter && menu.id !== 'character';
                             const active = state.currentMenu === menu.id;
                             return (
                                 <button
                                     key={menu.id}
-                                    onClick={() => dispatch({ type: 'SET_MENU', payload: menu.id })}
+                                    onClick={() => {
+                                        if (locked) return;
+                                        dispatch({ type: 'SET_MENU', payload: menu.id });
+                                    }}
+                                    title={locked ? '请先在【角色】页创建角色' : undefined}
+                                    aria-disabled={locked}
                                     style={{
                                         flex: '0 0 auto',
                                         minWidth: 72,
@@ -48835,11 +48863,12 @@ useEffect(() => {
                                             ? '1px solid rgba(201,162,39,0.9)'
                                             : '1px solid rgba(255,255,255,0.08)',
                                         borderRadius: 10,
-                                        color: active ? '#ffd700' : '#aaa',
-                                        cursor: 'pointer',
+                                        color: active ? '#ffd700' : (locked ? '#555' : '#aaa'),
+                                        cursor: locked ? 'not-allowed' : 'pointer',
                                         fontFamily: 'inherit',
                                         textAlign: 'center',
                                         lineHeight: 1.1,
+                                        opacity: locked ? 0.6 : 1,
                                     }}
                                 >
                                     <div style={{ fontSize: 18 }}>{menu.icon}</div>

@@ -36859,16 +36859,6 @@ const MapPage = ({ state, dispatch }) => {
     }, [isMobile]);
 
 
-// ==================== TAB 解锁（必须先创建角色） ====================
-const hasCharacter = (state.characters || []).length > 0;
-
-// 未创建角色时，强制停留在【角色】页（防止导入/异常状态跳到其他页）
-useEffect(() => {
-    if (!hasCharacter && state.currentMenu !== 'character') {
-        dispatch({ type: 'SET_MENU', payload: 'character' });
-    }
-}, [hasCharacter, state.currentMenu]);
-
     const selectedChar = selectedCharId
         ? state.characters.find(c => c.id === selectedCharId)
         : null;
@@ -48027,6 +48017,17 @@ const QuestObjectiveIndicator = ({ zone, requirement, progress }) => {
 // ==================== MAIN APP ====================
 export default function WoWIdleGame() {
 const [state, dispatch] = useReducer(gameReducer, initialState);
+
+// ==================== TAB 解锁（必须先创建角色） ====================
+// 未创建角色时：只能停留在【角色】页，其它 TAB 仅显示但不可用
+const hasCharacter = (state.characters || []).length > 0;
+
+// 未创建角色时，强制停留在【角色】页（防止导入/异常状态跳到其他页）
+useEffect(() => {
+    if (!hasCharacter && state.currentMenu !== 'character') {
+        dispatch({ type: 'SET_MENU', payload: 'character' });
+    }
+}, [hasCharacter, state.currentMenu]);
 
 // ==================== H5 / MOBILE UI ====================
 const isMobile = useIsMobile();

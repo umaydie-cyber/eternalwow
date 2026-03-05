@@ -17470,6 +17470,9 @@ function formatItemStatValue(stat, valueRaw) {
 
 
 function mergeEquipments(eqA, eqB) {
+    // 防御性校验：异常拖拽/状态竞争下可能传入空对象，避免访问 id 时崩溃
+    if (!eqA || !eqB) return null;
+
     // ==================== 特殊配方：逐风者左右颅合成风剑 ====================
     // 规则：EQ_176（右） + EQ_181（左） => EQ_182（雷霆之怒，逐风者的祝福之剑）
     const isThunderfuryRecipe = (a, b) => {
@@ -17516,7 +17519,7 @@ if (isAtieshForgeRecipe(eqA, eqB)) {
     const atiesh = createEquipmentInstance('EQ_383');
     return atiesh || null;
 }
-if (eqA.id !== eqB.id) return null;
+if (eqA?.id !== eqB?.id) return null;
 
     const getLevel = (eq) => (eq?.currentLevel ?? eq?.level ?? 0);
 

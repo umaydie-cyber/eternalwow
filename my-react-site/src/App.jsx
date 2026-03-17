@@ -29072,6 +29072,7 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
     let damageTakenHistory = Array.isArray(combatState.damageTakenHistory)
         ? [...combatState.damageTakenHistory]
         : [];
+    let damageTakenThisRound = Math.max(0, Math.floor(Number(combatState.damageTakenThisRound) || 0));
 
     // 天赋叠层（仅本场战斗有效）
     let talentBuffs = combatState.talentBuffs
@@ -29212,8 +29213,8 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
         const maxHp = Math.max(0, Math.floor(Number(character.stats.maxHp ?? character.stats.hp) || 0));
         const skillParams = (SKILLS?.shattered_soul?.params) || {};
         const recentRounds = Math.max(0, Math.floor(Number(skillParams.recentDamageRounds) || 4));
-        const healPct = Math.max(0, Number(skillParams.recentDamageHealPct) || 0.08);
-        const minPct = Math.max(0, Number(skillParams.minHealPctOfMaxHp) || 0.01);
+        const healPct = Math.max(0, Number(skillParams.recentDamageHealPct) || 0.2);
+        const minPct = Math.max(0, Number(skillParams.minHealPctOfMaxHp) || 0.03);
 
         const sumRecent = (Array.isArray(damageTakenHistory) ? damageTakenHistory : [])
             .slice(0, recentRounds)
@@ -29221,7 +29222,13 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
 
         const byDamage = Math.floor(sumRecent * healPct);
         const minHeal = Math.floor(maxHp * minPct);
-        return Math.max(byDamage, minHeal);
+        let heal = Math.max(byDamage, minHeal);
+
+        if (character?.classId === 'vengeance_demon_hunter' && character?.talents?.[10] === 'soul_fragment_recovery') {
+            heal = Math.floor(heal * 1.5);
+        }
+
+        return heal;
     };
 
     const triggerShatteredSoul = (stars, reasonText = '破碎灵魂') => {
@@ -29232,7 +29239,16 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
         const per = getShatteredSoulHealPerStar();
         if (per <= 0) return;
 
-        // 治疗吸收：从角色debuff读取剩余值
+        character.debuffs = character.debuffs || {};
+
+        let healingMult = 1;
+        if (character.debuffs?.mortalStrike) {
+            const ms = character.debuffs.mortalStrike;
+            if (ms.duration === undefined || ms.duration > 0) {
+                healingMult = Math.max(0, 1 - (ms.healingReduction || 0));
+            }
+        }
+
         let healAbsorb = Math.max(
           0,
           Math.floor(Number(character?.debuffs?.healAbsorb?.remaining) || 0)
@@ -29242,20 +29258,19 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
         const maxHp = Math.max(0, Math.floor(Number(character.stats.maxHp ?? character.stats.hp) || 0));
 
         for (let k = 0; k < count; k++) {
-            let healAmount = per;
+            let healAmount = Math.floor(per * healingMult);
+            let effectiveHeal = Math.min(healAmount, Math.max(0, maxHp - charHp));
 
-            // 治疗吸收
             if (healAbsorb > 0) {
-                const absorbed = Math.min(healAbsorb, healAmount);
+                const absorbed = Math.min(healAbsorb, effectiveHeal);
                 healAbsorb -= absorbed;
-                healAmount -= absorbed;
+                effectiveHeal -= absorbed;
                 totalAbsorbed += absorbed;
             }
 
-            if (healAmount > 0) {
-                const actual = Math.min(healAmount, maxHp - charHp);
-                charHp += actual;
-                totalHeal += actual;
+            if (effectiveHeal > 0) {
+                charHp += effectiveHeal;
+                totalHeal += effectiveHeal;
             }
         }
 
@@ -29273,8 +29288,9 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
         }
 
         if (totalHeal > 0 || totalAbsorbed > 0) {
-            let text = `【破碎灵魂】${character.name} 吸收灵魂碎片，恢复 ${totalHeal} 点生命（${count}星）`;
+            let text = `【${reasonText}】${character.name} 吸收灵魂碎片（${count}星）恢复 ${totalHeal} 点生命`;
             if (totalAbsorbed > 0) text += `（治疗吸收 吸收 ${totalAbsorbed}）`;
+            if (healingMult < 1) text += `（受到致死打击减疗${Math.round((1 - healingMult) * 100)}%）`;
             logs.push({ round, type: 'heal', actor: character.name,value: totalHeal,action:`破碎灵魂`, text });
         }
     };
@@ -29285,6 +29301,7 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
         if (charHp <= 0 || enemyHp <= 0 || round >= maxRounds) break;
 
         round++;
+        damageTakenThisRound = 0;
 
         // ===== 50级天赋：幻想曲（每回合+1层，影响下一个神圣新星） =====
         if (character?.classId === 'discipline_priest' && character?.talents?.[50] === 'fantasia') {
@@ -30839,7 +30856,10 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
 
         skillIndex++;
 
-        if (enemyHp <= 0) break;
+        if (enemyHp <= 0) {
+            damageTakenHistory = [damageTakenThisRound, ...damageTakenHistory].slice(0, 4);
+            break;
+        }
 
         // ===== DOT 结算（保持原有逻辑，重伤DOT会自动参与）=====
         const hasteFromBuffsForDot = Array.isArray(buffs)
@@ -31293,6 +31313,9 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
         }
 
         charHp -= finalDamage;
+        if (finalDamage > 0) {
+            damageTakenThisRound += finalDamage;
+        }
         const blockText = blockedAmount > 0 ? `，格挡 ${blockedAmount}` : '';
         logs.push({
             round,
@@ -31377,6 +31400,8 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
         // 回合结束，buff/debuff duration -1（保持原有）
         tickBuffs();
         tickEnemyDebuffs();
+        damageTakenHistory = [damageTakenThisRound, ...damageTakenHistory].slice(0, 4);
+        damageTakenThisRound = 0;
     }
 
     const finished = (charHp <= 0) || (enemyHp <= 0) || (round >= 200);
@@ -31395,6 +31420,8 @@ function stepCombatRounds(character, combatState, roundsPerTick = 1, gameState) 
             enemyDebuffs,
             validSkills,
             logs,
+            damageTakenHistory,
+            damageTakenThisRound,
             talentBuffs,
             fortuneMisfortuneStacks,
             fantasiaStacks,

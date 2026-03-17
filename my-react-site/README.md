@@ -14,3 +14,9 @@ The React Compiler is not enabled on this template because of its impact on dev 
 ## Expanding the ESLint configuration
 
 If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+
+## Game Feature Notes
+
+- 2026-03-17: synchronized `stepCombatRounds` with `stepBossCombat` for the Vengeance Demon Hunter passive `破碎灵魂`.
+- Map combat now tracks the last 4 rounds of damage taken for `破碎灵魂`, so per-star healing follows the same rule as boss combat.
+- Map combat `破碎灵魂` now also matches boss combat for `碎魂恢复` (+50% healing), healing absorb handling, and `致死打击` healing reduction logging.

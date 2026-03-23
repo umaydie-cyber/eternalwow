@@ -27468,6 +27468,13 @@ const addMaterialToInventory = (materialInventory, materialId, amount = 1) => {
     };
 };
 
+const getGatherPrecisionBonusAmount = (precision) => {
+    const normalizedPrecision = Math.max(0, Math.min(1000, Number(precision) || 0));
+    const extraChance = normalizedPrecision / 2000;
+    if (Math.random() >= extraChance) return 0;
+    return 1 + Math.floor(Math.random() * 5);
+};
+
 
 // ==================== INITIAL STATE ====================
 const initialState = {
@@ -30741,6 +30748,7 @@ function gameReducer(state, action) {
                     if (!zone || charIndex === -1) return;
 
                     let char = nextCharacters[charIndex];
+                    const gatherStats = calculateGatherStats(char);
                     const learnedProfessions = normalizeProfessionList(char.professions);
                     const availableMaterialIds = learnedProfessions.flatMap(professionId => zone.professionPools?.[professionId] || []);
                     if (availableMaterialIds.length === 0) return;
@@ -30759,13 +30767,20 @@ function gameReducer(state, action) {
                             break;
                         }
 
-                        materialInventory = addMaterialToInventory(materialInventory, materialId, 1);
+                        const bonusAmount = getGatherPrecisionBonusAmount(gatherStats.precision);
+                        const totalAmount = 1 + bonusAmount;
+
+                        materialInventory = addMaterialToInventory(materialInventory, materialId, totalAmount);
 
                         const professionId = material.professionId;
                         const professionMax = Number(PROFESSIONS?.[professionId]?.maxSkill) || 300;
                         updatedSkills[professionId] = Math.min(professionMax, (updatedSkills[professionId] || 0) + 1);
 
-                        gatherLogs.unshift(`${char.name} 在 ${zone.name} 采集到 ${material.name}。`);
+                        gatherLogs.unshift(
+                            bonusAmount > 0
+                                ? `${char.name} 在 ${zone.name} 采集到 ${material.name} x${totalAmount}（精细触发 +${bonusAmount}）。`
+                                : `${char.name} 在 ${zone.name} 采集到 ${material.name}。`
+                        );
                         changed = true;
                     }
 

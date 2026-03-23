@@ -228,8 +228,8 @@ export const GATHERING_ZONES = {
         description: '更偏中期的采集区域，普通材料之外开始出现伴生稀有草药和矿脉。',
         unlocked: true,
         professionPools: {
-            herbalism: [entry('briarthorn'), entry('mageroyal')],
-            mining: [entry('iron_ore')],
+            herbalism: [entry('briarthorn', 50), entry('mageroyal', 50)],
+            mining: [entry('iron_ore', 50)],
         },
         rareCompanions: {
             herbalism: [entry('swiftthistle')],

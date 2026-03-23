@@ -30904,15 +30904,7 @@ function gameReducer(state, action) {
                                 const rareEntry = rareCompanions[Math.floor(Math.random() * rareCompanions.length)];
                                 const rareMaterial = MATERIALS?.[rareEntry?.materialId];
                                 if (rareMaterial) {
-                                    const rareRequiredSkill = Number.isFinite(Number(rareEntry?.minSkill))
-                                        ? Math.max(0, Math.floor(Number(rareEntry.minSkill)))
-                                        : null;
-                                    const rareProfessionSkill = Math.max(0, Math.floor(Number(updatedSkills?.[rareMaterial.professionId]) || 0));
-                                    if (rareRequiredSkill != null && rareProfessionSkill < rareRequiredSkill) {
-                                        gatherLogs.unshift(`${char.name} 在 ${zone.name} 遇到了稀有资源 ${rareMaterial.name}，但因技能点不够无法采集（当前 ${rareProfessionSkill} / 需要 ${rareRequiredSkill}）。`);
-                                    } else {
-                                        rareGrant = grantGatherMaterial(rareMaterial, proficiencyMultiplier, { floorAmount: true });
-                                    }
+                                    rareGrant = grantGatherMaterial(rareMaterial, proficiencyMultiplier, { floorAmount: true });
                                 }
                             }
                         }

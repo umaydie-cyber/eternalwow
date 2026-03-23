@@ -27518,12 +27518,7 @@ const getGatherStar = (professionSkill, hiddenSkillDifficulty) => {
 
 const getGatherProficiencyMultiplier = (proficiency) => {
     const normalizedProficiency = Math.max(0, Math.min(1000, Number(proficiency) || 0));
-    const rollChance = normalizedProficiency / 1000;
-    let extraMultipliers = 0;
-    for (let i = 0; i < 3; i++) {
-        if (Math.random() < rollChance) extraMultipliers += 1;
-    }
-    return 1 + extraMultipliers;
+    return 1 + (normalizedProficiency / 1000) * 3;
 };
 
 
@@ -30826,7 +30821,7 @@ function gameReducer(state, action) {
                         const bonusAmount = getGatherPrecisionBonusAmount(gatherStats.precision);
                         const proficiencyMultiplier = getGatherProficiencyMultiplier(gatherStats.proficiency);
                         const baseAmount = 1 + bonusAmount;
-                        const totalAmount = baseAmount * proficiencyMultiplier;
+                        const totalAmount = Math.max(baseAmount, Math.round(baseAmount * proficiencyMultiplier));
 
                         materialInventory = addMaterialToInventory(materialInventory, materialId, star, totalAmount);
 

@@ -21,11 +21,20 @@ import {
     TEAM_BOSSES,
     BOND_NAMES,
 } from './game/data/progression';
+import {
+    GATHERING_ZONES,
+    MATERIALS,
+    MATERIAL_BAG_DEFAULT_SIZE,
+    PROFESSIONS,
+    PROFESSION_LEARN_COSTS,
+    createDefaultProfessionSkills,
+} from './game/data/professions';
 import { useIsMobile, isTouchDevice, safeAreaBottom } from './game/hooks/responsive';
 import { MapPage } from './game/pages/MapPage';
 import { CityPage } from './game/pages/CityPage';
 import { WorldBossPage, AchievementPage, CodexPage } from './game/pages/WorldBossPage';
 import { QuestPage, QUEST_STATUS, QUEST_CHAINS, QUEST_ITEMS, QUEST_REWARD_EQUIPMENTS } from './game/pages/QuestPage';
+import { ProfessionPage } from './game/pages/ProfessionPage';
 
 // ==================== DEBUG FLAGS ====================
 // 移动端（尤其是 iOS Safari）频繁 console.log 会显著卡顿；默认关闭调试日志
@@ -27425,6 +27434,40 @@ function stepBossCombat(state) {
     return { ...state, characters: syncedCharacters, bossCombat: combat };
 }
 
+const normalizeProfessionList = (professions) => {
+    if (!Array.isArray(professions)) return [];
+    return professions
+        .filter(professionId => !!PROFESSIONS[professionId])
+        .filter((professionId, index, arr) => arr.indexOf(professionId) === index)
+        .slice(0, 2);
+};
+
+const normalizeProfessionSkills = (skills) => {
+    const defaults = createDefaultProfessionSkills();
+    if (!skills || typeof skills !== 'object' || Array.isArray(skills)) return defaults;
+
+    const normalized = { ...defaults };
+    Object.keys(defaults).forEach(professionId => {
+        const maxSkill = Number(PROFESSIONS[professionId]?.maxSkill) || 300;
+        normalized[professionId] = Math.max(0, Math.min(maxSkill, Math.floor(Number(skills?.[professionId]) || 0)));
+    });
+    return normalized;
+};
+
+const countMaterialBagSlots = (materialInventory) =>
+    Object.values(materialInventory || {}).filter(count => (Number(count) || 0) > 0).length;
+
+const addMaterialToInventory = (materialInventory, materialId, amount = 1) => {
+    if (!MATERIALS[materialId]) return materialInventory || {};
+    const nextAmount = Math.max(0, Math.floor(Number(amount) || 0));
+    if (nextAmount <= 0) return materialInventory || {};
+
+    return {
+        ...(materialInventory || {}),
+        [materialId]: Math.max(0, Math.floor(Number(materialInventory?.[materialId]) || 0)) + nextAmount,
+    };
+};
+
 
 // ==================== INITIAL STATE ====================
 const initialState = {
@@ -27471,13 +27514,18 @@ const initialState = {
     inventory: [],
     inventorySize: 80,
     inventorySizeExtra: 0,
+    materialInventory: {},
+    materialBagSize: MATERIAL_BAG_DEFAULT_SIZE,
     achievements: {},
     codex: [],
     codexJunk: [],
     codexMounts: [],
     zones: JSON.parse(JSON.stringify(ZONES)),
     assignments: {},
+    gatherAssignments: {},
+    gatheringTimer: 0,
     combatLogs: [],
+    gatherLogs: [],
     stats: { battlesWon: 0, totalDamage: 0, totalHealing: 0, bossLateRoundDefeats: 0, grandVaultPicks: 0 },
     // 地图区域击杀统计（跨世累计，不会随轮回/重生重置）
     // 例如：{ elwynn_forest: 12345 }
@@ -30672,6 +30720,68 @@ function gameReducer(state, action) {
 
             newState.resources = newResources;
 
+            const nextGatherTimer = Math.max(0, Number(newState.gatheringTimer) || 0) + deltaSeconds;
+            let gatherExecutions = 0;
+            let gatherTimerRemainder = nextGatherTimer;
+            while (gatherTimerRemainder >= 30) {
+                gatherTimerRemainder -= 30;
+                gatherExecutions++;
+            }
+            newState.gatheringTimer = gatherTimerRemainder;
+
+            if (gatherExecutions > 0) {
+                let materialInventory = { ...(newState.materialInventory || {}) };
+                const bagSize = Math.max(0, Math.floor(Number(newState.materialBagSize) || MATERIAL_BAG_DEFAULT_SIZE));
+                const gatherLogs = Array.isArray(newState.gatherLogs) ? [...newState.gatherLogs] : [];
+                const nextCharacters = [...(newState.characters || [])];
+
+                Object.entries(newState.gatherAssignments || {}).forEach(([charId, zoneId]) => {
+                    const zone = GATHERING_ZONES?.[zoneId];
+                    const charIndex = nextCharacters.findIndex(c => c.id === charId);
+                    if (!zone || charIndex === -1) return;
+
+                    let char = nextCharacters[charIndex];
+                    const learnedProfessions = normalizeProfessionList(char.professions);
+                    const availableMaterialIds = learnedProfessions.flatMap(professionId => zone.professionPools?.[professionId] || []);
+                    if (availableMaterialIds.length === 0) return;
+
+                    let updatedSkills = normalizeProfessionSkills(char.professionSkills);
+                    let changed = false;
+
+                    for (let i = 0; i < gatherExecutions; i++) {
+                        const materialId = availableMaterialIds[Math.floor(Math.random() * availableMaterialIds.length)];
+                        const material = MATERIALS?.[materialId];
+                        if (!material) continue;
+
+                        const hasStack = (Number(materialInventory?.[materialId]) || 0) > 0;
+                        if (!hasStack && countMaterialBagSlots(materialInventory) >= bagSize) {
+                            gatherLogs.unshift(`材料背包已满，${char.name} 本次未能存放 ${material.name}。`);
+                            break;
+                        }
+
+                        materialInventory = addMaterialToInventory(materialInventory, materialId, 1);
+
+                        const professionId = material.professionId;
+                        const professionMax = Number(PROFESSIONS?.[professionId]?.maxSkill) || 300;
+                        updatedSkills[professionId] = Math.min(professionMax, (updatedSkills[professionId] || 0) + 1);
+
+                        gatherLogs.unshift(`${char.name} 在 ${zone.name} 采集到 ${material.name}。`);
+                        changed = true;
+                    }
+
+                    if (changed) {
+                        nextCharacters[charIndex] = {
+                            ...char,
+                            professionSkills: updatedSkills,
+                        };
+                    }
+                });
+
+                newState.materialInventory = materialInventory;
+                newState.gatherLogs = gatherLogs.slice(0, 30);
+                newState.characters = nextCharacters;
+            }
+
             // ===== 脱战回血（喷泉加成） =====
             const BASE_REGEN_DELAY_MS = 5000;
             const REGEN_DELAY_MS = Math.max(0, BASE_REGEN_DELAY_MS - glowLighthouseCount * 1000);
@@ -31340,6 +31450,8 @@ function gameReducer(state, action) {
                 ],
                 activeSkillSet: 0,
                 skills: Array.from(new Set([...(baseSkills || []), ...(raceExtraSkills || [])])),
+                professions: [],
+                professionSkills: createDefaultProfessionSkills(),
                 buffs: [],
                 lastCombatTime: 0,
                 combatState: null,
@@ -31655,6 +31767,38 @@ function gameReducer(state, action) {
             return nextState;
         }
 
+        case 'LEARN_PROFESSION': {
+            const { characterId, professionId } = action.payload || {};
+            if (!characterId || !PROFESSIONS[professionId]) return state;
+
+            const charIndex = state.characters.findIndex(c => c.id === characterId);
+            if (charIndex === -1) return state;
+
+            const character = state.characters[charIndex];
+            const currentProfessions = normalizeProfessionList(character.professions);
+            if (currentProfessions.includes(professionId) || currentProfessions.length >= 2) return state;
+
+            const costIndex = Math.min(currentProfessions.length, PROFESSION_LEARN_COSTS.length - 1);
+            const learnCost = Math.max(0, Math.floor(Number(PROFESSION_LEARN_COSTS[costIndex]) || 0));
+            if ((state.resources?.gold || 0) < learnCost) return state;
+
+            const nextCharacters = [...state.characters];
+            nextCharacters[charIndex] = {
+                ...character,
+                professions: [...currentProfessions, professionId],
+                professionSkills: normalizeProfessionSkills(character.professionSkills),
+            };
+
+            return {
+                ...state,
+                characters: nextCharacters,
+                resources: {
+                    ...(state.resources || {}),
+                    gold: (state.resources?.gold || 0) - learnCost,
+                },
+            };
+        }
+
         case 'ASSIGN_ZONE': {
             const { characterId, zoneId } = action.payload;
 
@@ -31666,6 +31810,11 @@ function gameReducer(state, action) {
             if (isInResourceBuilding) {
                 // 角色正在主城采集，不能派遣去地图
                 console.warn(`角色 ${characterId} 正在主城采集，无法派遣到地图`);
+                return state;
+            }
+
+            if (state.gatherAssignments?.[characterId]) {
+                console.warn(`角色 ${characterId} 正在采集地图工作，无法派遣到战斗地图`);
                 return state;
             }
 
@@ -31697,6 +31846,48 @@ function gameReducer(state, action) {
                 ...state,
                 assignments: newAssignments,
                 characters: newChars
+            };
+        }
+
+        case 'ASSIGN_GATHER_ZONE': {
+            const { characterId, zoneId } = action.payload || {};
+            if (!characterId || !zoneId || !GATHERING_ZONES?.[zoneId]) return state;
+
+            if (state.assignments?.[characterId]) return state;
+
+            const isInResourceBuilding = Object.values(state.resourceAssignments || {})
+                .flat()
+                .includes(characterId);
+            if (isInResourceBuilding) return state;
+
+            const charIndex = state.characters.findIndex(c => c.id === characterId);
+            if (charIndex === -1) return state;
+
+            const character = state.characters[charIndex];
+            const learnedProfessions = normalizeProfessionList(character.professions);
+            const zone = GATHERING_ZONES[zoneId];
+            const canGatherHere = learnedProfessions.some(professionId => (zone.professionPools?.[professionId] || []).length > 0);
+            if (!canGatherHere) return state;
+
+            return {
+                ...state,
+                gatherAssignments: {
+                    ...(state.gatherAssignments || {}),
+                    [characterId]: zoneId,
+                }
+            };
+        }
+
+        case 'UNASSIGN_GATHER_CHARACTER': {
+            const { characterId } = action.payload || {};
+            if (!characterId) return state;
+
+            const nextAssignments = { ...(state.gatherAssignments || {}) };
+            delete nextAssignments[characterId];
+
+            return {
+                ...state,
+                gatherAssignments: nextAssignments,
             };
         }
 
@@ -32166,6 +32357,17 @@ function gameReducer(state, action) {
                 decoded.bossCooldowns ??= {};
                 decoded.worldBossKillCounts ??= {};
                 decoded.worldBossAutoKill ??= {};
+                decoded.materialInventory ??= {};
+                if (typeof decoded.materialInventory !== 'object' || Array.isArray(decoded.materialInventory)) {
+                    decoded.materialInventory = {};
+                }
+                decoded.materialBagSize = Math.max(0, Math.floor(Number(decoded.materialBagSize) || MATERIAL_BAG_DEFAULT_SIZE));
+                decoded.gatherAssignments ??= {};
+                if (typeof decoded.gatherAssignments !== 'object' || Array.isArray(decoded.gatherAssignments)) {
+                    decoded.gatherAssignments = {};
+                }
+                decoded.gatherLogs = Array.isArray(decoded.gatherLogs) ? decoded.gatherLogs : [];
+                decoded.gatheringTimer = Math.max(0, Number(decoded.gatheringTimer) || 0);
 
                 // ===== 宏伟宝库（每日早上9点刷新）兼容旧档 =====
                 decoded.grandVault ??= {};
@@ -32231,6 +32433,8 @@ function gameReducer(state, action) {
                             skills: mergedSkills,
                             skillSets: sets,
                             activeSkillSet: active,
+                            professions: normalizeProfessionList(c.professions),
+                            professionSkills: normalizeProfessionSkills(c.professionSkills),
                             // 同步：战斗读取 skillSlots（激活的那套）
                             skillSlots: make8(activeSlots, baseSlots),
                         };
@@ -32529,6 +32733,11 @@ function gameReducer(state, action) {
             newState.currentResearch = null;
             newState.researchProgress = 0;
             newState.assignments = {};
+            newState.gatherAssignments = {};
+            newState.gatherLogs = [];
+            newState.gatheringTimer = 0;
+            newState.materialInventory = {};
+            newState.materialBagSize = MATERIAL_BAG_DEFAULT_SIZE;
             newState.zones = JSON.parse(JSON.stringify(ZONES));
             newState.achievements = {};
             newState.prepareBoss = null;
@@ -32684,6 +32893,16 @@ function gameReducer(state, action) {
             const newAssignments = { ...(state.assignments || {}) };
             delete newAssignments[characterId];
 
+            const newGatherAssignments = { ...(state.gatherAssignments || {}) };
+            delete newGatherAssignments[characterId];
+
+            const newResourceAssignments = Object.fromEntries(
+                Object.entries(state.resourceAssignments || {}).map(([buildingId, workers]) => [
+                    buildingId,
+                    (workers || []).filter(id => id !== characterId)
+                ])
+            );
+
             // 4) 清理 bossTeam：把阵容里引用的 charId 置空
             // bossTeam 在 state 里是 [null, null, null] 存 charId :contentReference[oaicite:3]{index=3}
             const newBossTeam = (state.bossTeam || []).map(id => (id === characterId ? null : id));
@@ -32702,6 +32921,8 @@ function gameReducer(state, action) {
                 characters: finalChars,
                 inventory: newInventory,
                 assignments: newAssignments,
+                gatherAssignments: newGatherAssignments,
+                resourceAssignments: newResourceAssignments,
                 bossTeam: newBossTeam,
                 bossCombat: newBossCombat,
             };
@@ -32766,6 +32987,11 @@ function gameReducer(state, action) {
             // 检查角色是否在地图打怪
             if (state.assignments?.[characterId]) {
                 console.warn(`角色 ${characterId} 正在地图打怪，无法派遣到主城采集`);
+                return state;
+            }
+
+            if (state.gatherAssignments?.[characterId]) {
+                console.warn(`角色 ${characterId} 正在采集地图工作，无法派遣到主城采集`);
                 return state;
             }
 
@@ -35555,6 +35781,7 @@ const InventoryPage = ({ state, dispatch }) => {
     const touch = isTouchDevice();
 
     const [selectedItem, setSelectedItem] = useState(null);
+    const [activeInventoryTab, setActiveInventoryTab] = useState('equipment');
 
     // 桌面端：保留拖拽排序/合成
     const [draggedItemId, setDraggedItemId] = useState(null);
@@ -35594,6 +35821,16 @@ const isSpecialRecipePair = (aId, bId) =>
         setDraggedIndex(null);
     };
 
+    const materialEntries = Object.entries(state.materialInventory || {})
+        .map(([materialId, count]) => ({
+            material: MATERIALS[materialId],
+            count: Math.max(0, Math.floor(Number(count) || 0)),
+        }))
+        .filter(entry => entry.material && entry.count > 0)
+        .sort((a, b) => a.material.name.localeCompare(b.material.name, 'zh-Hans-CN'));
+
+    const materialBagUsed = countMaterialBagSlots(state.materialInventory);
+
     const cancelModes = useCallback(() => {
         setMoveMode(null);
         setMergeMode(null);
@@ -35606,6 +35843,14 @@ const isSpecialRecipePair = (aId, bId) =>
             cancelModes();
         }
     }, [isMobile, cancelModes]);
+
+    useEffect(() => {
+        if (activeInventoryTab !== 'equipment') {
+            setActionSheet(null);
+            cancelModes();
+            clearDrag();
+        }
+    }, [activeInventoryTab, cancelModes]);
 
     const handleDropToEmpty = (e, targetIndex) => {
         e.preventDefault();
@@ -35903,6 +36148,22 @@ const isSpecialRecipePair = (aId, bId) =>
                 onClose={closeActionSheet}
             />
 
+            <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
+                <Button
+                    onClick={() => setActiveInventoryTab('equipment')}
+                    variant={activeInventoryTab === 'equipment' ? 'primary' : 'secondary'}
+                >
+                    装备背包
+                </Button>
+                <Button
+                    onClick={() => setActiveInventoryTab('materials')}
+                    variant={activeInventoryTab === 'materials' ? 'primary' : 'secondary'}
+                >
+                    材料背包
+                </Button>
+            </div>
+
+            {activeInventoryTab === 'equipment' ? (
             <Panel
                 title={`道具栏 (${state.inventory.length}/${state.inventorySize})`}
                 actions={
@@ -36350,6 +36611,54 @@ const isSpecialRecipePair = (aId, bId) =>
                     </div>
                 )}
             </Panel>
+            ) : (
+            <Panel title={`材料背包 (${materialBagUsed}/${state.materialBagSize || MATERIAL_BAG_DEFAULT_SIZE})`}>
+                {materialEntries.length > 0 ? (
+                    <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: `repeat(auto-fill, minmax(${isMobile ? 140 : 180}px, 1fr))`,
+                        gap: 10
+                    }}>
+                        {materialEntries.map(({ material, count }) => (
+                            <div
+                                key={material.id}
+                                style={{
+                                    padding: 14,
+                                    borderRadius: 10,
+                                    border: '1px solid #4a3c2a',
+                                    background: 'rgba(0,0,0,0.28)',
+                                }}
+                            >
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
+                                    <div>
+                                        <div style={{ fontSize: 15, fontWeight: 700, color: '#ffd700' }}>
+                                            {material.icon} {material.name}
+                                        </div>
+                                        <div style={{ marginTop: 6, fontSize: 11, color: '#888' }}>
+                                            {material.enName}
+                                        </div>
+                                    </div>
+                                    <div style={{ fontSize: 18, fontWeight: 800, color: '#4CAF50' }}>
+                                        x{count}
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    <div style={{
+                        padding: 20,
+                        textAlign: 'center',
+                        color: '#888',
+                        border: '1px dashed #4a3c2a',
+                        borderRadius: 10,
+                        background: 'rgba(0,0,0,0.2)'
+                    }}>
+                        暂无材料。前往地图的“采集”页派遣已学习专业的角色开始采集。
+                    </div>
+                )}
+            </Panel>
+            )}
         </div>
     );
 };
@@ -42659,11 +42968,13 @@ useEffect(() => {
                 functionalBuildings: savedState.functionalBuildings && typeof savedState.functionalBuildings === 'object' ? savedState.functionalBuildings : {},
                 resourceAssignments: savedState.resourceAssignments && typeof savedState.resourceAssignments === 'object' ? savedState.resourceAssignments : {},
                 assignments: savedState.assignments && typeof savedState.assignments === 'object' ? savedState.assignments : {},
+                gatherAssignments: savedState.gatherAssignments && typeof savedState.gatherAssignments === 'object' ? savedState.gatherAssignments : {},
                 research: savedState.research && typeof savedState.research === 'object' ? savedState.research : {},
                 dropFilters: savedState.dropFilters && typeof savedState.dropFilters === 'object' ? savedState.dropFilters : {},
                 maxCharacterSlots: initialState.maxCharacterSlots,
                 zones: JSON.parse(JSON.stringify(ZONES)),
                 combatLogs: savedState.combatLogs || [],
+                gatherLogs: Array.isArray(savedState.gatherLogs) ? savedState.gatherLogs : [],
                 offlineRewards: null
             };
 
@@ -42984,6 +43295,7 @@ useEffect(() => {
         { id: 'map', name: '地图', icon: '🗺️' },
         { id: 'character', name: '角色', icon: '👥' },
         { id: 'talent', name: '天赋', icon: '🌟' },
+        { id: 'profession', name: '专业', icon: '🧰' },
         { id: 'inventory', name: '道具', icon: '📦' },
         { id: 'city', name: '主城', icon: '🏰' },
         { id: 'research', name: '研究', icon: '🔬' },
@@ -42999,6 +43311,7 @@ useEffect(() => {
             case 'map': return <MapPage state={state} dispatch={dispatch} />;
             case 'character': return <CharacterPage state={state} dispatch={dispatch} />;
             case 'talent': return <TalentPage state={state} dispatch={dispatch} />;
+            case 'profession': return <ProfessionPage state={state} dispatch={dispatch} />;
             case 'inventory': return <InventoryPage state={state} dispatch={dispatch} />;
             case 'city': return <CityPage state={state} dispatch={dispatch} calculateGatherStats={calculateGatherStats} calculateBuildingProduction={calculateBuildingProduction} getFountainEfficiency={getFountainEfficiency} getVolcanicHotSpringRegenPct={getVolcanicHotSpringRegenPct} getFunctionalBuildingCost={getFunctionalBuildingCost} getFunctionalBuildingMaxCount={getFunctionalBuildingMaxCount} getFunctionalBuildingEffectiveMaxCount={getFunctionalBuildingEffectiveMaxCount} />;
             case 'research': return <ResearchPage state={state} dispatch={dispatch} />;

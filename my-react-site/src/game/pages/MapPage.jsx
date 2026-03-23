@@ -1,22 +1,55 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Panel, Button } from '../components/ui';
 import { CLASSES } from '../data/core';
+import { GATHERING_ZONES, MATERIALS, PROFESSIONS } from '../data/professions';
 import { useIsMobile } from '../hooks/responsive';
+
+const normalizeProfessionList = (professions) => {
+    if (!Array.isArray(professions)) return [];
+    return professions
+        .filter(professionId => !!PROFESSIONS[professionId])
+        .filter((professionId, index, arr) => arr.indexOf(professionId) === index)
+        .slice(0, 2);
+};
 
 export const MapPage = ({ state, dispatch }) => {
     const isMobile = useIsMobile();
+    const [activeTab, setActiveTab] = useState('combat');
     const [draggedChar, setDraggedChar] = useState(null);
     const [selectedCharId, setSelectedCharId] = useState(null);
 
-    // 桌面端切回时清空点选状态
     useEffect(() => {
         if (!isMobile) setSelectedCharId(null);
     }, [isMobile]);
 
+    const resourceAssignedIds = new Set(
+        Object.values(state.resourceAssignments || {}).flat()
+    );
+    const combatAssignedIds = new Set(Object.keys(state.assignments || {}));
+    const gatherAssignedIds = new Set(Object.keys(state.gatherAssignments || {}));
 
+    const unassignedChars = useMemo(() => (
+        state.characters.filter(char =>
+            !combatAssignedIds.has(char.id) &&
+            !gatherAssignedIds.has(char.id) &&
+            !resourceAssignedIds.has(char.id)
+        )
+    ), [state.characters, combatAssignedIds, gatherAssignedIds, resourceAssignedIds]);
+
+    const gatherReadyChars = useMemo(() => (
+        unassignedChars.filter(char => normalizeProfessionList(char.professions).length > 0)
+    ), [unassignedChars]);
+
+    const visibleChars = activeTab === 'combat' ? unassignedChars : gatherReadyChars;
     const selectedChar = selectedCharId
-        ? state.characters.find(c => c.id === selectedCharId)
+        ? visibleChars.find(char => char.id === selectedCharId) || null
         : null;
+
+    useEffect(() => {
+        if (selectedCharId && !visibleChars.some(char => char.id === selectedCharId)) {
+            setSelectedCharId(null);
+        }
+    }, [selectedCharId, visibleChars]);
 
     const assignToZone = useCallback((characterId, zoneId) => {
         if (!characterId || !zoneId) return;
@@ -26,10 +59,16 @@ export const MapPage = ({ state, dispatch }) => {
         });
     }, [dispatch]);
 
-    // ===== 拖拽派遣（桌面端保留） =====
+    const assignToGatherZone = useCallback((characterId, zoneId) => {
+        if (!characterId || !zoneId) return;
+        dispatch({
+            type: 'ASSIGN_GATHER_ZONE',
+            payload: { characterId, zoneId }
+        });
+    }, [dispatch]);
+
     const handleDragStart = (e, charId) => {
         setDraggedChar(charId);
-        // ✅ Edge/部分浏览器需要 setData 才会认为这是“有效拖拽”
         e.dataTransfer.setData('text/plain', charId);
         e.dataTransfer.effectAllowed = 'move';
     };
@@ -39,177 +78,160 @@ export const MapPage = ({ state, dispatch }) => {
         e.dataTransfer.dropEffect = 'move';
     };
 
-    const handleDrop = (e, zoneId) => {
+    const handleDrop = (e, zoneId, mode) => {
         e.preventDefault();
         const charId = draggedChar || e.dataTransfer.getData('text/plain');
-        if (charId) {
+        if (!charId) return;
+
+        if (mode === 'gather') {
+            assignToGatherZone(charId, zoneId);
+        } else {
             assignToZone(charId, zoneId);
-            setDraggedChar(null);
         }
+
+        setDraggedChar(null);
     };
 
-    // 获取所有在主城资源建筑工作的角色ID
-    const resourceAssignedIds = new Set(
-        Object.values(state.resourceAssignments || {}).flat()
-    );
-
-    // 过滤：既不在地图打怪，也不在主城采集
-    const unassignedChars = state.characters.filter(c =>
-        !state.assignments[c.id] && !resourceAssignedIds.has(c.id)
-    );
-
     const handleSelectChar = (charId) => {
-        // 移动端使用点选派遣（拖拽在 H5 上不稳定）
         if (!isMobile) return;
         setSelectedCharId(prev => prev === charId ? null : charId);
     };
 
-    return (
-        <div>
-            {/* 未分配的角色列表 */}
-            {unassignedChars.length > 0 && (
-                <div
-                    style={{
-                        position: 'sticky',
-                        top: 12,
-                        zIndex: 50,
-                        // 可选：如果角色很多，固定栏自己滚动
-                        maxHeight: isMobile ? '46vh' : '40vh',
-                        overflowY: 'auto',
-                    }}
-                >
-                    <Panel title="可派遣角色" style={{ marginBottom: 16 }}>
-                        <div style={{
-                            display: 'flex',
-                            gap: 12,
-                            flexWrap: 'wrap'
-                        }}>
-                            {unassignedChars.map(char => {
-                                const selected = selectedCharId === char.id;
+    const renderCharacterList = (chars, emptyText) => (
+        chars.length > 0 ? (
+            <div
+                style={{
+                    position: 'sticky',
+                    top: 12,
+                    zIndex: 50,
+                    maxHeight: isMobile ? '46vh' : '40vh',
+                    overflowY: 'auto',
+                    marginBottom: 16,
+                }}
+            >
+                <Panel title={activeTab === 'combat' ? '可派遣角色' : '可派遣采集角色'}>
+                    <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                        {chars.map(char => {
+                            const learnedProfessions = normalizeProfessionList(char.professions);
+                            const selected = selectedCharId === char.id;
 
-                                return (
-                                    <div
-                                        key={char.id}
-                                        draggable={!isMobile}
-                                        onDragStart={!isMobile ? (e) => handleDragStart(e, char.id) : undefined}
-                                        onClick={() => handleSelectChar(char.id)}
-                                        style={{
-                                            padding: '12px 16px',
-                                            background: selected
-                                                ? 'linear-gradient(135deg, rgba(255,215,0,0.22), rgba(139,115,25,0.12))'
-                                                : 'linear-gradient(135deg, rgba(201,162,39,0.2), rgba(139,115,25,0.1))',
-                                            border: selected ? '2px solid #ffd700' : '2px solid #c9a227',
-                                            borderRadius: 8,
-                                            cursor: isMobile ? 'pointer' : 'grab',
-                                            transition: 'all 0.2s',
-                                            userSelect: 'none',
-                                            minWidth: 140,
-                                            opacity: selectedCharId && !selected ? 0.85 : 1,
-                                        }}
-                                        onMouseEnter={(e) => {
-                                            if (isMobile) return;
-                                            e.currentTarget.style.transform = 'translateY(-4px)';
-                                            e.currentTarget.style.boxShadow = '0 4px 12px rgba(201,162,39,0.4)';
-                                        }}
-                                        onMouseLeave={(e) => {
-                                            if (isMobile) return;
-                                            e.currentTarget.style.transform = 'translateY(0)';
-                                            e.currentTarget.style.boxShadow = 'none';
-                                        }}
-                                    >
-                                        <div style={{ fontSize: 14, color: '#ffd700', fontWeight: 700 }}>
-                                            {char.name}
-                                        </div>
-                                        <div style={{ fontSize: 11, color: '#888', marginTop: 4 }}>
-                                            Lv.{char.level} {CLASSES[char.classId].name}
-                                        </div>
-                                        {isMobile && selected && (
-                                            <div style={{ marginTop: 6, fontSize: 11, color: '#ffd700', fontWeight: 700 }}>
-                                                ✅ 已选中，点选下方区域派遣
-                                            </div>
-                                        )}
+                            return (
+                                <div
+                                    key={char.id}
+                                    draggable={!isMobile}
+                                    onDragStart={!isMobile ? (e) => handleDragStart(e, char.id) : undefined}
+                                    onClick={() => handleSelectChar(char.id)}
+                                    style={{
+                                        padding: '12px 16px',
+                                        background: selected
+                                            ? 'linear-gradient(135deg, rgba(255,215,0,0.22), rgba(139,115,25,0.12))'
+                                            : 'linear-gradient(135deg, rgba(201,162,39,0.2), rgba(139,115,25,0.1))',
+                                        border: selected ? '2px solid #ffd700' : '2px solid #c9a227',
+                                        borderRadius: 8,
+                                        cursor: isMobile ? 'pointer' : 'grab',
+                                        transition: 'all 0.2s',
+                                        userSelect: 'none',
+                                        minWidth: 160,
+                                    }}
+                                >
+                                    <div style={{ fontSize: 14, color: '#ffd700', fontWeight: 700 }}>
+                                        {char.name}
                                     </div>
-                                );
-                            })}
-                        </div>
-
-                        <div style={{
-                            marginTop: 12,
-                            fontSize: 12,
-                            color: '#888',
-                            fontStyle: 'italic'
-                        }}>
-                            {isMobile ? '💡 点选角色 → 点选区域【派遣】按钮' : '💡 拖拽角色到区域进行分配'}
-                        </div>
-
-                        {isMobile && selectedChar && (
-                            <div style={{ marginTop: 8, fontSize: 12, color: '#aaa' }}>
-                                当前选择：<span style={{ color: '#ffd700', fontWeight: 800 }}>{selectedChar.name}</span>（再次点选可取消）
-                            </div>
-                        )}
-                    </Panel>
-                </div>
-            )}
-
-            {/* 区域列表 */}
-            <div style={{
-                display: 'grid',
-                gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(300px, 1fr))',
-                gap: 16
-            }}>
-                {Object.values(state.zones).map(zone => {
-                    const assignedChars = Object.entries(state.assignments)
-                        .filter(([_, zId]) => zId === zone.id)
-                        .map(([cId, _]) => state.characters.find(c => c.id === cId))
-                        .filter(Boolean);
-
-                    return (
-                        <div
-                            key={zone.id}
-                            onDragOver={!isMobile && zone.unlocked ? handleDragOver : undefined}
-                            onDrop={!isMobile && zone.unlocked ? (e) => handleDrop(e, zone.id) : undefined}
-                            style={{
-                                opacity: zone.unlocked ? 1 : 0.6,
-                                transition: 'all 0.2s'
-                            }}
-                        >
-                            <Panel title={zone.name}>
-                                <div style={{ fontSize: 13, color: '#aaa', marginBottom: 12 }}>
-                                    等级: {zone.level} | {zone.unlocked ? '✓ 已解锁' : `🔒 需要等级 ${zone.unlockLevel}`}
+                                    <div style={{ fontSize: 11, color: '#888', marginTop: 4 }}>
+                                        Lv.{char.level} {CLASSES[char.classId]?.name}
+                                    </div>
+                                    {activeTab === 'gather' && (
+                                        <div style={{ marginTop: 6, fontSize: 11, color: '#aaa' }}>
+                                            {learnedProfessions.map(professionId => `${PROFESSIONS[professionId]?.icon} ${PROFESSIONS[professionId]?.name}`).join(' / ')}
+                                        </div>
+                                    )}
+                                    {isMobile && selected && (
+                                        <div style={{ marginTop: 6, fontSize: 11, color: '#ffd700', fontWeight: 700 }}>
+                                            已选中，点下方区域派遣
+                                        </div>
+                                    )}
                                 </div>
+                            );
+                        })}
+                    </div>
 
-                                {zone.unlocked && (
-                                    <>
-                                        <div style={{ marginBottom: 12 }}>
-                                            <div style={{ fontSize: 12, color: '#888', marginBottom: 8 }}>怪物:</div>
-                                            {zone.enemies?.map((enemy, i) => (
-                                                <div key={i} style={{
+                    <div style={{ marginTop: 12, fontSize: 12, color: '#888', fontStyle: 'italic' }}>
+                        {isMobile ? '点选角色后，再点区域按钮派遣' : '拖拽角色到区域进行分配'}
+                    </div>
+
+                    {isMobile && selectedChar && (
+                        <div style={{ marginTop: 8, fontSize: 12, color: '#aaa' }}>
+                            当前选择：<span style={{ color: '#ffd700', fontWeight: 800 }}>{selectedChar.name}</span>
+                        </div>
+                    )}
+                </Panel>
+            </div>
+        ) : (
+            <Panel title={activeTab === 'combat' ? '可派遣角色' : '可派遣采集角色'} style={{ marginBottom: 16 }}>
+                <div style={{ fontSize: 12, color: '#888' }}>{emptyText}</div>
+            </Panel>
+        )
+    );
+
+    const renderCombatZones = () => (
+        <div style={{
+            display: 'grid',
+            gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(300px, 1fr))',
+            gap: 16
+        }}>
+            {Object.values(state.zones).map(zone => {
+                const assignedChars = Object.entries(state.assignments || {})
+                    .filter(([_, zId]) => zId === zone.id)
+                    .map(([charId]) => state.characters.find(char => char.id === charId))
+                    .filter(Boolean);
+
+                return (
+                    <div
+                        key={zone.id}
+                        onDragOver={!isMobile && zone.unlocked ? handleDragOver : undefined}
+                        onDrop={!isMobile && zone.unlocked ? (e) => handleDrop(e, zone.id, 'combat') : undefined}
+                        style={{ opacity: zone.unlocked ? 1 : 0.6 }}
+                    >
+                        <Panel title={zone.name}>
+                            <div style={{ fontSize: 13, color: '#aaa', marginBottom: 12 }}>
+                                等级: {zone.level} | {zone.unlocked ? '已解锁' : `需要等级 ${zone.unlockLevel}`}
+                            </div>
+
+                            {zone.unlocked && (
+                                <>
+                                    <div style={{ marginBottom: 12 }}>
+                                        <div style={{ fontSize: 12, color: '#888', marginBottom: 8 }}>怪物:</div>
+                                        {zone.enemies?.map((enemy, index) => (
+                                            <div
+                                                key={index}
+                                                style={{
                                                     fontSize: 11,
                                                     padding: 6,
                                                     background: 'rgba(0,0,0,0.3)',
                                                     borderRadius: 4,
                                                     marginBottom: 4
-                                                }}>
-                                                    {enemy.name} (HP: {enemy.hp}, 攻击: {enemy.attack})
-                                                </div>
-                                            ))}
-                                        </div>
-
-                                        <div style={{
-                                            minHeight: 60,
-                                            padding: 12,
-                                            background: 'rgba(201,162,39,0.05)',
-                                            border: '2px dashed #4a3c2a',
-                                            borderRadius: 6,
-                                            marginBottom: 12
-                                        }}>
-                                            <div style={{ fontSize: 12, color: '#888', marginBottom: 8 }}>
-                                                已分配角色:
+                                                }}
+                                            >
+                                                {enemy.name} (HP: {enemy.hp}, 攻击: {enemy.attack})
                                             </div>
+                                        ))}
+                                    </div>
 
-                                            {assignedChars.length > 0 ? (
-                                                assignedChars.map(char => (
-                                                    <div key={char.id} style={{
+                                    <div style={{
+                                        minHeight: 60,
+                                        padding: 12,
+                                        background: 'rgba(201,162,39,0.05)',
+                                        border: '2px dashed #4a3c2a',
+                                        borderRadius: 6,
+                                        marginBottom: 12
+                                    }}>
+                                        <div style={{ fontSize: 12, color: '#888', marginBottom: 8 }}>已分配角色:</div>
+
+                                        {assignedChars.length > 0 ? (
+                                            assignedChars.map(char => (
+                                                <div
+                                                    key={char.id}
+                                                    style={{
                                                         display: 'flex',
                                                         justifyContent: 'space-between',
                                                         alignItems: 'center',
@@ -218,64 +240,240 @@ export const MapPage = ({ state, dispatch }) => {
                                                         background: 'rgba(201,162,39,0.1)',
                                                         borderRadius: 4,
                                                         marginBottom: 6
-                                                    }}>
-                                                        <span style={{ fontSize: 11 }}>
-                                                            {char.name} (Lv.{char.level})
-                                                        </span>
-                                                        <Button
-                                                            onClick={(e) => {
-                                                                e?.stopPropagation?.();
-                                                                dispatch({
-                                                                    type: 'UNASSIGN_CHARACTER',
-                                                                    payload: { characterId: char.id }
-                                                                });
-                                                            }}
-                                                            variant="danger"
-                                                            style={{ padding: '6px 10px', fontSize: 11 }}
-                                                        >
-                                                            召回
-                                                        </Button>
-                                                    </div>
-                                                ))
-                                            ) : (
-                                                <div style={{ fontSize: 11, color: '#666', fontStyle: 'italic', textAlign: 'center' }}>
-                                                    {isMobile
-                                                        ? (selectedCharId ? '点下面按钮派遣选中角色' : '先在上方点选一个角色')
-                                                        : '拖拽角色到此处'}
-                                                </div>
-                                            )}
-
-                                            {/* ✅ 移动端：点选派遣按钮 */}
-                                            {isMobile && selectedCharId && (
-                                                <div style={{ marginTop: 10 }}>
+                                                    }}
+                                                >
+                                                    <span style={{ fontSize: 11 }}>
+                                                        {char.name} (Lv.{char.level})
+                                                    </span>
                                                     <Button
-                                                        onClick={() => {
-                                                            assignToZone(selectedCharId, zone.id);
-                                                            setSelectedCharId(null);
+                                                        onClick={(e) => {
+                                                            e?.stopPropagation?.();
+                                                            dispatch({
+                                                                type: 'UNASSIGN_CHARACTER',
+                                                                payload: { characterId: char.id }
+                                                            });
                                                         }}
-                                                        disabled={!selectedCharId}
-                                                        style={{ width: '100%', padding: '10px 12px', fontSize: 13 }}
+                                                        variant="danger"
+                                                        style={{ padding: '6px 10px', fontSize: 11 }}
                                                     >
-                                                        ✅ 派遣 {selectedChar?.name || '选中角色'}
-                                                    </Button>
-
-                                                    <Button
-                                                        onClick={() => setSelectedCharId(null)}
-                                                        variant="secondary"
-                                                        style={{ width: '100%', marginTop: 8, padding: '10px 12px', fontSize: 13 }}
-                                                    >
-                                                        取消选择
+                                                        召回
                                                     </Button>
                                                 </div>
-                                            )}
+                                            ))
+                                        ) : (
+                                            <div style={{ fontSize: 11, color: '#666', fontStyle: 'italic', textAlign: 'center' }}>
+                                                {isMobile
+                                                    ? (selectedCharId ? '点下方按钮派遣选中角色' : '先在上方点选一个角色')
+                                                    : '拖拽角色到此处'}
+                                            </div>
+                                        )}
+
+                                        {isMobile && selectedCharId && zone.unlocked && (
+                                            <div style={{ marginTop: 10 }}>
+                                                <Button
+                                                    onClick={() => {
+                                                        assignToZone(selectedCharId, zone.id);
+                                                        setSelectedCharId(null);
+                                                    }}
+                                                    style={{ width: '100%', padding: '10px 12px', fontSize: 13 }}
+                                                >
+                                                    派遣 {selectedChar?.name || '选中角色'}
+                                                </Button>
+
+                                                <Button
+                                                    onClick={() => setSelectedCharId(null)}
+                                                    variant="secondary"
+                                                    style={{ width: '100%', marginTop: 8, padding: '10px 12px', fontSize: 13 }}
+                                                >
+                                                    取消选择
+                                                </Button>
+                                            </div>
+                                        )}
+                                    </div>
+                                </>
+                            )}
+                        </Panel>
+                    </div>
+                );
+            })}
+        </div>
+    );
+
+    const renderGatherZones = () => (
+        <div style={{ display: 'grid', gap: 16 }}>
+            <div style={{
+                display: 'grid',
+                gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(320px, 1fr))',
+                gap: 16
+            }}>
+                {Object.values(GATHERING_ZONES).map(zone => {
+                    const assignedChars = Object.entries(state.gatherAssignments || {})
+                        .filter(([_, zId]) => zId === zone.id)
+                        .map(([charId]) => state.characters.find(char => char.id === charId))
+                        .filter(Boolean);
+
+                    return (
+                        <div
+                            key={zone.id}
+                            onDragOver={!isMobile ? handleDragOver : undefined}
+                            onDrop={!isMobile ? (e) => handleDrop(e, zone.id, 'gather') : undefined}
+                        >
+                            <Panel title={`${zone.icon} ${zone.name}`}>
+                                <div style={{ fontSize: 12, color: '#aaa', lineHeight: 1.7, marginBottom: 12 }}>
+                                    {zone.description}
+                                </div>
+
+                                <div style={{ display: 'grid', gap: 8, marginBottom: 14 }}>
+                                    {Object.entries(zone.professionPools || {}).map(([professionId, materialIds]) => (
+                                        <div
+                                            key={professionId}
+                                            style={{
+                                                padding: 10,
+                                                borderRadius: 8,
+                                                background: 'rgba(0,0,0,0.25)',
+                                                border: '1px solid #4a3c2a',
+                                            }}
+                                        >
+                                            <div style={{ fontSize: 12, color: '#ffd700', marginBottom: 6 }}>
+                                                {PROFESSIONS[professionId]?.icon} {PROFESSIONS[professionId]?.name}
+                                            </div>
+                                            <div style={{ fontSize: 11, color: '#aaa' }}>
+                                                {materialIds.map(materialId => {
+                                                    const material = MATERIALS[materialId];
+                                                    return material ? `${material.icon} ${material.name}` : materialId;
+                                                }).join(' / ')}
+                                            </div>
                                         </div>
-                                    </>
-                                )}
+                                    ))}
+                                </div>
+
+                                <div style={{
+                                    minHeight: 60,
+                                    padding: 12,
+                                    background: 'rgba(76,175,80,0.08)',
+                                    border: '2px dashed #355b35',
+                                    borderRadius: 6,
+                                }}>
+                                    <div style={{ fontSize: 12, color: '#888', marginBottom: 8 }}>已派驻采集角色:</div>
+
+                                    {assignedChars.length > 0 ? (
+                                        assignedChars.map(char => (
+                                            <div
+                                                key={char.id}
+                                                style={{
+                                                    display: 'flex',
+                                                    justifyContent: 'space-between',
+                                                    alignItems: 'center',
+                                                    gap: 8,
+                                                    padding: 6,
+                                                    background: 'rgba(76,175,80,0.12)',
+                                                    borderRadius: 4,
+                                                    marginBottom: 6
+                                                }}
+                                            >
+                                                <span style={{ fontSize: 11 }}>
+                                                    {char.name}
+                                                </span>
+                                                <Button
+                                                    onClick={() => dispatch({
+                                                        type: 'UNASSIGN_GATHER_CHARACTER',
+                                                        payload: { characterId: char.id }
+                                                    })}
+                                                    variant="danger"
+                                                    style={{ padding: '6px 10px', fontSize: 11 }}
+                                                >
+                                                    召回
+                                                </Button>
+                                            </div>
+                                        ))
+                                    ) : (
+                                        <div style={{ fontSize: 11, color: '#666', fontStyle: 'italic', textAlign: 'center' }}>
+                                            {isMobile
+                                                ? (selectedCharId ? '点下方按钮派遣选中角色' : '先选择一个已学习专业的角色')
+                                                : '拖拽已学习专业的角色到此处'}
+                                        </div>
+                                    )}
+
+                                    {isMobile && selectedCharId && (
+                                        <div style={{ marginTop: 10 }}>
+                                            <Button
+                                                onClick={() => {
+                                                    assignToGatherZone(selectedCharId, zone.id);
+                                                    setSelectedCharId(null);
+                                                }}
+                                                style={{ width: '100%', padding: '10px 12px', fontSize: 13 }}
+                                            >
+                                                派遣 {selectedChar?.name || '选中角色'} 采集
+                                            </Button>
+
+                                            <Button
+                                                onClick={() => setSelectedCharId(null)}
+                                                variant="secondary"
+                                                style={{ width: '100%', marginTop: 8, padding: '10px 12px', fontSize: 13 }}
+                                            >
+                                                取消选择
+                                            </Button>
+                                        </div>
+                                    )}
+                                </div>
                             </Panel>
                         </div>
                     );
                 })}
             </div>
+
+            <Panel title="最近采集记录">
+                {(state.gatherLogs || []).length > 0 ? (
+                    <div style={{ display: 'grid', gap: 8 }}>
+                        {(state.gatherLogs || []).slice(0, 12).map((log, index) => (
+                            <div
+                                key={`${log}_${index}`}
+                                style={{
+                                    fontSize: 12,
+                                    color: '#ddd',
+                                    padding: '8px 10px',
+                                    background: 'rgba(0,0,0,0.25)',
+                                    borderRadius: 6,
+                                }}
+                            >
+                                {log}
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    <div style={{ fontSize: 12, color: '#888' }}>
+                        暂无采集记录。把角色拖到采集区域后，每 30 秒会触发一次采集事件。
+                    </div>
+                )}
+            </Panel>
+        </div>
+    );
+
+    return (
+        <div>
+            <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
+                <Button
+                    onClick={() => setActiveTab('combat')}
+                    variant={activeTab === 'combat' ? 'primary' : 'secondary'}
+                >
+                    战斗
+                </Button>
+                <Button
+                    onClick={() => setActiveTab('gather')}
+                    variant={activeTab === 'gather' ? 'primary' : 'secondary'}
+                >
+                    采集
+                </Button>
+            </div>
+
+            {renderCharacterList(
+                visibleChars,
+                activeTab === 'combat'
+                    ? '暂无可派遣角色，可能已在战斗地图、主城资源建筑或采集区域工作。'
+                    : '暂无可派遣的采集角色。先去“专业”页学习采药或挖矿。'
+            )}
+
+            {activeTab === 'combat' ? renderCombatZones() : renderGatherZones()}
         </div>
     );
 };

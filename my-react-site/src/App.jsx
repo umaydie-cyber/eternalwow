@@ -27485,6 +27485,22 @@ const normalizeMaterialInventory = (materialInventory) => {
     return normalized;
 };
 
+const normalizeGatherEntry = (entry) => {
+    if (typeof entry === 'string') {
+        return { materialId: entry, minSkill: null };
+    }
+    if (!entry || typeof entry !== 'object') return null;
+    const materialId = entry.materialId || entry.id;
+    if (!materialId) return null;
+    const material = MATERIALS[materialId];
+    return {
+        materialId,
+        minSkill: Number.isFinite(Number(entry.minSkill))
+            ? Math.max(0, Math.floor(Number(entry.minSkill)))
+            : (Number.isFinite(Number(material?.minSkill)) ? Math.max(0, Math.floor(Number(material.minSkill))) : null),
+    };
+};
+
 const countMaterialBagSlots = (materialInventory) =>
     Object.values(normalizeMaterialInventory(materialInventory)).filter(count => (Number(count) || 0) > 0).length;
 
@@ -27519,6 +27535,11 @@ const getGatherStar = (professionSkill, hiddenSkillDifficulty) => {
 const getGatherProficiencyMultiplier = (proficiency) => {
     const normalizedProficiency = Math.max(0, Math.min(1000, Number(proficiency) || 0));
     return 1 + (normalizedProficiency / 1000) * 3;
+};
+
+const getRareCompanionChance = (perception) => {
+    const normalizedPerception = Math.max(0, Math.min(1000, Number(perception) || 0));
+    return 0.1 + (normalizedPerception / 1000) * 0.5;
 };
 
 const shouldGainProfessionSkillPoint = (professionSkill, hiddenSkillDifficulty) => {
@@ -30806,38 +30827,94 @@ function gameReducer(state, action) {
                     let char = nextCharacters[charIndex];
                     const gatherStats = calculateGatherStats(char);
                     const learnedProfessions = normalizeProfessionList(char.professions);
-                    const availableMaterialIds = learnedProfessions.flatMap(professionId => zone.professionPools?.[professionId] || []);
-                    if (availableMaterialIds.length === 0) return;
+                    const availableEntries = learnedProfessions.flatMap(professionId =>
+                        (zone.professionPools?.[professionId] || []).map(entry => ({
+                            professionId,
+                            entry: normalizeGatherEntry(entry),
+                        }))
+                    ).filter(item => item.entry?.materialId);
+                    if (availableEntries.length === 0) return;
 
                     let updatedSkills = normalizeProfessionSkills(char.professionSkills);
                     let changed = false;
 
+                    const grantGatherMaterial = (material, rawAmount, { floorAmount = false } = {}) => {
+                        if (!material) return null;
+
+                        const professionId = material.professionId;
+                        const currentProfessionSkill = Math.max(0, Math.floor(Number(updatedSkills?.[professionId]) || 0));
+                        const star = getGatherStar(currentProfessionSkill, material.hiddenSkillDifficulty);
+                        const inventoryKey = getMaterialInventoryKey(material.id, star);
+                        const normalizedAmount = floorAmount
+                            ? Math.floor(Number(rawAmount) || 0)
+                            : Math.max(0, Math.floor(Number(rawAmount) || 0));
+                        const finalAmount = Math.max(1, normalizedAmount);
+
+                        const hasStack = (Number(materialInventory?.[inventoryKey]) || 0) > 0;
+                        if (!hasStack && countMaterialBagSlots(materialInventory) >= bagSize) {
+                            gatherLogs.unshift(`材料背包已满，${char.name} 本次未能存放 ${star}星 ${material.name}。`);
+                            return { blocked: true };
+                        }
+
+                        materialInventory = addMaterialToInventory(materialInventory, material.id, star, finalAmount);
+
+                        const professionMax = Number(PROFESSIONS?.[professionId]?.maxSkill) || 300;
+                        if (shouldGainProfessionSkillPoint(currentProfessionSkill, material.hiddenSkillDifficulty)) {
+                            updatedSkills[professionId] = Math.min(professionMax, currentProfessionSkill + 1);
+                        }
+
+                        return {
+                            material,
+                            star,
+                            amount: finalAmount,
+                        };
+                    };
+
                     for (let i = 0; i < gatherExecutions; i++) {
-                        const materialId = availableMaterialIds[Math.floor(Math.random() * availableMaterialIds.length)];
+                        const selectedEntry = availableEntries[Math.floor(Math.random() * availableEntries.length)];
+                        const materialId = selectedEntry?.entry?.materialId;
                         const material = MATERIALS?.[materialId];
                         if (!material) continue;
 
                         const professionId = material.professionId;
                         const currentProfessionSkill = Math.max(0, Math.floor(Number(updatedSkills?.[professionId]) || 0));
-                        const star = getGatherStar(currentProfessionSkill, material.hiddenSkillDifficulty);
-                        const inventoryKey = getMaterialInventoryKey(materialId, star);
-
-                        const hasStack = (Number(materialInventory?.[inventoryKey]) || 0) > 0;
-                        if (!hasStack && countMaterialBagSlots(materialInventory) >= bagSize) {
-                            gatherLogs.unshift(`材料背包已满，${char.name} 本次未能存放 ${star}星 ${material.name}。`);
-                            break;
+                        const requiredSkill = Number.isFinite(Number(selectedEntry?.entry?.minSkill))
+                            ? Math.max(0, Math.floor(Number(selectedEntry.entry.minSkill)))
+                            : null;
+                        if (requiredSkill != null && currentProfessionSkill < requiredSkill) {
+                            gatherLogs.unshift(`${char.name} 在 ${zone.name} 发现了 ${material.name}，但因技能点不够无法采集（当前 ${currentProfessionSkill} / 需要 ${requiredSkill}）。`);
+                            continue;
                         }
 
                         const bonusAmount = getGatherPrecisionBonusAmount(gatherStats.precision);
                         const proficiencyMultiplier = getGatherProficiencyMultiplier(gatherStats.proficiency);
                         const baseAmount = 1 + bonusAmount;
                         const totalAmount = Math.max(baseAmount, Math.round(baseAmount * proficiencyMultiplier));
+                        const commonGrant = grantGatherMaterial(material, totalAmount);
+                        if (commonGrant?.blocked) break;
+                        if (!commonGrant) continue;
 
-                        materialInventory = addMaterialToInventory(materialInventory, materialId, star, totalAmount);
-
-                        const professionMax = Number(PROFESSIONS?.[professionId]?.maxSkill) || 300;
-                        if (shouldGainProfessionSkillPoint(currentProfessionSkill, material.hiddenSkillDifficulty)) {
-                            updatedSkills[professionId] = Math.min(professionMax, currentProfessionSkill + 1);
+                        let rareGrant = null;
+                        const rareCompanions = Array.isArray(zone.rareCompanions?.[professionId])
+                            ? zone.rareCompanions[professionId].map(entry => normalizeGatherEntry(entry)).filter(Boolean)
+                            : [];
+                        if (rareCompanions.length > 0) {
+                            const rareChance = getRareCompanionChance(gatherStats.perception);
+                            if (Math.random() < rareChance) {
+                                const rareEntry = rareCompanions[Math.floor(Math.random() * rareCompanions.length)];
+                                const rareMaterial = MATERIALS?.[rareEntry?.materialId];
+                                if (rareMaterial) {
+                                    const rareRequiredSkill = Number.isFinite(Number(rareEntry?.minSkill))
+                                        ? Math.max(0, Math.floor(Number(rareEntry.minSkill)))
+                                        : null;
+                                    const rareProfessionSkill = Math.max(0, Math.floor(Number(updatedSkills?.[rareMaterial.professionId]) || 0));
+                                    if (rareRequiredSkill != null && rareProfessionSkill < rareRequiredSkill) {
+                                        gatherLogs.unshift(`${char.name} 在 ${zone.name} 遇到了稀有资源 ${rareMaterial.name}，但因技能点不够无法采集（当前 ${rareProfessionSkill} / 需要 ${rareRequiredSkill}）。`);
+                                    } else {
+                                        rareGrant = grantGatherMaterial(rareMaterial, proficiencyMultiplier, { floorAmount: true });
+                                    }
+                                }
+                            }
                         }
 
                         const logParts = [];
@@ -30845,10 +30922,13 @@ function gameReducer(state, action) {
                             logParts.push(`精细额外 +${bonusAmount}`);
                         }
                         if (proficiencyMultiplier > 1) {
-                            logParts.push(`熟练倍率 x${proficiencyMultiplier}`);
+                            logParts.push(`熟练倍率 x${proficiencyMultiplier.toFixed(2)}`);
+                        }
+                        if (rareGrant && !rareGrant.blocked) {
+                            logParts.push(`伴生 ${rareGrant.star}星 ${rareGrant.material.name} x${rareGrant.amount}`);
                         }
                         gatherLogs.unshift(
-                            `${char.name} 在 ${zone.name} 采集到 ${star}星 ${material.name} x${totalAmount}` +
+                            `${char.name} 在 ${zone.name} 采集到 ${commonGrant.star}星 ${material.name} x${commonGrant.amount}` +
                             (logParts.length > 0 ? `（${logParts.join('，')}）` : '') +
                             '。'
                         );
@@ -36717,15 +36797,17 @@ const isSpecialRecipePair = (aId, bId) =>
                                 style={{
                                     padding: 14,
                                     borderRadius: 10,
-                                    border: `1px solid ${star >= 2 ? '#ffd700' : '#4a3c2a'}`,
-                                    background: star >= 2
-                                        ? 'linear-gradient(135deg, rgba(255,215,0,0.14), rgba(0,0,0,0.28))'
-                                        : 'rgba(0,0,0,0.28)',
+                                    border: `1px solid ${material.isRare ? '#4CAF50' : (star >= 2 ? '#ffd700' : '#4a3c2a')}`,
+                                    background: material.isRare
+                                        ? 'linear-gradient(135deg, rgba(76,175,80,0.16), rgba(0,0,0,0.28))'
+                                        : (star >= 2
+                                            ? 'linear-gradient(135deg, rgba(255,215,0,0.14), rgba(0,0,0,0.28))'
+                                            : 'rgba(0,0,0,0.28)'),
                                 }}
                             >
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
                                     <div>
-                                        <div style={{ fontSize: 15, fontWeight: 700, color: '#ffd700' }}>
+                                        <div style={{ fontSize: 15, fontWeight: 700, color: material.isRare ? '#7CFC8A' : '#ffd700' }}>
                                             {material.icon} {material.name} {star === 2 ? '★★' : '★'}
                                         </div>
                                         <div style={{ marginTop: 6, fontSize: 11, color: '#888' }}>

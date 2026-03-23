@@ -12,6 +12,15 @@ const normalizeProfessionList = (professions) => {
         .slice(0, 2);
 };
 
+const normalizeGatherEntry = (entry) => {
+    if (typeof entry === 'string') return { materialId: entry, minSkill: null };
+    if (!entry || typeof entry !== 'object') return null;
+    return {
+        materialId: entry.materialId || entry.id,
+        minSkill: Number.isFinite(Number(entry.minSkill)) ? Math.max(0, Math.floor(Number(entry.minSkill))) : null,
+    };
+};
+
 export const MapPage = ({ state, dispatch }) => {
     const isMobile = useIsMobile();
     const [activeTab, setActiveTab] = useState('combat');
@@ -324,7 +333,7 @@ export const MapPage = ({ state, dispatch }) => {
                                 </div>
 
                                 <div style={{ display: 'grid', gap: 8, marginBottom: 14 }}>
-                                    {Object.entries(zone.professionPools || {}).map(([professionId, materialIds]) => (
+                                    {Object.entries(zone.professionPools || {}).map(([professionId, materialEntries]) => (
                                         <div
                                             key={professionId}
                                             style={{
@@ -338,11 +347,25 @@ export const MapPage = ({ state, dispatch }) => {
                                                 {PROFESSIONS[professionId]?.icon} {PROFESSIONS[professionId]?.name}
                                             </div>
                                             <div style={{ fontSize: 11, color: '#aaa' }}>
-                                                {materialIds.map(materialId => {
-                                                    const material = MATERIALS[materialId];
-                                                    return material ? `${material.icon} ${material.name}` : materialId;
+                                                {materialEntries.map(rawEntry => {
+                                                    const entry = normalizeGatherEntry(rawEntry);
+                                                    const material = MATERIALS[entry?.materialId];
+                                                    if (!material) return entry?.materialId || '';
+                                                    return `${material.icon} ${material.name}${entry?.minSkill != null ? `（最低${entry.minSkill}）` : ''}`;
                                                 }).join(' / ')}
                                             </div>
+                                            {Array.isArray(zone.rareCompanions?.[professionId]) && zone.rareCompanions[professionId].length > 0 && (
+                                                <div style={{ marginTop: 6, fontSize: 11, color: '#d7b56d' }}>
+                                                    稀有伴生：
+                                                    {zone.rareCompanions[professionId].map(rawEntry => {
+                                                        const entry = normalizeGatherEntry(rawEntry);
+                                                        const material = MATERIALS[entry?.materialId];
+                                                        return material
+                                                            ? ` ${material.icon} ${material.name}${entry?.minSkill != null ? `（最低${entry.minSkill}）` : ''}`
+                                                            : ` ${entry?.materialId || ''}`;
+                                                    }).join(' / ')}
+                                                </div>
+                                            )}
                                         </div>
                                     ))}
                                 </div>

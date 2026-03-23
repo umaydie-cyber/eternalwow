@@ -27528,8 +27528,8 @@ const getGatherPrecisionBonusAmount = (precision) => {
 const getGatherStar = (professionSkill, hiddenSkillDifficulty) => {
     const skill = Math.max(0, Math.floor(Number(professionSkill) || 0));
     const difficulty = Math.max(1, Math.floor(Number(hiddenSkillDifficulty) || 1));
-    if (skill >= difficulty) return 2;
-    return Math.random() < (skill / difficulty) ? 2 : 1;
+    if (skill >= difficulty * 2) return 2;
+    return Math.random() < (skill / difficulty) * 0.5 ? 2 : 1;
 };
 
 const getGatherProficiencyMultiplier = (proficiency) => {
@@ -27540,6 +27540,11 @@ const getGatherProficiencyMultiplier = (proficiency) => {
 const getRareCompanionChance = (perception) => {
     const normalizedPerception = Math.max(0, Math.min(1000, Number(perception) || 0));
     return 0.1 + (normalizedPerception / 1000) * 0.5;
+};
+
+const getElementalEssenceChance = (perception) => {
+    const normalizedPerception = Math.max(0, Math.min(1000, Number(perception) || 0));
+    return 0.05 + (normalizedPerception / 1000) * 0.05;
 };
 
 const shouldGainProfessionSkillPoint = (professionSkill, hiddenSkillDifficulty) => {
@@ -30838,12 +30843,16 @@ function gameReducer(state, action) {
                     let updatedSkills = normalizeProfessionSkills(char.professionSkills);
                     let changed = false;
 
-                    const grantGatherMaterial = (material, rawAmount, { floorAmount = false } = {}) => {
+                    const grantGatherMaterial = (material, rawAmount, { floorAmount = false, grantSkillPoint = true } = {}) => {
                         if (!material) return null;
 
                         const professionId = material.professionId;
-                        const currentProfessionSkill = Math.max(0, Math.floor(Number(updatedSkills?.[professionId]) || 0));
-                        const star = getGatherStar(currentProfessionSkill, material.hiddenSkillDifficulty);
+                        const currentProfessionSkill = professionId
+                            ? Math.max(0, Math.floor(Number(updatedSkills?.[professionId]) || 0))
+                            : 0;
+                        const star = material.hasStars === false
+                            ? 1
+                            : getGatherStar(currentProfessionSkill, material.hiddenSkillDifficulty);
                         const inventoryKey = getMaterialInventoryKey(material.id, star);
                         const normalizedAmount = floorAmount
                             ? Math.floor(Number(rawAmount) || 0)
@@ -30859,7 +30868,7 @@ function gameReducer(state, action) {
                         materialInventory = addMaterialToInventory(materialInventory, material.id, star, finalAmount);
 
                         const professionMax = Number(PROFESSIONS?.[professionId]?.maxSkill) || 300;
-                        if (shouldGainProfessionSkillPoint(currentProfessionSkill, material.hiddenSkillDifficulty)) {
+                        if (grantSkillPoint && professionId && shouldGainProfessionSkillPoint(currentProfessionSkill, material.hiddenSkillDifficulty)) {
                             updatedSkills[professionId] = Math.min(professionMax, currentProfessionSkill + 1);
                         }
 
@@ -30904,8 +30913,21 @@ function gameReducer(state, action) {
                                 const rareEntry = rareCompanions[Math.floor(Math.random() * rareCompanions.length)];
                                 const rareMaterial = MATERIALS?.[rareEntry?.materialId];
                                 if (rareMaterial) {
-                                    rareGrant = grantGatherMaterial(rareMaterial, proficiencyMultiplier, { floorAmount: true });
+                                    rareGrant = grantGatherMaterial(rareMaterial, proficiencyMultiplier, {
+                                        floorAmount: true,
+                                        grantSkillPoint: false,
+                                    });
                                 }
+                            }
+                        }
+
+                        let essenceGrant = null;
+                        const elementalEssenceIds = ['earth_essence', 'fire_essence', 'air_essence', 'water_essence'];
+                        if (Math.random() < getElementalEssenceChance(gatherStats.perception)) {
+                            const essenceMaterialId = elementalEssenceIds[Math.floor(Math.random() * elementalEssenceIds.length)];
+                            const essenceMaterial = MATERIALS?.[essenceMaterialId];
+                            if (essenceMaterial) {
+                                essenceGrant = grantGatherMaterial(essenceMaterial, 1 + Math.floor(Math.random() * 2));
                             }
                         }
 
@@ -30918,6 +30940,9 @@ function gameReducer(state, action) {
                         }
                         if (rareGrant && !rareGrant.blocked) {
                             logParts.push(`伴生 ${rareGrant.star}星 ${rareGrant.material.name} x${rareGrant.amount}`);
+                        }
+                        if (essenceGrant && !essenceGrant.blocked) {
+                            logParts.push(`掉落 ${essenceGrant.material.name} x${essenceGrant.amount}`);
                         }
                         gatherLogs.unshift(
                             `${char.name} 在 ${zone.name} 采集到 ${commonGrant.star}星 ${material.name} x${commonGrant.amount}` +
@@ -36800,7 +36825,7 @@ const isSpecialRecipePair = (aId, bId) =>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
                                     <div>
                                         <div style={{ fontSize: 15, fontWeight: 700, color: material.isRare ? '#7CFC8A' : '#ffd700' }}>
-                                            {material.icon} {material.name} {star === 2 ? '★★' : '★'}
+                                            {material.icon} {material.name}{material.hasStars === false ? '' : ` ${star === 2 ? '★★' : '★'}`}
                                         </div>
                                         <div style={{ marginTop: 6, fontSize: 11, color: '#888' }}>
                                             {material.enName}

@@ -2,7 +2,7 @@
 
 更新时间：2026-03-23
 
-本文档基于 [my-react-site/src/App.jsx](/Users/dongchenjie/IdeaProjects/eternalwow/my-react-site/src/App.jsx) 当前实现整理，描述的是“代码里已经做出来、玩家当前可以直接体验到”的内容，而不是设计草案。
+本文档基于 [App.jsx](/Users/dongchenjie/IdeaProjects/eternalwow/my-react-site/src/App.jsx) 与 [src/game](/Users/dongchenjie/IdeaProjects/eternalwow/my-react-site/src/game) 当前实现整理，描述的是“代码里已经做出来、玩家当前可以直接体验到”的内容，而不是设计草案。
 
 ## 1. 游戏定位与主循环
 
@@ -439,7 +439,7 @@ Boss 系统当前已实现：
 - 当前正式职业只有 5 个，已经足够支撑 3 人和 5 人队伍构筑。
 - 天赋树高等级存在预留位，但主要实装集中在 10-60 级。
 - 主城普通建筑 `BUILDINGS` 目前只保留了非常轻量的旧结构，实际主城玩法已全面转向“资源建筑 + 功能建筑”。
-- 游戏主体逻辑集中在单个 `App.jsx` 中，说明当前功能完整，但后续继续扩展时很适合按模块拆分。
+- 游戏主体逻辑目前仍以 `App.jsx` 为装配中心，但公共 UI、静态数据、响应式工具和部分页面已经拆到 `src/game` 目录中。
 
 ## 6. 结论
 
@@ -452,6 +452,36 @@ Boss 系统当前已实现：
 - 图鉴、成就、坐骑、徽章、宏伟宝库的长期追求
 - 任务分支与剧情奖励
 - 轮回重生与跨世成长
+
+## 7. 当前项目结构（模块化后）
+
+本次重构没有改玩法逻辑，重点是把公共能力和高体积页面先独立出来，避免继续把所有实现堆进 `App.jsx`。
+
+当前已经拆出的模块如下：
+
+- [responsive.js](/Users/dongchenjie/IdeaProjects/eternalwow/my-react-site/src/game/hooks/responsive.js)
+  负责移动端判断、触屏判断和安全区工具。
+- [ui.jsx](/Users/dongchenjie/IdeaProjects/eternalwow/my-react-site/src/game/components/ui.jsx)
+  负责 `Panel`、`Button`、`MobileActionSheet`、`StatBar` 等公共 UI。
+- [core.js](/Users/dongchenjie/IdeaProjects/eternalwow/my-react-site/src/game/data/core.js)
+  负责种族、职业、资源建筑、功能建筑以及 Boss 轮回加成基础配置。
+- [progression.js](/Users/dongchenjie/IdeaProjects/eternalwow/my-react-site/src/game/data/progression.js)
+  负责研究、物品、世界首领、团队首领、坐骑、时空商城和轮回羁绊等成长向静态数据。
+- [MapPage.jsx](/Users/dongchenjie/IdeaProjects/eternalwow/my-react-site/src/game/pages/MapPage.jsx)
+  负责地图派遣页，包含未分配角色列表、区域分配与桌面/移动端派遣交互。
+- [CityPage.jsx](/Users/dongchenjie/IdeaProjects/eternalwow/my-react-site/src/game/pages/CityPage.jsx)
+  负责主城页，包含资源总览、资源建筑派遣、功能建筑展示与建造入口。
+- [WorldBossPage.jsx](/Users/dongchenjie/IdeaProjects/eternalwow/my-react-site/src/game/pages/WorldBossPage.jsx)
+  负责世界首领页，包含世界首领、团队首领与宏伟宝库入口；当前也显式导出了成就页与图鉴页组件，避免 `App.jsx` 继续依赖文件内隐式局部定义。
+- [QuestPage.jsx](/Users/dongchenjie/IdeaProjects/eternalwow/my-react-site/src/game/pages/QuestPage.jsx)
+  负责任务页本体与任务静态数据（任务状态、任务链、任务物品、任务奖励装备）。
+
+当前的主入口仍然是 [App.jsx](/Users/dongchenjie/IdeaProjects/eternalwow/my-react-site/src/App.jsx)，但它已经从“全量定义文件”转为“模块装配 + 全局流程调度文件”。目前仍保留在 `App.jsx` 内的主要是跨页面共享的 Boss 准备/战斗模态、轮回剧情模态，以及大量战斗结算与装备系统工具。后续继续重构时，最适合优先拆出的下一批模块是：
+
+- 战斗结算工具函数
+- 图鉴与装备相关工具
+- Boss 准备 / Boss 战斗相关全局模态
+- 轮回与剧情弹窗
 
 如果后续继续维护这份文档，最建议优先同步的变更点是：
 

@@ -27521,6 +27521,16 @@ const getGatherProficiencyMultiplier = (proficiency) => {
     return 1 + (normalizedProficiency / 1000) * 3;
 };
 
+const shouldGainProfessionSkillPoint = (professionSkill, hiddenSkillDifficulty) => {
+    const skill = Math.max(0, Math.floor(Number(professionSkill) || 0));
+    const difficulty = Math.max(1, Number(hiddenSkillDifficulty) || 1);
+
+    if (skill >= difficulty) return false;
+    if (skill <= difficulty * 0.5) return true;
+    if (skill <= difficulty * 0.8) return Math.random() < 0.5;
+    return Math.random() < 0.2;
+};
+
 
 // ==================== INITIAL STATE ====================
 const initialState = {
@@ -30826,7 +30836,9 @@ function gameReducer(state, action) {
                         materialInventory = addMaterialToInventory(materialInventory, materialId, star, totalAmount);
 
                         const professionMax = Number(PROFESSIONS?.[professionId]?.maxSkill) || 300;
-                        updatedSkills[professionId] = Math.min(professionMax, (updatedSkills[professionId] || 0) + 1);
+                        if (shouldGainProfessionSkillPoint(currentProfessionSkill, material.hiddenSkillDifficulty)) {
+                            updatedSkills[professionId] = Math.min(professionMax, currentProfessionSkill + 1);
+                        }
 
                         const logParts = [];
                         if (bonusAmount > 0) {

@@ -27454,17 +27454,51 @@ const normalizeProfessionSkills = (skills) => {
     return normalized;
 };
 
-const countMaterialBagSlots = (materialInventory) =>
-    Object.values(materialInventory || {}).filter(count => (Number(count) || 0) > 0).length;
+const getMaterialInventoryKey = (materialId, star = 1) => `${materialId}__${star}`;
 
-const addMaterialToInventory = (materialInventory, materialId, amount = 1) => {
+const parseMaterialInventoryKey = (key) => {
+    const [materialId, rawStar] = String(key || '').split('__');
+    const star = Math.max(1, Math.min(2, Math.floor(Number(rawStar) || 1)));
+    return { materialId, star };
+};
+
+const normalizeMaterialInventory = (materialInventory) => {
+    if (!materialInventory || typeof materialInventory !== 'object' || Array.isArray(materialInventory)) return {};
+
+    const normalized = {};
+    Object.entries(materialInventory).forEach(([key, rawCount]) => {
+        const count = Math.max(0, Math.floor(Number(rawCount) || 0));
+        if (count <= 0) return;
+
+        if (MATERIALS[key]) {
+            const legacyKey = getMaterialInventoryKey(key, 1);
+            normalized[legacyKey] = (normalized[legacyKey] || 0) + count;
+            return;
+        }
+
+        const { materialId, star } = parseMaterialInventoryKey(key);
+        if (!MATERIALS[materialId]) return;
+        const nextKey = getMaterialInventoryKey(materialId, star);
+        normalized[nextKey] = (normalized[nextKey] || 0) + count;
+    });
+
+    return normalized;
+};
+
+const countMaterialBagSlots = (materialInventory) =>
+    Object.values(normalizeMaterialInventory(materialInventory)).filter(count => (Number(count) || 0) > 0).length;
+
+const addMaterialToInventory = (materialInventory, materialId, star = 1, amount = 1) => {
     if (!MATERIALS[materialId]) return materialInventory || {};
+    const normalizedInventory = normalizeMaterialInventory(materialInventory);
     const nextAmount = Math.max(0, Math.floor(Number(amount) || 0));
     if (nextAmount <= 0) return materialInventory || {};
+    const safeStar = Math.max(1, Math.min(2, Math.floor(Number(star) || 1)));
+    const inventoryKey = getMaterialInventoryKey(materialId, safeStar);
 
     return {
-        ...(materialInventory || {}),
-        [materialId]: Math.max(0, Math.floor(Number(materialInventory?.[materialId]) || 0)) + nextAmount,
+        ...normalizedInventory,
+        [inventoryKey]: Math.max(0, Math.floor(Number(normalizedInventory?.[inventoryKey]) || 0)) + nextAmount,
     };
 };
 
@@ -27473,6 +27507,23 @@ const getGatherPrecisionBonusAmount = (precision) => {
     const extraChance = normalizedPrecision / 2000;
     if (Math.random() >= extraChance) return 0;
     return 1 + Math.floor(Math.random() * 5);
+};
+
+const getGatherStar = (professionSkill, hiddenSkillDifficulty) => {
+    const skill = Math.max(0, Math.floor(Number(professionSkill) || 0));
+    const difficulty = Math.max(1, Math.floor(Number(hiddenSkillDifficulty) || 1));
+    if (skill >= difficulty) return 2;
+    return Math.random() < (skill / difficulty) ? 2 : 1;
+};
+
+const getGatherProficiencyMultiplier = (proficiency) => {
+    const normalizedProficiency = Math.max(0, Math.min(1000, Number(proficiency) || 0));
+    const rollChance = normalizedProficiency / 1000;
+    let extraMultipliers = 0;
+    for (let i = 0; i < 3; i++) {
+        if (Math.random() < rollChance) extraMultipliers += 1;
+    }
+    return 1 + extraMultipliers;
 };
 
 
@@ -30737,7 +30788,7 @@ function gameReducer(state, action) {
             newState.gatheringTimer = gatherTimerRemainder;
 
             if (gatherExecutions > 0) {
-                let materialInventory = { ...(newState.materialInventory || {}) };
+                let materialInventory = normalizeMaterialInventory(newState.materialInventory);
                 const bagSize = Math.max(0, Math.floor(Number(newState.materialBagSize) || MATERIAL_BAG_DEFAULT_SIZE));
                 const gatherLogs = Array.isArray(newState.gatherLogs) ? [...newState.gatherLogs] : [];
                 const nextCharacters = [...(newState.characters || [])];
@@ -30761,25 +30812,38 @@ function gameReducer(state, action) {
                         const material = MATERIALS?.[materialId];
                         if (!material) continue;
 
-                        const hasStack = (Number(materialInventory?.[materialId]) || 0) > 0;
+                        const professionId = material.professionId;
+                        const currentProfessionSkill = Math.max(0, Math.floor(Number(updatedSkills?.[professionId]) || 0));
+                        const star = getGatherStar(currentProfessionSkill, material.hiddenSkillDifficulty);
+                        const inventoryKey = getMaterialInventoryKey(materialId, star);
+
+                        const hasStack = (Number(materialInventory?.[inventoryKey]) || 0) > 0;
                         if (!hasStack && countMaterialBagSlots(materialInventory) >= bagSize) {
-                            gatherLogs.unshift(`材料背包已满，${char.name} 本次未能存放 ${material.name}。`);
+                            gatherLogs.unshift(`材料背包已满，${char.name} 本次未能存放 ${star}星 ${material.name}。`);
                             break;
                         }
 
                         const bonusAmount = getGatherPrecisionBonusAmount(gatherStats.precision);
-                        const totalAmount = 1 + bonusAmount;
+                        const proficiencyMultiplier = getGatherProficiencyMultiplier(gatherStats.proficiency);
+                        const baseAmount = 1 + bonusAmount;
+                        const totalAmount = baseAmount * proficiencyMultiplier;
 
-                        materialInventory = addMaterialToInventory(materialInventory, materialId, totalAmount);
+                        materialInventory = addMaterialToInventory(materialInventory, materialId, star, totalAmount);
 
-                        const professionId = material.professionId;
                         const professionMax = Number(PROFESSIONS?.[professionId]?.maxSkill) || 300;
                         updatedSkills[professionId] = Math.min(professionMax, (updatedSkills[professionId] || 0) + 1);
 
+                        const logParts = [];
+                        if (bonusAmount > 0) {
+                            logParts.push(`精细额外 +${bonusAmount}`);
+                        }
+                        if (proficiencyMultiplier > 1) {
+                            logParts.push(`熟练倍率 x${proficiencyMultiplier}`);
+                        }
                         gatherLogs.unshift(
-                            bonusAmount > 0
-                                ? `${char.name} 在 ${zone.name} 采集到 ${material.name} x${totalAmount}（精细触发 +${bonusAmount}）。`
-                                : `${char.name} 在 ${zone.name} 采集到 ${material.name}。`
+                            `${char.name} 在 ${zone.name} 采集到 ${star}星 ${material.name} x${totalAmount}` +
+                            (logParts.length > 0 ? `（${logParts.join('，')}）` : '') +
+                            '。'
                         );
                         changed = true;
                     }
@@ -32372,10 +32436,7 @@ function gameReducer(state, action) {
                 decoded.bossCooldowns ??= {};
                 decoded.worldBossKillCounts ??= {};
                 decoded.worldBossAutoKill ??= {};
-                decoded.materialInventory ??= {};
-                if (typeof decoded.materialInventory !== 'object' || Array.isArray(decoded.materialInventory)) {
-                    decoded.materialInventory = {};
-                }
+                decoded.materialInventory = normalizeMaterialInventory(decoded.materialInventory);
                 decoded.materialBagSize = Math.max(0, Math.floor(Number(decoded.materialBagSize) || MATERIAL_BAG_DEFAULT_SIZE));
                 decoded.gatherAssignments ??= {};
                 if (typeof decoded.gatherAssignments !== 'object' || Array.isArray(decoded.gatherAssignments)) {
@@ -35836,13 +35897,22 @@ const isSpecialRecipePair = (aId, bId) =>
         setDraggedIndex(null);
     };
 
-    const materialEntries = Object.entries(state.materialInventory || {})
-        .map(([materialId, count]) => ({
+    const materialEntries = Object.entries(normalizeMaterialInventory(state.materialInventory))
+        .map(([inventoryKey, count]) => {
+            const { materialId, star } = parseMaterialInventoryKey(inventoryKey);
+            return {
             material: MATERIALS[materialId],
+            star,
             count: Math.max(0, Math.floor(Number(count) || 0)),
-        }))
+        };
+        })
         .filter(entry => entry.material && entry.count > 0)
-        .sort((a, b) => a.material.name.localeCompare(b.material.name, 'zh-Hans-CN'));
+        .sort((a, b) => {
+            if (a.material.name !== b.material.name) {
+                return a.material.name.localeCompare(b.material.name, 'zh-Hans-CN');
+            }
+            return b.star - a.star;
+        });
 
     const materialBagUsed = countMaterialBagSlots(state.materialInventory);
 
@@ -36634,20 +36704,22 @@ const isSpecialRecipePair = (aId, bId) =>
                         gridTemplateColumns: `repeat(auto-fill, minmax(${isMobile ? 140 : 180}px, 1fr))`,
                         gap: 10
                     }}>
-                        {materialEntries.map(({ material, count }) => (
+                        {materialEntries.map(({ material, star, count }) => (
                             <div
-                                key={material.id}
+                                key={`${material.id}_${star}`}
                                 style={{
                                     padding: 14,
                                     borderRadius: 10,
-                                    border: '1px solid #4a3c2a',
-                                    background: 'rgba(0,0,0,0.28)',
+                                    border: `1px solid ${star >= 2 ? '#ffd700' : '#4a3c2a'}`,
+                                    background: star >= 2
+                                        ? 'linear-gradient(135deg, rgba(255,215,0,0.14), rgba(0,0,0,0.28))'
+                                        : 'rgba(0,0,0,0.28)',
                                 }}
                             >
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
                                     <div>
                                         <div style={{ fontSize: 15, fontWeight: 700, color: '#ffd700' }}>
-                                            {material.icon} {material.name}
+                                            {material.icon} {material.name} {star === 2 ? '★★' : '★'}
                                         </div>
                                         <div style={{ marginTop: 6, fontSize: 11, color: '#888' }}>
                                             {material.enName}

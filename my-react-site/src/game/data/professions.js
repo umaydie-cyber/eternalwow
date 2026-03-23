@@ -24,6 +24,7 @@ export const MATERIALS = {
         enName: 'Peacebloom',
         icon: '🌼',
         professionId: 'herbalism',
+        hiddenSkillDifficulty: 80,
         stackLimit: Infinity,
     },
     silverleaf: {
@@ -32,6 +33,7 @@ export const MATERIALS = {
         enName: 'Silverleaf',
         icon: '🍃',
         professionId: 'herbalism',
+        hiddenSkillDifficulty: 100,
         stackLimit: Infinity,
     },
     copper_ore: {
@@ -40,6 +42,7 @@ export const MATERIALS = {
         enName: 'Copper Ore',
         icon: '🟠',
         professionId: 'mining',
+        hiddenSkillDifficulty: 80,
         stackLimit: Infinity,
     },
     tin_ore: {
@@ -48,6 +51,7 @@ export const MATERIALS = {
         enName: 'Tin Ore',
         icon: '⚙️',
         professionId: 'mining',
+        hiddenSkillDifficulty: 100,
         stackLimit: Infinity,
     },
 };

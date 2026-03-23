@@ -13,6 +13,7 @@ export const ProfessionPage = ({ state, dispatch }) => {
                     每名角色最多学习 2 个专业。第 1 个专业花费 🪙{PROFESSION_LEARN_COSTS[0].toLocaleString()}，
                     第 2 个专业花费 🪙{PROFESSION_LEARN_COSTS[1].toLocaleString()}。
                     采集地图每 30 秒触发一次采集事件，并提升对应专业熟练度，最高 300 点。
+                    达到材料隐藏难度后会稳定产出 2 星材料；精细和熟练会继续放大单次采集数量。
                 </div>
             </Panel>
 

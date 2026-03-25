@@ -495,7 +495,7 @@ export const MapPage = ({ state, dispatch }) => {
                 visibleChars,
                 activeTab === 'combat'
                     ? '暂无可派遣角色，可能已在战斗地图、主城资源建筑或采集区域工作。'
-                    : '暂无可派遣的采集角色。先去“专业”页学习采药或挖矿。'
+                    : '暂无可派遣的采集角色。先去“专业”页学习草药或采矿。'
             )}
 
             {activeTab === 'combat' ? renderCombatZones() : renderGatherZones()}

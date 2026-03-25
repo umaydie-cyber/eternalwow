@@ -27,6 +27,7 @@ import {
     MATERIAL_BAG_DEFAULT_SIZE,
     PROFESSIONS,
     PROFESSION_LEARN_COSTS,
+    PROFESSION_SLOT_LIMIT,
     createDefaultProfessionSkills,
 } from './game/data/professions';
 import { useIsMobile, isTouchDevice, safeAreaBottom } from './game/hooks/responsive';
@@ -31952,14 +31953,14 @@ function gameReducer(state, action) {
 
         case 'LEARN_PROFESSION': {
             const { characterId, professionId } = action.payload || {};
-            if (!characterId || !PROFESSIONS[professionId]) return state;
+            if (!characterId || !PROFESSIONS[professionId] || PROFESSIONS[professionId].isAvailable === false) return state;
 
             const charIndex = state.characters.findIndex(c => c.id === characterId);
             if (charIndex === -1) return state;
 
             const character = state.characters[charIndex];
             const currentProfessions = normalizeProfessionList(character.professions);
-            if (currentProfessions.includes(professionId) || currentProfessions.length >= 2) return state;
+            if (currentProfessions.includes(professionId) || currentProfessions.length >= PROFESSION_SLOT_LIMIT) return state;
 
             const costIndex = Math.min(currentProfessions.length, PROFESSION_LEARN_COSTS.length - 1);
             const learnCost = Math.max(0, Math.floor(Number(PROFESSION_LEARN_COSTS[costIndex]) || 0));

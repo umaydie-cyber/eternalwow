@@ -1,21 +1,80 @@
 export const MATERIAL_BAG_DEFAULT_SIZE = 100;
 
 export const PROFESSION_LEARN_COSTS = [5000, 100000];
+export const PROFESSION_SLOT_LIMIT = 2;
 
 const entry = (materialId, minSkill = null) => ({ materialId, minSkill });
 
 export const PROFESSIONS = {
     herbalism: {
         id: 'herbalism',
-        name: '采药',
+        name: '草药',
         icon: '🌿',
         maxSkill: 300,
+        isAvailable: true,
     },
     mining: {
         id: 'mining',
-        name: '挖矿',
+        name: '采矿',
         icon: '⛏️',
         maxSkill: 300,
+        isAvailable: true,
+    },
+    skinning: {
+        id: 'skinning',
+        name: '剥皮',
+        icon: '🦊',
+        maxSkill: 300,
+        isAvailable: false,
+    },
+    tailoring: {
+        id: 'tailoring',
+        name: '裁缝',
+        icon: '🧵',
+        maxSkill: 300,
+        isAvailable: false,
+    },
+    alchemy: {
+        id: 'alchemy',
+        name: '炼金',
+        icon: '⚗️',
+        maxSkill: 300,
+        isAvailable: false,
+    },
+    inscription: {
+        id: 'inscription',
+        name: '铭文',
+        icon: '📜',
+        maxSkill: 300,
+        isAvailable: false,
+    },
+    jewelcrafting: {
+        id: 'jewelcrafting',
+        name: '珠宝加工',
+        icon: '💎',
+        maxSkill: 300,
+        isAvailable: false,
+    },
+    blacksmithing: {
+        id: 'blacksmithing',
+        name: '锻造',
+        icon: '🔨',
+        maxSkill: 300,
+        isAvailable: false,
+    },
+    leatherworking: {
+        id: 'leatherworking',
+        name: '制皮',
+        icon: '🧥',
+        maxSkill: 300,
+        isAvailable: false,
+    },
+    engineering: {
+        id: 'engineering',
+        name: '工程学',
+        icon: '⚙️',
+        maxSkill: 300,
+        isAvailable: false,
     },
 };
 

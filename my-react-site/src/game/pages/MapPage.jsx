@@ -21,6 +21,13 @@ const normalizeGatherEntry = (entry) => {
     };
 };
 
+const formatGatherMaterialLabel = (entry, { showMinSkill = true } = {}) => {
+    const material = MATERIALS[entry?.materialId];
+    if (!material) return entry?.materialId || '';
+    const minSkillLabel = showMinSkill && entry?.minSkill != null ? `（最低${entry.minSkill}）` : '';
+    return `${material.icon} ${material.name}${minSkillLabel}`;
+};
+
 export const MapPage = ({ state, dispatch }) => {
     const isMobile = useIsMobile();
     const [activeTab, setActiveTab] = useState('combat');
@@ -349,9 +356,7 @@ export const MapPage = ({ state, dispatch }) => {
                                             <div style={{ fontSize: 11, color: '#aaa' }}>
                                                 {materialEntries.map(rawEntry => {
                                                     const entry = normalizeGatherEntry(rawEntry);
-                                                    const material = MATERIALS[entry?.materialId];
-                                                    if (!material) return entry?.materialId || '';
-                                                    return `${material.icon} ${material.name}${entry?.minSkill != null ? `（最低${entry.minSkill}）` : ''}`;
+                                                    return formatGatherMaterialLabel(entry);
                                                 }).join(' / ')}
                                             </div>
                                             {Array.isArray(zone.rareCompanions?.[professionId]) && zone.rareCompanions[professionId].length > 0 && (
@@ -359,10 +364,7 @@ export const MapPage = ({ state, dispatch }) => {
                                                     稀有伴生：
                                                     {zone.rareCompanions[professionId].map(rawEntry => {
                                                         const entry = normalizeGatherEntry(rawEntry);
-                                                        const material = MATERIALS[entry?.materialId];
-                                                        return material
-                                                            ? ` ${material.icon} ${material.name}${entry?.minSkill != null ? `（最低${entry.minSkill}）` : ''}`
-                                                            : ` ${entry?.materialId || ''}`;
+                                                        return ` ${formatGatherMaterialLabel(entry, { showMinSkill: false })}`;
                                                     }).join(' / ')}
                                                 </div>
                                             )}

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { Panel, Button } from '../components/ui';
 import { CLASSES } from '../data/core';
 import { GATHERING_ZONES, MATERIALS, PROFESSIONS } from '../data/professions';
@@ -32,17 +32,17 @@ export const MapPage = ({ state, dispatch }) => {
     const isMobile = useIsMobile();
     const [activeTab, setActiveTab] = useState('combat');
     const [draggedChar, setDraggedChar] = useState(null);
-    const [selectedCharId, setSelectedCharId] = useState(null);
+    const [mobileSelectedCharId, setMobileSelectedCharId] = useState(null);
 
-    useEffect(() => {
-        if (!isMobile) setSelectedCharId(null);
-    }, [isMobile]);
-
-    const resourceAssignedIds = new Set(
-        Object.values(state.resourceAssignments || {}).flat()
-    );
-    const combatAssignedIds = new Set(Object.keys(state.assignments || {}));
-    const gatherAssignedIds = new Set(Object.keys(state.gatherAssignments || {}));
+    const resourceAssignedIds = useMemo(() => (
+        new Set(Object.values(state.resourceAssignments || {}).flat())
+    ), [state.resourceAssignments]);
+    const combatAssignedIds = useMemo(() => (
+        new Set(Object.keys(state.assignments || {}))
+    ), [state.assignments]);
+    const gatherAssignedIds = useMemo(() => (
+        new Set(Object.keys(state.gatherAssignments || {}))
+    ), [state.gatherAssignments]);
 
     const unassignedChars = useMemo(() => (
         state.characters.filter(char =>
@@ -57,15 +57,10 @@ export const MapPage = ({ state, dispatch }) => {
     ), [unassignedChars]);
 
     const visibleChars = activeTab === 'combat' ? unassignedChars : gatherReadyChars;
-    const selectedChar = selectedCharId
-        ? visibleChars.find(char => char.id === selectedCharId) || null
+    const selectedChar = isMobile
+        ? visibleChars.find(char => char.id === mobileSelectedCharId) || null
         : null;
-
-    useEffect(() => {
-        if (selectedCharId && !visibleChars.some(char => char.id === selectedCharId)) {
-            setSelectedCharId(null);
-        }
-    }, [selectedCharId, visibleChars]);
+    const selectedCharId = selectedChar?.id || null;
 
     const assignToZone = useCallback((characterId, zoneId) => {
         if (!characterId || !zoneId) return;
@@ -110,7 +105,7 @@ export const MapPage = ({ state, dispatch }) => {
 
     const handleSelectChar = (charId) => {
         if (!isMobile) return;
-        setSelectedCharId(prev => prev === charId ? null : charId);
+        setMobileSelectedCharId(prev => prev === charId ? null : charId);
     };
 
     const renderCharacterList = (chars, emptyText) => (
@@ -197,7 +192,7 @@ export const MapPage = ({ state, dispatch }) => {
         }}>
             {Object.values(state.zones).map(zone => {
                 const assignedChars = Object.entries(state.assignments || {})
-                    .filter(([_, zId]) => zId === zone.id)
+                    .filter(([, zId]) => zId === zone.id)
                     .map(([charId]) => state.characters.find(char => char.id === charId))
                     .filter(Boolean);
 
@@ -289,7 +284,7 @@ export const MapPage = ({ state, dispatch }) => {
                                                 <Button
                                                     onClick={() => {
                                                         assignToZone(selectedCharId, zone.id);
-                                                        setSelectedCharId(null);
+                                                        setMobileSelectedCharId(null);
                                                     }}
                                                     style={{ width: '100%', padding: '10px 12px', fontSize: 13 }}
                                                 >
@@ -297,7 +292,7 @@ export const MapPage = ({ state, dispatch }) => {
                                                 </Button>
 
                                                 <Button
-                                                    onClick={() => setSelectedCharId(null)}
+                                                    onClick={() => setMobileSelectedCharId(null)}
                                                     variant="secondary"
                                                     style={{ width: '100%', marginTop: 8, padding: '10px 12px', fontSize: 13 }}
                                                 >
@@ -324,7 +319,7 @@ export const MapPage = ({ state, dispatch }) => {
             }}>
                 {Object.values(GATHERING_ZONES).map(zone => {
                     const assignedChars = Object.entries(state.gatherAssignments || {})
-                        .filter(([_, zId]) => zId === zone.id)
+                        .filter(([, zId]) => zId === zone.id)
                         .map(([charId]) => state.characters.find(char => char.id === charId))
                         .filter(Boolean);
 
@@ -424,7 +419,7 @@ export const MapPage = ({ state, dispatch }) => {
                                             <Button
                                                 onClick={() => {
                                                     assignToGatherZone(selectedCharId, zone.id);
-                                                    setSelectedCharId(null);
+                                                    setMobileSelectedCharId(null);
                                                 }}
                                                 style={{ width: '100%', padding: '10px 12px', fontSize: 13 }}
                                             >
@@ -432,7 +427,7 @@ export const MapPage = ({ state, dispatch }) => {
                                             </Button>
 
                                             <Button
-                                                onClick={() => setSelectedCharId(null)}
+                                                onClick={() => setMobileSelectedCharId(null)}
                                                 variant="secondary"
                                                 style={{ width: '100%', marginTop: 8, padding: '10px 12px', fontSize: 13 }}
                                             >

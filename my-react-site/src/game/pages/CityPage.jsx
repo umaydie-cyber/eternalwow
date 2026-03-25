@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { Panel, Button } from '../components/ui';
 import { BOSS_NAMES, CLASSES, FUNCTIONAL_BUILDINGS, RESOURCE_BUILDINGS } from '../data/core';
 import { useIsMobile } from '../hooks/responsive';
@@ -7,13 +7,10 @@ import { useIsMobile } from '../hooks/responsive';
 export const CityPage = ({ state, dispatch, calculateGatherStats, calculateBuildingProduction, getFountainEfficiency, getVolcanicHotSpringRegenPct, getFunctionalBuildingCost, getFunctionalBuildingMaxCount, getFunctionalBuildingEffectiveMaxCount }) => {
     const isMobile = useIsMobile();
     const [draggedChar, setDraggedChar] = useState(null);
-    const [selectedCharId, setSelectedCharId] = useState(null);
+    const [mobileSelectedCharId, setMobileSelectedCharId] = useState(null);
     const [activeTab, setActiveTab] = useState('resources'); // 'resources' | 'functional'
 
-    // 桌面端切回时清空点选状态
-    useEffect(() => {
-        if (!isMobile) setSelectedCharId(null);
-    }, [isMobile]);
+    const selectedCharId = isMobile ? mobileSelectedCharId : null;
 
     const selectedChar = selectedCharId
         ? state.characters.find(c => c.id === selectedCharId)
@@ -23,12 +20,14 @@ export const CityPage = ({ state, dispatch, calculateGatherStats, calculateBuild
     // 获取未被派遣的角色（不在地图也不在资源建筑）
     const getAvailableChars = () => {
         const mapAssigned = new Set(Object.keys(state.assignments || {}));
+        const professionAssigned = new Set(Object.keys(state.gatherAssignments || {}));
         const resourceAssigned = new Set(
             Object.values(state.resourceAssignments || {}).flat()
         );
 
         return state.characters.filter(c =>
             !mapAssigned.has(c.id) && !resourceAssigned.has(c.id)
+            && !professionAssigned.has(c.id)
         );
     };
 
@@ -133,7 +132,7 @@ export const CityPage = ({ state, dispatch, calculateGatherStats, calculateBuild
                                     onDragStart={!isMobile ? (e) => handleDragStart(e, char.id) : undefined}
                                     onClick={() => {
                                         if (!isMobile) return;
-                                        setSelectedCharId(prev => prev === char.id ? null : char.id);
+                                        setMobileSelectedCharId(prev => prev === char.id ? null : char.id);
                                     }}
                                     style={{
                                         padding: 12,
@@ -402,7 +401,7 @@ export const CityPage = ({ state, dispatch, calculateGatherStats, calculateBuild
                     type: 'ASSIGN_RESOURCE_BUILDING',
                     payload: { characterId: selectedCharId, buildingId: building.id }
                 });
-                setSelectedCharId(null);
+                setMobileSelectedCharId(null);
             }}
             disabled={isFull}
             style={{ width: '100%', padding: '10px 12px', fontSize: 13 }}
@@ -411,7 +410,7 @@ export const CityPage = ({ state, dispatch, calculateGatherStats, calculateBuild
         </Button>
 
         <Button
-            onClick={() => setSelectedCharId(null)}
+            onClick={() => setMobileSelectedCharId(null)}
             variant="secondary"
             style={{ width: '100%', marginTop: 8, padding: '10px 12px', fontSize: 13 }}
         >

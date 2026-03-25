@@ -27443,6 +27443,25 @@ const normalizeProfessionList = (professions) => {
         .slice(0, 2);
 };
 
+const getCharacterResourceBuildingId = (state, characterId) => {
+    for (const [buildingId, workerIds] of Object.entries(state.resourceAssignments || {})) {
+        if ((workerIds || []).includes(characterId)) return buildingId;
+    }
+    return null;
+};
+
+const getCharacterGatherZoneId = (state, characterId) => state.gatherAssignments?.[characterId] || null;
+
+const getCharacterMapZoneId = (state, characterId) => state.assignments?.[characterId] || null;
+
+const isCharacterBusyWithProfessionWork = (state, characterId) => (
+    !!getCharacterGatherZoneId(state, characterId) || !!getCharacterResourceBuildingId(state, characterId)
+);
+
+const isCharacterBusyForBoss = (state, characterId) => (
+    !!getCharacterMapZoneId(state, characterId) || isCharacterBusyWithProfessionWork(state, characterId)
+);
+
 const normalizeProfessionSkills = (skills) => {
     const defaults = createDefaultProfessionSkills();
     if (!skills || typeof skills !== 'object' || Array.isArray(skills)) return defaults;
@@ -31986,18 +32005,14 @@ function gameReducer(state, action) {
         case 'ASSIGN_ZONE': {
             const { characterId, zoneId } = action.payload;
 
-            // 检查角色是否在主城资源建筑工作
-            const isInResourceBuilding = Object.values(state.resourceAssignments || {})
-                .flat()
-                .includes(characterId);
-
-            if (isInResourceBuilding) {
+            const resourceBuildingId = getCharacterResourceBuildingId(state, characterId);
+            if (resourceBuildingId) {
                 // 角色正在主城采集，不能派遣去地图
                 console.warn(`角色 ${characterId} 正在主城采集，无法派遣到地图`);
                 return state;
             }
 
-            if (state.gatherAssignments?.[characterId]) {
+            if (getCharacterGatherZoneId(state, characterId)) {
                 console.warn(`角色 ${characterId} 正在采集地图工作，无法派遣到战斗地图`);
                 return state;
             }
@@ -32037,12 +32052,8 @@ function gameReducer(state, action) {
             const { characterId, zoneId } = action.payload || {};
             if (!characterId || !zoneId || !GATHERING_ZONES?.[zoneId]) return state;
 
-            if (state.assignments?.[characterId]) return state;
-
-            const isInResourceBuilding = Object.values(state.resourceAssignments || {})
-                .flat()
-                .includes(characterId);
-            if (isInResourceBuilding) return state;
+            if (getCharacterMapZoneId(state, characterId)) return state;
+            if (getCharacterResourceBuildingId(state, characterId)) return state;
 
             const charIndex = state.characters.findIndex(c => c.id === characterId);
             if (charIndex === -1) return state;
@@ -32686,6 +32697,11 @@ function gameReducer(state, action) {
 
         case 'SET_BOSS_TEAM_SLOT': {
             const { slot, charId } = action.payload;
+            if (charId && isCharacterBusyForBoss(state, charId)) {
+                alert('该角色正在地图战斗、专业采集或资源建筑工作中，需先召回后才能挑战 Boss。');
+                return state;
+            }
+
             const newTeam = [...state.bossTeam];
             // 如果同一个角色已存在，移除旧位置
             const oldSlot = newTeam.indexOf(charId);
@@ -32710,6 +32726,10 @@ function gameReducer(state, action) {
 
             const teamIds = state.bossTeam.filter(Boolean);
             if (teamIds.length === 0) return state;
+            if (teamIds.some(charId => isCharacterBusyForBoss(state, charId))) {
+                alert('队伍中有角色仍在地图战斗、专业采集或资源建筑工作中，需先召回后才能挑战 Boss。');
+                return state;
+            }
 
             const teamChars = teamIds.map(id => state.characters.find(c => c.id === id)).filter(Boolean);
             // 重新计算队伍光环
@@ -33166,12 +33186,12 @@ function gameReducer(state, action) {
             }
 
             // 检查角色是否在地图打怪
-            if (state.assignments?.[characterId]) {
+            if (getCharacterMapZoneId(state, characterId)) {
                 console.warn(`角色 ${characterId} 正在地图打怪，无法派遣到主城采集`);
                 return state;
             }
 
-            if (state.gatherAssignments?.[characterId]) {
+            if (getCharacterGatherZoneId(state, characterId)) {
                 console.warn(`角色 ${characterId} 正在采集地图工作，无法派遣到主城采集`);
                 return state;
             }
@@ -37913,6 +37933,7 @@ const BossPrepareModal = ({ state, dispatch }) => {
     const teamSize = Math.max(1, (state.bossTeam || []).length || getBossPartySize(bossId));
     // ===== 角色状态（待命 / 地图战斗 / 采集） =====
     const mapAssignments = state.assignments || {};
+    const professionAssignments = state.gatherAssignments || {};
     const resourceAssignments = state.resourceAssignments || {};
 
     // charId -> buildingId（主城采集）
@@ -37924,8 +37945,8 @@ const BossPrepareModal = ({ state, dispatch }) => {
     // Boss准备界面需要展示【所有角色】（包含地图战斗/采集中角色）
     // 排序：待命角色优先展示
     const allCharacters = [...(state.characters || [])].sort((a, b) => {
-        const aBusy = !!(mapAssignments[a.id] || resourceBuildingByCharId[a.id]);
-        const bBusy = !!(mapAssignments[b.id] || resourceBuildingByCharId[b.id]);
+        const aBusy = !!(mapAssignments[a.id] || professionAssignments[a.id] || resourceBuildingByCharId[a.id]);
+        const bBusy = !!(mapAssignments[b.id] || professionAssignments[b.id] || resourceBuildingByCharId[b.id]);
         if (aBusy !== bBusy) return aBusy ? 1 : -1; // 待命在前
         return (b.level || 0) - (a.level || 0); // 同组按等级降序
     });
@@ -40832,7 +40853,7 @@ const BossPrepareModal = ({ state, dispatch }) => {
                                 marginBottom: 12
                             }}>
                                 👥 所有角色 <span style={{ color: '#888', fontWeight: 400 }}>
-                                （{isMobile ? '手机端：点选角色→点位置加入/换位；' : '仅待命角色可拖拽；'}地图战斗/采集中角色可在此召回）
+                                （{isMobile ? '手机端：点选角色→点位置加入/换位；' : '仅待命角色可拖拽；'}地图战斗/专业采集/资源建筑中的角色可在此召回）
                             </span>
                             </div>
 
@@ -40855,14 +40876,19 @@ const BossPrepareModal = ({ state, dispatch }) => {
                                     {allCharacters.map(char => {
                                         const isInTeam = state.bossTeam.includes(char.id);
                                         const zoneId = mapAssignments?.[char.id];
+                                        const professionZoneId = professionAssignments?.[char.id];
                                         const gatherBuildingId = resourceBuildingByCharId?.[char.id];
                                         const isMapFighting = !!zoneId;
-                                        const isGathering = !!gatherBuildingId;
-                                        const isBusy = isMapFighting || isGathering;
+                                        const isProfessionGathering = !!professionZoneId;
+                                        const isResourceWorking = !!gatherBuildingId;
+                                        const isBusy = isMapFighting || isProfessionGathering || isResourceWorking;
                                         const canDrag = !isInTeam && !isBusy;
 
                                         const zoneName = zoneId
                                             ? (state.zones?.[zoneId]?.name || ZONES?.[zoneId]?.name || zoneId)
+                                            : '';
+                                        const professionZoneName = professionZoneId
+                                            ? (GATHERING_ZONES?.[professionZoneId]?.name || professionZoneId)
                                             : '';
                                         const buildingName = gatherBuildingId
                                             ? (RESOURCE_BUILDINGS?.[gatherBuildingId]?.name || gatherBuildingId)
@@ -40877,7 +40903,13 @@ const BossPrepareModal = ({ state, dispatch }) => {
                                                     payload: { characterId: char.id }
                                                 });
                                             }
-                                            if (isGathering) {
+                                            if (isProfessionGathering) {
+                                                dispatch({
+                                                    type: 'UNASSIGN_GATHER_CHARACTER',
+                                                    payload: { characterId: char.id }
+                                                });
+                                            }
+                                            if (isResourceWorking) {
                                                 dispatch({
                                                     type: 'UNASSIGN_RESOURCE_BUILDING',
                                                     payload: { characterId: char.id, buildingId: gatherBuildingId }
@@ -40930,14 +40962,18 @@ const BossPrepareModal = ({ state, dispatch }) => {
                                                         ? 'rgba(76,175,80,0.1)'
                                                         : isMapFighting
                                                             ? 'rgba(244,67,54,0.08)'
-                                                            : isGathering
+                                                            : isProfessionGathering
+                                                                ? 'rgba(76,175,80,0.08)'
+                                                                : isResourceWorking
                                                                 ? 'rgba(33,150,243,0.08)'
                                                                 : 'rgba(0,0,0,0.3)',
                                                     border: isInTeam
                                                         ? '1px solid rgba(76,175,80,0.3)'
                                                         : isMapFighting
                                                             ? '1px solid rgba(244,67,54,0.35)'
-                                                            : isGathering
+                                                            : isProfessionGathering
+                                                                ? '1px solid rgba(76,175,80,0.35)'
+                                                                : isResourceWorking
                                                                 ? '1px solid rgba(33,150,243,0.35)'
                                                                 : '1px solid rgba(74,60,42,0.5)',
                                                     borderRadius: 8,
@@ -40957,8 +40993,10 @@ const BossPrepareModal = ({ state, dispatch }) => {
                                                 title={
                                                     isMapFighting
                                                         ? `地图战斗中：${zoneName || zoneId}`
-                                                        : isGathering
-                                                            ? `采集中：${buildingName || gatherBuildingId}`
+                                                        : isProfessionGathering
+                                                            ? `专业采集中：${professionZoneName || professionZoneId}`
+                                                            : isResourceWorking
+                                                                ? `资源建筑中：${buildingName || gatherBuildingId}`
                                                             : '待命'
                                                 }
                                             >
@@ -41012,7 +41050,20 @@ const BossPrepareModal = ({ state, dispatch }) => {
                                                                 ⚔️ 地图战斗中{zoneName ? `：${zoneName}` : ''}
                                                             </span>
                                                         )}
-                                                        {isGathering && (
+                                                        {isProfessionGathering && (
+                                                            <span style={{
+                                                                fontSize: 9,
+                                                                padding: '2px 6px',
+                                                                borderRadius: 4,
+                                                                background: 'rgba(76,175,80,0.15)',
+                                                                border: '1px solid rgba(76,175,80,0.35)',
+                                                                color: '#a5d6a7',
+                                                                fontWeight: 700
+                                                            }}>
+                                                                ⛏️ 专业采集中{professionZoneName ? `：${professionZoneName}` : ''}
+                                                            </span>
+                                                        )}
+                                                        {isResourceWorking && (
                                                             <span style={{
                                                                 fontSize: 9,
                                                                 padding: '2px 6px',
@@ -41022,13 +41073,13 @@ const BossPrepareModal = ({ state, dispatch }) => {
                                                                 color: '#90caf9',
                                                                 fontWeight: 700
                                                             }}>
-                                                                ⛏️ 采集中{buildingName ? `：${buildingName}` : ''}
+                                                                🏭 资源建筑中{buildingName ? `：${buildingName}` : ''}
                                                             </span>
                                                         )}
                                                     </div>
                                                 </div>
 
-                                                {/* 召回按钮：地图战斗/采集中角色可召回 */}
+                                                {/* 召回按钮：地图战斗/专业采集/资源建筑中的角色可召回 */}
                                                 {isBusy && (
                                                     <Button
                                                         onClick={recallCharacter}

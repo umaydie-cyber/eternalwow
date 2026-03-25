@@ -59,7 +59,7 @@
 - 地图页默认打开“战斗”页签；第二个页签是“采集”。
 - 区域按角色等级逐步解锁。
 - 区域内怪物有独立血量、攻击、掉金和经验配置。
-- 角色可同时处于“战斗地图 / 采集地图 / 主城资源建筑”三类岗位之一，不能重复派遣。
+- 角色可同时处于“战斗地图 / 采集地图 / 主城资源建筑 / Boss 阵容待命”中的一种状态；正在采集或工作的角色不能重复派遣，也不能直接加入 Boss 挑战。
 - 地图战斗会驱动经验成长、装备掉落、垃圾掉落、坐骑掉落、图鉴点亮和成就统计。
 - 脱离战斗后角色会自动回血，回血速度会被喷泉、火山温泉、轮回羁绊等系统共同影响。
 - 地图累计击杀数为跨世统计，不会被重生清空。
@@ -370,7 +370,8 @@ Boss 系统当前已实现：
 
 - 世界首领和团队首领分开展示。
 - 世界首领默认 3 人阵容，团队首领为 5 人阵容。
-- 准备界面可直接从地图战斗或采集岗位把角色召回入队。
+- 准备界面可直接从地图战斗、专业采集或主城资源建筑岗位把角色召回入队。
+- 仍在地图战斗、专业采集或主城资源建筑中的角色，不能直接加入 Boss 队伍，也不能开始 Boss 挑战。
 - 可设置 `优先 Boss / 优先小弟` 和 `集中站位 / 分散站位` 两类策略。
 - 每个 Boss 都有独立数值、技能循环和部分专属机制。
 - 击杀后进入重生冷却。
@@ -584,7 +585,7 @@ Boss 系统当前已实现：
 - [professions.js](/Users/dongchenjie/IdeaProjects/eternalwow/my-react-site/src/game/data/professions.js)
   负责专业、材料、采集区域、专业学习成本和默认熟练度配置。
 - [MapPage.jsx](/Users/dongchenjie/IdeaProjects/eternalwow/my-react-site/src/game/pages/MapPage.jsx)
-  负责地图页的“战斗 / 采集”双页签，包含未分配角色列表、战斗区域派遣、采集区域派遣和采集日志展示。
+  负责地图页的“战斗 / 采集”双页签，包含可派遣角色过滤、战斗区域派遣、采集区域派遣、移动端点选派遣和采集日志展示。
 - [CityPage.jsx](/Users/dongchenjie/IdeaProjects/eternalwow/my-react-site/src/game/pages/CityPage.jsx)
   负责主城页，包含资源总览、资源建筑派遣、功能建筑展示与建造入口。
 - [WorldBossPage.jsx](/Users/dongchenjie/IdeaProjects/eternalwow/my-react-site/src/game/pages/WorldBossPage.jsx)

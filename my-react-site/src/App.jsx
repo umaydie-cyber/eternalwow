@@ -35611,6 +35611,238 @@ const SpacetimeShopModal = ({ state, dispatch, onClose }) => {
 };
 
 
+// ==================== PAGE: TALENT ====================
+const TALENT_TYPE_LABELS = {
+    aura: '常驻',
+    on_hit: '触发',
+    on_block: '格挡',
+    on_cast: '施法',
+    on_turn: '回合',
+    dot: '持续',
+};
+
+const TalentPage = ({ state, dispatch }) => {
+    const characters = state.characters || [];
+    const [selectedCharId, setSelectedCharId] = useState(characters[0]?.id || null);
+    const isMobile = useIsMobile();
+
+    useEffect(() => {
+        if (!characters.length) {
+            setSelectedCharId(null);
+            return;
+        }
+
+        if (!characters.some(char => char.id === selectedCharId)) {
+            setSelectedCharId(characters[0].id);
+        }
+    }, [characters, selectedCharId]);
+
+    const selectedCharacter = characters.find(char => char.id === selectedCharId) || characters[0] || null;
+    const talentRows = selectedCharacter ? (TALENTS[selectedCharacter.classId] || []) : [];
+    const unlockedRows = talentRows.filter(row => (selectedCharacter?.level || 0) >= row.tier).length;
+
+    return (
+        <div style={{ display: 'grid', gap: 16 }}>
+            <Panel title="天赋总览">
+                {!characters.length ? (
+                    <div style={{ color: '#888', fontSize: 13 }}>
+                        暂无角色，创建角色后即可配置天赋。
+                    </div>
+                ) : (
+                    <>
+                        <div style={{
+                            display: 'grid',
+                            gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(220px, 1fr))',
+                            gap: 12,
+                            marginBottom: 16
+                        }}>
+                            {characters.map(char => {
+                                const classTalents = TALENTS[char.classId] || [];
+                                const selectedCount = classTalents.filter(row => !!char.talents?.[row.tier]).length;
+                                const unlockedCount = classTalents.filter(row => (char.level || 0) >= row.tier).length;
+                                const active = char.id === selectedCharacter?.id;
+
+                                return (
+                                    <button
+                                        key={char.id}
+                                        type="button"
+                                        onClick={() => setSelectedCharId(char.id)}
+                                        style={{
+                                            textAlign: 'left',
+                                            padding: 14,
+                                            borderRadius: 10,
+                                            cursor: 'pointer',
+                                            border: active ? '1px solid #c9a227' : '1px solid rgba(255,255,255,0.10)',
+                                            background: active
+                                                ? 'linear-gradient(135deg, rgba(201,162,39,0.18), rgba(80,50,10,0.18))'
+                                                : 'rgba(0,0,0,0.28)',
+                                            color: '#e8dcc4',
+                                        }}
+                                    >
+                                        <div style={{ fontSize: 15, fontWeight: 800, color: active ? '#ffd700' : '#f5e6c8' }}>
+                                            {char.name}
+                                        </div>
+                                        <div style={{ fontSize: 12, color: '#aaa', marginTop: 4 }}>
+                                            Lv.{char.level} · {char.race} · {CLASSES[char.classId]?.name || char.classId}
+                                        </div>
+                                        <div style={{ display: 'flex', gap: 12, fontSize: 11, color: '#b8aa8a', marginTop: 10 }}>
+                                            <span>已解锁 {unlockedCount} 层</span>
+                                            <span>已选择 {selectedCount} 项</span>
+                                        </div>
+                                    </button>
+                                );
+                            })}
+                        </div>
+
+                        {selectedCharacter && (
+                            <>
+                                <div style={{
+                                    display: 'flex',
+                                    flexWrap: 'wrap',
+                                    gap: 10,
+                                    fontSize: 12,
+                                    color: '#b8aa8a',
+                                    marginBottom: 4
+                                }}>
+                                    <span>当前角色：<span style={{ color: '#ffd700', fontWeight: 800 }}>{selectedCharacter.name}</span></span>
+                                    <span>职业：{CLASSES[selectedCharacter.classId]?.name || selectedCharacter.classId}</span>
+                                    <span>已解锁：{unlockedRows}/{talentRows.length}</span>
+                                </div>
+
+                                {talentRows.length === 0 ? (
+                                    <div style={{ color: '#888', fontSize: 13 }}>
+                                        该职业暂未配置天赋树。
+                                    </div>
+                                ) : (
+                                    <div style={{ display: 'grid', gap: 12 }}>
+                                        {talentRows.map(row => {
+                                            const unlocked = (selectedCharacter.level || 0) >= row.tier;
+                                            const selectedTalentId = selectedCharacter.talents?.[row.tier] || null;
+
+                                            return (
+                                                <div
+                                                    key={row.tier}
+                                                    style={{
+                                                        padding: 14,
+                                                        borderRadius: 12,
+                                                        border: unlocked ? '1px solid rgba(201,162,39,0.22)' : '1px solid rgba(255,255,255,0.08)',
+                                                        background: unlocked ? 'rgba(0,0,0,0.28)' : 'rgba(20,20,20,0.35)',
+                                                    }}
+                                                >
+                                                    <div style={{
+                                                        display: 'flex',
+                                                        justifyContent: 'space-between',
+                                                        alignItems: 'center',
+                                                        gap: 8,
+                                                        marginBottom: 12
+                                                    }}>
+                                                        <div>
+                                                            <div style={{ fontSize: 15, fontWeight: 900, color: unlocked ? '#ffd700' : '#888' }}>
+                                                                {row.tier} 级天赋
+                                                            </div>
+                                                            <div style={{ fontSize: 11, color: '#999', marginTop: 4 }}>
+                                                                {unlocked ? '每层 3 选 1，重复点击可切换本层选择。' : `角色达到 Lv.${row.tier} 后解锁。`}
+                                                            </div>
+                                                        </div>
+                                                        {selectedTalentId && (
+                                                            <div style={{
+                                                                padding: '4px 10px',
+                                                                borderRadius: 999,
+                                                                background: 'rgba(201,162,39,0.16)',
+                                                                border: '1px solid rgba(201,162,39,0.30)',
+                                                                color: '#ffd700',
+                                                                fontSize: 11,
+                                                                fontWeight: 800
+                                                            }}>
+                                                                已选择
+                                                            </div>
+                                                        )}
+                                                    </div>
+
+                                                    <div style={{
+                                                        display: 'grid',
+                                                        gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, minmax(0, 1fr))',
+                                                        gap: 12
+                                                    }}>
+                                                        {(row.options || []).map(option => {
+                                                            const active = selectedTalentId === option.id;
+                                                            const typeLabel = TALENT_TYPE_LABELS[option.type] || '效果';
+
+                                                            return (
+                                                                <button
+                                                                    key={option.id}
+                                                                    type="button"
+                                                                    disabled={!unlocked}
+                                                                    onClick={() => {
+                                                                        if (!unlocked) return;
+                                                                        dispatch({
+                                                                            type: 'SET_TALENT',
+                                                                            payload: {
+                                                                                characterId: selectedCharacter.id,
+                                                                                tier: row.tier,
+                                                                                talentId: option.id
+                                                                            }
+                                                                        });
+                                                                    }}
+                                                                    style={{
+                                                                        textAlign: 'left',
+                                                                        minHeight: 160,
+                                                                        padding: 14,
+                                                                        borderRadius: 10,
+                                                                        cursor: unlocked ? 'pointer' : 'not-allowed',
+                                                                        border: active ? '2px solid #ffd700' : '1px solid rgba(255,255,255,0.10)',
+                                                                        background: active
+                                                                            ? 'linear-gradient(180deg, rgba(201,162,39,0.18), rgba(70,45,12,0.20))'
+                                                                            : (unlocked ? 'rgba(255,255,255,0.03)' : 'rgba(120,120,120,0.08)'),
+                                                                        color: unlocked ? '#e8dcc4' : '#777',
+                                                                        opacity: unlocked ? 1 : 0.75,
+                                                                        display: 'flex',
+                                                                        flexDirection: 'column',
+                                                                        gap: 10
+                                                                    }}
+                                                                >
+                                                                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
+                                                                        <div style={{ fontSize: 14, fontWeight: 800, color: active ? '#ffd700' : '#f3e0b9' }}>
+                                                                            {option.name}
+                                                                        </div>
+                                                                        <div style={{
+                                                                            padding: '2px 8px',
+                                                                            borderRadius: 999,
+                                                                            background: active ? 'rgba(255,215,0,0.16)' : 'rgba(255,255,255,0.06)',
+                                                                            color: active ? '#ffd700' : '#aaa',
+                                                                            fontSize: 10,
+                                                                            fontWeight: 700,
+                                                                            whiteSpace: 'nowrap'
+                                                                        }}>
+                                                                            {typeLabel}
+                                                                        </div>
+                                                                    </div>
+
+                                                                    <div style={{ fontSize: 12, lineHeight: 1.7, color: active ? '#fff6de' : '#b9b0a0' }}>
+                                                                        {option.description || '暂无描述'}
+                                                                    </div>
+
+                                                                    <div style={{ marginTop: 'auto', fontSize: 11, color: active ? '#ffd700' : '#888' }}>
+                                                                        {active ? '当前生效中' : (unlocked ? '点击切换到该天赋' : '尚未解锁')}
+                                                                    </div>
+                                                                </button>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                            </>
+                        )}
+                    </>
+                )}
+            </Panel>
+        </div>
+    );
+};
+
 
 // ==================== PAGE: CHARACTER ====================
 const CharacterPage = ({ state, dispatch }) => {
